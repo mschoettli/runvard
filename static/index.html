@@ -8317,6 +8317,11 @@ function partitionName(name,num=1){const base=name.startsWith('/dev/')?name.slic
 function defaultMountPoint(name){const base=(name.startsWith('/dev/')?name.slice(5):name).replace(/[^A-Za-z0-9_.-]/g,'-');return '/mnt/'+base;}
 function normalizeMountPoint(value,name){const v=(value||'').trim();if(!v)return defaultMountPoint(name);return v.startsWith('/')?v:'/mnt/'+v.replace(/^\/+/,'');}
 function requireOk(res,fallback){if(res&&res.ok===false)throw new Error(res.stderr||fallback||'Storage operation failed');return res;}
+function isMountableVolume(volume,parent){
+  if(!volume||volume.protected||parent?.protected||volume.mountpoint)return false;
+  if(!/^(ext[234]|xfs|btrfs)$/.test(volume.fstype||''))return false;
+  return ['part','disk','crypt','lvm'].includes(volume.type||'');
+}
 function cardMetric(label,value){return `<div><span>${esc(uiText(label))}</span><strong>${value}</strong></div>`;}
 function simpleTable(headers,rows){
   return `<table class="nx-muted-table"><thead><tr>${headers.map(h=>`<th>${esc(uiText(h))}</th>`).join('')}</tr></thead><tbody>${rows||'<tr><td colspan="'+headers.length+'">'+emptyState('Nothing here yet')+'</td></tr>'}</tbody></table>`;
@@ -8337,6 +8342,7 @@ function renderDeviceCards(devs){
       </div>
       <div class="nx-action-row">
         ${!d.protected&&d.type==='disk'&&!hasVolumes?`<button class="btn sm" onclick="diskWizard('${esc(d.name)}')">Set up disk</button>`:''}
+        ${isMountableVolume(volume,d)?`<button class="btn sm" onclick="mountVolumeForm('${esc(volume.name)}')">Mount</button>`:''}
         ${!d.protected&&/^(ext[234]|xfs|btrfs)$/.test(volume.fstype||'')?`<button class="btn ghost sm" onclick="fsGrowForm('${esc(volume.name)}','${esc(volume.mountpoint||'')}','${esc(volume.fstype)}')">Grow filesystem</button>`:''}
       </div>
       ${d.children&&d.children.length?advancedDetails('Volumes',renderDeviceCards(d.children),false):''}
@@ -8426,6 +8432,10 @@ window.diskWizard=dev=>typedConfirm('Erase and set up disk',`This will create a 
   {name:'mountpoint',label:'Mount point',value:defaultMountPoint(dev)},
   {name:'persist',label:'Mount automatically after reboot',type:'checkbox',value:true},
 ],async d=>{closeForm();toast('Setting up disk…');try{const mountpoint=normalizeMountPoint(d.mountpoint,dev);requireOk(await post('/storage/partition-table',{device:dev,label:'gpt'}),'Could not create partition table');const part=requireOk(await post('/storage/partition',{device:dev}),'Could not create partition');const partition=part.partition||partitionName(dev);requireOk(await post('/storage/format',{partition,fstype:d.fstype}),'Could not format partition');requireOk(await post('/storage/mount',{partition,mountpoint,persist:d.persist}),'Could not mount partition');toast('Disk ready');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}}));
+window.mountVolumeForm=dev=>openForm('Mount volume: '+dev,'💿',[
+  {name:'mountpoint',label:'Mount point',value:defaultMountPoint(dev)},
+  {name:'persist',label:'Mount automatically after reboot',type:'checkbox',value:true},
+],async d=>{closeForm();toast('Mounting volume…');try{const mountpoint=normalizeMountPoint(d.mountpoint,dev);requireOk(await post('/storage/mount',{partition:dev,mountpoint,persist:d.persist}),'Could not mount volume');toast('Volume mounted');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}});
 window.zpoolDestroy=name=>typedConfirm('Destroy ZFS pool',`Pool "${name}" and its data will be removed permanently.`,name,async()=>{try{const r=await post('/storage/zfs/destroy',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool destroyed');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
 window.lvRemove=lvpath=>typedConfirm('Delete logical volume',`Logical volume "${lvpath}" will be deleted permanently.`,lvpath,async()=>{try{const r=await post('/storage/lvm/lv-remove',{lv_path:lvpath});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Volume deleted');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
 

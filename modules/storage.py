@@ -199,8 +199,19 @@ def mount_device(partition: str, mountpoint: str, persist=False):
     if res["ok"] and persist:
         uuid = _run(["blkid", "-s", "UUID", "-o", "value", dev])["stdout"].strip()
         if uuid:
-            with open("/etc/fstab", "a") as f:
-                f.write(f"\nUUID={uuid} {mountpoint} auto defaults 0 2\n")
+            entry = f"UUID={uuid} {mountpoint} auto defaults 0 2"
+            try:
+                with open("/etc/fstab") as f:
+                    exists = any(
+                        line.strip() and not line.lstrip().startswith("#")
+                        and line.split()[0] == f"UUID={uuid}"
+                        for line in f
+                    )
+            except OSError:
+                exists = False
+            if not exists:
+                with open("/etc/fstab", "a") as f:
+                    f.write(f"\n{entry}\n")
     return res
 
 
