@@ -366,6 +366,70 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .app-status-pill .sd{width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block}
 .app-install-btn{width:100%;background:transparent;border:.5px solid var(--border-accent);color:var(--accent-light);padding:7px;border-radius:8px;font-size:12px;font-weight:500;font-family:inherit;cursor:pointer;transition:background .15s,color .15s}
 .app-install-btn:hover{background:rgba(122,74,255,.12);color:#fff}
+.form-card.compose-install-card{width:min(960px,95vw)}
+.compose-install-shell{display:grid;gap:14px}
+.compose-install-head{display:flex;align-items:flex-start;gap:12px;background:linear-gradient(135deg,rgba(122,74,255,.12),rgba(34,211,238,.06));border:1px solid var(--border-accent);border-radius:12px;padding:14px}
+.compose-install-icon{width:46px;height:46px;border-radius:11px;background:rgba(122,74,255,.16);border:1px solid rgba(122,74,255,.28);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
+.compose-install-icon img{width:30px;height:30px;object-fit:contain}
+.compose-install-title{min-width:0;flex:1}
+.compose-install-title h3{font-size:16px;line-height:1.25;margin:0 0 4px;color:var(--text)}
+.compose-install-title p{font-size:12px;color:var(--text2);line-height:1.45;margin:0}
+.compose-install-badges{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.compose-install-badge{display:inline-flex;align-items:center;min-height:22px;padding:3px 9px;border-radius:999px;border:1px solid rgba(34,197,94,.22);background:rgba(34,197,94,.09);color:#4ade80;font-size:11px;font-weight:600;white-space:nowrap}
+.compose-install-badge.info{border-color:rgba(34,211,238,.22);background:rgba(34,211,238,.08);color:#67e8f9}
+.service-summary{display:grid;gap:8px;background:rgba(34,211,238,.055);border:1px solid rgba(34,211,238,.18);border-radius:11px;padding:12px}
+.compose-summary-title{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.compose-summary-title strong{font-size:13px;color:var(--text)}
+.compose-summary-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.compose-summary-cell{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.075);border-radius:8px;padding:9px;min-width:0}
+.compose-summary-cell span{display:block;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.compose-summary-cell strong{display:block;font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.compose-install-layout{display:grid;grid-template-columns:1fr;gap:14px}
+.compose-rail{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+.compose-rail-item{min-width:max-content;background:#0a0810;border:1px solid var(--border);border-radius:9px;padding:8px 10px}
+.compose-rail-item strong{display:block;color:var(--accent-light);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600}
+.compose-rail-item span{display:block;color:var(--text3);font-size:10px;margin-top:2px}
+.compose-form-stack{display:grid;gap:10px}
+.compose-block{display:grid;border:1px solid var(--border);border-radius:11px;background:var(--bg3);overflow:hidden}
+.compose-key{display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(0,0,0,.16);border-bottom:1px solid var(--border);padding:10px 12px}
+.compose-key code{display:inline-flex;min-height:28px;align-items:center;border:1px solid rgba(122,74,255,.24);background:rgba(122,74,255,.08);border-radius:7px;padding:0 8px;color:var(--accent-light);font-family:'JetBrains Mono',monospace;font-size:12px}
+.compose-key span{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.compose-block-body{display:grid;gap:10px;padding:12px}
+.compose-field-grid{display:grid;grid-template-columns:1fr;gap:10px}
+.compose-field{display:grid;gap:5px;min-width:0}
+.compose-field label,.compose-field .compose-label{font-size:12px;color:var(--text2);margin:0}
+.compose-field input,.compose-field select{min-height:40px}
+.compose-port-row,.compose-volume-row,.compose-env-row{display:grid;grid-template-columns:1fr;gap:8px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.075);border-radius:9px;padding:10px}
+.compose-volume-list{display:grid;gap:8px}
+.compose-volume-label{display:grid;gap:3px}
+.compose-volume-label strong{font-size:13px;color:var(--text)}
+.compose-volume-label span{font-size:11px;color:var(--text3);line-height:1.35}
+.compose-drive-select{position:relative}
+.compose-drive-select:before{content:"";position:absolute;left:9px;top:50%;width:7px;height:7px;border-radius:50%;background:#67e8f9;transform:translateY(-50%);pointer-events:none}
+.compose-drive-select.system:before{background:#facc15}
+.compose-drive-select.absolute:before{background:var(--text3)}
+.compose-drive-select select{padding-left:24px}
+.compose-arrow{display:none;color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:11px;text-align:center;align-self:center}
+.compose-env-key{display:flex;align-items:center;min-height:40px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:0 11px;color:#dbeafe;font-family:'JetBrains Mono',monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.compose-preview-card{border-color:rgba(34,211,238,.22);background:rgba(34,211,238,.045)}
+.compose-preview-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.compose-preview-toolbar strong{font-size:13px;color:var(--text)}
+.compose-preview{margin:0;max-height:280px;overflow:auto;background:#0a0810;border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:12px;color:#dbeafe;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.55;white-space:pre-wrap}
+.compose-install-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:2px}
+@media (min-width: 768px){
+  .compose-field-grid,.compose-env-row,.compose-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .compose-port-row{grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr)}
+  .compose-arrow{display:block}
+}
+@media (min-width: 1024px){
+  .compose-install-layout{grid-template-columns:170px minmax(0,1fr);align-items:start}
+  .compose-rail{position:sticky;top:0;display:grid;overflow:visible;padding:0}
+  .compose-rail-item{min-width:0}
+  .compose-block{grid-template-columns:150px minmax(0,1fr)}
+  .compose-key{display:block;border-bottom:0;border-right:1px solid var(--border)}
+  .compose-key code{width:100%;margin-bottom:8px}
+  .compose-volume-row{grid-template-columns:118px 128px minmax(0,1.15fr) minmax(0,.9fr) 70px;align-items:end}
+}
 .app-menu{position:fixed;background:rgba(15,12,26,.97);border:.5px solid var(--border-accent);border-radius:12px;padding:6px;z-index:999;min-width:170px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
 .app-menu div{padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center}
 .app-menu div:hover{background:var(--glass-hover)}
@@ -524,7 +588,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 
 <!-- Formular-Modal -->
 <div class="form-overlay" id="form-overlay">
-  <div class="form-card">
+  <div class="form-card" role="dialog" aria-modal="true" aria-labelledby="form-head">
     <div class="form-head" id="form-head"></div>
     <div class="form-body" id="form-body"></div>
   </div>
@@ -5040,6 +5104,8 @@ function toast(msg,type='success'){const t=document.createElement('div');t.class
 // ═══ Formular-Modal ═══
 let formSubmitFn=null;
 function openForm(title,icon,fields,onSubmit){
+  const formCard=document.querySelector('#form-overlay .form-card');
+  if(formCard)formCard.classList.remove('compose-install-card');
   $('#form-head').innerHTML=`<span>${icon}</span> ${esc(uiText(title))}`;
   const body=$('#form-body');
   body.innerHTML=fields.map(f=>{
@@ -5055,7 +5121,7 @@ function openForm(title,icon,fields,onSubmit){
   $('#form-go').onclick=formSubmitFn;
   $('#form-overlay').classList.add('open');
 }
-function closeForm(){$('#form-overlay').classList.remove('open');}
+function closeForm(){const formCard=document.querySelector('#form-overlay .form-card');if(formCard)formCard.classList.remove('compose-install-card');$('#form-overlay').classList.remove('open');}
 $('#form-overlay').onclick=e=>{if(e.target.id==='form-overlay')closeForm();};
 
 // ═══ Bestätigungs-Modal (Punkt 4) ═══
@@ -7859,70 +7925,6 @@ window.appsDoSearch=v=>{appsSearch=v;const grid=$('#apps-grid');if(!grid)return;
   translateRenderedText(grid);
 };
 
-window.appInstallForm=async id=>{
-  try{
-    const a=await api('/apps/get?app_id='+encodeURIComponent(id));
-    openForm('Installieren: '+a.name,'🧩',[
-      {name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:a.compose,hint:'Ports, volumes and env variables can be adjusted. Data is stored in /opt/runvard/data/apps/'+a.id+'/'},
-    ],async d=>{
-      closeForm();
-      // Inline-Indikator in Modal-Header
-      const actions=ensureInstallIndicatorHost();
-      if(!actions)return;
-      const indicator=document.createElement('div');
-      indicator.className='install-indicator';
-      indicator.innerHTML=`
-        <span class="install-dot"></span>
-        <span class="install-label">${esc(a.name)}</span>
-        <span class="install-bar-wrap"><span class="install-bar-fill" id="inst-bar-${esc(id)}"></span></span>
-        <span class="install-pct" id="inst-step-${esc(id)}">…</span>`;
-      actions.insertBefore(indicator,actions.firstChild);
-
-      try{
-        const r=await post('/apps/install',{app_id:id,content:d.content});
-        if(!r.job_id){toast('Error','error');indicator.remove();return;}
-        _activeInstalls++;updateAppsBadge();
-        // Poll für Status
-        let progress=5;
-        const barEl=$('#inst-bar-'+id),stepEl=$('#inst-step-'+id),lblEl=indicator.querySelector('.install-label');
-        const poller=setInterval(async()=>{
-          try{
-            const s=await api('/apps/install-status?job_id='+encodeURIComponent(r.job_id));
-            if(stepEl)stepEl.textContent=s.step||'…';
-            if(s.status==='pulling')progress=Math.min(progress+1,70);
-            else if(s.status==='starting')progress=Math.min(progress+5,95);
-            if(barEl)barEl.style.width=Math.round(progress)+'%';
-            if(s.status==='done'||s.status==='error'){
-              clearInterval(poller);
-              _activeInstalls=Math.max(0,_activeInstalls-1);updateAppsBadge();
-              if(barEl)barEl.style.width='100%';
-              if(s.ok){
-                indicator.classList.add('done');
-                if(lblEl)lblEl.textContent=a.name+' ✓';
-                toast(a.name+' installed ✓');
-                dashAutoAdd(a.id,a.name,a.icon,a.port);
-              } else {
-                indicator.classList.add('error');
-                indicator.title=s.output||s.step||'';
-                if(lblEl)lblEl.textContent='Error';
-                toast(s.step||'Error','error');
-              }
-              setTimeout(()=>{indicator.remove();},2500);
-              renderApps($('#modal-body'));
-            }
-          }catch(e){}
-        },2000);
-      }catch(e){
-        _activeInstalls=Math.max(0,_activeInstalls-1);updateAppsBadge();
-        indicator.classList.add('error');
-        indicator.querySelector('.install-label').textContent='Error';
-        toast('Error: '+e.message,'error');
-        setTimeout(()=>{indicator.remove();},3000);
-      }
-    });
-  }catch(e){toast('Error: '+e.message,'error');}
-};
-
 window.appAct=async(id,action)=>{
   const labels={start:'Starting…',stop:'Stopping…',restart:'Restarting…',update:'Refreshing…'};
   toast(uiText(labels[action]||'…'));
@@ -8448,54 +8450,251 @@ async function renderVmPoolsSimple(body){
 window.vmManage=name=>{const body=$('#modal-body');body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">Back</button><span>${esc(name)}</span></div><div class="nx-card-grid"><div class="nx-action-card"><div class="nx-action-title">Console</div><p class="nx-action-sub">Open the VM screen.</p><button class="btn sm" onclick="vmConsole('${esc(name)}')">Open console</button></div><div class="nx-action-card"><div class="nx-action-title">Hardware</div><p class="nx-action-sub">Attach disks or network cards.</p><button class="btn sm" onclick="vmHardware('${esc(name)}')">Manage hardware</button></div><div class="nx-action-card"><div class="nx-action-title">Snapshots</div><p class="nx-action-sub">Save or restore a VM state.</p><button class="btn sm" onclick="vmSnaps('${esc(name)}')">Open snapshots</button></div><div class="nx-action-card"><div class="nx-action-title">Advanced</div><p class="nx-action-sub">Clone the VM or change the CD-ROM.</p><button class="btn ghost sm" onclick="vmClone('${esc(name)}')">Clone</button> <button class="btn ghost sm" onclick="vmCdromForm('${esc(name)}')">CD-ROM</button></div></div>`;translateRenderedText(body);};
 window.vmDeleteConfirm=name=>typedConfirm('Delete virtual machine',`VM "${name}" and its disk will be removed permanently.`,name,async()=>{try{await post('/vms/action',{name,action:'delete'});toast('VM deleted');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
 
+let _appInstallDraft=null;
+function appInstallSlug(value,fallback){
+  const clean=String(value||'').trim().replace(/^[./]+/,'').replace(/[^A-Za-z0-9_.-]+/g,'-').replace(/^-+|-+$/g,'');
+  return clean||fallback||'data';
+}
+function appInstallBaseName(path,fallback){
+  const clean=String(path||'').split(':')[0].replace(/\/+$/,'');
+  const base=clean.split('/').filter(Boolean).pop();
+  return appInstallSlug(base,fallback);
+}
+function appInstallIsManagedSource(source){
+  return String(source||'').startsWith('./');
+}
+function appInstallMountRoot(mountpoint,appId){
+  const mp=String(mountpoint||'/').replace(/\/+$/,'')||'/';
+  if(mp==='/')return `/opt/runvard/data/apps/${appId}`;
+  return `${mp}/runvard/apps/${appId}`;
+}
+function appInstallJoin(root,folder){
+  return `${String(root||'').replace(/\/+$/,'')}/${String(folder||'').replace(/^\/+/,'')}`;
+}
+function appInstallVolumeRole(v){
+  const text=[v.label,v.source,v.target,v.folder].join(' ').toLowerCase();
+  if(/media|movie|music|photo|photos|video|library|download|downloads|upload|uploads|backup|backups|books|audiobook|manga|originals/.test(text))return 'large';
+  if(/db|database|postgres|mysql|mariadb|redis|config|metadata|thumb|cache|state|index/.test(text))return 'fast';
+  return 'state';
+}
+function appInstallListItem(raw){
+  return String(raw||'').trim().replace(/^-\s*/,'').trim().replace(/^['"]|['"]$/g,'');
+}
+function appInstallParseVolume(raw,index){
+  const item=appInstallListItem(raw);
+  const parts=item.split(':');
+  const source=parts[0]||'';
+  const target=parts[1]||'';
+  const mode=parts[2]||'rw';
+  const managed=appInstallIsManagedSource(source);
+  const folder=managed?appInstallSlug(source.replace(/^\.\//,''),`volume-${index+1}`):appInstallBaseName(target||source,`volume-${index+1}`);
+  return {
+    raw:item,
+    source,
+    target,
+    mode,
+    managed,
+    folder,
+    label:folder.replace(/[-_]+/g,' ').replace(/\b\w/g,c=>c.toUpperCase()),
+    mountpoint:'',
+  };
+}
+function appInstallParsePort(raw){
+  const item=appInstallListItem(raw);
+  const [base,proto='']=item.split('/');
+  const parts=base.split(':');
+  if(parts.length>=2){
+    return {raw:item,host:parts[0],container:parts.slice(1).join(':'),proto};
+  }
+  return {raw:item,host:'',container:base,proto};
+}
+function appInstallParseCompose(content){
+  const lines=String(content||'').replace(/\r\n/g,'\n').split('\n');
+  const draft={service:'app',image:'',restart:'unless-stopped',container:'',ports:[],volumes:[],env:[],extra:[]};
+  let section='';
+  let inServices=false;
+  lines.forEach(line=>{
+    const trimmed=line.trim();
+    if(!trimmed)return;
+    if(trimmed==='services:'){inServices=true;section='';return;}
+    const svc=trimmed.match(/^([A-Za-z0-9_.-]+):$/);
+    if(inServices&&line.startsWith('  ')&&!line.startsWith('    ')&&svc){draft.service=svc[1];return;}
+    if(!line.startsWith('    '))return;
+    if(/^image:\s*/.test(trimmed)){draft.image=trimmed.replace(/^image:\s*/,'');section='';return;}
+    if(/^restart:\s*/.test(trimmed)){draft.restart=trimmed.replace(/^restart:\s*/,'');section='';return;}
+    if(/^container_name:\s*/.test(trimmed)){draft.container=trimmed.replace(/^container_name:\s*/,'');section='';return;}
+    if(trimmed==='ports:'){section='ports';return;}
+    if(trimmed==='volumes:'){section='volumes';return;}
+    if(trimmed==='environment:'){section='environment';return;}
+    if(/^[A-Za-z0-9_.-]+:\s*/.test(trimmed)&&!trimmed.startsWith('- ')){
+      section='extra';
+      draft.extra.push(line);
+      return;
+    }
+    if(section==='ports'&&trimmed.startsWith('- '))draft.ports.push(appInstallParsePort(trimmed));
+    else if(section==='volumes'&&trimmed.startsWith('- '))draft.volumes.push(appInstallParseVolume(trimmed,draft.volumes.length));
+    else if(section==='environment'&&trimmed.startsWith('- ')){
+      const item=appInstallListItem(trimmed);
+      const p=item.indexOf('=');
+      draft.env.push({key:p>=0?item.slice(0,p):item,value:p>=0?item.slice(p+1):''});
+    }else if(section==='extra')draft.extra.push(line);
+  });
+  if(!draft.container)draft.container=draft.service;
+  return draft;
+}
+function appInstallMounts(disks){
+  const rows=(disks||[]).filter(x=>x&&x.mountpoint&&x.total).map(x=>({...x,score:(x.free||0)-(x.mountpoint==='/'?Number.MAX_SAFE_INTEGER/4:0)}));
+  rows.sort((a,b)=>(b.score||0)-(a.score||0));
+  if(!rows.length)rows.push({mountpoint:'/',device:'/',fstype:'',total:0,free:0,used:0,percent:0});
+  return rows;
+}
+function appInstallBestMount(mounts,role){
+  const nonRoot=mounts.filter(x=>x.mountpoint!=='/');
+  if(!nonRoot.length)return mounts[0]?.mountpoint||'/';
+  if(role==='large')return nonRoot.slice().sort((a,b)=>(b.free||0)-(a.free||0))[0].mountpoint;
+  const fast=nonRoot.find(x=>/ssd|nvme/i.test(`${x.device} ${x.mountpoint}`));
+  return (fast||nonRoot[0]).mountpoint;
+}
+function appInstallMountLabel(m){
+  const name=m.mountpoint==='/'?'System disk':m.mountpoint;
+  const detail=[m.device,m.fstype,fmtBytes(m.free||0)+' free'].filter(Boolean).join(' · ');
+  return `${name} (${detail})`;
+}
+function appInstallVolumeSource(draft,volume){
+  if(!volume.managed)return volume.source;
+  return appInstallJoin(appInstallMountRoot(volume.mountpoint,draft.app.id),volume.folder);
+}
+function appInstallVolumeSpec(draft,volume){
+  const mode=volume.mode&&volume.mode!=='rw'?`:${volume.mode}`:'';
+  return `${appInstallVolumeSource(draft,volume)}:${volume.target}${mode}`;
+}
+function appInstallCompose(draft){
+  const lines=['services:',`  ${draft.service}:`];
+  if(draft.image)lines.push(`    image: ${draft.image}`);
+  if(draft.restart)lines.push(`    restart: ${draft.restart}`);
+  if(draft.container)lines.push(`    container_name: ${draft.container}`);
+  if(draft.ports.length){
+    lines.push('    ports:');
+    draft.ports.forEach(p=>{
+      const spec=p.host?`${p.host}:${p.container}${p.proto?'/'+p.proto:''}`:`${p.container}${p.proto?'/'+p.proto:''}`;
+      lines.push(`      - "${spec}"`);
+    });
+  }
+  if(draft.volumes.length){
+    lines.push('    volumes:');
+    draft.volumes.forEach(v=>lines.push(`      - ${appInstallVolumeSpec(draft,v)}`));
+  }
+  if(draft.env.length){
+    lines.push('    environment:');
+    draft.env.forEach(e=>lines.push(`      - ${e.key}=${e.value}`));
+  }
+  draft.extra.forEach(line=>lines.push(line));
+  return lines.join('\n')+'\n';
+}
+function appInstallRenderVolumes(){
+  const d=_appInstallDraft;if(!d)return;
+  const el=$('#app-compose-volumes');if(!el)return;
+  el.innerHTML=d.volumes.map((v,i)=>{
+    const role=appInstallVolumeRole(v);
+    const driveClass=!v.managed?'absolute':v.mountpoint==='/'?'system':'';
+    return `<div class="compose-volume-row">
+      <div class="compose-volume-label"><strong>${esc(v.label)}</strong><span>${esc(v.managed?(role==='large'?'Large data':'App state'):'Host path')}</span></div>
+      <div class="compose-field"><label for="app-volume-drive-${i}">Drive</label><div class="compose-drive-select ${driveClass}">${v.managed?`<select id="app-volume-drive-${i}" onchange="appInstallSetVolumeMount(${i},this.value)">${d.mounts.map(m=>`<option value="${esc(m.mountpoint)}" ${m.mountpoint===v.mountpoint?'selected':''}>${esc(appInstallMountLabel(m))}</option>`).join('')}</select>`:`<input id="app-volume-drive-${i}" value="Fixed" readonly>`}</div></div>
+      <div class="compose-field"><label for="app-volume-source-${i}">Host source</label><input id="app-volume-source-${i}" value="${esc(appInstallVolumeSource(d,v))}" readonly></div>
+      <div class="compose-field"><label for="app-volume-target-${i}">Container target</label><input id="app-volume-target-${i}" value="${esc(v.target||'-')}" readonly></div>
+      <div class="compose-field"><label for="app-volume-mode-${i}">Mode</label><input id="app-volume-mode-${i}" value="${esc(v.mode||'rw')}" readonly></div>
+    </div>`;
+  }).join('')||'<div class="empty-state" style="padding:16px">No volumes in this template</div>';
+}
+function appInstallRefresh(){
+  const d=_appInstallDraft;if(!d)return;
+  d.service=$('#app-compose-service')?.value.trim()||d.service;
+  d.container=$('#app-compose-container')?.value.trim()||d.service;
+  d.image=$('#app-compose-image')?.value.trim()||d.image;
+  d.restart=$('#app-compose-restart')?.value||d.restart;
+  d.ports.forEach((p,i)=>{p.host=$(`#app-port-host-${i}`)?.value.trim()||p.host;p.container=$(`#app-port-container-${i}`)?.value.trim()||p.container;});
+  d.env.forEach((e,i)=>{e.value=$(`#app-env-value-${i}`)?.value??e.value;});
+  const content=appInstallCompose(d);
+  const preview=$('#app-compose-content');if(preview)preview.textContent=content;
+  const project=$('#app-compose-project');if(project)project.textContent=d.service;
+}
+window.appInstallSetVolumeMount=(index,mountpoint)=>{if(!_appInstallDraft||!_appInstallDraft.volumes[index])return;_appInstallDraft.volumes[index].mountpoint=mountpoint;appInstallRenderVolumes();appInstallRefresh();};
+async function appInstallStart(draft){
+  const content=appInstallCompose(draft);
+  closeForm();
+  toast('Installing '+draft.app.name+'…');
+  const host=ensureInstallIndicatorHost();
+  const indicator=document.createElement('div');
+  indicator.className='install-indicator';
+  indicator.innerHTML=`<span class="install-dot"></span><span class="install-label">${esc(draft.app.name)}</span><span class="install-bar-wrap"><span class="install-bar-fill" id="inst-bar-${esc(draft.app.id)}"></span></span><span class="install-pct" id="inst-step-${esc(draft.app.id)}">…</span>`;
+  if(host)host.insertBefore(indicator,host.firstChild);
+  try{
+    const r=await post('/apps/install',{app_id:draft.app.id,content});
+    if(!r.job_id){indicator.remove();toast(appUi('installDidNotStart'),'error');return;}
+    _activeInstalls++;updateAppsBadge();
+    let progress=8;
+    const poller=setInterval(async()=>{
+      try{
+        const s=await api('/apps/install-status?job_id='+encodeURIComponent(r.job_id));
+        const stepEl=$('#inst-step-'+draft.app.id),barEl=$('#inst-bar-'+draft.app.id),labelEl=indicator.querySelector('.install-label');
+        if(stepEl)stepEl.textContent=s.step||'…';
+        if(s.status==='pulling')progress=Math.min(progress+2,70);
+        else if(s.status==='starting')progress=Math.min(progress+6,95);
+        if(barEl)barEl.style.width=Math.round(progress)+'%';
+        if(s.status==='done'||s.status==='error'){
+          clearInterval(poller);_activeInstalls=Math.max(0,_activeInstalls-1);updateAppsBadge();
+          if(barEl)barEl.style.width='100%';
+          if(s.ok){indicator.classList.add('done');if(labelEl)labelEl.textContent=draft.app.name+' ✓';toast(draft.app.name+' installed');dashAutoAdd(draft.app.id,draft.app.name,draft.app.icon,draft.app.port);}
+          else{indicator.classList.add('error');indicator.title=s.output||s.step||'';if(labelEl)labelEl.textContent=appUi('installFailed');toast(s.step||appUi('installFailed'),'error');}
+          setTimeout(()=>indicator.remove(),3000);
+          renderApps($('#modal-body'));
+        }
+      }catch(e){}
+    },2000);
+  }catch(e){indicator.classList.add('error');toast('Error: '+e.message,'error');setTimeout(()=>indicator.remove(),3000);}
+}
 window.appInstallForm=async id=>{
   try{
-    const a=await api('/apps/get?app_id='+encodeURIComponent(id));
+    const [a,diskData]=await Promise.all([api('/apps/get?app_id='+encodeURIComponent(id)),api('/system/disks').catch(()=>[])]);
+    const draft=appInstallParseCompose(a.compose||'');
+    draft.app=a;
+    draft.mounts=appInstallMounts(diskData);
+    draft.volumes.forEach(v=>{if(v.managed)v.mountpoint=appInstallBestMount(draft.mounts,appInstallVolumeRole(v));});
+    _appInstallDraft=draft;
+    const formCard=document.querySelector('#form-overlay .form-card');
+    if(formCard)formCard.classList.add('compose-install-card');
     $('#form-head').innerHTML=`<span>🧩</span> ${esc(uiText('Install'))}: ${esc(a.name)}`;
     $('#form-body').innerHTML=`
-      <div class="nx-card-inner">
-        <div class="nx-action-title">${esc(a.name)}</div>
-        <p class="nx-action-sub">${esc(localizedAppDesc(a)||appUi('installDefault'))}</p>
-        <div class="nx-kv">${cardMetric('Port',a.port||appUi('automatic'))}${cardMetric(appUi('dataFolder'),'/opt/runvard/data/apps/'+esc(a.id))}</div>
-      </div>
-      ${advancedDetails('Advanced compose file',`<textarea id="app-compose-content" rows="14" style="font-family:'JetBrains Mono',monospace">${esc(a.compose||'')}</textarea><div class="hint">Only edit this if you understand Docker Compose.</div>`,false)}
-      <div class="form-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="app-install-go">${esc(uiText('Install'))}</button></div>`;
+      <div class="compose-install-shell">
+        <div class="compose-install-head">
+          <div class="compose-install-icon"><img src="${esc(a.icon)}" alt="" onerror="this.style.display='none';this.parentElement.textContent='${esc((a.name||'?')[0])}'"></div>
+          <div class="compose-install-title"><h3>${esc(a.name)}</h3><p>${esc(localizedAppDesc(a)||appUi('installDefault'))}</p></div>
+          <div class="compose-install-badges"><span class="compose-install-badge">Docker ready</span><span class="compose-install-badge info">Compose</span></div>
+        </div>
+        <div class="service-summary">
+          <div class="compose-summary-title"><strong>Compose service setup</strong><span class="compose-install-badge info">live preview</span></div>
+          <div class="compose-summary-grid"><div class="compose-summary-cell"><span>Project</span><strong id="app-compose-project">${esc(draft.service)}</strong></div><div class="compose-summary-cell"><span>Storage</span><strong>${draft.volumes.length} volume${draft.volumes.length===1?'':'s'}</strong></div></div>
+        </div>
+        <div class="compose-install-layout">
+          <div class="compose-rail">
+            ${[['services:','service'],['image:','runtime'],['ports:','network'],['volumes:','storage'],['environment:','settings'],['preview','file']].map(x=>`<div class="compose-rail-item"><strong>${x[0]}</strong><span>${x[1]}</span></div>`).join('')}
+          </div>
+          <div class="compose-form-stack">
+            <div class="compose-block"><div class="compose-key"><code>services:</code><span>Service</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label for="app-compose-service">Service name</label><input id="app-compose-service" value="${esc(draft.service)}" oninput="appInstallRefresh()"></div><div class="compose-field"><label for="app-compose-container">Container name</label><input id="app-compose-container" value="${esc(draft.container)}" oninput="appInstallRefresh()"></div></div></div></div>
+            <div class="compose-block"><div class="compose-key"><code>image:</code><span>Runtime</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label for="app-compose-image">Image</label><input id="app-compose-image" value="${esc(draft.image)}" oninput="appInstallRefresh()"></div><div class="compose-field"><label for="app-compose-restart">Restart</label><select id="app-compose-restart" onchange="appInstallRefresh()">${['unless-stopped','always','on-failure','no'].map(x=>`<option value="${x}" ${x===draft.restart?'selected':''}>${x}</option>`).join('')}</select></div></div></div></div>
+            <div class="compose-block"><div class="compose-key"><code>ports:</code><span>Network</span></div><div class="compose-block-body">${draft.ports.map((p,i)=>`<div class="compose-port-row"><div class="compose-field"><label for="app-port-host-${i}">Host port</label><input id="app-port-host-${i}" value="${esc(p.host)}" oninput="appInstallRefresh()"></div><div class="compose-arrow">to</div><div class="compose-field"><label for="app-port-container-${i}">Container port${p.proto?` / ${esc(p.proto)}`:''}</label><input id="app-port-container-${i}" value="${esc(p.container)}" oninput="appInstallRefresh()"></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No public ports</div>'}</div></div>
+            <div class="compose-block"><div class="compose-key"><code>volumes:</code><span>Storage</span></div><div class="compose-block-body"><div class="compose-volume-list" id="app-compose-volumes"></div></div></div>
+            <div class="compose-block"><div class="compose-key"><code>environment:</code><span>Settings</span></div><div class="compose-block-body">${draft.env.map((e,i)=>`<div class="compose-env-row"><div class="compose-field"><span class="compose-label">Variable</span><div class="compose-env-key" id="app-env-key-${i}">${esc(e.key)}</div></div><div class="compose-field"><label for="app-env-value-${i}">Value</label><input id="app-env-value-${i}" value="${esc(e.value)}" oninput="appInstallRefresh()"></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No environment variables</div>'}</div></div>
+            <div class="compose-block compose-preview-card"><div class="compose-key"><code>compose</code><span>Preview</span></div><div class="compose-block-body"><div class="compose-preview-toolbar"><strong>docker-compose.yml</strong><span class="compose-install-badge info">generated</span></div><pre class="compose-preview mono" id="app-compose-content" aria-label="Generated docker-compose.yml" tabindex="0"></pre></div></div>
+          </div>
+        </div>
+        <div class="compose-install-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="app-install-go">${esc(uiText('Install'))}</button></div>
+      </div>`;
     $('#form-overlay').classList.add('open');
-    translateRenderedText($('#form-body'));
-    $('#app-install-go').onclick=async()=>{
-      const content=$('#app-compose-content')?.value||a.compose||'';
-      closeForm();
-      toast('Installing '+a.name+'…');
-      const host=ensureInstallIndicatorHost();
-      const indicator=document.createElement('div');
-      indicator.className='install-indicator';
-      indicator.innerHTML=`<span class="install-dot"></span><span class="install-label">${esc(a.name)}</span><span class="install-bar-wrap"><span class="install-bar-fill" id="inst-bar-${esc(id)}"></span></span><span class="install-pct" id="inst-step-${esc(id)}">…</span>`;
-      if(host)host.insertBefore(indicator,host.firstChild);
-      try{
-        const r=await post('/apps/install',{app_id:id,content});
-        if(!r.job_id){indicator.remove();toast(appUi('installDidNotStart'),'error');return;}
-        _activeInstalls++;updateAppsBadge();
-        let progress=8;
-        const poller=setInterval(async()=>{
-          try{
-            const s=await api('/apps/install-status?job_id='+encodeURIComponent(r.job_id));
-            const stepEl=$('#inst-step-'+id),barEl=$('#inst-bar-'+id),labelEl=indicator.querySelector('.install-label');
-            if(stepEl)stepEl.textContent=s.step||'…';
-            if(s.status==='pulling')progress=Math.min(progress+2,70);
-            else if(s.status==='starting')progress=Math.min(progress+6,95);
-            if(barEl)barEl.style.width=Math.round(progress)+'%';
-            if(s.status==='done'||s.status==='error'){
-              clearInterval(poller);_activeInstalls=Math.max(0,_activeInstalls-1);updateAppsBadge();
-              if(barEl)barEl.style.width='100%';
-              if(s.ok){indicator.classList.add('done');if(labelEl)labelEl.textContent=a.name+' ✓';toast(a.name+' installed');dashAutoAdd(a.id,a.name,a.icon,a.port);}
-              else {indicator.classList.add('error');indicator.title=s.output||s.step||'';if(labelEl)labelEl.textContent=appUi('installFailed');toast(s.step||appUi('installFailed'),'error');}
-              setTimeout(()=>indicator.remove(),3000);
-              renderApps($('#modal-body'));
-            }
-          }catch(e){}
-        },2000);
-      }catch(e){indicator.classList.add('error');toast('Error: '+e.message,'error');setTimeout(()=>indicator.remove(),3000);}
-    };
+    appInstallRenderVolumes();
+    appInstallRefresh();
+    $('#app-install-go').onclick=()=>appInstallStart(_appInstallDraft);
+    requestAnimationFrame(()=>$('#app-compose-service')?.focus());
   }catch(e){toast('Error: '+e.message,'error');}
 };
 window.appUninstall=(id,name)=>typedConfirm('Uninstall app',`"${name}" will be stopped and removed. Data in /opt/runvard/data/apps/${id}/ stays on disk.`,name,async()=>{
