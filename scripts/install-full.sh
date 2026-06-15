@@ -423,6 +423,7 @@ RestartSec=5
 [Install]
 WantedBy=multi-user.target
 EOF
+chmod 644 "$SERVICE_FILE"
 
 systemctl daemon-reload
 if [ -f "$LEGACY_SERVICE_FILE" ]; then
