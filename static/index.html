@@ -767,6 +767,7 @@ const UI_PHRASES={
     "Advanced":"Erweitert",
     "Advanced Docker tools for users who know images, volumes and Compose files.":"Erweiterte Docker-Werkzeuge für Benutzer, die Images, Volumes und Compose-Dateien kennen.",
     "Advanced compose file":"Erweiterte Compose-Datei",
+    "Advanced Compose template":"Erweiterte Compose-Vorlage",
     "Advanced filters":"Erweiterte Filter",
     "Advanced filesystems":"Erweiterte Dateisysteme",
     "Advanced multi-container projects. Editing Compose files can break services.":"Erweiterte Multi-Container-Projekte. Änderungen an Compose-Dateien können Dienste beschädigen.",
@@ -1628,6 +1629,7 @@ const UI_PHRASES={
     "Advanced":"Avancé",
     "Advanced Docker tools for users who know images, volumes and Compose files.":"Outils Docker avancés pour les utilisateurs qui connaissent les images, volumes et fichiers Compose.",
     "Advanced compose file":"Fichier compose avancé",
+    "Advanced Compose template":"Modèle Compose avancé",
     "Advanced filters":"Filtres avancés",
     "Advanced filesystems":"Systèmes de fichiers avancés",
     "Advanced multi-container projects. Editing Compose files can break services.":"Projets multi-conteneurs avancés. Modifier les fichiers Compose peut casser des services.",
@@ -2446,6 +2448,7 @@ const UI_PHRASES={
     "Advanced":"Avanzate",
     "Advanced Docker tools for users who know images, volumes and Compose files.":"Strumenti Docker avanzati per utenti che conoscono immagini, volumi e file Compose.",
     "Advanced compose file":"File compose avanzato",
+    "Advanced Compose template":"Template Compose avanzato",
     "Advanced filters":"Filtri avanzati",
     "Advanced filesystems":"File system avanzati",
     "Advanced multi-container projects. Editing Compose files can break services.":"Progetti multi-container avanzati. Modificare i file Compose può danneggiare i servizi.",
@@ -3268,6 +3271,7 @@ const UI_PHRASES={
     "Advanced":"Avanzado",
     "Advanced Docker tools for users who know images, volumes and Compose files.":"Herramientas Docker avanzadas para usuarios que conocen imágenes, volúmenes y archivos Compose.",
     "Advanced compose file":"Archivo compose avanzado",
+    "Advanced Compose template":"Plantilla Compose avanzada",
     "Advanced filters":"Filtros avanzados",
     "Advanced filesystems":"Sistemas de archivos avanzados",
     "Advanced multi-container projects. Editing Compose files can break services.":"Proyectos multicontenedor avanzados. Editar archivos Compose puede dañar servicios.",
@@ -4093,6 +4097,7 @@ const UI_PHRASES={
     "Advanced":"Avançado",
     "Advanced Docker tools for users who know images, volumes and Compose files.":"Ferramentas Docker avançadas para utilizadores que conhecem imagens, volumes e ficheiros Compose.",
     "Advanced compose file":"Ficheiro compose avançado",
+    "Advanced Compose template":"Modelo Compose avançado",
     "Advanced filters":"Filtros avançados",
     "Advanced filesystems":"Sistemas de ficheiros avançados",
     "Advanced multi-container projects. Editing Compose files can break services.":"Projetos multi-contentor avançados. Editar ficheiros Compose pode danificar serviços.",
@@ -8569,15 +8574,18 @@ function appInstallParsePort(raw){
 }
 function appInstallParseCompose(content){
   const lines=String(content||'').replace(/\r\n/g,'\n').split('\n');
-  const draft={service:'app',image:'',restart:'unless-stopped',container:'',ports:[],volumes:[],env:[],extra:[]};
+  const draft={service:'app',image:'',restart:'unless-stopped',container:'',ports:[],volumes:[],env:[],extra:[],rawContent:String(content||'')};
   let section='';
   let inServices=false;
+  let serviceCount=0;
+  let hasTopLevelExtra=false;
   lines.forEach(line=>{
     const trimmed=line.trim();
     if(!trimmed)return;
     if(trimmed==='services:'){inServices=true;section='';return;}
+    if(trimmed&&inServices&&!line.startsWith(' ')&&trimmed!=='services:')hasTopLevelExtra=true;
     const svc=trimmed.match(/^([A-Za-z0-9_.-]+):$/);
-    if(inServices&&line.startsWith('  ')&&!line.startsWith('    ')&&svc){draft.service=svc[1];return;}
+    if(inServices&&line.startsWith('  ')&&!line.startsWith('    ')&&svc){serviceCount++;if(serviceCount===1)draft.service=svc[1];return;}
     if(!line.startsWith('    '))return;
     if(/^image:\s*/.test(trimmed)){draft.image=trimmed.replace(/^image:\s*/,'');section='';return;}
     if(/^restart:\s*/.test(trimmed)){draft.restart=trimmed.replace(/^restart:\s*/,'');section='';return;}
@@ -8598,6 +8606,7 @@ function appInstallParseCompose(content){
       draft.env.push({key:p>=0?item.slice(0,p):item,value:p>=0?item.slice(p+1):''});
     }else if(section==='extra')draft.extra.push(line);
   });
+  draft.lockedCompose=serviceCount>1||hasTopLevelExtra;
   if(!draft.container)draft.container=draft.service;
   return draft;
 }
@@ -8631,6 +8640,7 @@ function appInstallVolumeSpec(draft,volume){
   return `${appInstallVolumeSource(draft,volume)}:${volume.target}${mode}`;
 }
 function appInstallCompose(draft){
+  if(draft.lockedCompose)return draft.rawContent.replace(/\r\n/g,'\n').replace(/\s*$/,'')+'\n';
   const lines=['services:',`  ${draft.service}:`];
   if(draft.image)lines.push(`    image: ${draft.image}`);
   if(draft.restart)lines.push(`    restart: ${draft.restart}`);
@@ -8752,6 +8762,7 @@ window.appInstallForm=async id=>{
     const formCard=document.querySelector('#form-overlay .form-card');
     if(formCard)formCard.classList.add('compose-install-card');
     $('#form-head').innerHTML=`<span>🧩</span> ${esc(uiText('Install'))}: ${esc(a.name)}`;
+    const advancedTemplate=draft.lockedCompose;
     $('#form-body').innerHTML=`
       <div class="compose-install-shell">
         <div class="compose-install-head">
@@ -8760,15 +8771,17 @@ window.appInstallForm=async id=>{
           <div class="compose-install-badges"><span class="compose-install-badge">Docker ready</span><span class="compose-install-badge info">Compose</span></div>
         </div>
         <div class="service-summary">
-          <div class="compose-summary-title"><strong>Compose service setup</strong><span class="compose-install-badge info">live preview</span></div>
-          <div class="compose-summary-grid"><div class="compose-summary-cell"><span>Project</span><strong id="app-compose-project">${esc(draft.service)}</strong></div><div class="compose-summary-cell"><span>Storage</span><strong>${draft.volumes.length} volume${draft.volumes.length===1?'':'s'}</strong></div></div>
+          <div class="compose-summary-title"><strong>${esc(uiText(advancedTemplate?'Advanced Compose template':'Compose service setup'))}</strong><span class="compose-install-badge info">${esc(uiText(advancedTemplate?'kept unchanged':'live preview'))}</span></div>
+          <div class="compose-summary-grid"><div class="compose-summary-cell"><span>${esc(uiText('Project'))}</span><strong id="app-compose-project">${esc(draft.service)}</strong></div><div class="compose-summary-cell"><span>${esc(uiText('Storage'))}</span><strong>${draft.volumes.length} volume${draft.volumes.length===1?'':'s'}</strong></div></div>
         </div>
         <div class="compose-form-stack">
+          ${advancedTemplate?'':`
           <div class="compose-block"><div class="compose-key"><code>services:</code><span>Service</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label for="app-compose-service">Service name</label><input id="app-compose-service" value="${esc(draft.service)}" oninput="appInstallRefresh()"></div><div class="compose-field"><label for="app-compose-container">Container name</label><input id="app-compose-container" value="${esc(draft.container)}" oninput="appInstallRefresh()"></div></div></div></div>
           <div class="compose-block"><div class="compose-key"><code>image:</code><span>Runtime</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label for="app-compose-image">Image</label><input id="app-compose-image" value="${esc(draft.image)}" oninput="appInstallRefresh()"></div><div class="compose-field"><label for="app-compose-restart">Restart</label><select id="app-compose-restart" onchange="appInstallRefresh()">${['unless-stopped','always','on-failure','no'].map(x=>`<option value="${x}" ${x===draft.restart?'selected':''}>${x}</option>`).join('')}</select></div></div></div></div>
           <div class="compose-block"><div class="compose-key"><code>ports:</code><span>Network</span></div><div class="compose-block-body">${draft.ports.map((p,i)=>`<div class="compose-port-row"><div class="compose-field"><label for="app-port-host-${i}">Host port</label><input id="app-port-host-${i}" value="${esc(p.host)}" oninput="appInstallRefresh()"></div><div class="compose-arrow">to</div><div class="compose-field"><label for="app-port-container-${i}">Container port${p.proto?` / ${esc(p.proto)}`:''}</label><input id="app-port-container-${i}" value="${esc(p.container)}" oninput="appInstallRefresh()"></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No public ports</div>'}</div></div>
           <div class="compose-block"><div class="compose-key"><code>volumes:</code><span>Storage</span></div><div class="compose-block-body"><div class="compose-volume-list" id="app-compose-volumes"></div></div></div>
           <div class="compose-block"><div class="compose-key"><code>environment:</code><span>Settings</span></div><div class="compose-block-body">${draft.env.map((e,i)=>`<div class="compose-env-row"><div class="compose-field"><span class="compose-label">Variable</span><div class="compose-env-key" id="app-env-key-${i}">${esc(e.key)}</div></div><div class="compose-field"><label for="app-env-value-${i}">Value</label><input id="app-env-value-${i}" value="${esc(e.value)}" oninput="appInstallRefresh()"></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No environment variables</div>'}</div></div>
+          `}
           <div class="compose-block compose-preview-card"><div class="compose-key"><code>compose</code><span>Preview</span></div><div class="compose-block-body"><div class="compose-preview-toolbar"><strong>docker-compose.yml</strong><span class="compose-install-badge info">generated</span></div><pre class="compose-preview mono" id="app-compose-content" aria-label="Generated docker-compose.yml" tabindex="0"></pre></div></div>
         </div>
         <div class="compose-install-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="app-install-go">${esc(uiText('Install'))}</button></div>
