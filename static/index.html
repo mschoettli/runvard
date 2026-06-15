@@ -8685,6 +8685,18 @@ function appInstallRenderVolumes(){
   }).join('')||'<div class="empty-state" style="padding:16px">No volumes in this template</div>';
   translateRenderedText(el);
 }
+function appInstallRenderReadonlyVolumes(draft){
+  return draft.volumes.map(v=>`<div class="compose-volume-row">
+    <div class="compose-volume-heading">
+      <div class="compose-volume-label"><strong>${esc(v.label)}</strong><span>${esc(v.target||'')}</span></div>
+      <span class="compose-volume-badge">${esc(v.mode||'rw')}</span>
+    </div>
+    <div class="compose-volume-fields">
+      <div class="compose-field compose-volume-source"><span class="compose-label">Host source</span><input value="${esc(v.source||'')}" readonly></div>
+      <div class="compose-field"><span class="compose-label">Container target</span><input value="${esc(v.target||'')}" readonly></div>
+    </div>
+  </div>`).join('')||'<div class="empty-state" style="padding:16px">No volumes in this template</div>';
+}
 function appInstallRefresh(){
   const d=_appInstallDraft;if(!d)return;
   const service=$('#app-compose-service'),container=$('#app-compose-container'),image=$('#app-compose-image'),restart=$('#app-compose-restart');
@@ -8775,7 +8787,13 @@ window.appInstallForm=async id=>{
           <div class="compose-summary-grid"><div class="compose-summary-cell"><span>${esc(uiText('Project'))}</span><strong id="app-compose-project">${esc(draft.service)}</strong></div><div class="compose-summary-cell"><span>${esc(uiText('Storage'))}</span><strong>${draft.volumes.length} volume${draft.volumes.length===1?'':'s'}</strong></div></div>
         </div>
         <div class="compose-form-stack">
-          ${advancedTemplate?'':`
+          ${advancedTemplate?`
+          <div class="compose-block"><div class="compose-key"><code>services:</code><span>Service</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><span class="compose-label">Service name</span><input value="${esc(draft.service)}" readonly></div><div class="compose-field"><span class="compose-label">Container name</span><input value="${esc(draft.container)}" readonly></div></div></div></div>
+          <div class="compose-block"><div class="compose-key"><code>image:</code><span>Runtime</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><span class="compose-label">Image</span><input value="${esc(draft.image)}" readonly></div><div class="compose-field"><span class="compose-label">Restart</span><input value="${esc(draft.restart)}" readonly></div></div></div></div>
+          <div class="compose-block"><div class="compose-key"><code>ports:</code><span>Network</span></div><div class="compose-block-body">${draft.ports.map(p=>`<div class="compose-port-row"><div class="compose-field"><span class="compose-label">Host port</span><input value="${esc(p.host)}" readonly></div><div class="compose-arrow">to</div><div class="compose-field"><span class="compose-label">Container port${p.proto?` / ${esc(p.proto)}`:''}</span><input value="${esc(p.container)}" readonly></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No public ports</div>'}</div></div>
+          <div class="compose-block"><div class="compose-key"><code>volumes:</code><span>Storage</span></div><div class="compose-block-body"><div class="compose-volume-list">${appInstallRenderReadonlyVolumes(draft)}</div></div></div>
+          <div class="compose-block"><div class="compose-key"><code>environment:</code><span>Settings</span></div><div class="compose-block-body">${draft.env.map(e=>`<div class="compose-env-row"><div class="compose-field"><span class="compose-label">Variable</span><div class="compose-env-key">${esc(e.key)}</div></div><div class="compose-field"><span class="compose-label">Value</span><input value="${esc(e.value)}" readonly></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No environment variables</div>'}</div></div>
+          `:`
           <div class="compose-block"><div class="compose-key"><code>services:</code><span>Service</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label for="app-compose-service">Service name</label><input id="app-compose-service" value="${esc(draft.service)}" oninput="appInstallRefresh()"></div><div class="compose-field"><label for="app-compose-container">Container name</label><input id="app-compose-container" value="${esc(draft.container)}" oninput="appInstallRefresh()"></div></div></div></div>
           <div class="compose-block"><div class="compose-key"><code>image:</code><span>Runtime</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label for="app-compose-image">Image</label><input id="app-compose-image" value="${esc(draft.image)}" oninput="appInstallRefresh()"></div><div class="compose-field"><label for="app-compose-restart">Restart</label><select id="app-compose-restart" onchange="appInstallRefresh()">${['unless-stopped','always','on-failure','no'].map(x=>`<option value="${x}" ${x===draft.restart?'selected':''}>${x}</option>`).join('')}</select></div></div></div></div>
           <div class="compose-block"><div class="compose-key"><code>ports:</code><span>Network</span></div><div class="compose-block-body">${draft.ports.map((p,i)=>`<div class="compose-port-row"><div class="compose-field"><label for="app-port-host-${i}">Host port</label><input id="app-port-host-${i}" value="${esc(p.host)}" oninput="appInstallRefresh()"></div><div class="compose-arrow">to</div><div class="compose-field"><label for="app-port-container-${i}">Container port${p.proto?` / ${esc(p.proto)}`:''}</label><input id="app-port-container-${i}" value="${esc(p.container)}" oninput="appInstallRefresh()"></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No public ports</div>'}</div></div>
@@ -8787,7 +8805,7 @@ window.appInstallForm=async id=>{
         <div class="compose-install-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="app-install-go">${esc(uiText('Install'))}</button></div>
       </div>`;
     $('#form-overlay').classList.add('open');
-    appInstallRenderVolumes();
+    if(!advancedTemplate)appInstallRenderVolumes();
     appInstallRefresh();
     translateRenderedText($('#form-body'));
     $('#app-install-go').onclick=()=>appInstallStart(_appInstallDraft);
