@@ -698,6 +698,42 @@ def _compose_diagnostics(path):
     return output
 
 
+def _fallback_down(app_id):
+    """Remove app containers when docker compose down cannot parse the file."""
+    output = ""
+    names = {app_id}
+    if app_id == "immich":
+        names.update({"immich", "immich-server", "immich-machine-learning",
+                      "immich-redis", "immich-postgres"})
+    try:
+        r = subprocess.run(
+            ["docker", "ps", "-aq", "--filter", f"label=com.docker.compose.project={app_id}"],
+            capture_output=True, text=True, timeout=30
+        )
+        output += r.stdout + r.stderr
+        names.update(x for x in r.stdout.splitlines() if x.strip())
+    except Exception as e:
+        output += f"\nFallback container lookup failed: {e}"
+    hard_fail = False
+    for name in sorted(names):
+        try:
+            r = subprocess.run(["docker", "rm", "-f", name],
+                               capture_output=True, text=True, timeout=60)
+            output += r.stdout + r.stderr
+            if r.returncode != 0 and "No such container" not in r.stderr:
+                hard_fail = True
+        except Exception as e:
+            output += f"\nFallback remove failed for {name}: {e}"
+            hard_fail = True
+    try:
+        r = subprocess.run(["docker", "network", "rm", f"{app_id}_default"],
+                           capture_output=True, text=True, timeout=30)
+        output += r.stdout + r.stderr
+    except Exception:
+        pass
+    return {"ok": not hard_fail, "output": output}
+
+
 def build_compose(app):
     """
     Build a docker-compose.yml file from an app template.
@@ -1000,6 +1036,10 @@ def action(app_id, act):
         if r.returncode != 0:
             ok = False
             break
+    if act == "down" and not ok:
+        fallback = _fallback_down(app_id)
+        output += "\nFallback uninstall:\n" + fallback["output"]
+        ok = fallback["ok"]
     if act in ("start", "restart", "update") and ok:
         time.sleep(1)
         if not _running(app_id):
