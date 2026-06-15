@@ -1103,10 +1103,15 @@ const UI_PHRASES={
     "Min. days":"Min. Tage",
     "Modified":"Geändert",
     "Most servers only need one connected interface with an IP address. Advanced networking is below.":"Die meisten Server brauchen nur eine verbundene Schnittstelle mit IP-Adresse. Erweiterte Netzwerkeinstellungen sind unten.",
+    "Could not mount volume":"Volume konnte nicht eingehängt werden",
+    "Mount":"Einhängen",
+    "Mount automatically after reboot":"Nach Neustart automatisch einhängen",
     "Mount error":"Mount-Fehler",
     "Mount path of the Btrfs filesystem":"Eingehängter Pfad des Btrfs-Dateisystems",
     "Mount point":"Mountpoint",
+    "Mounting volume…":"Hänge Volume ein…",
     "Mounted volumes":"Eingehängte Volumes",
+    "Volume mounted":"Volume eingehängt",
     "NFS share connected":"NFS-Share verbunden",
     "NIC attached":"NIC angehängt",
     "NIC detached":"NIC abgehängt",
@@ -1955,10 +1960,15 @@ const UI_PHRASES={
     "Min. days":"Jours min.",
     "Modified":"Modifié",
     "Most servers only need one connected interface with an IP address. Advanced networking is below.":"La plupart des serveurs n’ont besoin que d’une interface connectée avec une adresse IP. Le réseau avancé est ci-dessous.",
+    "Could not mount volume":"Impossible de monter le volume",
+    "Mount":"Monter",
+    "Mount automatically after reboot":"Monter automatiquement après redémarrage",
     "Mount error":"Erreur de montage",
     "Mount path of the Btrfs filesystem":"Point de montage du système de fichiers Btrfs",
     "Mount point":"Point de montage",
+    "Mounting volume…":"Montage du volume…",
     "Mounted volumes":"Volumes montés",
+    "Volume mounted":"Volume monté",
     "NFS share connected":"Partage NFS connecté",
     "NIC attached":"Carte réseau attachée",
     "NIC detached":"Carte réseau détachée",
@@ -2771,10 +2781,15 @@ const UI_PHRASES={
     "Min. days":"Giorni min.",
     "Modified":"Modificato",
     "Most servers only need one connected interface with an IP address. Advanced networking is below.":"La maggior parte dei server necessita di una sola interfaccia connessa con un indirizzo IP. Le impostazioni di rete avanzate sono sotto.",
+    "Could not mount volume":"Impossibile montare il volume",
+    "Mount":"Monta",
+    "Mount automatically after reboot":"Monta automaticamente dopo il riavvio",
     "Mount error":"Errore di montaggio",
     "Mount path of the Btrfs filesystem":"Percorso di montaggio del filesystem Btrfs",
     "Mount point":"Punto di montaggio",
+    "Mounting volume…":"Montaggio volume…",
     "Mounted volumes":"Volumi montati",
+    "Volume mounted":"Volume montato",
     "NFS share connected":"Condivisione NFS connessa",
     "NIC attached":"NIC collegata",
     "NIC detached":"NIC scollegata",
@@ -3587,10 +3602,15 @@ const UI_PHRASES={
     "Min. days":"Días mín.",
     "Modified":"Modificado",
     "Most servers only need one connected interface with an IP address. Advanced networking is below.":"La mayoría de los servidores solo necesitan una interfaz conectada con dirección IP. La red avanzada está abajo.",
+    "Could not mount volume":"No se pudo montar el volumen",
+    "Mount":"Montar",
+    "Mount automatically after reboot":"Montar automáticamente después de reiniciar",
     "Mount error":"Error de montaje",
     "Mount path of the Btrfs filesystem":"Ruta de montaje del sistema de archivos Btrfs",
     "Mount point":"Punto de montaje",
+    "Mounting volume…":"Montando volumen…",
     "Mounted volumes":"Volúmenes montados",
+    "Volume mounted":"Volumen montado",
     "NFS share connected":"Recurso NFS conectado",
     "NIC attached":"NIC conectada",
     "NIC detached":"NIC desconectada",
@@ -4410,10 +4430,15 @@ const UI_PHRASES={
     "Min. days":"Dias mín.",
     "Modified":"Modificado",
     "Most servers only need one connected interface with an IP address. Advanced networking is below.":"A maioria dos servidores só precisa de uma interface ligada com endereço IP. A rede avançada está abaixo.",
+    "Could not mount volume":"Não foi possível montar o volume",
+    "Mount":"Montar",
+    "Mount automatically after reboot":"Montar automaticamente após reiniciar",
     "Mount error":"Erro de montagem",
     "Mount path of the Btrfs filesystem":"Caminho de montagem do sistema de ficheiros Btrfs",
     "Mount point":"Ponto de montagem",
+    "Mounting volume…":"A montar volume…",
     "Mounted volumes":"Volumes montados",
+    "Volume mounted":"Volume montado",
     "NFS share connected":"Partilha NFS ligada",
     "NIC attached":"NIC anexada",
     "NIC detached":"NIC desanexada",
@@ -4880,7 +4905,7 @@ const PHRASE_PATTERNS=[
   {re:new RegExp("^(\\d+) files$"),t:{"de": "$1 Dateien", "fr": "$1 fichiers", "it": "$1 file", "es": "$1 archivos", "pt": "$1 ficheiros"}},
   {re:new RegExp("^Results for \"(.+)\"$"),t:{"de": "Ergebnisse für „$1\"", "fr": "Résultats pour « $1 »", "it": "Risultati per \"$1\"", "es": "Resultados para «$1»", "pt": "Resultados para \"$1\""}}
 ];
-const PHRASE_PREFIX=[["Error: ", 7, {"de": "Fehler: ", "fr": "Erreur : ", "it": "Errore: ", "es": "Error: ", "pt": "Erro: "}], ["Latest: ", 8, {"de": "Neueste Version: ", "fr": "Dernière : ", "it": "Ultima: ", "es": "Última: ", "pt": "Mais recente: "}]];
+const PHRASE_PREFIX=[["Error: ", 7, {"de": "Fehler: ", "fr": "Erreur : ", "it": "Errore: ", "es": "Error: ", "pt": "Erro: "}], ["Latest: ", 8, {"de": "Neueste Version: ", "fr": "Dernière : ", "it": "Ultima: ", "es": "Última: ", "pt": "Mais recente: "}], ["Mount volume: ", 14, {"de": "Volume einhängen: ", "fr": "Monter le volume : ", "it": "Monta volume: ", "es": "Montar volumen: ", "pt": "Montar volume: "}]];
 const PHRASE_SUFFIX=[[" installed", 10, {"de": " installiert", "fr": " installé", "it": " installato", "es": " instalado", "pt": " instalado"}], [" uninstalled", 12, {"de": " deinstalliert", "fr": " désinstallé", "it": " disinstallato", "es": " desinstalado", "pt": " desinstalado"}]];
 const PHRASE_INSTALLING={"de": "Installiere ", "fr": "Installation de ", "it": "Installazione di ", "es": "Instalando ", "pt": "A instalar "};
 const TOAST_ALIASES={
@@ -8342,7 +8367,7 @@ function renderDeviceCards(devs){
       </div>
       <div class="nx-action-row">
         ${!d.protected&&d.type==='disk'&&!hasVolumes?`<button class="btn sm" onclick="diskWizard('${esc(d.name)}')">Set up disk</button>`:''}
-        ${isMountableVolume(volume,d)?`<button class="btn sm" onclick="mountVolumeForm('${esc(volume.name)}')">Mount</button>`:''}
+        ${isMountableVolume(volume,d)?`<button class="btn sm" onclick="mountVolumeForm('${esc(volume.name)}')">${esc(uiText('Mount'))}</button>`:''}
         ${!d.protected&&/^(ext[234]|xfs|btrfs)$/.test(volume.fstype||'')?`<button class="btn ghost sm" onclick="fsGrowForm('${esc(volume.name)}','${esc(volume.mountpoint||'')}','${esc(volume.fstype)}')">Grow filesystem</button>`:''}
       </div>
       ${d.children&&d.children.length?advancedDetails('Volumes',renderDeviceCards(d.children),false):''}
