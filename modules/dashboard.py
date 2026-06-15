@@ -29,10 +29,10 @@ def _compose_running(app_id):
     if not os.path.isdir(path):
         return False
     try:
-        r = subprocess.run(["docker", "compose", "ps", "--status", "running", "-q"],
+        r = subprocess.run(["docker", "compose", "ps", "--status", "running", "-q", app_id],
                            cwd=path, capture_output=True, text=True, timeout=15)
         if r.returncode != 0:
-            r = subprocess.run(["docker", "compose", "ps", "-q"],
+            r = subprocess.run(["docker", "compose", "ps", "--status", "running", "-q"],
                                cwd=path, capture_output=True, text=True,
                                timeout=15)
         return bool(r.stdout.strip())

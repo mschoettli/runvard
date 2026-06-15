@@ -86,7 +86,42 @@ CATALOG = [
     {"id": "immich", "name": "Immich", "icon": "immich", "category": "Media",
      "desc": "Foto- & Video-Backup in Hochleistung", "port": 2283,
      "tpl": _c("ghcr.io/immich-app/immich-server:release", ["2283:2283"],
-               ["./upload:/usr/src/app/upload"])},
+               ["./library:/data", "/etc/localtime:/etc/localtime:ro"],
+               {
+                   "DB_HOSTNAME": "database",
+                   "DB_USERNAME": "postgres",
+                   "DB_PASSWORD": "postgres",
+                   "DB_DATABASE_NAME": "immich",
+                   "REDIS_HOSTNAME": "redis",
+                   "IMMICH_MACHINE_LEARNING_URL": "http://immich-machine-learning:3003",
+               },
+               extra="""    depends_on:
+      - redis
+      - database
+  immich-machine-learning:
+    image: ghcr.io/immich-app/immich-machine-learning:release
+    container_name: immich-machine-learning
+    restart: unless-stopped
+    volumes:
+      - model-cache:/cache
+  redis:
+    image: docker.io/valkey/valkey:9
+    container_name: immich-redis
+    restart: unless-stopped
+  database:
+    image: ghcr.io/immich-app/postgres:14-vectorchord0.4.3-pgvectors0.2.0
+    container_name: immich-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_USER: postgres
+      POSTGRES_DB: immich
+      POSTGRES_INITDB_ARGS: '--data-checksums'
+    volumes:
+      - ./postgres:/var/lib/postgresql/data
+    shm_size: 128mb
+volumes:
+  model-cache:""")},
     {"id": "tube-archivist", "name": "TubeArchivist", "icon": "invidious", "category": "Media",
      "desc": "Eigenes YouTube-Archiv", "port": 8000,
      "tpl": _c("bbilly1/tubearchivist:latest", ["8000:8000"],
@@ -720,10 +755,10 @@ def _running(app_id):
     if not os.path.isdir(path):
         return False
     try:
-        r = subprocess.run(["docker", "compose", "ps", "--status", "running", "-q"],
+        r = subprocess.run(["docker", "compose", "ps", "--status", "running", "-q", app_id],
                            cwd=path, capture_output=True, text=True, timeout=15)
         if r.returncode != 0:
-            r = subprocess.run(["docker", "compose", "ps", "-q"],
+            r = subprocess.run(["docker", "compose", "ps", "--status", "running", "-q"],
                                cwd=path, capture_output=True, text=True,
                                timeout=15)
         return bool(r.stdout.strip())
