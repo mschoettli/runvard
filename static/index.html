@@ -384,11 +384,6 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .compose-summary-cell{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.075);border-radius:8px;padding:9px;min-width:0}
 .compose-summary-cell span{display:block;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
 .compose-summary-cell strong{display:block;font-size:12px;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.compose-install-layout{display:grid;grid-template-columns:1fr;gap:14px}
-.compose-rail{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
-.compose-rail-item{min-width:max-content;background:#0a0810;border:1px solid var(--border);border-radius:9px;padding:8px 10px}
-.compose-rail-item strong{display:block;color:var(--accent-light);font-family:'JetBrains Mono',monospace;font-size:11px;font-weight:600}
-.compose-rail-item span{display:block;color:var(--text3);font-size:10px;margin-top:2px}
 .compose-form-stack{display:grid;gap:10px}
 .compose-block{display:grid;border:1px solid var(--border);border-radius:11px;background:var(--bg3);overflow:hidden}
 .compose-key{display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(0,0,0,.16);border-bottom:1px solid var(--border);padding:10px 12px}
@@ -399,11 +394,16 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .compose-field{display:grid;gap:5px;min-width:0}
 .compose-field label,.compose-field .compose-label{font-size:12px;color:var(--text2);margin:0}
 .compose-field input,.compose-field select{min-height:40px}
-.compose-port-row,.compose-volume-row,.compose-env-row{display:grid;grid-template-columns:1fr;gap:8px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.075);border-radius:9px;padding:10px}
+.compose-port-row,.compose-env-row{display:grid;grid-template-columns:1fr;gap:8px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.075);border-radius:9px;padding:10px}
 .compose-volume-list{display:grid;gap:8px}
-.compose-volume-label{display:grid;gap:3px}
+.compose-volume-row{display:grid;gap:10px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.075);border-radius:9px;padding:12px}
+.compose-volume-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.compose-volume-label{display:grid;gap:3px;min-width:0}
 .compose-volume-label strong{font-size:13px;color:var(--text)}
 .compose-volume-label span{font-size:11px;color:var(--text3);line-height:1.35}
+.compose-volume-badge{display:inline-flex;align-items:center;min-height:22px;max-width:100%;padding:3px 8px;border-radius:999px;border:1px solid rgba(122,74,255,.24);background:rgba(122,74,255,.08);color:var(--accent-light);font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.compose-volume-fields{display:grid;grid-template-columns:1fr;gap:10px}
+.compose-volume-source{min-width:0}
 .compose-drive-select{position:relative}
 .compose-drive-select:before{content:"";position:absolute;left:9px;top:50%;width:7px;height:7px;border-radius:50%;background:#67e8f9;transform:translateY(-50%);pointer-events:none}
 .compose-drive-select.system:before{background:#facc15}
@@ -419,16 +419,12 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 @media (min-width: 768px){
   .compose-field-grid,.compose-env-row,.compose-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
   .compose-port-row{grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr)}
+  .compose-volume-fields{grid-template-columns:minmax(160px,.8fr) minmax(260px,1.4fr)}
+  .compose-volume-source{grid-column:span 1}
   .compose-arrow{display:block}
 }
 @media (min-width: 1024px){
-  .compose-install-layout{grid-template-columns:170px minmax(0,1fr);align-items:start}
-  .compose-rail{position:sticky;top:0;display:grid;overflow:visible;padding:0}
-  .compose-rail-item{min-width:0}
-  .compose-block{grid-template-columns:150px minmax(0,1fr)}
-  .compose-key{display:block;border-bottom:0;border-right:1px solid var(--border)}
-  .compose-key code{width:100%;margin-bottom:8px}
-  .compose-volume-row{grid-template-columns:118px 128px minmax(0,1.15fr) minmax(0,.9fr) 70px;align-items:end}
+  .compose-volume-fields{grid-template-columns:minmax(160px,.8fr) minmax(340px,1.8fr) minmax(180px,.9fr) minmax(90px,.45fr);align-items:end}
 }
 .app-menu{position:fixed;background:rgba(15,12,26,.97);border:.5px solid var(--border-accent);border-radius:12px;padding:6px;z-index:999;min-width:170px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
 .app-menu div{padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center}
@@ -784,6 +780,7 @@ const UI_PHRASES={
     "App restarted":"App neugestartet",
     "App started":"App gestartet",
     "App stopped":"App gestoppt",
+    "App state":"App-Zustand",
     "App updated ✓":"App aktualisiert ✓",
     "AppArmor unavailable":"AppArmor nicht verfügbar",
     "Apply":"Anwenden",
@@ -849,6 +846,7 @@ const UI_PHRASES={
     "Compose project":"Compose-Projekt",
     "Compose project deleted":"Compose-Projekt gelöscht",
     "Compose projects":"Compose-Projekte",
+    "Compose service setup":"Compose-Service einrichten",
     "Configure IP":"IP konfigurieren",
     "Configured":"Konfiguriert",
     "Configured now":"Aktuell konfiguriert",
@@ -866,6 +864,9 @@ const UI_PHRASES={
     "Container services":"Container-Dienste",
     "Container started":"Container gestartet",
     "Container stopped":"Container gestoppt",
+    "Container name":"Containername",
+    "Container port":"Container-Port",
+    "Container target":"Container-Ziel",
     "Containers":"Container",
     "Continue":"Fortfahren",
     "Copy":"Kopieren",
@@ -1156,6 +1157,8 @@ const UI_PHRASES={
     "No port found in the Compose file":"Kein Port im Compose-File gefunden",
     "No projects":"Keine Projekte",
     "No public ports":"Keine öffentlichen Ports",
+    "No environment variables":"Keine Umgebungsvariablen",
+    "No volumes in this template":"Keine Volumes in dieser Vorlage",
     "No remote disks connected":"Keine Remote-Laufwerke verbunden",
     "No reports yet":"Noch keine Berichte",
     "No rules":"Keine Regeln",
@@ -1301,6 +1304,7 @@ const UI_PHRASES={
     "Select one file or folder first":"Wähle zuerst genau eine Datei oder einen Ordner aus",
     "Server IP or hostname":"Server-IP oder Hostname",
     "Service restarted:":"Service neugestartet:",
+    "Service name":"Servicename",
     "Service started:":"Service gestartet:",
     "Service stopped:":"Service gestoppt:",
     "Service, e.g. runvard":"Dienst, z. B. runvard",
@@ -1360,6 +1364,26 @@ const UI_PHRASES={
     "System overview":"Systemübersicht",
     "System packages":"Systempakete",
     "System user":"Systembenutzer",
+    "Docker ready":"Docker bereit",
+    "Drive":"Laufwerk",
+    "Fixed":"Fixiert",
+    "Fixed host path":"Fester Host-Pfad",
+    "Generated docker-compose.yml":"Generierte docker-compose.yml",
+    "Host path":"Host-Pfad",
+    "Host port":"Host-Port",
+    "Host source":"Host-Pfad",
+    "Image":"Image",
+    "Large data":"Große Daten",
+    "Mode":"Modus",
+    "Preview":"Vorschau",
+    "Runtime":"Laufzeit",
+    "Settings":"Einstellungen",
+    "Value":"Wert",
+    "Variable":"Variable",
+    "free":"frei",
+    "generated":"generiert",
+    "live preview":"Live-Vorschau",
+    "to":"zu",
     "Target size":"Zielgröße",
     "Task created":"Aufgabe erstellt",
     "Text search":"Textsuche",
@@ -8556,13 +8580,16 @@ function appInstallBestMount(mounts,role){
   return (fast||nonRoot[0]).mountpoint;
 }
 function appInstallMountLabel(m){
-  const name=m.mountpoint==='/'?'System disk':m.mountpoint;
-  const detail=[m.device,m.fstype,fmtBytes(m.free||0)+' free'].filter(Boolean).join(' · ');
+  const name=m.mountpoint==='/'?uiText('System disk'):m.mountpoint;
+  const detail=[m.device,m.fstype,fmtBytes(m.free||0)+' '+uiText('free')].filter(Boolean).join(' · ');
   return `${name} (${detail})`;
 }
-function appInstallVolumeSource(draft,volume){
+function appInstallVolumeComputedSource(draft,volume){
   if(!volume.managed)return volume.source;
   return appInstallJoin(appInstallMountRoot(volume.mountpoint,draft.app.id),volume.folder);
+}
+function appInstallVolumeSource(draft,volume){
+  return volume.sourceOverride??appInstallVolumeComputedSource(draft,volume);
 }
 function appInstallVolumeSpec(draft,volume){
   const mode=volume.mode&&volume.mode!=='rw'?`:${volume.mode}`:'';
@@ -8597,28 +8624,54 @@ function appInstallRenderVolumes(){
   el.innerHTML=d.volumes.map((v,i)=>{
     const role=appInstallVolumeRole(v);
     const driveClass=!v.managed?'absolute':v.mountpoint==='/'?'system':'';
+    const roleLabel=v.managed?(role==='large'?'Large data':'App state'):'Host path';
     return `<div class="compose-volume-row">
-      <div class="compose-volume-label"><strong>${esc(v.label)}</strong><span>${esc(v.managed?(role==='large'?'Large data':'App state'):'Host path')}</span></div>
-      <div class="compose-field"><label for="app-volume-drive-${i}">Drive</label><div class="compose-drive-select ${driveClass}">${v.managed?`<select id="app-volume-drive-${i}" onchange="appInstallSetVolumeMount(${i},this.value)">${d.mounts.map(m=>`<option value="${esc(m.mountpoint)}" ${m.mountpoint===v.mountpoint?'selected':''}>${esc(appInstallMountLabel(m))}</option>`).join('')}</select>`:`<input id="app-volume-drive-${i}" value="Fixed" readonly>`}</div></div>
-      <div class="compose-field"><label for="app-volume-source-${i}">Host source</label><input id="app-volume-source-${i}" value="${esc(appInstallVolumeSource(d,v))}" readonly></div>
-      <div class="compose-field"><label for="app-volume-target-${i}">Container target</label><input id="app-volume-target-${i}" value="${esc(v.target||'-')}" readonly></div>
-      <div class="compose-field"><label for="app-volume-mode-${i}">Mode</label><input id="app-volume-mode-${i}" value="${esc(v.mode||'rw')}" readonly></div>
+      <div class="compose-volume-heading">
+        <div class="compose-volume-label"><strong>${esc(v.label)}</strong><span>${esc(roleLabel)}</span></div>
+        <span class="compose-volume-badge">${esc(v.managed?appInstallMountLabel(d.mounts.find(m=>m.mountpoint===v.mountpoint)||{mountpoint:v.mountpoint}):'Fixed host path')}</span>
+      </div>
+      <div class="compose-volume-fields">
+        <div class="compose-field"><label for="app-volume-drive-${i}">Drive</label><div class="compose-drive-select ${driveClass}">${v.managed?`<select id="app-volume-drive-${i}" onchange="appInstallSetVolumeMount(${i},this.value)">${d.mounts.map(m=>`<option value="${esc(m.mountpoint)}" ${m.mountpoint===v.mountpoint?'selected':''}>${esc(appInstallMountLabel(m))}</option>`).join('')}</select>`:`<input id="app-volume-drive-${i}" value="${esc(uiText('Fixed'))}" readonly>`}</div></div>
+        <div class="compose-field compose-volume-source"><label for="app-volume-source-${i}">Host source</label><input id="app-volume-source-${i}" value="${esc(appInstallVolumeSource(d,v))}" oninput="appInstallRefresh()"></div>
+        <div class="compose-field"><label for="app-volume-target-${i}">Container target</label><input id="app-volume-target-${i}" value="${esc(v.target||'')}" oninput="appInstallRefresh()"></div>
+        <div class="compose-field"><label for="app-volume-mode-${i}">Mode</label><input id="app-volume-mode-${i}" value="${esc(v.mode||'rw')}" oninput="appInstallRefresh()"></div>
+      </div>
     </div>`;
   }).join('')||'<div class="empty-state" style="padding:16px">No volumes in this template</div>';
+  translateRenderedText(el);
 }
 function appInstallRefresh(){
   const d=_appInstallDraft;if(!d)return;
-  d.service=$('#app-compose-service')?.value.trim()||d.service;
-  d.container=$('#app-compose-container')?.value.trim()||d.service;
-  d.image=$('#app-compose-image')?.value.trim()||d.image;
-  d.restart=$('#app-compose-restart')?.value||d.restart;
-  d.ports.forEach((p,i)=>{p.host=$(`#app-port-host-${i}`)?.value.trim()||p.host;p.container=$(`#app-port-container-${i}`)?.value.trim()||p.container;});
+  const service=$('#app-compose-service'),container=$('#app-compose-container'),image=$('#app-compose-image'),restart=$('#app-compose-restart');
+  if(service)d.service=service.value.trim();
+  if(container)d.container=container.value.trim();
+  if(image)d.image=image.value.trim();
+  if(restart)d.restart=restart.value;
+  d.ports.forEach((p,i)=>{
+    const host=$(`#app-port-host-${i}`),target=$(`#app-port-container-${i}`);
+    if(host)p.host=host.value.trim();
+    if(target)p.container=target.value.trim();
+  });
+  d.volumes.forEach((v,i)=>{
+    const source=$(`#app-volume-source-${i}`),target=$(`#app-volume-target-${i}`),mode=$(`#app-volume-mode-${i}`);
+    if(source)v.sourceOverride=source.value.trim();
+    if(target)v.target=target.value.trim();
+    if(mode)v.mode=mode.value.trim();
+  });
   d.env.forEach((e,i)=>{e.value=$(`#app-env-value-${i}`)?.value??e.value;});
   const content=appInstallCompose(d);
   const preview=$('#app-compose-content');if(preview)preview.textContent=content;
   const project=$('#app-compose-project');if(project)project.textContent=d.service;
 }
-window.appInstallSetVolumeMount=(index,mountpoint)=>{if(!_appInstallDraft||!_appInstallDraft.volumes[index])return;_appInstallDraft.volumes[index].mountpoint=mountpoint;appInstallRenderVolumes();appInstallRefresh();};
+window.appInstallSetVolumeMount=(index,mountpoint)=>{
+  if(!_appInstallDraft||!_appInstallDraft.volumes[index])return;
+  appInstallRefresh();
+  const volume=_appInstallDraft.volumes[index];
+  volume.mountpoint=mountpoint;
+  volume.sourceOverride=appInstallVolumeComputedSource(_appInstallDraft,volume);
+  appInstallRenderVolumes();
+  appInstallRefresh();
+};
 async function appInstallStart(draft){
   const content=appInstallCompose(draft);
   closeForm();
@@ -8675,24 +8728,20 @@ window.appInstallForm=async id=>{
           <div class="compose-summary-title"><strong>Compose service setup</strong><span class="compose-install-badge info">live preview</span></div>
           <div class="compose-summary-grid"><div class="compose-summary-cell"><span>Project</span><strong id="app-compose-project">${esc(draft.service)}</strong></div><div class="compose-summary-cell"><span>Storage</span><strong>${draft.volumes.length} volume${draft.volumes.length===1?'':'s'}</strong></div></div>
         </div>
-        <div class="compose-install-layout">
-          <div class="compose-rail">
-            ${[['services:','service'],['image:','runtime'],['ports:','network'],['volumes:','storage'],['environment:','settings'],['preview','file']].map(x=>`<div class="compose-rail-item"><strong>${x[0]}</strong><span>${x[1]}</span></div>`).join('')}
-          </div>
-          <div class="compose-form-stack">
-            <div class="compose-block"><div class="compose-key"><code>services:</code><span>Service</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label for="app-compose-service">Service name</label><input id="app-compose-service" value="${esc(draft.service)}" oninput="appInstallRefresh()"></div><div class="compose-field"><label for="app-compose-container">Container name</label><input id="app-compose-container" value="${esc(draft.container)}" oninput="appInstallRefresh()"></div></div></div></div>
-            <div class="compose-block"><div class="compose-key"><code>image:</code><span>Runtime</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label for="app-compose-image">Image</label><input id="app-compose-image" value="${esc(draft.image)}" oninput="appInstallRefresh()"></div><div class="compose-field"><label for="app-compose-restart">Restart</label><select id="app-compose-restart" onchange="appInstallRefresh()">${['unless-stopped','always','on-failure','no'].map(x=>`<option value="${x}" ${x===draft.restart?'selected':''}>${x}</option>`).join('')}</select></div></div></div></div>
-            <div class="compose-block"><div class="compose-key"><code>ports:</code><span>Network</span></div><div class="compose-block-body">${draft.ports.map((p,i)=>`<div class="compose-port-row"><div class="compose-field"><label for="app-port-host-${i}">Host port</label><input id="app-port-host-${i}" value="${esc(p.host)}" oninput="appInstallRefresh()"></div><div class="compose-arrow">to</div><div class="compose-field"><label for="app-port-container-${i}">Container port${p.proto?` / ${esc(p.proto)}`:''}</label><input id="app-port-container-${i}" value="${esc(p.container)}" oninput="appInstallRefresh()"></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No public ports</div>'}</div></div>
-            <div class="compose-block"><div class="compose-key"><code>volumes:</code><span>Storage</span></div><div class="compose-block-body"><div class="compose-volume-list" id="app-compose-volumes"></div></div></div>
-            <div class="compose-block"><div class="compose-key"><code>environment:</code><span>Settings</span></div><div class="compose-block-body">${draft.env.map((e,i)=>`<div class="compose-env-row"><div class="compose-field"><span class="compose-label">Variable</span><div class="compose-env-key" id="app-env-key-${i}">${esc(e.key)}</div></div><div class="compose-field"><label for="app-env-value-${i}">Value</label><input id="app-env-value-${i}" value="${esc(e.value)}" oninput="appInstallRefresh()"></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No environment variables</div>'}</div></div>
-            <div class="compose-block compose-preview-card"><div class="compose-key"><code>compose</code><span>Preview</span></div><div class="compose-block-body"><div class="compose-preview-toolbar"><strong>docker-compose.yml</strong><span class="compose-install-badge info">generated</span></div><pre class="compose-preview mono" id="app-compose-content" aria-label="Generated docker-compose.yml" tabindex="0"></pre></div></div>
-          </div>
+        <div class="compose-form-stack">
+          <div class="compose-block"><div class="compose-key"><code>services:</code><span>Service</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label for="app-compose-service">Service name</label><input id="app-compose-service" value="${esc(draft.service)}" oninput="appInstallRefresh()"></div><div class="compose-field"><label for="app-compose-container">Container name</label><input id="app-compose-container" value="${esc(draft.container)}" oninput="appInstallRefresh()"></div></div></div></div>
+          <div class="compose-block"><div class="compose-key"><code>image:</code><span>Runtime</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label for="app-compose-image">Image</label><input id="app-compose-image" value="${esc(draft.image)}" oninput="appInstallRefresh()"></div><div class="compose-field"><label for="app-compose-restart">Restart</label><select id="app-compose-restart" onchange="appInstallRefresh()">${['unless-stopped','always','on-failure','no'].map(x=>`<option value="${x}" ${x===draft.restart?'selected':''}>${x}</option>`).join('')}</select></div></div></div></div>
+          <div class="compose-block"><div class="compose-key"><code>ports:</code><span>Network</span></div><div class="compose-block-body">${draft.ports.map((p,i)=>`<div class="compose-port-row"><div class="compose-field"><label for="app-port-host-${i}">Host port</label><input id="app-port-host-${i}" value="${esc(p.host)}" oninput="appInstallRefresh()"></div><div class="compose-arrow">to</div><div class="compose-field"><label for="app-port-container-${i}">Container port${p.proto?` / ${esc(p.proto)}`:''}</label><input id="app-port-container-${i}" value="${esc(p.container)}" oninput="appInstallRefresh()"></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No public ports</div>'}</div></div>
+          <div class="compose-block"><div class="compose-key"><code>volumes:</code><span>Storage</span></div><div class="compose-block-body"><div class="compose-volume-list" id="app-compose-volumes"></div></div></div>
+          <div class="compose-block"><div class="compose-key"><code>environment:</code><span>Settings</span></div><div class="compose-block-body">${draft.env.map((e,i)=>`<div class="compose-env-row"><div class="compose-field"><span class="compose-label">Variable</span><div class="compose-env-key" id="app-env-key-${i}">${esc(e.key)}</div></div><div class="compose-field"><label for="app-env-value-${i}">Value</label><input id="app-env-value-${i}" value="${esc(e.value)}" oninput="appInstallRefresh()"></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No environment variables</div>'}</div></div>
+          <div class="compose-block compose-preview-card"><div class="compose-key"><code>compose</code><span>Preview</span></div><div class="compose-block-body"><div class="compose-preview-toolbar"><strong>docker-compose.yml</strong><span class="compose-install-badge info">generated</span></div><pre class="compose-preview mono" id="app-compose-content" aria-label="Generated docker-compose.yml" tabindex="0"></pre></div></div>
         </div>
         <div class="compose-install-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="app-install-go">${esc(uiText('Install'))}</button></div>
       </div>`;
     $('#form-overlay').classList.add('open');
     appInstallRenderVolumes();
     appInstallRefresh();
+    translateRenderedText($('#form-body'));
     $('#app-install-go').onclick=()=>appInstallStart(_appInstallDraft);
     requestAnimationFrame(()=>$('#app-compose-service')?.focus());
   }catch(e){toast('Error: '+e.message,'error');}
