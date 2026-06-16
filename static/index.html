@@ -5985,7 +5985,7 @@ window.mountSmbForm=()=>openForm('SMB-Share verbinden','🔗',[
   {name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/nas'},
   {name:'username',label:'Username',value:'guest'},
   {name:'password',label:'Password',type:'password'},
-],async d=>{try{await post('/files/mount-smb',d);closeForm();toast('SMB share connected');renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
+],async d=>{try{const r=await post('/files/mount-smb',d);if(r&&r.ok===false){toast((r.stderr||r.stdout||'SMB mount failed').slice(0,300),'error');return;}closeForm();toast('SMB share connected');currentPath=(r&&r.mountpoint)||d.mountpoint;renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
 
 // Externes NFS mounten
 window.mountNfsForm=()=>openForm('NFS-Share verbinden','🔗',[
@@ -5993,7 +5993,7 @@ window.mountNfsForm=()=>openForm('NFS-Share verbinden','🔗',[
   {name:'export',label:'Export-Pfad',placeholder:'/srv/nfs/media'},
   {name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/nfs'},
   {name:'options',label:'Optionen (optional)',placeholder:'ro,soft',hint:'Comma-separated mount options'},
-],async d=>{try{const r=await post('/files/mount-nfs',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}closeForm();toast('NFS share connected');renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
+],async d=>{try{const r=await post('/files/mount-nfs',d);if(r&&r.ok===false){toast((r.stderr||r.stdout||'NFS mount failed').slice(0,300),'error');return;}closeForm();toast('NFS share connected');currentPath=(r&&r.mountpoint)||d.mountpoint;renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
 
 // Eigenschaften
 window.showProps=async path=>{

@@ -196,7 +196,13 @@ def mount_smb(server, share_name, mountpoint, username="guest", password=""):
     opts = f"username={username},password={password},uid=0,gid=0"
     r = subprocess.run(["mount", "-t", "cifs", f"//{server}/{share_name}", mountpoint, "-o", opts],
                        capture_output=True, text=True, timeout=30)
-    return {"ok": r.returncode == 0, "stderr": r.stderr}
+    return {
+        "ok": r.returncode == 0,
+        "returncode": r.returncode,
+        "stdout": r.stdout,
+        "stderr": r.stderr,
+        "mountpoint": os.path.realpath(mountpoint),
+    }
 
 # ── Externes NFS mounten ──
 def mount_nfs(server, export, mountpoint, options=""):
@@ -205,7 +211,13 @@ def mount_nfs(server, export, mountpoint, options=""):
     if options:
         cmd += ["-o", options]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-    return {"ok": r.returncode == 0, "stderr": r.stderr}
+    return {
+        "ok": r.returncode == 0,
+        "returncode": r.returncode,
+        "stdout": r.stdout,
+        "stderr": r.stderr,
+        "mountpoint": os.path.realpath(mountpoint),
+    }
 
 # ── Helpers ──
 def is_image(p): return Path(p).suffix.lower() in {".jpg",".jpeg",".png",".gif",".webp",".svg",".bmp"}
