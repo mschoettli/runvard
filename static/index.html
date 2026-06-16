@@ -5863,7 +5863,7 @@ const QUICKLINKS=[
   {label:'🧩 Apps',path:'/opt/runvard/data/apps'},
   {label:'🗑 Trash',path:'__trash__'},
 ];
-let currentPath='/root', clipboard=null, viewMode='grid', sortBy='name', sortDir='asc', selectedFiles=new Set(), fileSelectionOrder=[], lastSelectedPath=null, fileJobsTimer=null, filesHotkeysReady=false;
+let currentPath='/root', clipboard=null, viewMode='grid', sortBy='name', sortDir='asc', selectedFiles=new Set(), fileSelectionOrder=[], lastSelectedPath=null, fileJobsTimer=null, filesHotkeysReady=false, filesGlobalDropReady=false;
 const FILE_I18N={
   up:{de:'Hoch',en:'Up',fr:'Remonter',it:'Su',es:'Subir',pt:'Subir'},
   parentFolder:{de:'Übergeordneter Ordner',en:'Parent folder',fr:'Dossier parent',it:'Cartella superiore',es:'Carpeta superior',pt:'Pasta superior'},
@@ -6079,6 +6079,7 @@ function setupFileInteractions(){
   setupFileDropUpload();
   setupFileMarquee();
   setupFilesHotkeys();
+  setupFilesGlobalDrop();
 }
 
 function setupFileDropUpload(){
@@ -6092,10 +6093,56 @@ function setupFileDropUpload(){
   sc.addEventListener('dragleave',leave);
   sc.addEventListener('drop',e=>{
     e.preventDefault();
+    e.stopPropagation();
     sc.classList.remove('drag-over');
-    const files=[...e.dataTransfer.files];
+    const files=fileDropFiles(e);
     if(files.length) uploadFileList(files,currentPath);
   });
+}
+
+function filesDropActive(){
+  if(!currentTile||currentTile.id!=='files'||currentPath==='__trash__')return false;
+  const form=$('#form-overlay'), confirm=$('#confirm-overlay');
+  if(form&&form.classList.contains('open'))return false;
+  if(confirm&&confirm.classList.contains('open'))return false;
+  return !!$('#files-scroll');
+}
+
+function fileDropFiles(e){
+  return [...(e.dataTransfer?.files||[])].filter(f=>f&&f.name);
+}
+
+function setupFilesGlobalDrop(){
+  if(filesGlobalDropReady)return;
+  filesGlobalDropReady=true;
+  const hasFiles=e=>Array.from(e.dataTransfer?.types||[]).includes('Files');
+  const mark=on=>{$('#files-scroll')?.classList.toggle('drag-over',!!on);};
+  document.addEventListener('dragover',e=>{
+    if(!filesDropActive()||!hasFiles(e))return;
+    e.preventDefault();
+    e.stopPropagation();
+    e.dataTransfer.dropEffect='copy';
+    mark(true);
+  },true);
+  document.addEventListener('dragenter',e=>{
+    if(!filesDropActive()||!hasFiles(e))return;
+    e.preventDefault();
+    e.stopPropagation();
+    mark(true);
+  },true);
+  document.addEventListener('dragleave',e=>{
+    if(!filesDropActive())return;
+    const overlay=$('#overlay');
+    if(!overlay||!e.relatedTarget||!overlay.contains(e.relatedTarget))mark(false);
+  },true);
+  document.addEventListener('drop',e=>{
+    if(!filesDropActive()||!hasFiles(e))return;
+    e.preventDefault();
+    e.stopPropagation();
+    mark(false);
+    const files=fileDropFiles(e);
+    if(files.length) uploadFileList(files,currentPath);
+  },true);
 }
 
 function setupFileMarquee(){
