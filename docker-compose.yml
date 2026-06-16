@@ -1,0 +1,25 @@
+services:
+  runvard:
+    image: ${RUNVARD_IMAGE:-ghcr.io/mschoettli/runvard:latest}
+    container_name: runvard
+    restart: unless-stopped
+    network_mode: host
+    pid: host
+    privileged: true
+    environment:
+      RUNVARD_PORT: ${RUNVARD_PORT:-8080}
+      RUNVARD_USER: ${RUNVARD_USER:-admin}
+      RUNVARD_PASS: ${RUNVARD_PASS:-runvard}
+    volumes:
+      - /opt/runvard/data:/opt/runvard/data
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /dev:/dev
+      - /run:/run
+      - /tmp:/tmp
+      - /etc:/etc
+      - /home:/home
+      - /root:/root
+      - /mnt:/mnt
+      - /media:/media
+      - /var/lib/libvirt:/var/lib/libvirt
+      - /var/log:/var/log

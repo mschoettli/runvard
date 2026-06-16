@@ -1,0 +1,12 @@
+.DS_Store
+.git
+.github
+.pytest_cache
+.venv
+__pycache__
+*.pyc
+data
+*.log
+*.sqlite
+*.db
+node_modules

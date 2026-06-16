@@ -9,3 +9,12 @@ runvard should be deployed on a trusted local network or behind a secure reverse
 ## Installation
 
 See [INSTALLATION.md](INSTALLATION.md) for installation, offline setup, service management, and uninstall instructions.
+
+### Docker Compose
+
+For Docker-based installation, use the included `docker-compose.yml`.
+It pulls the published GitHub Container Registry image and does not build locally.
+
+```bash
+docker compose up -d
+```
