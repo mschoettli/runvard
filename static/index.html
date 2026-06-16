@@ -6445,7 +6445,7 @@ window.pasteClipboard=async()=>{
 };
 
 // Löschen → Papierkorb
-window.deleteFile=path=>confirmDelete(uiText('To trash'),fileText('moveToTrashConfirm',path.split('/').pop()),async()=>{try{startTopProgress('Deleting 1/1',1);await post('/files/delete',{path});setTopProgress(1,'Deleting 1/1');finishTopProgress('Deleted');toast(uiText('To trash'));renderFiles($('#modal-body'));}catch(e){failTopProgress('Delete failed');toast(e.message,'error');}});
+window.deleteFile=path=>confirmDelete(uiText('To trash'),fileText('moveToTrashConfirm',path.split('/').pop()),async()=>{try{await startFileJob('delete',[path]);toast(fileText('deleteJobStarted'));}catch(e){toast(e.message,'error');}});
 
 // Bulk-Aktionen
 window.bulkDelete=()=>confirmDelete(fileText('delete'),fileText('bulkTrashConfirm',selectedFiles.size),async()=>{

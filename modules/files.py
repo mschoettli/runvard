@@ -74,7 +74,9 @@ def rename(path, new_name):
     return {"ok": True, "path": dst}
 
 def copy_item(src, dst_dir):
-    src = _r(src); dst_dir = _r(dst_dir); _ok(dst_dir)
+    src = _r(src); dst_dir = _r(dst_dir)
+    if _bl(src): raise PermissionError("Gesperrt")
+    _ok(dst_dir)
     dst = _unique_dst(os.path.join(dst_dir, os.path.basename(src)))
     if os.path.isdir(src): shutil.copytree(src, dst)
     else: shutil.copy2(src, dst)
@@ -115,11 +117,17 @@ def search(base, query, max_results=200):
 # ── ZIP ──
 def make_zip(paths, output_path):
     output_path = _r(output_path); _ok(os.path.dirname(output_path))
+    paths = [_r(p) for p in paths]
+    for p in paths:
+        if _bl(p): raise PermissionError("Gesperrt")
     with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
         for p in paths:
-            p = _r(p)
             if os.path.isdir(p):
-                for root, _, files in os.walk(p):
+                for root, dirs, files in os.walk(p):
+                    if _bl(root):
+                        dirs.clear()
+                        continue
+                    dirs[:] = [d for d in dirs if not _bl(os.path.join(root, d))]
                     for f in files:
                         full = os.path.join(root, f)
                         zf.write(full, os.path.relpath(full, os.path.dirname(p)))
@@ -193,8 +201,10 @@ def _load_jobs():
 
 def _save_jobs(data):
     os.makedirs(os.path.dirname(JOBDB), exist_ok=True)
-    with open(JOBDB, "w") as f:
+    tmp = JOBDB + ".tmp"
+    with open(tmp, "w") as f:
         json.dump(data[-80:], f, indent=2)
+    os.replace(tmp, JOBDB)
 
 def _patch_job(job_id, **patch):
     with _job_lock:
@@ -210,10 +220,14 @@ def _count_work(paths):
     total = 0
     for p in paths:
         p = _r(p)
+        if _bl(p):
+            raise PermissionError("Gesperrt")
         if os.path.isdir(p):
-            for root, _, files in os.walk(p):
+            for root, dirs, files in os.walk(p):
                 if _bl(root):
+                    dirs.clear()
                     continue
+                dirs[:] = [d for d in dirs if not _bl(os.path.join(root, d))]
                 total += max(1, len(files))
         else:
             total += 1
@@ -223,6 +237,10 @@ def _copy_tree_progress(src, dst, tick):
     os.makedirs(dst, exist_ok=False)
     shutil.copystat(src, dst, follow_symlinks=False)
     for root, dirs, files in os.walk(src):
+        if _bl(root):
+            dirs.clear()
+            continue
+        dirs[:] = [d for d in dirs if not _bl(os.path.join(root, d))]
         rel = os.path.relpath(root, src)
         target_root = dst if rel == "." else os.path.join(dst, rel)
         os.makedirs(target_root, exist_ok=True)
@@ -234,7 +252,6 @@ def _copy_tree_progress(src, dst, tick):
 
 def _run_file_job(job_id, action, paths, dst_dir="", output=""):
     done = 0
-    total = _count_work(paths) if action in ("copy", "move", "delete") else 100
 
     def tick(current=""):
         nonlocal done
@@ -244,6 +261,7 @@ def _run_file_job(job_id, action, paths, dst_dir="", output=""):
 
     _active_jobs.add(job_id)
     try:
+        total = _count_work(paths) if action in ("copy", "move", "delete") else 100
         _patch_job(job_id, status="running", progress=1, total=total)
         if action == "copy":
             dst_dir_r = _r(dst_dir); _ok(dst_dir_r)
