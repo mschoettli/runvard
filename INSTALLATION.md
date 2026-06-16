@@ -13,29 +13,6 @@ If the password is left empty, the installer generates a random password and pri
 The selected username, password, and port are stored in `/opt/runvard/data/runvard.env` and loaded by the systemd service.
 After installation, runvard is available at the address printed by the installer; the default port is `8080`.
 
-## Docker Compose
-
-The included `docker-compose.yml` installs runvard from the published GitHub Container Registry image.
-It uses `image: ghcr.io/mschoettli/runvard:latest` and does not require a local build.
-
-```bash
-mkdir -p /opt/runvard/data
-docker compose up -d
-```
-
-Optional settings can be placed in a `.env` file next to `docker-compose.yml`.
-
-```bash
-RUNVARD_IMAGE=ghcr.io/mschoettli/runvard:latest
-RUNVARD_PORT=8080
-RUNVARD_USER=admin
-RUNVARD_PASS=runvard
-```
-
-The Compose setup runs with host networking, host PID visibility, privileged mode, and host bind mounts because runvard manages system services, files, Docker, storage, shares, and virtual machines.
-Use it only on a trusted server.
-The GHCR image is built and published by the GitHub Actions workflow in `.github/workflows/docker-image.yml`.
-
 ## Bundled Wheels
 
 If the bundled `wheels/` directory is present, the installer uses those local wheel files first to speed up Python dependency installation.
