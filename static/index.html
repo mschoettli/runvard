@@ -5728,8 +5728,12 @@ function sortEntries(entries){
 async function renderFiles(body){
   if(currentPath==='__trash__') return renderTrash(body);
   selectedFiles.clear();
-  const data=await api('/files/list?path='+encodeURIComponent(currentPath));
+  const [data,mountData]=await Promise.all([
+    api('/files/list?path='+encodeURIComponent(currentPath)),
+    api('/files/mounts').catch(()=>({mounts:[]}))
+  ]);
   const entries=sortEntries(data.entries);
+  const remoteMounts=(mountData.mounts||[]);
   const pathParts=data.path.split('/').filter(Boolean);
   const bcHtml=pathParts.map((p,i)=>{
     const full='/'+pathParts.slice(0,i+1).join('/');
@@ -5743,6 +5747,7 @@ async function renderFiles(body){
       ${QUICKLINKS.map(q=>`<div class="files-quicklink${currentPath===q.path?' active':''}" onclick="navTo('${esc(q.path)}')">${q.label}</div>`).join('')}
       <div style="height:.5px;background:var(--border);margin:6px 8px"></div>
       <div class="files-sb-label">Remote</div>
+      ${remoteMounts.map(m=>`<div class="files-quicklink${currentPath===m.mountpoint?' active':''}" title="${esc(m.source)}" onclick="navTo('${esc(m.mountpoint)}')">${m.type==='SMB'?'🖧':'📡'} ${esc(m.label)}</div>`).join('')}
       <div class="files-quicklink" onclick="mountSmbForm()">🔗 Connect SMB</div>
       <div class="files-quicklink" onclick="mountNfsForm()">🔗 Connect NFS</div>
     </div>

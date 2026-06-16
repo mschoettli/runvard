@@ -480,6 +480,10 @@ def files_share(path: str = Form(...), user: str = Depends(auth)):
 def files_shares(user: str = Depends(auth)):
     return files.list_shares()
 
+@app.get("/api/files/mounts")
+def files_mounts(user: str = Depends(auth)):
+    return {"mounts": files.list_mounts()}
+
 @app.post("/api/files/shares/delete")
 def files_share_delete(token: str = Form(...), user: str = Depends(auth)):
     return files.delete_share(token)

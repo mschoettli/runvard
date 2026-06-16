@@ -190,6 +190,33 @@ def delete_share(token):
     s = _load_shares(); s.pop(token, None); _save_shares(s)
     return {"ok": True}
 
+def list_mounts():
+    mounts = []
+    try:
+        with open("/proc/mounts") as f:
+            lines = f.readlines()
+    except Exception:
+        return mounts
+
+    for line in lines:
+        parts = line.split()
+        if len(parts) < 3:
+            continue
+        source, mountpoint, fstype = parts[:3]
+        if fstype not in {"cifs", "smb3", "nfs", "nfs4"}:
+            continue
+        source = source.replace("\\040", " ")
+        mountpoint = mountpoint.replace("\\040", " ")
+        kind = "SMB" if fstype in {"cifs", "smb3"} else "NFS"
+        label = source.replace("//", "", 1) if kind == "SMB" else source
+        mounts.append({
+            "source": source,
+            "mountpoint": mountpoint,
+            "type": kind,
+            "label": label or mountpoint,
+        })
+    return mounts
+
 # ── Externes SMB mounten ──
 def mount_smb(server, share_name, mountpoint, username="guest", password=""):
     os.makedirs(mountpoint, exist_ok=True)
