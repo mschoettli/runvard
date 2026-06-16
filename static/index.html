@@ -5812,7 +5812,7 @@ async function renderFiles(body){
         <button class="btn danger sm" onclick="bulkDelete()">Delete</button>
         <button class="btn ghost sm" onclick="selectedFiles.clear();renderFiles($('#modal-body'))">✕</button>
       </div>
-      <div class="files-scroll">
+      <div class="files-scroll" oncontextmenu="showFolderCtx(event)">
       ${viewMode==='grid'?`
       <div class="file-grid" id="file-area">
         ${entries.map(e=>{if(e.blocked)return'';const fi=fileIcon(e);return`
@@ -5883,6 +5883,24 @@ window.showCtx=(e,path,isDir,readonly)=>{
   const menu=$('#ctx-menu');
   menu.style.cssText=`position:fixed;top:${Math.min(e.clientY,window.innerHeight-280)}px;left:${Math.min(e.clientX,window.innerWidth-180)}px;background:rgba(15,12,26,.97);border:.5px solid var(--border-accent);border-radius:12px;padding:6px;z-index:999;min-width:170px;box-shadow:0 12px 40px rgba(0,0,0,.6)`;
   menu.innerHTML=`<div style="padding:6px 12px 8px;color:var(--text3);font-size:11px;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(itemLabel)}</div>`+items.map(i=>i.label==='─'?'<div style="height:.5px;background:var(--border);margin:4px 6px"></div>':`<div onclick="${i.fn};closeCtx()" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center" onmouseover="this.style.background='var(--glass-hover)'" onmouseout="this.style.background=''">${i.icon?`<span>${i.icon}</span>`:'<span style="width:16px"></span>'} ${esc(uiText(i.label))}</div>`).join('');
+  setTimeout(()=>document.addEventListener('click',closeCtx,{once:true}),10);
+};
+window.showFolderCtx=e=>{
+  if(e.target.closest('[data-path]')) return;
+  e.preventDefault(); e.stopPropagation();
+  selectedFiles.clear();
+  lastSelectedPath=null;
+  updateFileSelectionUI();
+  const clipCount=clipboard?(clipboard.paths||[clipboard.path].filter(Boolean)).length:0;
+  const items=[
+    clipboard?{icon:'📌',label:clipCount>1?`Paste ${clipCount} items here`:'Paste here',fn:'pasteClipboard()'}:null,
+    clipboard?{icon:'',label:'─',fn:''}:null,
+    {icon:'📁',label:'New folder',fn:'mkdirForm()'},
+  ].filter(Boolean);
+
+  const menu=$('#ctx-menu');
+  menu.style.cssText=`position:fixed;top:${Math.min(e.clientY,window.innerHeight-180)}px;left:${Math.min(e.clientX,window.innerWidth-210)}px;background:rgba(15,12,26,.97);border:.5px solid var(--border-accent);border-radius:12px;padding:6px;z-index:999;min-width:200px;box-shadow:0 12px 40px rgba(0,0,0,.6)`;
+  menu.innerHTML=`<div style="padding:6px 12px 8px;color:var(--text3);font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(currentPath)}</div>`+items.map(i=>i.label==='─'?'<div style="height:.5px;background:var(--border);margin:4px 6px"></div>':`<div onclick="${i.fn};closeCtx()" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center" onmouseover="this.style.background='var(--glass-hover)'" onmouseout="this.style.background=''">${i.icon?`<span>${i.icon}</span>`:'<span style="width:16px"></span>'} ${esc(uiText(i.label))}</div>`).join('');
   setTimeout(()=>document.addEventListener('click',closeCtx,{once:true}),10);
 };
 window.closeCtx=()=>{const m=$('#ctx-menu');if(m)m.innerHTML='';};
