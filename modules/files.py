@@ -1,5 +1,5 @@
 """Dateimanager – komplett neu, sauber, ohne Altlasten."""
-import os, shutil, stat, mimetypes, json, time, uuid, zipfile, subprocess
+import os, shutil, stat, mimetypes, json, time, uuid, zipfile, subprocess, threading
 from pathlib import Path
 
 BLOCKED  = {"/proc", "/sys", "/dev", "/run"}
@@ -7,7 +7,10 @@ READONLY = {"/etc", "/bin", "/sbin", "/usr", "/lib", "/lib64", "/boot"}
 TRASH    = "/opt/runvard/data/trash"
 TRASHMETA= "/opt/runvard/data/trash/.meta.json"
 SHAREDB  = "/opt/runvard/data/shares.json"
+JOBDB    = "/opt/runvard/data/file_jobs.json"
 MAX_EDIT = 2 * 1024 * 1024
+_job_lock = threading.Lock()
+_active_jobs = set()
 
 def _r(p):  return os.path.realpath(p)
 def _bl(p): return any(_r(p)==b or _r(p).startswith(b+"/") for b in BLOCKED)
@@ -15,6 +18,19 @@ def _ro(p): return any(_r(p)==r or _r(p).startswith(r+"/") for r in READONLY)
 def _ok(p):
     if _bl(p): raise PermissionError("Gesperrt")
     if _ro(p): raise PermissionError("Schreibgeschützt")
+
+def _unique_dst(dst):
+    if not os.path.exists(dst):
+        return dst
+    parent = os.path.dirname(dst)
+    name = os.path.basename(dst)
+    stem, ext = os.path.splitext(name)
+    for i in range(1, 10000):
+        suffix = " copy" if i == 1 else f" copy {i}"
+        cand = os.path.join(parent, f"{stem}{suffix}{ext}")
+        if not os.path.exists(cand):
+            return cand
+    raise FileExistsError(dst)
 
 def list_dir(path):
     path = _r(path or "/")
@@ -59,14 +75,14 @@ def rename(path, new_name):
 
 def copy_item(src, dst_dir):
     src = _r(src); dst_dir = _r(dst_dir); _ok(dst_dir)
-    dst = os.path.join(dst_dir, os.path.basename(src))
+    dst = _unique_dst(os.path.join(dst_dir, os.path.basename(src)))
     if os.path.isdir(src): shutil.copytree(src, dst)
     else: shutil.copy2(src, dst)
     return {"ok": True, "dst": dst}
 
 def move(src, dst_dir):
     src = _r(src); dst_dir = _r(dst_dir); _ok(src); _ok(dst_dir)
-    dst = os.path.join(dst_dir, os.path.basename(src))
+    dst = _unique_dst(os.path.join(dst_dir, os.path.basename(src)))
     shutil.move(src, dst)
     return {"ok": True, "dst": dst}
 
@@ -113,7 +129,13 @@ def make_zip(paths, output_path):
 
 def extract_zip(path, dst_dir):
     path = _r(path); dst_dir = _r(dst_dir); _ok(dst_dir)
-    with zipfile.ZipFile(path, "r") as zf: zf.extractall(dst_dir)
+    dst_real = _r(dst_dir)
+    with zipfile.ZipFile(path, "r") as zf:
+        for member in zf.infolist():
+            target = _r(os.path.join(dst_real, member.filename))
+            if target != dst_real and not target.startswith(dst_real + os.sep):
+                raise PermissionError("Unsicherer ZIP-Pfad")
+        zf.extractall(dst_real)
     return {"ok": True, "dst": dst_dir}
 
 # ── Papierkorb ──
@@ -160,6 +182,147 @@ def empty_trash():
         elif os.path.exists(p): os.remove(p)
     _save_meta([])
     return {"ok": True}
+
+# ── Hintergrund-Jobs für große Dateioperationen ──
+def _load_jobs():
+    try:
+        with open(JOBDB) as f:
+            return json.load(f)
+    except:
+        return []
+
+def _save_jobs(data):
+    os.makedirs(os.path.dirname(JOBDB), exist_ok=True)
+    with open(JOBDB, "w") as f:
+        json.dump(data[-80:], f, indent=2)
+
+def _patch_job(job_id, **patch):
+    with _job_lock:
+        jobs = _load_jobs()
+        for job in jobs:
+            if job["id"] == job_id:
+                job.update(patch)
+                job["updated"] = time.time()
+                break
+        _save_jobs(jobs)
+
+def _count_work(paths):
+    total = 0
+    for p in paths:
+        p = _r(p)
+        if os.path.isdir(p):
+            for root, _, files in os.walk(p):
+                if _bl(root):
+                    continue
+                total += max(1, len(files))
+        else:
+            total += 1
+    return max(1, total)
+
+def _copy_tree_progress(src, dst, tick):
+    os.makedirs(dst, exist_ok=False)
+    shutil.copystat(src, dst, follow_symlinks=False)
+    for root, dirs, files in os.walk(src):
+        rel = os.path.relpath(root, src)
+        target_root = dst if rel == "." else os.path.join(dst, rel)
+        os.makedirs(target_root, exist_ok=True)
+        for d in dirs:
+            os.makedirs(os.path.join(target_root, d), exist_ok=True)
+        for f in files:
+            shutil.copy2(os.path.join(root, f), os.path.join(target_root, f))
+            tick(os.path.join(root, f))
+
+def _run_file_job(job_id, action, paths, dst_dir="", output=""):
+    done = 0
+    total = _count_work(paths) if action in ("copy", "move", "delete") else 100
+
+    def tick(current=""):
+        nonlocal done
+        done += 1
+        _patch_job(job_id, progress=min(99, int(done * 100 / total)),
+                   current=current)
+
+    _active_jobs.add(job_id)
+    try:
+        _patch_job(job_id, status="running", progress=1, total=total)
+        if action == "copy":
+            dst_dir_r = _r(dst_dir); _ok(dst_dir_r)
+            for src in paths:
+                src = _r(src)
+                dst = _unique_dst(os.path.join(dst_dir_r, os.path.basename(src)))
+                if os.path.isdir(src):
+                    _copy_tree_progress(src, dst, tick)
+                else:
+                    shutil.copy2(src, dst)
+                    tick(src)
+        elif action == "move":
+            dst_dir_r = _r(dst_dir); _ok(dst_dir_r)
+            for src in paths:
+                src = _r(src); _ok(src)
+                shutil.move(src, _unique_dst(os.path.join(dst_dir_r, os.path.basename(src))))
+                tick(src)
+        elif action == "delete":
+            for src in paths:
+                delete(src)
+                tick(src)
+        elif action == "zip":
+            make_zip(paths, output)
+            _patch_job(job_id, progress=99, current=output)
+        else:
+            raise ValueError("Unbekannter Job")
+        _patch_job(job_id, status="done", progress=100, current="")
+    except Exception as e:
+        _patch_job(job_id, status="error", error=str(e), current="")
+    finally:
+        _active_jobs.discard(job_id)
+
+def start_job(action, paths, dst_dir="", output=""):
+    paths = [_r(p) for p in paths if p]
+    if not paths:
+        raise ValueError("Keine Dateien ausgewählt")
+    if action not in ("copy", "move", "delete", "zip"):
+        raise ValueError("Unbekannter Job")
+    job = {
+        "id": str(uuid.uuid4()).replace("-", ""),
+        "action": action,
+        "status": "queued",
+        "progress": 0,
+        "paths": paths,
+        "dst_dir": dst_dir,
+        "output": output,
+        "current": "",
+        "error": "",
+        "created": time.time(),
+        "updated": time.time(),
+    }
+    with _job_lock:
+        jobs = _load_jobs()
+        jobs.append(job)
+        _save_jobs(jobs)
+    t = threading.Thread(target=_run_file_job,
+                         args=(job["id"], action, paths, dst_dir, output),
+                         daemon=True)
+    t.start()
+    return job
+
+def list_jobs(active_only=False):
+    jobs = _load_jobs()
+    for job in jobs:
+        if job.get("status") == "running" and job.get("id") not in _active_jobs:
+            job["status"] = "unknown"
+            job["error"] = job.get("error") or "Status nach Neustart unbekannt"
+    if active_only:
+        jobs = [j for j in jobs if j.get("status") in ("queued", "running")]
+    return sorted(jobs, key=lambda j: j.get("created", 0), reverse=True)
+
+def get_job(job_id):
+    for job in _load_jobs():
+        if job["id"] == job_id:
+            if job.get("status") == "running" and job.get("id") not in _active_jobs:
+                job["status"] = "unknown"
+                job["error"] = job.get("error") or "Status nach Neustart unbekannt"
+            return job
+    raise FileNotFoundError("Job nicht gefunden")
 
 # ── Share-Links ──
 def _load_shares():

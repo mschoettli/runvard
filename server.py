@@ -423,18 +423,25 @@ def files_delete(path: str = Form(...), user: str = Depends(auth)):
 
 @app.get("/api/files/download")
 def files_download(path: str, user: str = Depends(auth)):
-    if files._blocked(path): raise HTTPException(403, "Gesperrt")
+    if files._bl(path): raise HTTPException(403, "Gesperrt")
     return FileResponse(path, filename=os.path.basename(path))
 
 @app.get("/api/files/preview")
 def files_preview(path: str, user: str = Depends(auth)):
-    if files._blocked(path): raise HTTPException(403, "Gesperrt")
+    if files._bl(path): raise HTTPException(403, "Gesperrt")
     import mimetypes as mt; mime, _ = mt.guess_type(path)
     return FileResponse(path, media_type=mime or "application/octet-stream")
 
 @app.post("/api/files/upload")
 async def files_upload(path: str = Form(...), file: UploadFile = File(...), user: str = Depends(auth)):
-    dest = os.path.join(path, file.filename)
+    try:
+        files._ok(path)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+    safe_name = os.path.basename(file.filename)
+    if not safe_name:
+        raise HTTPException(400, "Ungültiger Dateiname")
+    dest = files._unique_dst(os.path.join(path, safe_name))
     with open(dest, "wb") as f:
         while chunk := await file.read(1024 * 1024): f.write(chunk)
     return {"ok": True, "path": dest}
@@ -457,6 +464,26 @@ def files_zip(paths: str = Form(...), output: str = Form(...), user: str = Depen
 def files_unzip(path: str = Form(...), dst_dir: str = Form(...), user: str = Depends(auth)):
     try: return files.extract_zip(path, dst_dir)
     except Exception as e: raise HTTPException(400, str(e))
+
+@app.post("/api/files/job")
+def files_job(action: str = Form(...), paths: str = Form(...),
+              dst_dir: str = Form(""), output: str = Form(""),
+              user: str = Depends(auth)):
+    try:
+        return files.start_job(action, paths.split("|"), dst_dir, output)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+@app.get("/api/files/jobs")
+def files_jobs(active: bool = False, user: str = Depends(auth)):
+    return {"jobs": files.list_jobs(active)}
+
+@app.get("/api/files/job")
+def files_job_status(job_id: str, user: str = Depends(auth)):
+    try:
+        return files.get_job(job_id)
+    except Exception as e:
+        raise HTTPException(404, str(e))
 
 @app.get("/api/files/trash")
 def files_trash_list(user: str = Depends(auth)):
