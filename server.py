@@ -1516,8 +1516,9 @@ def dashboard_toggle_url(tile_id: str = Form(...), show: bool = Form(...),
 @app.post("/api/dashboard/update")
 def dashboard_update(tile_id: str = Form(...), name: str = Form(""),
                      url: str = Form(""), icon: str = Form(""),
+                     host: str = Form(None),
                      user: str = Depends(auth)):
-    return dashboard.update_tile(tile_id, name or None, url or None, icon or None)
+    return dashboard.update_tile(tile_id, name or None, url or None, icon or None, host)
 
 
 # ============ WebSocket Terminal ============

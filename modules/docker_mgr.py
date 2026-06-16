@@ -3,6 +3,8 @@ import os
 import shutil
 import subprocess
 
+from modules.compose_utils import best_web_port_from_compose
+
 try:
     import docker
     HAS_DOCKER = True
@@ -264,12 +266,7 @@ def list_compose_projects():
 def _compose_port(compose_file):
     try:
         with open(compose_file) as f:
-            for line in f:
-                line = line.strip()
-                if ":" in line and line.startswith("- "):
-                    port_str = line.strip('- "\'')
-                    host_port = port_str.split(":")[0].split("/")[0]
-                    return int(host_port)
+            return best_web_port_from_compose(f.read())
     except Exception:
         pass
     return 0

@@ -6898,7 +6898,44 @@ window.iscsiLogin=(portal,target)=>{toast('Melde an…');post('/storage/iscsi/lo
 window.iscsiLogout=(portal,target)=>confirmDelete('Target abmelden',`Disconnect session to "${target}"?`,async()=>{try{const r=await post('/storage/iscsi/logout',{portal,target});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Abgemeldet');renderStorage($('#modal-body'),'iSCSI');}catch(e){toast('Error: '+e.message,'error');}});
 
 // ═══ Docker – Punkte 1 & 2 ═══
-function extractPort(content){const m=(content||'').match(/[:\-]\s*["']?(\d{2,5}):\d+["']?/);return m?m[1]:null;}
+const NON_WEB_PORTS=new Set([21,22,25,53,110,139,143,389,445,587,636,993,995,1883,2049,2181,3306,33060,4222,5432,5671,5672,6379,8883,9092,9300,11211,27017,27018]);
+const WEB_PORTS=new Set([80,443,3000,3001,4200,5000,5173,5601,8000,8008,8080,8081,8082,8096,8123,8443,8834,9000,9001,9090,9443,10000]);
+function composePublishedPorts(content){
+  const ports=[];
+  const serviceRe=/^\s{2,}([A-Za-z0-9_.-]+):\s*$/;
+  let service='',inPorts=false,portsIndent=0;
+  String(content||'').split(/\r?\n/).forEach(raw=>{
+    const line=raw.split('#')[0].replace(/\s+$/,'');
+    if(!line.trim())return;
+    const indent=line.length-line.trimStart().length;
+    const trimmed=line.trim();
+    const svc=trimmed.match(/^([A-Za-z0-9_.-]+):\s*$/);
+    if(svc&&indent>=2){service=svc[1];inPorts=false;return;}
+    if(trimmed==='ports:'){inPorts=true;portsIndent=indent;return;}
+    if(inPorts&&indent<=portsIndent){inPorts=false;}
+    if(!inPorts||!trimmed.startsWith('- '))return;
+    const spec=trimmed.slice(2).trim().replace(/^['"]|['"]$/g,'').split('/')[0];
+    const parts=spec.split(':');
+    if(parts.length<2)return;
+    const published=Number(parts.length===2?parts[0]:parts[parts.length-2]);
+    const target=Number(parts[parts.length-1]);
+    if(Number.isFinite(published)&&Number.isFinite(target))ports.push({service,published,target});
+  });
+  return ports;
+}
+function composeBestWebPort(content){
+  const candidates=composePublishedPorts(content).filter(p=>!NON_WEB_PORTS.has(p.published)&&!NON_WEB_PORTS.has(p.target)).map(p=>{
+    let score=0;
+    if(/web|www|ui|frontend|front|app|server|api|http|nginx|apache|caddy|proxy|dashboard|homepage|admin/i.test(p.service))score+=60;
+    if(/db|database|postgres|postgresql|mysql|mariadb|redis|mongo|mongodb|rabbit|broker|kafka|zookeeper|memcached|mqtt/i.test(p.service))score-=80;
+    if(WEB_PORTS.has(p.target))score+=50;
+    if(WEB_PORTS.has(p.published))score+=25;
+    if(p.target===80||p.target===443)score+=20;
+    return {...p,score};
+  }).filter(p=>p.score>=0).sort((a,b)=>b.score-a.score);
+  return candidates[0]?.published||null;
+}
+function extractPort(content){return composeBestWebPort(content);}
 function serverHost(){return location.hostname;}
 
 async function renderDocker(body,tab){
@@ -7047,10 +7084,7 @@ window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Pr
 window.composeEdit=async name=>{const c=await api('/docker/compose/get?name='+encodeURIComponent(name));openForm('Compose bearbeiten: '+name,'🐳',[{name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:c.content},...composeEnvFields(c)],async d=>{await post('/docker/compose/save',{name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''});closeForm();toast('Gespeichert');});};
 window.composeAct=async(name,action)=>{toast(action==='up'?'Starte '+name+'…':'Stoppe '+name+'…');try{const r=await post('/docker/compose/action',{name,action});const msgs={up:'Project started: '+name,down:'Project stopped: '+name,restart:'Project restarted: '+name};toast(r.ok?(msgs[action]||'OK'):'Error',r.ok?'success':'error');renderDocker($('#modal-body'),'Compose');}catch(e){toast('Error: '+e.message,'error');}};
 window.composeDelete=name=>typedConfirm('Delete Compose project',`Compose project "${name}" will be stopped and removed.`,name,async()=>{try{const r=await post('/docker/compose/remove',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Compose project deleted');renderDocker($('#modal-body'),'Compose');}catch(e){toast('Error: '+e.message,'error');}});
-function composeFirstPort(content){
-  const match=String(content||'').match(/^\s*-\s*["']?(\d+)\s*:/m);
-  return match?Number(match[1]):0;
-}
+function composeFirstPort(content){return composeBestWebPort(content)||0;}
 window.composeAddToDashboard=async(name,port=0,announce=true)=>{
   try{
     await post('/dashboard/add',{tile_type:'compose',tile_id:'compose:'+name,name,icon:'🐳',port:port||0});
@@ -8696,12 +8730,11 @@ function renderDashboard(){
   if(!grid||!section)return;
   section.style.display='block';
   if(!dashTiles.length){grid.innerHTML='';return;}
-  const host=location.hostname;
   grid.innerHTML=dashTiles.map(t=>{
     const isService=t.type==='app'||t.type==='compose';
     const statusCls=isService?(t.running?'run':'stop'):'ext';
     const port=t.port||0;
-    const url=isService?`${host}:${port}`:(t.url||'').replace(/^https?:\/\//,'');
+    const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');
     const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
     return `<div class="dash-tile" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')">
       <div class="dash-tile-body${t.show_url?' has-url':''}">
@@ -8729,11 +8762,24 @@ window.dashClick=(e,id)=>{
   const t=dashTiles.find(x=>x.id===id);
   if(!t)return;
   if(t.type==='custom'&&t.url){window.open(t.url,'_blank');return;}
-  if((t.type==='app'||t.type==='compose')&&t.port){window.open(`http://${location.hostname}:${t.port}`,'_blank');}
+  if((t.type==='app'||t.type==='compose')&&t.port){window.open(dashTileUrl(t),'_blank');}
 };
 
 function dashComposeProject(t){
   return t?.project||String(t?.id||'').replace(/^compose:/,'');
+}
+
+function dashTileHost(t){
+  return String(t?.host||location.hostname).replace(/^https?:\/\//,'').replace(/\/.*$/,'').trim()||location.hostname;
+}
+
+function dashTileAddress(t){
+  const host=dashTileHost(t);
+  return t?.port?`${host}:${t.port}`:host;
+}
+
+function dashTileUrl(t){
+  return `http://${dashTileAddress(t)}`;
 }
 
 // Kontextmenü
@@ -8761,7 +8807,8 @@ window.dashCtx=(e,id)=>{
     <div class="dash-ctx-sep"></div>
     ${canRun?`
     <div class="dash-ctx-item" onclick="dashCompose('${esc(id)}')"><span>${esc(uiText('✎ Edit compose'))}</span></div>
-    <div class="dash-ctx-item" onclick="dashFiles('${esc(id)}')"><span>${esc(uiText('📂 Show files'))}</span></div>`:`
+    <div class="dash-ctx-item" onclick="dashFiles('${esc(id)}')"><span>${esc(uiText('📂 Show files'))}</span></div>
+    <div class="dash-ctx-item" onclick="dashEditHost('${esc(id)}')"><span>${esc(uiText('IP anpassen'))}</span></div>`:`
     <div class="dash-ctx-item" onclick="dashEditCustom('${esc(id)}')"><span>✎ ${esc(uiText('Edit'))}</span></div>`}
     <div class="dash-ctx-sep"></div>
     <div class="dash-ctx-item" onclick="dashToggleUrl('${esc(id)}',${!t.show_url})">
@@ -8778,7 +8825,7 @@ window.dashOpen=id=>{
   const t=dashTiles.find(x=>x.id===id);
   if(!t)return;
   if(t.type==='custom'&&t.url)window.open(t.url,'_blank');
-  else if((t.type==='app'||t.type==='compose')&&t.port)window.open(`http://${location.hostname}:${t.port}`,'_blank');
+  else if((t.type==='app'||t.type==='compose')&&t.port)window.open(dashTileUrl(t),'_blank');
   document.querySelector('.dash-ctx')?.remove();
 };
 window.dashAppAction=async(id,action)=>{
@@ -8828,6 +8875,17 @@ window.dashToggleUrl=async(id,show)=>{
   const t=dashTiles.find(x=>x.id===id);
   if(t)t.show_url=show;
   renderDashboard();
+};
+window.dashEditHost=id=>{
+  document.querySelector('.dash-ctx')?.remove();
+  const t=dashTiles.find(x=>x.id===id);
+  if(!t)return;
+  openForm('IP anpassen','↗',[
+    {name:'host',label:'IP / Host',value:t.host||'',placeholder:location.hostname,hint:'Leer lassen nutzt die aktuelle runvard-Adresse.'},
+  ],async d=>{
+    await post('/dashboard/update',{tile_id:id,host:d.host||''});
+    closeForm();toast(uiText('Saved'));loadDashboard();
+  });
 };
 window.dashRemove=(id,name)=>{
   document.querySelector('.dash-ctx')?.remove();
@@ -9620,9 +9678,8 @@ function renderDashboard(){
   const grid=$('#dash-grid');const section=$('#dash-section');if(!grid||!section)return;
   section.style.display='block';
   if(!dashTiles.length){grid.innerHTML=`<div class="nx-view-intro" style="grid-column:1/-1"><div><h3>Ready for apps</h3><p>Install apps or add custom shortcuts.</p></div><button class="btn" onclick="openTileById('apps')">Open apps</button></div>`;return;}
-  const host=location.hostname;
   grid.innerHTML=dashTiles.map(t=>{
-    const isService=t.type==='app'||t.type==='compose';const statusCls=isService?(t.running?'run':'stop'):'ext';const port=t.port||0;const url=isService?`${host}:${port}`:(t.url||'').replace(/^https?:\/\//,'');const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
+    const isService=t.type==='app'||t.type==='compose';const statusCls=isService?(t.running?'run':'stop'):'ext';const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
     return `<div class="dash-tile" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')"><div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${statusCls}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div></div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
   }).join('');
   if(typeof Sortable!=='undefined'){Sortable.create(grid,{animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:()=>{const order=[...grid.querySelectorAll('.dash-tile')].map(el=>el.dataset.id);post('/dashboard/order',{order:JSON.stringify(order)});}});}

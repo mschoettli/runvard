@@ -6,6 +6,8 @@ import os
 import json
 import subprocess
 
+from modules.compose_utils import best_web_port_from_compose
+
 DASH_FILE = "/opt/runvard/data/dashboard.json"
 APPS_DIR = "/opt/runvard/data/apps"
 COMPOSE_DIR = "/opt/runvard/data/compose"
@@ -51,18 +53,13 @@ def _compose_running(path, service=None):
 
 
 def _compose_port_from_path(path):
-    """Liest den ersten Port aus dem Compose-File."""
+    """Liest den besten Web-Port aus dem Compose-File."""
     compose = os.path.join(path, "docker-compose.yml")
     if not os.path.isfile(compose):
         return 0
     try:
         with open(compose) as f:
-            for line in f:
-                line = line.strip()
-                if ':' in line and line.startswith('- '):
-                    port_str = line.strip('- "\'')
-                    host_port = port_str.split(':')[0].split('/')
-                    return int(host_port[0])
+            return best_web_port_from_compose(f.read())
     except Exception:
         pass
     return 0
@@ -92,8 +89,7 @@ def get_dashboard():
                 os.path.join(path, "docker-compose.yml"))
             if not tile["installed"]:
                 continue
-            if not tile.get("port"):
-                tile["port"] = _compose_port_from_path(path)
+            tile["port"] = _compose_port_from_path(path)
         tiles.append(tile)
     return {"tiles": tiles}
 
@@ -104,6 +100,8 @@ def add_tile(tile_type, tile_id, name="", url="", icon="", port=0):
     # Duplikat-Check
     for t in data["tiles"]:
         if t["id"] == tile_id:
+            if tile_type == "compose" and port:
+                t["port"] = port
             return {"ok": True, "msg": "Bereits vorhanden"}
     tile = {
         "id": tile_id,
@@ -163,7 +161,14 @@ def toggle_url(tile_id, show):
     return {"ok": True}
 
 
-def update_tile(tile_id, name=None, url=None, icon=None):
+def _normalize_host(host):
+    value = str(host or "").strip()
+    value = value.removeprefix("http://").removeprefix("https://")
+    value = value.split("/", 1)[0].strip()
+    return value
+
+
+def update_tile(tile_id, name=None, url=None, icon=None, host=None):
     """Aktualisiert eine Custom-Kachel."""
     data = _load()
     for t in data["tiles"]:
@@ -174,6 +179,12 @@ def update_tile(tile_id, name=None, url=None, icon=None):
                 t["url"] = url
             if icon is not None:
                 t["icon"] = icon
+            if host is not None:
+                clean_host = _normalize_host(host)
+                if clean_host:
+                    t["host"] = clean_host
+                else:
+                    t.pop("host", None)
             break
     _save(data)
     return {"ok": True}
