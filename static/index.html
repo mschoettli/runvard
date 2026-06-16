@@ -355,6 +355,7 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
 .empty-state{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px}
 tr.sel-row td{background:rgba(139,92,246,.1);}
+#ctx-menu:empty{display:none!important}
 #ctx-menu div:empty{display:none}
 
 /* ── App-Store ── */
@@ -5048,6 +5049,8 @@ const TOAST_PHRASES={
   "Signing in…":{de:"Melde an…",en:"Signing in…",fr:"Connexion…",it:"Accesso in corso…",es:"Iniciando sesión…",pt:"A iniciar sessão…"},
   "Start failed":{de:"Start fehlgeschlagen",en:"Start failed",fr:"Échec du démarrage",it:"Avvio non riuscito",es:"Error al iniciar",pt:"Falha ao iniciar"},
   "Unpacked":{de:"Entpackt",en:"Unpacked",fr:"Décompressé",it:"Estratto",es:"Descomprimido",pt:"Extraído"},
+  "Upload cancelled":{de:"Upload abgebrochen",en:"Upload cancelled",fr:"Import annulé",it:"Caricamento annullato",es:"Subida cancelada",pt:"Carregamento cancelado"},
+  "Upload failed":{de:"Upload fehlgeschlagen",en:"Upload failed",fr:"Échec de l’import",it:"Caricamento non riuscito",es:"Error al subir",pt:"Falha no carregamento"},
   "Update failed":{de:"Update fehlgeschlagen",en:"Update failed",fr:"Échec de la mise à jour",it:"Aggiornamento non riuscito",es:"Error de actualización",pt:"Falha na atualização"},
   "VM cloned":{de:"VM geklont",en:"VM cloned",fr:"VM clonée",it:"VM clonata",es:"VM clonada",pt:"VM clonada"}
 };
@@ -5056,6 +5059,12 @@ const TOAST_PATTERNS=[
   {re:new RegExp("^Copied: (.+)$"),t:{"de":"Kopiert: $1","en":"Copied: $1","fr":"Copié : $1","it":"Copiato: $1","es":"Copiado: $1","pt":"Copiado: $1"}},
   {re:new RegExp("^Ausgeschnitten: (.+)$"),t:{"de":"Ausgeschnitten: $1","en":"Cut: $1","fr":"Coupé : $1","it":"Tagliato: $1","es":"Cortado: $1","pt":"Cortado: $1"}},
   {re:new RegExp("^Cut: (.+)$"),t:{"de":"Ausgeschnitten: $1","en":"Cut: $1","fr":"Coupé : $1","it":"Tagliato: $1","es":"Cortado: $1","pt":"Cortado: $1"}},
+  {re:new RegExp("^(\\d+) Elemente kopiert$"),t:{"de":"$1 Elemente kopiert","en":"$1 items copied","fr":"$1 éléments copiés","it":"$1 elementi copiati","es":"$1 elementos copiados","pt":"$1 itens copiados"}},
+  {re:new RegExp("^(\\d+) Elemente ausgeschnitten$"),t:{"de":"$1 Elemente ausgeschnitten","en":"$1 items cut","fr":"$1 éléments coupés","it":"$1 elementi tagliati","es":"$1 elementos cortados","pt":"$1 itens cortados"}},
+  {re:new RegExp("^(\\d+) Elemente eingefügt$"),t:{"de":"$1 Elemente eingefügt","en":"$1 items pasted","fr":"$1 éléments collés","it":"$1 elementi incollati","es":"$1 elementos pegados","pt":"$1 itens colados"}},
+  {re:new RegExp("^(\\d+) items copied$"),t:{"de":"$1 Elemente kopiert","en":"$1 items copied","fr":"$1 éléments copiés","it":"$1 elementi copiati","es":"$1 elementos copiados","pt":"$1 itens copiados"}},
+  {re:new RegExp("^(\\d+) items cut$"),t:{"de":"$1 Elemente ausgeschnitten","en":"$1 items cut","fr":"$1 éléments coupés","it":"$1 elementi tagliati","es":"$1 elementos cortados","pt":"$1 itens cortados"}},
+  {re:new RegExp("^(\\d+) items pasted$"),t:{"de":"$1 Elemente eingefügt","en":"$1 items pasted","fr":"$1 éléments collés","it":"$1 elementi incollati","es":"$1 elementos pegados","pt":"$1 itens colados"}},
   {re:new RegExp("^(.+) wiederhergestellt$"),t:{"de":"$1 wiederhergestellt","en":"$1 restored","fr":"$1 restauré","it":"$1 ripristinato","es":"$1 restaurado","pt":"$1 restaurado"}},
   {re:new RegExp("^(.+) restored$"),t:{"de":"$1 wiederhergestellt","en":"$1 restored","fr":"$1 restauré","it":"$1 ripristinato","es":"$1 restaurado","pt":"$1 restaurado"}},
   {re:new RegExp("^(.+) entfernt$"),t:{"de":"$1 entfernt","en":"$1 removed","fr":"$1 supprimé","it":"$1 rimosso","es":"$1 eliminado","pt":"$1 removido"}},
@@ -5104,6 +5113,44 @@ function toastText(text){
     }
   }
   return uiText(aliased);
+}
+const PROGRESS_PHRASES={
+  "Working":{de:"Arbeite",en:"Working",fr:"En cours",it:"In corso",es:"Trabajando",pt:"A trabalhar"},
+  "Failed":{de:"Fehlgeschlagen",en:"Failed",fr:"Échec",it:"Fallito",es:"Fallido",pt:"Falhado"},
+  "Upload complete":{de:"Upload abgeschlossen",en:"Upload complete",fr:"Import terminé",it:"Caricamento completato",es:"Subida completada",pt:"Carregamento concluído"},
+  "Upload failed":{de:"Upload fehlgeschlagen",en:"Upload failed",fr:"Échec de l’import",it:"Caricamento non riuscito",es:"Error al subir",pt:"Falha no carregamento"},
+  "Copied":{de:"Kopiert",en:"Copied",fr:"Copié",it:"Copiato",es:"Copiado",pt:"Copiado"},
+  "Copying failed":{de:"Kopieren fehlgeschlagen",en:"Copying failed",fr:"Échec de la copie",it:"Copia non riuscita",es:"Error al copiar",pt:"Falha ao copiar"},
+  "Moved":{de:"Verschoben",en:"Moved",fr:"Déplacé",it:"Spostato",es:"Movido",pt:"Movido"},
+  "Moving failed":{de:"Verschieben fehlgeschlagen",en:"Moving failed",fr:"Échec du déplacement",it:"Spostamento non riuscito",es:"Error al mover",pt:"Falha ao mover"},
+  "Deleted":{de:"Gelöscht",en:"Deleted",fr:"Supprimé",it:"Eliminato",es:"Eliminado",pt:"Eliminado"},
+  "Delete failed":{de:"Löschen fehlgeschlagen",en:"Delete failed",fr:"Échec de la suppression",it:"Eliminazione non riuscita",es:"Error al eliminar",pt:"Falha ao eliminar"},
+  "Creating ZIP":{de:"ZIP wird erstellt",en:"Creating ZIP",fr:"Création du ZIP",it:"Creazione ZIP",es:"Creando ZIP",pt:"A criar ZIP"},
+  "ZIP created":{de:"ZIP erstellt",en:"ZIP created",fr:"ZIP créé",it:"ZIP creato",es:"ZIP creado",pt:"ZIP criado"},
+  "ZIP failed":{de:"ZIP fehlgeschlagen",en:"ZIP failed",fr:"Échec du ZIP",it:"ZIP non riuscito",es:"Error con ZIP",pt:"Falha no ZIP"},
+  "Unpacking ZIP":{de:"ZIP wird entpackt",en:"Unpacking ZIP",fr:"Décompression du ZIP",it:"Estrazione ZIP",es:"Descomprimiendo ZIP",pt:"A extrair ZIP"},
+  "Unpacked":{de:"Entpackt",en:"Unpacked",fr:"Décompressé",it:"Estratto",es:"Descomprimido",pt:"Extraído"},
+  "Unpack failed":{de:"Entpacken fehlgeschlagen",en:"Unpack failed",fr:"Échec de la décompression",it:"Estrazione non riuscita",es:"Error al descomprimir",pt:"Falha ao extrair"},
+};
+const PROGRESS_PATTERNS=[
+  {re:new RegExp("^Uploading (\\d+)/(\\d+)$"),t:{de:"Upload $1/$2",en:"Uploading $1/$2",fr:"Import $1/$2",it:"Caricamento $1/$2",es:"Subiendo $1/$2",pt:"A carregar $1/$2"}},
+  {re:new RegExp("^Copying (\\d+)/(\\d+)$"),t:{de:"Kopiere $1/$2",en:"Copying $1/$2",fr:"Copie $1/$2",it:"Copia $1/$2",es:"Copiando $1/$2",pt:"A copiar $1/$2"}},
+  {re:new RegExp("^Moving (\\d+)/(\\d+)$"),t:{de:"Verschiebe $1/$2",en:"Moving $1/$2",fr:"Déplacement $1/$2",it:"Spostamento $1/$2",es:"Moviendo $1/$2",pt:"A mover $1/$2"}},
+  {re:new RegExp("^Deleting (\\d+)/(\\d+)$"),t:{de:"Lösche $1/$2",en:"Deleting $1/$2",fr:"Suppression $1/$2",it:"Eliminazione $1/$2",es:"Eliminando $1/$2",pt:"A eliminar $1/$2"}},
+];
+function progressText(text){
+  const lang=currentLanguage();
+  const value=String(text??'');
+  const direct=PROGRESS_PHRASES[value];
+  if(direct)return direct[lang]||direct.en||value;
+  for(const p of PROGRESS_PATTERNS){
+    const m=value.match(p.re);
+    if(m){
+      const template=p.t[lang]||p.t.en;
+      return template.replace(/\$(\d)/g,(_,i)=>m[i]??'');
+    }
+  }
+  return uiText(value);
 }
 function i18nOriginalAttrKey(attr){
   return 'i18nOriginal'+attr.replace(/(^|-)([a-z])/g,(_,p,c)=>c.toUpperCase());
@@ -5218,13 +5265,13 @@ function startTopProgress(label,total=1){
   box.classList.remove('done','error');
   box.classList.add('active');
   box.setAttribute('aria-hidden','false');
-  labelEl.textContent=label||'Working';
+  labelEl.textContent=progressText(label||'Working');
   fill.style.width='0%';
 }
 function setTopProgress(done,label){
   const {box,label:labelEl,fill}=topProgressEls(); if(!box||!labelEl||!fill)return;
   const pct=Math.max(0,Math.min(100,(Number(done)||0)/topProgressTotal*100));
-  if(label)labelEl.textContent=label;
+  if(label)labelEl.textContent=progressText(label);
   fill.style.width=pct.toFixed(1)+'%';
 }
 function hideTopProgress(){
@@ -5235,7 +5282,7 @@ function hideTopProgress(){
 function finishTopProgress(label){
   const {box,label:labelEl,fill}=topProgressEls(); if(!box||!labelEl||!fill)return;
   clearTimeout(topProgressHideTimer);
-  if(label)labelEl.textContent=label;
+  if(label)labelEl.textContent=progressText(label);
   fill.style.width='100%';
   box.classList.remove('error');
   box.classList.add('done','active');
@@ -5245,7 +5292,7 @@ function finishTopProgress(label){
 function failTopProgress(label){
   const {box,label:labelEl,fill}=topProgressEls(); if(!box||!labelEl||!fill)return;
   clearTimeout(topProgressHideTimer);
-  labelEl.textContent=label||'Failed';
+  labelEl.textContent=progressText(label||'Failed');
   fill.style.width='100%';
   box.classList.remove('done');
   box.classList.add('error','active');
@@ -5966,7 +6013,7 @@ window.showFolderCtx=e=>{
   menu.innerHTML=`<div style="padding:6px 12px 8px;color:var(--text3);font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(currentPath)}</div>`+items.map(i=>i.label==='─'?'<div style="height:.5px;background:var(--border);margin:4px 6px"></div>':`<div onclick="${i.fn};closeCtx()" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center" onmouseover="this.style.background='var(--glass-hover)'" onmouseout="this.style.background=''">${i.icon?`<span>${i.icon}</span>`:'<span style="width:16px"></span>'} ${esc(uiText(i.label))}</div>`).join('');
   setTimeout(()=>document.addEventListener('click',closeCtx,{once:true}),10);
 };
-window.closeCtx=()=>{const m=$('#ctx-menu');if(m)m.innerHTML='';};
+window.closeCtx=()=>{const m=$('#ctx-menu');if(m){m.innerHTML='';m.removeAttribute('style');}};
 
 function updateFileSelectionUI(){
   document.querySelectorAll('#file-area [data-path]').forEach(el=>{
