@@ -232,13 +232,15 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 .term-opt.active{background:rgba(122,74,255,.18);border-color:var(--border-accent);color:var(--accent-light)}
 
 /* Files */
-.files-layout{display:grid;grid-template-columns:170px 1fr;gap:0;height:100%}
+.files-layout{display:grid;grid-template-columns:170px minmax(0,1fr);gap:0;height:100%;min-height:0;overflow:hidden}
 .files-sidebar{display:flex;flex-direction:column;gap:2px;padding:0 10px 0 0;border-right:.5px solid var(--border);overflow-y:auto}
 .files-sb-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:0 8px;margin:0 0 4px}
 .files-quicklink{padding:7px 10px;border-radius:8px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;color:var(--text2);transition:all .15s}
 .files-quicklink:hover{background:var(--glass);color:var(--text)}
 .files-quicklink.active{background:var(--glass-hover);color:var(--accent-light)}
-.file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px}
+.files-main{min-width:0;display:flex;flex-direction:column;gap:6px;padding-left:16px;overflow:hidden}
+.files-scroll{flex:1;min-height:0;overflow-y:auto;overflow-x:hidden;padding-right:2px}
+.file-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(72px,1fr));gap:6px;min-width:0}
 .file-card{padding:10px 6px;text-align:center;border-radius:10px;cursor:pointer;border:1px solid transparent;transition:all .12s;outline:none;user-select:none;-webkit-user-select:none;-webkit-tap-highlight-color:transparent;display:flex;flex-direction:column;align-items:center;gap:5px}
 .file-card:hover{background:var(--glass-hover);border-color:var(--border)}
 .file-card .fi{width:34px;height:34px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
@@ -252,6 +254,9 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 .fi-lock{background:#374151}
 .file-card .fn{font-size:10px;word-break:break-word;color:var(--text2);line-height:1.3;max-height:28px;overflow:hidden}
 .file-card .fs{font-size:8px;color:var(--text3);font-family:'JetBrains Mono',monospace}
+.file-card.selected{background:rgba(122,74,255,.15);border-color:rgba(122,74,255,.4);box-shadow:inset 0 0 0 1px rgba(122,74,255,.2)}
+.file-card.selected .fn{color:var(--text)}
+.file-card.selected .fi{box-shadow:0 0 0 2px rgba(255,255,255,.08)}
 .files-statusbar{display:flex;align-items:center;gap:12px;padding:7px 4px 2px;margin-top:4px;border-top:.5px solid var(--border);font-size:11px;color:var(--text3);flex-shrink:0}
 .files-statusbar .sb-item{display:flex;align-items:center;gap:5px}
 .files-statusbar .sb-sep{width:.5px;height:12px;background:var(--border)}
@@ -266,6 +271,9 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 .file-list-row{display:grid;grid-template-columns:28px 1fr 70px 90px;gap:8px;padding:7px 10px;border-radius:8px;align-items:center;font-size:12px;cursor:pointer;transition:background .12s;border:1px solid transparent}
 .file-list-row:hover{background:rgba(255,255,255,.03)}
 .file-list-row.selected{background:rgba(122,74,255,.1);border-color:rgba(122,74,255,.25)}
+.files-scroll table tbody tr.sel-row td{background:rgba(122,74,255,.11);border-bottom-color:rgba(122,74,255,.22)}
+.files-scroll table tbody tr.sel-row td:first-child{border-radius:8px 0 0 8px}
+.files-scroll table tbody tr.sel-row td:last-child{border-radius:0 8px 8px 0}
 .file-list-row .fi{width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px}
 .file-list-head{display:grid;grid-template-columns:28px 1fr 70px 90px;gap:8px;padding:4px 10px;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;border-bottom:.5px solid var(--border);margin-bottom:2px}
 .fn-color-folder{color:var(--text)}
@@ -286,7 +294,6 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 ::-webkit-scrollbar-thumb{background:rgba(139,92,246,.3);border-radius:3px}
 ::-webkit-scrollbar-thumb:hover{background:rgba(139,92,246,.6)}
 ::-webkit-scrollbar-corner{background:transparent}
-.file-card.selected{background:rgba(122,74,255,.15);border-color:rgba(122,74,255,.4);}
 .sec-hdr{display:flex;align-items:center;margin-bottom:14px}.sec-hdr h3{font-size:13px;font-weight:600;color:var(--text);flex:1}
 .nx-card-inner{background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px}
 .nx-view-intro{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;background:linear-gradient(135deg,rgba(122,74,255,.12),rgba(6,182,212,.06));border:1px solid var(--border-accent);border-radius:14px;padding:16px 18px;margin-bottom:16px}
@@ -496,8 +503,10 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   .nx-view-intro{grid-template-columns:1fr;gap:12px}
   .nx-card-grid,.nx-summary-grid{grid-template-columns:1fr}
   .nx-kv{grid-template-columns:1fr}
-  .files-layout{grid-template-columns:1fr}
+  .files-layout{grid-template-columns:1fr;overflow:auto}
   .files-sidebar{border-right:0;border-bottom:.5px solid var(--border);padding:0 0 10px;margin-bottom:10px;display:grid;grid-template-columns:repeat(2,1fr)}
+  .files-main{padding-left:0;overflow:visible}
+  .files-scroll{overflow-x:hidden}
   .topbar{grid-template-columns:1fr auto;padding:7px 12px}
   .time{display:none}
 }
@@ -5751,7 +5760,7 @@ async function renderFiles(body){
       <div class="files-quicklink" onclick="mountSmbForm()">🔗 Connect SMB</div>
       <div class="files-quicklink" onclick="mountNfsForm()">🔗 Connect NFS</div>
     </div>
-    <div style="min-width:0;display:flex;flex-direction:column;gap:6px;padding-left:16px">
+    <div class="files-main">
       <div class="breadcrumb">${bcHtml||'<span class="bc-seg current">/</span>'}</div>
       <div class="toolbar">
         <button class="btn ghost sm" onclick="navTo('${esc(data.parent)}')" title="Parent folder">↑ Up</button>
@@ -5773,6 +5782,7 @@ async function renderFiles(body){
         <button class="btn danger sm" onclick="bulkDelete()">Delete</button>
         <button class="btn ghost sm" onclick="selectedFiles.clear();renderFiles($('#modal-body'))">✕</button>
       </div>
+      <div class="files-scroll">
       ${viewMode==='grid'?`
       <div class="file-grid" id="file-area">
         ${entries.map(e=>{if(e.blocked)return'';const fi=fileIcon(e);return`
@@ -5798,6 +5808,7 @@ async function renderFiles(body){
           <td style="color:var(--text3);font-size:11px">${new Date(e.modified*1000).toLocaleDateString('de-DE')}</td>
         </tr>`;}).join('')}</tbody>
       </table>`}
+      </div>
       <div class="files-statusbar">
         <div class="sb-item">📁 ${entries.filter(e=>e.is_dir).length} folders</div>
         <div class="sb-sep"></div>
