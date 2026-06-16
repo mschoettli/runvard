@@ -367,6 +367,7 @@ input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent);cursor:po
 tr.sel-row td{background:rgba(139,92,246,.1);}
 #ctx-menu:empty{display:none!important}
 #ctx-menu div:empty{display:none}
+#bulk-bar{display:none!important}
 
 /* ── App-Store ── */
 .apps-cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
@@ -5847,6 +5848,74 @@ const QUICKLINKS=[
   {label:'🗑 Trash',path:'__trash__'},
 ];
 let currentPath='/root', clipboard=null, viewMode='grid', sortBy='name', sortDir='asc', selectedFiles=new Set(), fileSelectionOrder=[], lastSelectedPath=null, fileJobsTimer=null, filesHotkeysReady=false;
+const FILE_I18N={
+  up:{de:'Hoch',en:'Up',fr:'Remonter',it:'Su',es:'Subir',pt:'Subir'},
+  parentFolder:{de:'Übergeordneter Ordner',en:'Parent folder',fr:'Dossier parent',it:'Cartella superiore',es:'Carpeta superior',pt:'Pasta superior'},
+  copyPath:{de:'Pfad kopieren',en:'Copy path',fr:'Copier le chemin',it:'Copia percorso',es:'Copiar ruta',pt:'Copiar caminho'},
+  path:{de:'Pfad',en:'Path',fr:'Chemin',it:'Percorso',es:'Ruta',pt:'Caminho'},
+  newFolder:{de:'Neuer Ordner',en:'New folder',fr:'Nouveau dossier',it:'Nuova cartella',es:'Nueva carpeta',pt:'Nova pasta'},
+  upload:{de:'Hochladen',en:'Upload',fr:'Importer',it:'Carica',es:'Subir',pt:'Carregar'},
+  share:{de:'Freigeben',en:'Share',fr:'Partager',it:'Condividi',es:'Compartir',pt:'Partilhar'},
+  search:{de:'Suchen...',en:'Search...',fr:'Rechercher...',it:'Cerca...',es:'Buscar...',pt:'Pesquisar...'},
+  name:{de:'Name',en:'Name',fr:'Nom',it:'Nome',es:'Nombre',pt:'Nome'},
+  size:{de:'Größe',en:'Size',fr:'Taille',it:'Dimensione',es:'Tamaño',pt:'Tamanho'},
+  date:{de:'Datum',en:'Date',fr:'Date',it:'Data',es:'Fecha',pt:'Data'},
+  type:{de:'Typ',en:'Type',fr:'Type',it:'Tipo',es:'Tipo',pt:'Tipo'},
+  copy:{de:'Kopieren',en:'Copy',fr:'Copier',it:'Copia',es:'Copiar',pt:'Copiar'},
+  cut:{de:'Ausschneiden',en:'Cut',fr:'Couper',it:'Taglia',es:'Cortar',pt:'Cortar'},
+  paste:{de:'Einfügen',en:'Paste',fr:'Coller',it:'Incolla',es:'Pegar',pt:'Colar'},
+  pasteHere:{de:'Hier einfügen',en:'Paste here',fr:'Coller ici',it:'Incolla qui',es:'Pegar aquí',pt:'Colar aqui'},
+  pasteManyHere:{de:'$1 Elemente hier einfügen',en:'Paste $1 items here',fr:'Coller $1 éléments ici',it:'Incolla $1 elementi qui',es:'Pegar $1 elementos aquí',pt:'Colar $1 itens aqui'},
+  download:{de:'Download',en:'Download',fr:'Télécharger',it:'Scarica',es:'Descargar',pt:'Transferir'},
+  zip:{de:'ZIP',en:'ZIP',fr:'ZIP',it:'ZIP',es:'ZIP',pt:'ZIP'},
+  delete:{de:'Löschen',en:'Delete',fr:'Supprimer',it:'Elimina',es:'Eliminar',pt:'Eliminar'},
+  view:{de:'Ansicht',en:'View',fr:'Affichage',it:'Vista',es:'Vista',pt:'Vista'},
+  dropUpload:{de:'Dateien hier ablegen zum Hochladen',en:'Drop files here to upload',fr:'Déposez les fichiers ici pour importer',it:'Rilascia qui i file da caricare',es:'Suelta archivos aquí para subirlos',pt:'Largue ficheiros aqui para carregar'},
+  folders:{de:'Ordner',en:'folders',fr:'dossiers',it:'cartelle',es:'carpetas',pt:'pastas'},
+  files:{de:'Dateien',en:'files',fr:'fichiers',it:'file',es:'archivos',pt:'ficheiros'},
+  total:{de:'Gesamt',en:'Total',fr:'Total',it:'Totale',es:'Total',pt:'Total'},
+  selected:{de:'ausgewählt',en:'selected',fr:'sélectionnés',it:'selezionati',es:'seleccionados',pt:'selecionados'},
+  working:{de:'Arbeite...',en:'Working...',fr:'En cours...',it:'In corso...',es:'Trabajando...',pt:'A trabalhar...'},
+  selectOne:{de:'Wähle zuerst genau eine Datei oder einen Ordner aus',en:'Select one file or folder first',fr:'Sélectionnez d’abord un seul fichier ou dossier',it:'Seleziona prima un solo file o cartella',es:'Selecciona primero un archivo o carpeta',pt:'Selecione primeiro um ficheiro ou pasta'},
+  selectFiles:{de:'Wähle zuerst Dateien aus',en:'Select files first',fr:'Sélectionnez d’abord des fichiers',it:'Seleziona prima i file',es:'Selecciona archivos primero',pt:'Selecione ficheiros primeiro'},
+  jobStarted:{de:'Job gestartet',en:'Job started',fr:'Tâche démarrée',it:'Job avviato',es:'Tarea iniciada',pt:'Tarefa iniciada'},
+  deleteJobStarted:{de:'Lösch-Job gestartet',en:'Delete job started',fr:'Suppression démarrée',it:'Eliminazione avviata',es:'Eliminación iniciada',pt:'Eliminação iniciada'},
+  zipJobStarted:{de:'ZIP-Job gestartet',en:'ZIP job started',fr:'Création ZIP démarrée',it:'Creazione ZIP avviata',es:'Creación ZIP iniciada',pt:'Criação ZIP iniciada'},
+  moveToTrashConfirm:{de:'"$1" in den Papierkorb verschieben?',en:'Move "$1" to trash?',fr:'Déplacer "$1" vers la corbeille ?',it:'Spostare "$1" nel cestino?',es:'¿Mover "$1" a la papelera?',pt:'Mover "$1" para o lixo?'},
+  bulkTrashConfirm:{de:'$1 Elemente in den Papierkorb verschieben?',en:'Move $1 items to trash?',fr:'Déplacer $1 éléments vers la corbeille ?',it:'Spostare $1 elementi nel cestino?',es:'¿Mover $1 elementos a la papelera?',pt:'Mover $1 itens para o lixo?'},
+  emptyTrashConfirm:{de:'Alle Elemente endgültig löschen?',en:'Permanently delete all items?',fr:'Supprimer définitivement tous les éléments ?',it:'Eliminare definitivamente tutti gli elementi?',es:'¿Eliminar permanentemente todos los elementos?',pt:'Eliminar todos os itens permanentemente?'},
+  uploadComplete:{de:'Upload abgeschlossen',en:'Upload complete',fr:'Import terminé',it:'Caricamento completato',es:'Subida completada',pt:'Carregamento concluído'},
+  uploadFailed:{de:'Upload fehlgeschlagen',en:'Upload failed',fr:'Échec de l’import',it:'Caricamento non riuscito',es:'Error al subir',pt:'Falha no carregamento'},
+  copiedMany:{de:'$1 Elemente kopiert',en:'$1 items copied',fr:'$1 éléments copiés',it:'$1 elementi copiati',es:'$1 elementos copiados',pt:'$1 itens copiados'},
+  cutMany:{de:'$1 Elemente ausgeschnitten',en:'$1 items cut',fr:'$1 éléments coupés',it:'$1 elementi tagliati',es:'$1 elementos cortados',pt:'$1 itens cortados'},
+  startedMany:{de:'$1 Elemente gestartet',en:'$1 items started',fr:'$1 éléments démarrés',it:'$1 elementi avviati',es:'$1 elementos iniciados',pt:'$1 itens iniciados'},
+  uploadedMany:{de:'$1 Datei(en) hochgeladen',en:'$1 file(s) uploaded',fr:'$1 fichier(s) importé(s)',it:'$1 file caricati',es:'$1 archivo(s) subido(s)',pt:'$1 ficheiro(s) carregado(s)'},
+  downloadSelected:{de:'Auswahl herunterladen',en:'Download selected',fr:'Télécharger la sélection',it:'Scarica selezionati',es:'Descargar selección',pt:'Transferir seleção'},
+  copySelected:{de:'Auswahl kopieren',en:'Copy selected',fr:'Copier la sélection',it:'Copia selezionati',es:'Copiar selección',pt:'Copiar seleção'},
+  cutSelected:{de:'Auswahl ausschneiden',en:'Cut selected',fr:'Couper la sélection',it:'Taglia selezionati',es:'Cortar selección',pt:'Cortar seleção'},
+  deleteSelected:{de:'Auswahl löschen',en:'Delete selected',fr:'Supprimer la sélection',it:'Elimina selezionati',es:'Eliminar selección',pt:'Eliminar seleção'},
+  createLink:{de:'Link erstellen',en:'Create link',fr:'Créer un lien',it:'Crea link',es:'Crear enlace',pt:'Criar ligação'},
+  createZip:{de:'ZIP erstellen',en:'Create ZIP',fr:'Créer un ZIP',it:'Crea ZIP',es:'Crear ZIP',pt:'Criar ZIP'},
+  unpack:{de:'Entpacken',en:'Unpack',fr:'Décompresser',it:'Estrai',es:'Descomprimir',pt:'Extrair'},
+  asSambaShare:{de:'Als Samba-Freigabe',en:'As Samba share',fr:'Comme partage Samba',it:'Come condivisione Samba',es:'Como recurso Samba',pt:'Como partilha Samba'},
+  properties:{de:'Eigenschaften',en:'Properties',fr:'Propriétés',it:'Proprietà',es:'Propiedades',pt:'Propriedades'},
+  items:{de:'Elemente',en:'items',fr:'éléments',it:'elementi',es:'elementos',pt:'itens'},
+  copying:{de:'Kopieren',en:'Copying',fr:'Copie',it:'Copia',es:'Copiando',pt:'A copiar'},
+  moving:{de:'Verschieben',en:'Moving',fr:'Déplacement',it:'Spostamento',es:'Moviendo',pt:'A mover'},
+  deleting:{de:'Löschen',en:'Deleting',fr:'Suppression',it:'Eliminazione',es:'Eliminando',pt:'A eliminar'},
+  creatingZip:{de:'ZIP wird erstellt',en:'Creating ZIP',fr:'Création du ZIP',it:'Creazione ZIP',es:'Creando ZIP',pt:'A criar ZIP'},
+  queued:{de:'wartet',en:'queued',fr:'en attente',it:'in coda',es:'en cola',pt:'em fila'},
+  running:{de:'läuft',en:'running',fr:'en cours',it:'in esecuzione',es:'en ejecución',pt:'em execução'},
+  done:{de:'fertig',en:'done',fr:'terminé',it:'fatto',es:'hecho',pt:'concluído'},
+  error:{de:'Fehler',en:'error',fr:'erreur',it:'errore',es:'error',pt:'erro'},
+  unknown:{de:'unbekannt',en:'unknown',fr:'inconnu',it:'sconosciuto',es:'desconocido',pt:'desconhecido'},
+};
+function fileText(key,...args){
+  const dict=FILE_I18N[key]||{};
+  let text=dict[currentLanguage()]||dict.en||key;
+  args.forEach((v,i)=>{text=text.replace(new RegExp('\\$'+(i+1),'g'),v);});
+  return text;
+}
 
 function fileIcon(e){
   const n=(e.name||'').toLowerCase();
@@ -5920,36 +5989,36 @@ async function renderFiles(body){
     <div class="files-main">
       <div class="breadcrumb">${bcHtml||'<span class="bc-seg current">/</span>'}</div>
       <div id="file-job-strip" class="file-job-strip">
-        <span id="file-job-label">Working…</span>
+        <span id="file-job-label">${esc(fileText('working'))}</span>
         <div class="job-track"><div id="file-job-fill" class="job-fill"></div></div>
         <span id="file-job-pct" class="mono">0%</span>
       </div>
       <div class="toolbar">
-        <button class="btn ghost sm" onclick="navTo('${esc(data.parent)}')" title="Parent folder">↑ Up</button>
-        <button class="btn ghost sm" onclick="copyText(currentPath)" title="Copy current path">⧉ Path</button>
-        <button class="btn ghost sm" onclick="mkdirForm()">+ New folder</button>
-        <label class="btn ghost sm" style="cursor:pointer">↑ Upload<input type="file" multiple hidden onchange="uploadFiles(this)"></label>
-        <button class="btn ghost sm" onclick="selectedFiles.size===1?createShareLink([...selectedFiles][0]):toast('Select one file or folder first','error')">Share</button>
-        <input id="files-search" class="nx-search" placeholder="Search…" style="flex:1;min-width:120px;padding:6px 10px;font-size:11px" oninput="fileSearch(this.value)">
+        <button class="btn ghost sm" onclick="navTo('${esc(data.parent)}')" title="${esc(fileText('parentFolder'))}">↑ ${esc(fileText('up'))}</button>
+        <button class="btn ghost sm" onclick="copyText(currentPath)" title="${esc(fileText('copyPath'))}">⧉ ${esc(fileText('path'))}</button>
+        <button class="btn ghost sm" onclick="mkdirForm()">+ ${esc(fileText('newFolder'))}</button>
+        <label class="btn ghost sm" style="cursor:pointer">↑ ${esc(fileText('upload'))}<input type="file" multiple hidden onchange="uploadFiles(this)"></label>
+        <button class="btn ghost sm" onclick="selectedFiles.size===1?createShareLink([...selectedFiles][0]):toast(fileText('selectOne'),'error')">${esc(fileText('share'))}</button>
+        <input id="files-search" class="nx-search" placeholder="${esc(fileText('search'))}" style="flex:1;min-width:120px;padding:6px 10px;font-size:11px" oninput="fileSearch(this.value)">
         <div style="margin-left:auto;display:flex;gap:5px;align-items:center">
           <select id="sort-sel" style="width:auto;padding:4px 20px 4px 8px;font-size:11px" onchange="sortBy=this.value;renderFiles($('#modal-body'))">
-            <option value="name" ${sortBy==='name'?'selected':''}>Name</option><option value="size" ${sortBy==='size'?'selected':''}>Size</option><option value="date" ${sortBy==='date'?'selected':''}>Date</option><option value="type" ${sortBy==='type'?'selected':''}>Type</option>
+            <option value="name" ${sortBy==='name'?'selected':''}>${esc(fileText('name'))}</option><option value="size" ${sortBy==='size'?'selected':''}>${esc(fileText('size'))}</option><option value="date" ${sortBy==='date'?'selected':''}>${esc(fileText('date'))}</option><option value="type" ${sortBy==='type'?'selected':''}>${esc(fileText('type'))}</option>
           </select>
-          <button class="btn icon" onclick="viewMode=viewMode==='grid'?'list':'grid';renderFiles($('#modal-body'))" title="Ansicht" style="font-size:13px">${viewMode==='grid'?'☰':'⊞'}</button>
+          <button class="btn icon" onclick="viewMode=viewMode==='grid'?'list':'grid';renderFiles($('#modal-body'))" title="${esc(fileText('view'))}" style="font-size:13px">${viewMode==='grid'?'☰':'⊞'}</button>
         </div>
       </div>
       <div id="bulk-bar" style="display:none;gap:6px;flex-wrap:wrap;align-items:center">
         <span id="sel-count" style="font-size:11px;color:var(--text3)"></span>
-        <button class="btn ghost sm" onclick="bulkCopy()">Copy</button>
-        <button class="btn ghost sm" onclick="bulkCut()">Cut</button>
-        ${clipboard?'<button class="btn ghost sm" onclick="pasteClipboard()">Paste</button>':''}
-        <button class="btn ghost sm" onclick="bulkDownload()">↓ Download</button>
-        <button class="btn ghost sm" onclick="bulkZip()">ZIP</button>
-        <button class="btn danger sm" onclick="bulkDelete()">Delete</button>
+        <button class="btn ghost sm" onclick="bulkCopy()">${esc(fileText('copy'))}</button>
+        <button class="btn ghost sm" onclick="bulkCut()">${esc(fileText('cut'))}</button>
+        ${clipboard?`<button class="btn ghost sm" onclick="pasteClipboard()">${esc(fileText('paste'))}</button>`:''}
+        <button class="btn ghost sm" onclick="bulkDownload()">↓ ${esc(fileText('download'))}</button>
+        <button class="btn ghost sm" onclick="bulkZip()">${esc(fileText('zip'))}</button>
+        <button class="btn danger sm" onclick="bulkDelete()">${esc(fileText('delete'))}</button>
         <button class="btn ghost sm" onclick="selectedFiles.clear();renderFiles($('#modal-body'))">✕</button>
       </div>
       <div class="files-scroll" id="files-scroll" oncontextmenu="showFolderCtx(event)">
-      <div class="files-drop-hint">Dateien hier ablegen zum Hochladen</div>
+      <div class="files-drop-hint">${esc(fileText('dropUpload'))}</div>
       ${viewMode==='grid'?`
       <div class="file-grid" id="file-area">
         ${entries.map(e=>{if(e.blocked)return'';const fi=fileIcon(e);return`
@@ -5963,7 +6032,7 @@ async function renderFiles(body){
         </div>`;}).join('')}
       </div>`:`
       <table id="file-area" style="font-size:12px">
-        <thead><tr><th style="width:32px"></th><th class="sortable-th" onclick="setFileSort('name')">Name${sortMark('name')}</th><th class="sortable-th" onclick="setFileSort('size')" style="width:70px;text-align:right">Size${sortMark('size')}</th><th class="sortable-th" onclick="setFileSort('date')" style="width:90px">Datum${sortMark('date')}</th></tr></thead>
+        <thead><tr><th style="width:32px"></th><th class="sortable-th" onclick="setFileSort('name')">${esc(fileText('name'))}${sortMark('name')}</th><th class="sortable-th" onclick="setFileSort('size')" style="width:70px;text-align:right">${esc(fileText('size'))}${sortMark('size')}</th><th class="sortable-th" onclick="setFileSort('date')" style="width:90px">${esc(fileText('date'))}${sortMark('date')}</th></tr></thead>
         <tbody>${entries.map(e=>{if(e.blocked)return'';const fi=fileIcon(e);return`
           <tr data-path="${esc(e.path)}" class="${selectedFiles.has(e.path)?'sel-row':''}"
           onclick="fileClick(event,'${esc(e.path)}',${e.is_dir})"
@@ -5977,10 +6046,10 @@ async function renderFiles(body){
       </table>`}
       </div>
       <div class="files-statusbar">
-        <div class="sb-item">📁 ${entries.filter(e=>e.is_dir).length} folders</div>
+        <div class="sb-item">📁 ${entries.filter(e=>e.is_dir).length} ${esc(fileText('folders'))}</div>
         <div class="sb-sep"></div>
-        <div class="sb-item">📄 ${entries.filter(e=>!e.is_dir).length} files</div>
-        <div class="sb-total"><span>Total</span><strong>${fmtBytes(entries.reduce((s,e)=>s+(e.is_dir?0:(e.size||0)),0))}</strong></div>
+        <div class="sb-item">📄 ${entries.filter(e=>!e.is_dir).length} ${esc(fileText('files'))}</div>
+        <div class="sb-total"><span>${esc(fileText('total'))}</span><strong>${fmtBytes(entries.reduce((s,e)=>s+(e.is_dir?0:(e.size||0)),0))}</strong></div>
       </div>
     </div>
   </div>
@@ -6097,7 +6166,7 @@ async function uploadFileList(files,targetPath=currentPath){
       setTopProgress(i+1,`Uploading ${i+1}/${files.length}`);
     }
     finishTopProgress('Upload complete');
-    toast(`${files.length} file(s) uploaded`);
+    toast(fileText('uploadedMany',files.length));
     renderFiles($('#modal-body'));
   }catch(e){
     failTopProgress('Upload failed');
@@ -6106,7 +6175,7 @@ async function uploadFileList(files,targetPath=currentPath){
 }
 
 async function startFileJob(action,paths,opts={}){
-  if(!paths||!paths.length){toast('Select files first','error');return null;}
+  if(!paths||!paths.length){toast(fileText('selectFiles'),'error');return null;}
   const job=await post('/files/job',{
     action,
     paths:paths.join('|'),
@@ -6118,8 +6187,8 @@ async function startFileJob(action,paths,opts={}){
 }
 
 function fileJobLabel(job){
-  const map={copy:'Copying',move:'Moving',delete:'Deleting',zip:'Creating ZIP'};
-  return `${map[job.action]||'Working'} · ${job.status}`;
+  const map={copy:'copying',move:'moving',delete:'deleting',zip:'creatingZip'};
+  return `${fileText(map[job.action]||'working')} · ${fileText(job.status||'unknown')}`;
 }
 
 function paintFileJob(job){
@@ -6171,25 +6240,25 @@ window.showCtx=(e,path,isDir,readonly)=>{
   }
   const paths=[...selectedFiles];
   const multi=paths.length>1;
-  const itemLabel=multi?`${paths.length} items`:name;
+  const itemLabel=multi?`${paths.length} ${fileText('items')}`:name;
   const items=[
-    {icon:'⬇',label:multi?'Download selected':'Download',fn:multi?'bulkDownload()':`downloadFile('${esc(path)}')`},
-    (!multi&&!readonly)?{icon:'✎',label:'Rename',fn:`renameForm('${esc(path)}')`}:null,
-    readonly?null:{icon:'📋',label:multi?'Copy selected':'Copy',fn:'bulkCopy()'},
-    readonly?null:{icon:'✂',label:multi?'Cut selected':'Cut',fn:'bulkCut()'},
-    clipboard?{icon:'📌',label:'Paste here',fn:`pasteClipboard()`}:null,
+    {icon:'⬇',label:multi?fileText('downloadSelected'):fileText('download'),fn:multi?'bulkDownload()':`downloadFile('${esc(path)}')`},
+    (!multi&&!readonly)?{icon:'✎',label:uiText('Rename'),fn:`renameForm('${esc(path)}')`}:null,
+    readonly?null:{icon:'📋',label:multi?fileText('copySelected'):fileText('copy'),fn:'bulkCopy()'},
+    readonly?null:{icon:'✂',label:multi?fileText('cutSelected'):fileText('cut'),fn:'bulkCut()'},
+    clipboard?{icon:'📌',label:fileText('pasteHere'),fn:`pasteClipboard()`}:null,
     {icon:'',label:'─',fn:''},
-    (!multi&&isDir&&!readonly)?{icon:'🔗',label:'As Samba share',fn:`sambaShareForm('${esc(path)}','${esc(name)}')`}:null,
-    !multi?{icon:'🔗',label:'Create link',fn:`createShareLink('${esc(path)}')`}:null,
-    multi?{icon:'📦',label:'Create ZIP',fn:'bulkZip()'}:(isDir&&path.endsWith('.zip')?null:{icon:'📦',label:path.endsWith('.zip')?'Unpack':'Create ZIP',fn:path.endsWith('.zip')?`unzipFile('${esc(path)}')` :`zipFile('${esc(path)}')`}),
+    (!multi&&isDir&&!readonly)?{icon:'🔗',label:fileText('asSambaShare'),fn:`sambaShareForm('${esc(path)}','${esc(name)}')`}:null,
+    !multi?{icon:'🔗',label:fileText('createLink'),fn:`createShareLink('${esc(path)}')`}:null,
+    multi?{icon:'📦',label:fileText('createZip'),fn:'bulkZip()'}:(isDir&&path.endsWith('.zip')?null:{icon:'📦',label:path.endsWith('.zip')?fileText('unpack'):fileText('createZip'),fn:path.endsWith('.zip')?`unzipFile('${esc(path)}')` :`zipFile('${esc(path)}')`}),
     {icon:'',label:'─',fn:''},
-    readonly?null:{icon:'🗑',label:multi?'Delete selected':'Delete',fn:multi?'bulkDelete()':`deleteFile('${esc(path)}')`},
-    !multi?{icon:'ℹ',label:'Properties',fn:`showProps('${esc(path)}')`}:null,
+    readonly?null:{icon:'🗑',label:multi?fileText('deleteSelected'):fileText('delete'),fn:multi?'bulkDelete()':`deleteFile('${esc(path)}')`},
+    !multi?{icon:'ℹ',label:fileText('properties'),fn:`showProps('${esc(path)}')`}:null,
   ].filter(Boolean).filter(i=>i.label!=='─'||true);
 
   const menu=$('#ctx-menu');
   menu.style.cssText=`position:fixed;top:${Math.min(e.clientY,window.innerHeight-280)}px;left:${Math.min(e.clientX,window.innerWidth-180)}px;background:rgba(15,12,26,.97);border:.5px solid var(--border-accent);border-radius:12px;padding:6px;z-index:999;min-width:170px;box-shadow:0 12px 40px rgba(0,0,0,.6)`;
-  menu.innerHTML=`<div style="padding:6px 12px 8px;color:var(--text3);font-size:11px;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(itemLabel)}</div>`+items.map(i=>i.label==='─'?'<div style="height:.5px;background:var(--border);margin:4px 6px"></div>':`<div onclick="${i.fn};closeCtx()" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center" onmouseover="this.style.background='var(--glass-hover)'" onmouseout="this.style.background=''">${i.icon?`<span>${i.icon}</span>`:'<span style="width:16px"></span>'} ${esc(uiText(i.label))}</div>`).join('');
+  menu.innerHTML=`<div style="padding:6px 12px 8px;color:var(--text3);font-size:11px;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(itemLabel)}</div>`+items.map(i=>i.label==='─'?'<div style="height:.5px;background:var(--border);margin:4px 6px"></div>':`<div onclick="${i.fn};closeCtx()" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center" onmouseover="this.style.background='var(--glass-hover)'" onmouseout="this.style.background=''">${i.icon?`<span>${i.icon}</span>`:'<span style="width:16px"></span>'} ${esc(i.label)}</div>`).join('');
   setTimeout(()=>document.addEventListener('click',closeCtx,{once:true}),10);
 };
 window.showFolderCtx=e=>{
@@ -6200,14 +6269,14 @@ window.showFolderCtx=e=>{
   updateFileSelectionUI();
   const clipCount=clipboard?(clipboard.paths||[clipboard.path].filter(Boolean)).length:0;
   const items=[
-    clipboard?{icon:'📌',label:clipCount>1?`Paste ${clipCount} items here`:'Paste here',fn:'pasteClipboard()'}:null,
+    clipboard?{icon:'📌',label:clipCount>1?fileText('pasteManyHere',clipCount):fileText('pasteHere'),fn:'pasteClipboard()'}:null,
     clipboard?{icon:'',label:'─',fn:''}:null,
-    {icon:'📁',label:'New folder',fn:'mkdirForm()'},
+    {icon:'📁',label:fileText('newFolder'),fn:'mkdirForm()'},
   ].filter(Boolean);
 
   const menu=$('#ctx-menu');
   menu.style.cssText=`position:fixed;top:${Math.min(e.clientY,window.innerHeight-180)}px;left:${Math.min(e.clientX,window.innerWidth-210)}px;background:rgba(15,12,26,.97);border:.5px solid var(--border-accent);border-radius:12px;padding:6px;z-index:999;min-width:200px;box-shadow:0 12px 40px rgba(0,0,0,.6)`;
-  menu.innerHTML=`<div style="padding:6px 12px 8px;color:var(--text3);font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(currentPath)}</div>`+items.map(i=>i.label==='─'?'<div style="height:.5px;background:var(--border);margin:4px 6px"></div>':`<div onclick="${i.fn};closeCtx()" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center" onmouseover="this.style.background='var(--glass-hover)'" onmouseout="this.style.background=''">${i.icon?`<span>${i.icon}</span>`:'<span style="width:16px"></span>'} ${esc(uiText(i.label))}</div>`).join('');
+  menu.innerHTML=`<div style="padding:6px 12px 8px;color:var(--text3);font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(currentPath)}</div>`+items.map(i=>i.label==='─'?'<div style="height:.5px;background:var(--border);margin:4px 6px"></div>':`<div onclick="${i.fn};closeCtx()" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center" onmouseover="this.style.background='var(--glass-hover)'" onmouseout="this.style.background=''">${i.icon?`<span>${i.icon}</span>`:'<span style="width:16px"></span>'} ${esc(i.label)}</div>`).join('');
   setTimeout(()=>document.addEventListener('click',closeCtx,{once:true}),10);
 };
 window.closeCtx=()=>{const m=$('#ctx-menu');if(m){m.innerHTML='';m.removeAttribute('style');}};
@@ -6244,8 +6313,8 @@ window.fileDblClick=(path,isDir)=>{
 
 function updateBulkBar(){
   const bar=$('#bulk-bar'); if(!bar) return;
-  bar.style.display=selectedFiles.size?'flex':'none';
-  const c=$('#sel-count'); if(c) c.textContent=`${selectedFiles.size} selected`;
+  bar.style.display='none';
+  const c=$('#sel-count'); if(c) c.textContent=`${selectedFiles.size} ${fileText('selected')}`;
 }
 
 window.navTo=p=>{currentPath=p;selectedFiles.clear();lastSelectedPath=null;closeCtx();renderFiles($('#modal-body'));};
@@ -6255,15 +6324,15 @@ window.openFile=async path=>{
   const ext=path.split('.').pop().toLowerCase();
   const body=$('#modal-body');
   if(['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext)){
-    body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderFiles($('#modal-body'))">← Back</button></div><div style="text-align:center;padding:20px"><img src="/api/files/preview?path=${encodeURIComponent(path)}" style="max-width:100%;max-height:65vh;border-radius:12px;object-fit:contain"></div>`;
+    body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderFiles($('#modal-body'))">← ${esc(uiText('Back'))}</button></div><div style="text-align:center;padding:20px"><img src="/api/files/preview?path=${encodeURIComponent(path)}" style="max-width:100%;max-height:65vh;border-radius:12px;object-fit:contain"></div>`;
     return;
   }
   if(['mp4','webm','ogg'].includes(ext)){
-    body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderFiles($('#modal-body'))">← Back</button></div><video controls style="width:100%;max-height:70vh;border-radius:12px" src="/api/files/preview?path=${encodeURIComponent(path)}"></video>`;
+    body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderFiles($('#modal-body'))">← ${esc(uiText('Back'))}</button></div><video controls style="width:100%;max-height:70vh;border-radius:12px" src="/api/files/preview?path=${encodeURIComponent(path)}"></video>`;
     return;
   }
   if(ext==='pdf'){
-    body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderFiles($('#modal-body'))">← Back</button></div><iframe src="/api/files/preview?path=${encodeURIComponent(path)}" style="width:100%;height:70vh;border:none;border-radius:12px"></iframe>`;
+    body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderFiles($('#modal-body'))">← ${esc(uiText('Back'))}</button></div><iframe src="/api/files/preview?path=${encodeURIComponent(path)}" style="width:100%;height:70vh;border:none;border-radius:12px"></iframe>`;
     return;
   }
   // Text / Markdown
@@ -6271,15 +6340,15 @@ window.openFile=async path=>{
     const d=await api('/files/read?path='+encodeURIComponent(path));
     const isMd=/\.(md|markdown)$/i.test(path);
     if(isMd){
-      body.innerHTML=`<div class="toolbar"><button class="btn sm" onclick="saveFile('${esc(path)}')">💾 Save</button><button class="btn ghost sm" onclick="renderFiles($('#modal-body'))">← Back</button></div><div class="md-split"><textarea id="md-edit" oninput="updatePreview()">${esc(d.content)}</textarea><div class="md-preview" id="md-prev"></div></div>`;
+      body.innerHTML=`<div class="toolbar"><button class="btn sm" onclick="saveFile('${esc(path)}')">💾 ${esc(uiText('Save'))}</button><button class="btn ghost sm" onclick="renderFiles($('#modal-body'))">← ${esc(uiText('Back'))}</button></div><div class="md-split"><textarea id="md-edit" oninput="updatePreview()">${esc(d.content)}</textarea><div class="md-preview" id="md-prev"></div></div>`;
       updatePreview();
     } else {
-      body.innerHTML=`<div class="toolbar"><button class="btn sm" onclick="saveFile('${esc(path)}')">💾 Save</button><button class="btn ghost sm" onclick="renderFiles($('#modal-body'))">← Back</button></div><textarea id="md-edit" style="width:100%;height:calc(100% - 60px);font-family:'JetBrains Mono',monospace">${esc(d.content)}</textarea>`;
+      body.innerHTML=`<div class="toolbar"><button class="btn sm" onclick="saveFile('${esc(path)}')">💾 ${esc(uiText('Save'))}</button><button class="btn ghost sm" onclick="renderFiles($('#modal-body'))">← ${esc(uiText('Back'))}</button></div><textarea id="md-edit" style="width:100%;height:calc(100% - 60px);font-family:'JetBrains Mono',monospace">${esc(d.content)}</textarea>`;
     }
-  }catch(e){ toast('File not readable: '+e.message,'error'); }
+  }catch(e){ toast(uiText('File not readable: ')+e.message,'error'); }
 };
 window.updatePreview=()=>{const p=$('#md-prev');if(p)p.innerHTML=marked.parse($('#md-edit').value);};
-window.saveFile=async path=>{await post('/files/write',{path,content:$('#md-edit').value});toast('Gespeichert');};
+window.saveFile=async path=>{await post('/files/write',{path,content:$('#md-edit').value});toast(uiText('Saved'));};
 
 // Suche
 let searchTimeout;
@@ -6305,7 +6374,7 @@ window.fileSearch=q=>{
 };
 
 // Ordner/Upload
-window.mkdirForm=()=>openForm('Create folder','📁',[{name:'name',label:'Folder name'}],async d=>{await post('/files/mkdir',{path:currentPath,name:d.name});closeForm();toast('Folder created');renderFiles($('#modal-body'));});
+window.mkdirForm=()=>openForm(uiText('Create folder'),'📁',[{name:'name',label:uiText('Folder name')}],async d=>{await post('/files/mkdir',{path:currentPath,name:d.name});closeForm();toast(uiText('Folder created'));renderFiles($('#modal-body'));});
 function uploadFileWithProgress(file,index,total,targetPath){
   return new Promise((resolve,reject)=>{
     const fd=new FormData();
@@ -6334,15 +6403,15 @@ window.uploadFiles=async inp=>{
 window.downloadFile=path=>window.open('/api/files/download?path='+encodeURIComponent(path),'_blank');
 
 // Umbenennen
-window.renameForm=path=>openForm('Rename','✎',[{name:'new_name',label:'New name',value:path.split('/').pop()}],async d=>{try{await post('/files/rename',{path,new_name:d.new_name});closeForm();toast('Renamed');renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
+window.renameForm=path=>openForm(uiText('Rename'),'✎',[{name:'new_name',label:uiText('New name'),value:path.split('/').pop()}],async d=>{try{await post('/files/rename',{path,new_name:d.new_name});closeForm();toast('Renamed');renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
 
 // Kopieren / Ausschneiden / Einfügen
 function selectedOrPath(path){
   if(path&&!selectedFiles.has(path)) return [path];
   return selectedFiles.size?[...selectedFiles]:(path?[path]:[]);
 }
-window.copyToClipboard=path=>{const paths=selectedOrPath(path);if(!paths.length)return;clipboard={paths,action:'copy'};toast(paths.length>1?`${paths.length} Elemente kopiert`:'Kopiert: '+paths[0].split('/').pop());renderFiles($('#modal-body'));};
-window.cutToClipboard=path=>{const paths=selectedOrPath(path);if(!paths.length)return;clipboard={paths,action:'cut'};toast(paths.length>1?`${paths.length} Elemente ausgeschnitten`:'Ausgeschnitten: '+paths[0].split('/').pop());renderFiles($('#modal-body'));};
+window.copyToClipboard=path=>{const paths=selectedOrPath(path);if(!paths.length)return;clipboard={paths,action:'copy'};toast(paths.length>1?fileText('copiedMany',paths.length):'Kopiert: '+paths[0].split('/').pop());renderFiles($('#modal-body'));};
+window.cutToClipboard=path=>{const paths=selectedOrPath(path);if(!paths.length)return;clipboard={paths,action:'cut'};toast(paths.length>1?fileText('cutMany',paths.length):'Ausgeschnitten: '+paths[0].split('/').pop());renderFiles($('#modal-body'));};
 window.bulkCopy=()=>copyToClipboard();
 window.bulkCut=()=>cutToClipboard();
 window.pasteClipboard=async()=>{
@@ -6355,21 +6424,21 @@ window.pasteClipboard=async()=>{
     if(action==='cut') clipboard=null;
     selectedFiles.clear();lastSelectedPath=null;
     updateFileSelectionUI();
-    toast(paths.length>1?`${paths.length} Elemente gestartet`:'Job gestartet');
+    toast(paths.length>1?fileText('startedMany',paths.length):fileText('jobStarted'));
   }catch(e){toast(e.message,'error');}
 };
 
 // Löschen → Papierkorb
-window.deleteFile=path=>confirmDelete('To trash',`Move "${path.split('/').pop()}" to trash?`,async()=>{try{startTopProgress('Deleting 1/1',1);await post('/files/delete',{path});setTopProgress(1,'Deleting 1/1');finishTopProgress('Deleted');toast('To trash');renderFiles($('#modal-body'));}catch(e){failTopProgress('Delete failed');toast(e.message,'error');}});
+window.deleteFile=path=>confirmDelete(uiText('To trash'),fileText('moveToTrashConfirm',path.split('/').pop()),async()=>{try{startTopProgress('Deleting 1/1',1);await post('/files/delete',{path});setTopProgress(1,'Deleting 1/1');finishTopProgress('Deleted');toast(uiText('To trash'));renderFiles($('#modal-body'));}catch(e){failTopProgress('Delete failed');toast(e.message,'error');}});
 
 // Bulk-Aktionen
-window.bulkDelete=()=>confirmDelete('Delete',`${selectedFiles.size} Elemente in den Papierkorb?`,async()=>{
+window.bulkDelete=()=>confirmDelete(fileText('delete'),fileText('bulkTrashConfirm',selectedFiles.size),async()=>{
   const paths=[...selectedFiles]; if(!paths.length)return;
   try{
     await startFileJob('delete',paths);
     selectedFiles.clear();
     updateFileSelectionUI();
-    toast('Delete job started');
+    toast(fileText('deleteJobStarted'));
   }catch(e){toast(e.message,'error');}
 });
 window.bulkDownload=()=>{for(const p of selectedFiles) downloadFile(p);};
@@ -6377,19 +6446,19 @@ window.bulkZip=async()=>{
   const out=currentPath+'/archiv_'+Date.now()+'.zip';
   try{
     await startFileJob('zip',[...selectedFiles],{output:out});
-    toast('ZIP job started');selectedFiles.clear();updateFileSelectionUI();
+    toast(fileText('zipJobStarted'));selectedFiles.clear();updateFileSelectionUI();
   }catch(e){toast(e.message,'error');}
 };
 
 // ZIP
 window.zipFile=async path=>{
   const out=path+'.zip';
-  try{await startFileJob('zip',[path],{output:out});toast('ZIP job started');}
+  try{await startFileJob('zip',[path],{output:out});toast(fileText('zipJobStarted'));}
   catch(e){toast(e.message,'error');}
 };
 window.unzipFile=async path=>{
   startTopProgress('Unpacking ZIP',100);
-  try{setTopProgress(15,'Unpacking ZIP');await post('/files/unzip',{path,dst_dir:currentPath});setTopProgress(95,'Unpacking ZIP');finishTopProgress('Unpacked');toast('Entpackt');renderFiles($('#modal-body'));}
+  try{setTopProgress(15,'Unpacking ZIP');await post('/files/unzip',{path,dst_dir:currentPath});setTopProgress(95,'Unpacking ZIP');finishTopProgress('Unpacked');toast('Unpacked');renderFiles($('#modal-body'));}
   catch(e){failTopProgress('Unpack failed');toast(e.message,'error');}
 };
 
@@ -6397,14 +6466,14 @@ window.unzipFile=async path=>{
 window.createShareLink=async path=>{
   const r=await post('/files/share',{path});
   const url=`${location.origin}/dl/${r.token}`;
-  openForm('Link created 🔗','🔗',[{name:'url',label:'Download link (copy)',value:url}],()=>{closeForm();});
+  openForm(uiText('Link created 🔗'),'🔗',[{name:'url',label:uiText('Download link (copy)'),value:url}],()=>{closeForm();});
   setTimeout(()=>{const inp=$('#f_url');if(inp){inp.select();document.execCommand('copy');toast('Link copied');}},100);
 };
 
 // Samba-Freigabe aus Rechtsklick
-window.sambaShareForm=(path,name)=>openForm('Create Samba share','🔗',[
-  {name:'name',label:'Share name',value:name},
-  {name:'writable',label:'Schreibbar',type:'checkbox',value:true},
+window.sambaShareForm=(path,name)=>openForm(uiText('Create Samba share'),'🔗',[
+  {name:'name',label:uiText('Share name'),value:name},
+  {name:'writable',label:uiText('Schreibbar'),type:'checkbox',value:true},
 ],async d=>{
   try{
     await post('/files/samba-share',{path,name:d.name,writable:d.writable});
@@ -6414,7 +6483,7 @@ window.sambaShareForm=(path,name)=>openForm('Create Samba share','🔗',[
     $('#form-body').innerHTML=`
       <div style="margin-bottom:20px;padding:16px;background:rgba(34,197,94,.08);border:.5px solid rgba(34,197,94,.3);border-radius:12px;display:flex;align-items:center;gap:10px">
         <span style="color:var(--green);font-size:18px">✓</span>
-        <span style="font-size:12px;color:var(--green)">Share <strong>${esc(d.name)}</strong> created</span>
+        <span style="font-size:12px;color:var(--green)">${esc(uiText('Share'))} <strong>${esc(d.name)}</strong> ${esc(uiText('created'))}</span>
       </div>
       <div class="form-field">
         <label>Windows</label>
@@ -6435,29 +6504,29 @@ window.sambaShareForm=(path,name)=>openForm('Create Samba share','🔗',[
 });
 
 // Externes SMB mounten
-window.mountSmbForm=()=>openForm('Connect SMB','🔗',[
-  {name:'server',label:'Server IP or hostname',placeholder:'192.168.1.10'},
-  {name:'share_name',label:'Share name',placeholder:'media'},
-  {name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/nas'},
-  {name:'username',label:'Username',value:'guest'},
-  {name:'password',label:'Password',type:'password'},
+window.mountSmbForm=()=>openForm(uiText('Connect SMB'),'🔗',[
+  {name:'server',label:uiText('Server IP or hostname'),placeholder:'192.168.1.10'},
+  {name:'share_name',label:uiText('Share name'),placeholder:'media'},
+  {name:'mountpoint',label:uiText('Mountpoint'),placeholder:'/mnt/nas'},
+  {name:'username',label:uiText('Username'),value:'guest'},
+  {name:'password',label:uiText('Password'),type:'password'},
 ],async d=>{try{const r=await post('/files/mount-smb',d);if(r&&r.ok===false){toast((r.stderr||r.stdout||'SMB mount failed').slice(0,300),'error');return;}closeForm();toast('SMB share connected');currentPath=(r&&r.mountpoint)||d.mountpoint;renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
 
 // Externes NFS mounten
-window.mountNfsForm=()=>openForm('Connect NFS','🔗',[
-  {name:'server',label:'Server IP or hostname',placeholder:'192.168.1.10'},
-  {name:'export',label:'Export path',placeholder:'/srv/nfs/media'},
-  {name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/nfs'},
-  {name:'options',label:'Options (optional)',placeholder:'ro,soft',hint:'Comma-separated mount options'},
+window.mountNfsForm=()=>openForm(uiText('Connect NFS'),'🔗',[
+  {name:'server',label:uiText('Server IP or hostname'),placeholder:'192.168.1.10'},
+  {name:'export',label:uiText('Export path'),placeholder:'/srv/nfs/media'},
+  {name:'mountpoint',label:uiText('Mountpoint'),placeholder:'/mnt/nfs'},
+  {name:'options',label:uiText('Options (optional)'),placeholder:'ro,soft',hint:uiText('Comma-separated mount options')},
 ],async d=>{try{const r=await post('/files/mount-nfs',d);if(r&&r.ok===false){toast((r.stderr||r.stdout||'NFS mount failed').slice(0,300),'error');return;}closeForm();toast('NFS share connected');currentPath=(r&&r.mountpoint)||d.mountpoint;renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
 
 // Eigenschaften
 window.showProps=async path=>{
   const i=await api('/files/info?path='+encodeURIComponent(path));
-  openForm('Properties','ℹ',[
-    {name:'_name',label:'Name',value:i.name},{name:'_path',label:'Path',value:i.path},
-    {name:'_size',label:'Size',value:fmtBytes(i.size)},{name:'_mod',label:'Modified',value:new Date(i.modified*1000).toLocaleString(currentLanguage()==='en'?'en-US':currentLanguage())},
-    {name:'_mode',label:'Permissions',value:i.mode+' ('+i.octal+')'},
+  openForm(fileText('properties'),'ℹ',[
+    {name:'_name',label:fileText('name'),value:i.name},{name:'_path',label:fileText('path'),value:i.path},
+    {name:'_size',label:fileText('size'),value:fmtBytes(i.size)},{name:'_mod',label:uiText('Modified'),value:new Date(i.modified*1000).toLocaleString(currentLanguage()==='en'?'en-US':currentLanguage())},
+    {name:'_mode',label:uiText('Permissions'),value:i.mode+' ('+i.octal+')'},
   ],()=>closeForm());
   setTimeout(()=>{document.querySelectorAll('#f__name,#f__path,#f__size,#f__mod,#f__mode').forEach(e=>e.readOnly=true);},50);
 };
@@ -6472,20 +6541,20 @@ async function renderTrash(body){
     </div>
     <div>
       <div class="toolbar">
-        <button class="btn danger sm" onclick="emptyTrash()">🗑 Empty trash</button>
+        <button class="btn danger sm" onclick="emptyTrash()">🗑 ${esc(uiText('Empty trash'))}</button>
       </div>
       <table><thead><tr><th>Name</th><th>Original-Pfad</th><th>Deleted</th><th></th></tr></thead><tbody>
       ${items.length?items.map(i=>`<tr>
         <td><span style="display:inline-flex;align-items:center;gap:8px"><span class="fi ${i.is_dir?'fi-folder':'fi-doc'}" style="width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px">${i.is_dir?'📁':'📄'}</span> ${esc(i.name)}</span></td>
         <td class="mono" style="font-size:11px;color:var(--text3)">${esc(i.original)}</td>
         <td style="color:var(--text3)">${new Date(i.deleted*1000).toLocaleDateString('de-DE')}</td>
-        <td><button class="btn sm ghost" onclick="restoreTrash('${i.id}','${esc(i.name)}')">↩ Restore</button></td>
+        <td><button class="btn sm ghost" onclick="restoreTrash('${i.id}','${esc(i.name)}')">↩ ${esc(uiText('Restore'))}</button></td>
       </tr>`).join(''):'<tr><td colspan="4" class="loading">Trash is empty</td></tr>'}
       </tbody></table>
     </div>
   </div>`;
 }
-window.emptyTrash=()=>confirmDelete('Empty trash','Permanently delete all items?',async()=>{await post('/files/trash/empty',{});toast('Trash emptied');renderTrash($('#modal-body'));});
+window.emptyTrash=()=>confirmDelete(uiText('Empty trash'),fileText('emptyTrashConfirm'),async()=>{await post('/files/trash/empty',{});toast('Trash emptied');renderTrash($('#modal-body'));});
 window.restoreTrash=async(id,name)=>{try{await post('/files/trash/restore',{item_id:id});toast(name+' wiederhergestellt');renderTrash($('#modal-body'));}catch(e){toast(e.message,'error');}};
 
 
