@@ -6047,7 +6047,7 @@ window.fileDblClick=(path,isDir)=>{
 
 function updateBulkBar(){
   const bar=$('#bulk-bar'); if(!bar) return;
-  bar.style.display=selectedFiles.size>0?'flex':'none';
+  bar.style.display='none';
   const c=$('#sel-count'); if(c) c.textContent=`${selectedFiles.size} selected`;
 }
 
