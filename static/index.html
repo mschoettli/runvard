@@ -6935,6 +6935,7 @@ async function renderDocker(body,tab){
          <button class="btn icon play" title="Start" onclick="composeAct('${esc(x.name)}','up')" style="width:26px;height:26px;font-size:12px">▶</button>
          <button class="btn icon stop" title="Stoppen" onclick="composeAct('${esc(x.name)}','down')" style="width:26px;height:26px;font-size:12px">⏹</button>
          <button class="btn icon" title="Bearbeiten" onclick="composeEdit('${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">✎</button>
+         <button class="btn icon" title="Dashboard" onclick="composeAddToDashboard('${esc(x.name)}',${Number(x.port||0)})" style="width:26px;height:26px;font-size:12px">▣</button>
          <button class="btn icon" title="Open app" onclick="composeOpen('${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">↗</button>
        </div>
      </td></tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">No projects</div></td></tr>'}</tbody></table>`;}
@@ -7042,10 +7043,21 @@ const composeEnvFields=(data={})=>[
   {name:'env_enabled',label:'Use .env file',type:'checkbox',value:!!data.env_enabled,hint:'Stores a .env file next to docker-compose.yml.'},
   {name:'env_content',label:'.env',type:'textarea',rows:6,value:data.env_content||'',placeholder:'KEY=value\nANOTHER_KEY=value',showWhen:'env_enabled'}
 ];
-window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Project name',placeholder:'meine-app'},{name:'content',label:'docker-compose.yml',type:'textarea',rows:12,value:'services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"'},...composeEnvFields()],async d=>{await post('/docker/compose/save',{name:d.name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''});closeForm();toast('Project saved');renderDocker($('#modal-body'),'Compose');});
+window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Project name',placeholder:'meine-app'},{name:'content',label:'docker-compose.yml',type:'textarea',rows:12,value:'services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"'},...composeEnvFields()],async d=>{await post('/docker/compose/save',{name:d.name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''});await composeAddToDashboard(d.name,composeFirstPort(d.content),false);closeForm();toast('Project saved');renderDocker($('#modal-body'),'Compose');});
 window.composeEdit=async name=>{const c=await api('/docker/compose/get?name='+encodeURIComponent(name));openForm('Compose bearbeiten: '+name,'🐳',[{name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:c.content},...composeEnvFields(c)],async d=>{await post('/docker/compose/save',{name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''});closeForm();toast('Gespeichert');});};
 window.composeAct=async(name,action)=>{toast(action==='up'?'Starte '+name+'…':'Stoppe '+name+'…');try{const r=await post('/docker/compose/action',{name,action});const msgs={up:'Project started: '+name,down:'Project stopped: '+name,restart:'Project restarted: '+name};toast(r.ok?(msgs[action]||'OK'):'Error',r.ok?'success':'error');renderDocker($('#modal-body'),'Compose');}catch(e){toast('Error: '+e.message,'error');}};
 window.composeDelete=name=>typedConfirm('Delete Compose project',`Compose project "${name}" will be stopped and removed.`,name,async()=>{try{const r=await post('/docker/compose/remove',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Compose project deleted');renderDocker($('#modal-body'),'Compose');}catch(e){toast('Error: '+e.message,'error');}});
+function composeFirstPort(content){
+  const match=String(content||'').match(/^\s*-\s*["']?(\d+)\s*:/m);
+  return match?Number(match[1]):0;
+}
+window.composeAddToDashboard=async(name,port=0,announce=true)=>{
+  try{
+    await post('/dashboard/add',{tile_type:'compose',tile_id:'compose:'+name,name,icon:'🐳',port:port||0});
+    if(announce)toast(uiText('Added to dashboard'));
+    loadDashboard();
+  }catch(e){if(announce)toast('Error: '+e.message,'error');}
+};
 // Punkt 1: App-URL öffnen
 window.composeOpen=async name=>{const c=await api('/docker/compose/get?name='+encodeURIComponent(name));const port=extractPort(c.content);if(port){window.open(`http://${serverHost()}:${port}`,'_blank');}else{toast('No port found in the Compose file','error');}};
 
@@ -8686,10 +8698,10 @@ function renderDashboard(){
   if(!dashTiles.length){grid.innerHTML='';return;}
   const host=location.hostname;
   grid.innerHTML=dashTiles.map(t=>{
-    const isApp=t.type==='app';
-    const statusCls=isApp?(t.running?'run':'stop'):'ext';
+    const isService=t.type==='app'||t.type==='compose';
+    const statusCls=isService?(t.running?'run':'stop'):'ext';
     const port=t.port||0;
-    const url=isApp?`${host}:${port}`:(t.url||'').replace(/^https?:\/\//,'');
+    const url=isService?`${host}:${port}`:(t.url||'').replace(/^https?:\/\//,'');
     const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
     return `<div class="dash-tile" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')">
       <div class="dash-tile-body${t.show_url?' has-url':''}">
@@ -8717,8 +8729,12 @@ window.dashClick=(e,id)=>{
   const t=dashTiles.find(x=>x.id===id);
   if(!t)return;
   if(t.type==='custom'&&t.url){window.open(t.url,'_blank');return;}
-  if(t.type==='app'&&t.port){window.open(`http://${location.hostname}:${t.port}`,'_blank');}
+  if((t.type==='app'||t.type==='compose')&&t.port){window.open(`http://${location.hostname}:${t.port}`,'_blank');}
 };
+
+function dashComposeProject(t){
+  return t?.project||String(t?.id||'').replace(/^compose:/,'');
+}
 
 // Kontextmenü
 window.dashCtx=(e,id)=>{
@@ -8733,15 +8749,17 @@ window.dashCtx=(e,id)=>{
   menu.style.top=Math.min(e.clientY,window.innerHeight-280)+'px';
   menu.style.left=Math.min(e.clientX,window.innerWidth-180)+'px';
   const urlLabel=uiText(t.show_url?'Hide IP':'Show IP');
+  const isCompose=t.type==='compose';
+  const canRun=isApp||isCompose;
   menu.innerHTML=`
     <div class="dash-ctx-item" onclick="dashOpen('${esc(id)}')"><span>↗ ${esc(uiText('Open'))}</span></div>
-    ${isApp&&t.running?`
+    ${canRun&&t.running?`
     <div class="dash-ctx-item" onclick="dashAppAction('${esc(id)}','restart')"><span>↻ ${esc(uiText('Restart'))}</span></div>
     <div class="dash-ctx-item" onclick="dashAppAction('${esc(id)}','stop')"><span>⏸ ${esc(uiText('Pause'))}</span></div>`:''}
-    ${isApp&&!t.running?`
+    ${canRun&&!t.running?`
     <div class="dash-ctx-item" onclick="dashAppAction('${esc(id)}','start')"><span>▶ ${esc(uiText('Start'))}</span></div>`:''}
     <div class="dash-ctx-sep"></div>
-    ${isApp?`
+    ${canRun?`
     <div class="dash-ctx-item" onclick="dashCompose('${esc(id)}')"><span>${esc(uiText('✎ Edit compose'))}</span></div>
     <div class="dash-ctx-item" onclick="dashFiles('${esc(id)}')"><span>${esc(uiText('📂 Show files'))}</span></div>`:`
     <div class="dash-ctx-item" onclick="dashEditCustom('${esc(id)}')"><span>✎ ${esc(uiText('Edit'))}</span></div>`}
@@ -8760,34 +8778,48 @@ window.dashOpen=id=>{
   const t=dashTiles.find(x=>x.id===id);
   if(!t)return;
   if(t.type==='custom'&&t.url)window.open(t.url,'_blank');
-  else if(t.port)window.open(`http://${location.hostname}:${t.port}`,'_blank');
+  else if((t.type==='app'||t.type==='compose')&&t.port)window.open(`http://${location.hostname}:${t.port}`,'_blank');
   document.querySelector('.dash-ctx')?.remove();
 };
 window.dashAppAction=async(id,action)=>{
   document.querySelector('.dash-ctx')?.remove();
+  const t=dashTiles.find(x=>x.id===id);
+  const isCompose=t?.type==='compose';
   const msgs={start:'App started',stop:'App stopped',restart:'App restarted'};
   const pending={start:'Starting…',stop:'Stopping…',restart:'Restarting…'};
   toast(uiText(pending[action]||'…'));
-  try{await post('/apps/action',{app_id:id,action});toast(uiText(msgs[action]||'OK'));loadDashboard();}
+  try{
+    if(isCompose){
+      const composeAction={start:'up',stop:'down',restart:'restart'}[action]||action;
+      await post('/docker/compose/action',{name:dashComposeProject(t),action:composeAction});
+    }else{
+      await post('/apps/action',{app_id:id,action});
+    }
+    toast(uiText(msgs[action]||'OK'));loadDashboard();
+  }
   catch(e){toast('Error: '+e.message,'error');}
 };
 window.dashCompose=async id=>{
   document.querySelector('.dash-ctx')?.remove();
   try{
-    const a=await api('/apps/get?app_id='+encodeURIComponent(id));
-    const c=await api('/docker/compose/get?name='+encodeURIComponent(id));
-    openForm('Compose: '+a.name,'✎',[
-      {name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:c.content||a.compose}
+    const t=dashTiles.find(x=>x.id===id);
+    const isCompose=t?.type==='compose';
+    const project=isCompose?dashComposeProject(t):id;
+    const a=isCompose?t:await api('/apps/get?app_id='+encodeURIComponent(id));
+    const c=await api('/docker/compose/get?name='+encodeURIComponent(project));
+    openForm('Compose: '+(a.name||project),'✎',[
+      {name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:c.content||a.compose||''}
     ],async d=>{
-      await post('/docker/compose/save',{name:id,content:d.content});
+      await post('/docker/compose/save',{name:project,content:d.content});
       closeForm();toast(uiText('Saved'));
     });
   }catch(e){toast('Error: '+e.message,'error');}
 };
 window.dashFiles=id=>{
   document.querySelector('.dash-ctx')?.remove();
+  const t=dashTiles.find(x=>x.id===id);
   openModal({id:'files',name:'Files',icon:'🗂️',color:'#22d3ee',desc:'Explorer'});
-  currentPath='/opt/runvard/data/apps/'+id;
+  currentPath=t?.type==='compose'?'/opt/runvard/data/compose/'+dashComposeProject(t):'/opt/runvard/data/apps/'+id;
   renderFiles($('#modal-body'));
 };
 window.dashToggleUrl=async(id,show)=>{
@@ -8799,7 +8831,7 @@ window.dashToggleUrl=async(id,show)=>{
 };
 window.dashRemove=(id,name)=>{
   document.querySelector('.dash-ctx')?.remove();
-  confirmDelete('Remove from dashboard',`Remove "${name}" from the dashboard? The app will not be uninstalled.`,async()=>{
+  confirmDelete('Remove from dashboard',`Remove "${name}" from the dashboard? The project will not be deleted.`,async()=>{
     await post('/dashboard/remove',{tile_id:id});
     loadDashboard();
     toast(uiText('Removed from dashboard'));
@@ -9078,7 +9110,7 @@ async function renderDockerAdvanced(body,tab){
   if(oldTab==='Compose'){
     const p=await api('/docker/compose');
     body.innerHTML=viewIntro('Compose projects','Advanced multi-container projects. Editing Compose files can break services.',`<button class="btn" onclick="composeForm()">Create project</button>`)
-      +simpleTable(['Project','Status','Actions'],p.map(x=>`<tr><td>${esc(x.name)}</td><td>${statusBadge(x.running?'Running':'Stopped',x.running?'good':'warn')}</td><td><button class="btn sm" onclick="composeAct('${esc(x.name)}','up')">Start</button> <button class="btn ghost sm" onclick="composeAct('${esc(x.name)}','down')">Stop</button> <button class="btn ghost sm" onclick="composeEdit('${esc(x.name)}')">Edit</button> <button class="btn danger sm" onclick="composeDelete('${esc(x.name)}')">Delete</button></td></tr>`).join(''));
+      +simpleTable(['Project','Status','Actions'],p.map(x=>`<tr><td>${esc(x.name)}</td><td>${statusBadge(x.running?'Running':'Stopped',x.running?'good':'warn')}</td><td><button class="btn sm" onclick="composeAct('${esc(x.name)}','up')">Start</button> <button class="btn ghost sm" onclick="composeAct('${esc(x.name)}','down')">Stop</button> <button class="btn ghost sm" onclick="composeEdit('${esc(x.name)}')">Edit</button> <button class="btn ghost sm" onclick="composeAddToDashboard('${esc(x.name)}',${Number(x.port||0)})">Dashboard</button> <button class="btn danger sm" onclick="composeDelete('${esc(x.name)}')">Delete</button></td></tr>`).join(''));
   } else if(oldTab==='Images'){
     const im=await api('/docker/images');
     body.innerHTML=viewIntro('Images','Images are templates used to create containers.',`<button class="btn" onclick="pullForm()">Pull image</button>`)
@@ -9590,7 +9622,7 @@ function renderDashboard(){
   if(!dashTiles.length){grid.innerHTML=`<div class="nx-view-intro" style="grid-column:1/-1"><div><h3>Ready for apps</h3><p>Install apps or add custom shortcuts.</p></div><button class="btn" onclick="openTileById('apps')">Open apps</button></div>`;return;}
   const host=location.hostname;
   grid.innerHTML=dashTiles.map(t=>{
-    const isApp=t.type==='app';const statusCls=isApp?(t.running?'run':'stop'):'ext';const port=t.port||0;const url=isApp?`${host}:${port}`:(t.url||'').replace(/^https?:\/\//,'');const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
+    const isService=t.type==='app'||t.type==='compose';const statusCls=isService?(t.running?'run':'stop'):'ext';const port=t.port||0;const url=isService?`${host}:${port}`:(t.url||'').replace(/^https?:\/\//,'');const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
     return `<div class="dash-tile" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')"><div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${statusCls}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div></div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
   }).join('');
   if(typeof Sortable!=='undefined'){Sortable.create(grid,{animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:()=>{const order=[...grid.querySelectorAll('.dash-tile')].map(el=>el.dataset.id);post('/dashboard/order',{order:JSON.stringify(order)});}});}

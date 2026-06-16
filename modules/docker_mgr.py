@@ -253,8 +253,26 @@ def list_compose_projects():
         path = os.path.join(COMPOSE_DIR, name)
         compose_file = os.path.join(path, "docker-compose.yml")
         if os.path.isfile(compose_file):
-            projects.append({"name": name, "running": _compose_running(path)})
+            projects.append({
+                "name": name,
+                "running": _compose_running(path),
+                "port": _compose_port(compose_file),
+            })
     return projects
+
+
+def _compose_port(compose_file):
+    try:
+        with open(compose_file) as f:
+            for line in f:
+                line = line.strip()
+                if ":" in line and line.startswith("- "):
+                    port_str = line.strip('- "\'')
+                    host_port = port_str.split(":")[0].split("/")[0]
+                    return int(host_port)
+    except Exception:
+        pass
+    return 0
 
 
 def _compose_running(path):

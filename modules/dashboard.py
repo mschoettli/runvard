@@ -8,6 +8,7 @@ import subprocess
 
 DASH_FILE = "/opt/runvard/data/dashboard.json"
 APPS_DIR = "/opt/runvard/data/apps"
+COMPOSE_DIR = "/opt/runvard/data/compose"
 
 
 def _load():
@@ -24,12 +25,21 @@ def _save(data):
         json.dump(data, f, indent=2)
 
 
-def _compose_running(app_id):
-    path = os.path.join(APPS_DIR, app_id)
+def _compose_project_name(tile):
+    project = str(tile.get("project") or tile.get("id") or "").strip()
+    if project.startswith("compose:"):
+        project = project.split(":", 1)[1]
+    return os.path.basename(project)
+
+
+def _compose_running(path, service=None):
     if not os.path.isdir(path):
         return False
     try:
-        r = subprocess.run(["docker", "compose", "ps", "--status", "running", "-q", app_id],
+        cmd = ["docker", "compose", "ps", "--status", "running", "-q"]
+        if service:
+            cmd.append(service)
+        r = subprocess.run(cmd,
                            cwd=path, capture_output=True, text=True, timeout=15)
         if r.returncode != 0:
             r = subprocess.run(["docker", "compose", "ps", "--status", "running", "-q"],
@@ -40,17 +50,16 @@ def _compose_running(app_id):
         return False
 
 
-def _compose_port(app_id):
+def _compose_port_from_path(path):
     """Liest den ersten Port aus dem Compose-File."""
-    compose = os.path.join(APPS_DIR, app_id, "docker-compose.yml")
+    compose = os.path.join(path, "docker-compose.yml")
     if not os.path.isfile(compose):
         return 0
     try:
         with open(compose) as f:
             for line in f:
                 line = line.strip()
-                if ':' in line and line.startswith('- "'):
-                    # Format: - "8096:8096"
+                if ':' in line and line.startswith('- '):
                     port_str = line.strip('- "\'')
                     host_port = port_str.split(':')[0].split('/')
                     return int(host_port[0])
@@ -66,13 +75,25 @@ def get_dashboard():
     for t in data.get("tiles", []):
         tile = dict(t)
         if tile.get("type") == "app":
-            tile["running"] = _compose_running(tile["id"])
+            path = os.path.join(APPS_DIR, tile["id"])
+            tile["running"] = _compose_running(path, tile["id"])
             tile["installed"] = os.path.isfile(
-                os.path.join(APPS_DIR, tile["id"], "docker-compose.yml"))
+                os.path.join(path, "docker-compose.yml"))
             if not tile["installed"]:
                 continue  # App wurde deinstalliert → nicht anzeigen
             if not tile.get("port"):
-                tile["port"] = _compose_port(tile["id"])
+                tile["port"] = _compose_port_from_path(path)
+        elif tile.get("type") == "compose":
+            project = _compose_project_name(tile)
+            path = os.path.join(COMPOSE_DIR, project)
+            tile["project"] = project
+            tile["running"] = _compose_running(path)
+            tile["installed"] = os.path.isfile(
+                os.path.join(path, "docker-compose.yml"))
+            if not tile["installed"]:
+                continue
+            if not tile.get("port"):
+                tile["port"] = _compose_port_from_path(path)
         tiles.append(tile)
     return {"tiles": tiles}
 
@@ -94,6 +115,8 @@ def add_tile(tile_type, tile_id, name="", url="", icon="", port=0):
     }
     if tile_type == "custom":
         tile["url"] = url
+    if tile_type == "compose":
+        tile["project"] = _compose_project_name(tile)
     if port:
         tile["port"] = port
     data["tiles"].append(tile)
