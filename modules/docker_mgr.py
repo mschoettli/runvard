@@ -270,25 +270,51 @@ def _compose_running(path):
         return False
 
 
-def save_compose(name, content):
-    path = os.path.join(COMPOSE_DIR, name)
+def _compose_project_path(name):
+    safe = os.path.basename(str(name or "").strip())
+    if not safe or safe in (".", "..") or safe != str(name or "").strip():
+        raise ValueError("Ungültiger Compose-Projektname")
+    return os.path.join(COMPOSE_DIR, safe)
+
+
+def save_compose(name, content, env_enabled=False, env_content=""):
+    path = _compose_project_path(name)
     os.makedirs(path, exist_ok=True)
     with open(os.path.join(path, "docker-compose.yml"), "w") as f:
         f.write(content)
+    env_path = os.path.join(path, ".env")
+    if env_enabled:
+        with open(env_path, "w") as f:
+            f.write(env_content or "")
+    else:
+        try:
+            os.remove(env_path)
+        except FileNotFoundError:
+            pass
     return {"ok": True}
 
 
 def get_compose(name):
-    path = os.path.join(COMPOSE_DIR, name, "docker-compose.yml")
+    path = _compose_project_path(name)
+    compose_path = os.path.join(path, "docker-compose.yml")
+    env_path = os.path.join(path, ".env")
+    data = {"content": "", "env_enabled": False, "env_content": ""}
     try:
-        with open(path) as f:
-            return {"content": f.read()}
+        with open(compose_path) as f:
+            data["content"] = f.read()
     except OSError:
-        return {"content": ""}
+        pass
+    try:
+        with open(env_path) as f:
+            data["env_content"] = f.read()
+            data["env_enabled"] = True
+    except OSError:
+        pass
+    return data
 
 
 def compose_action(name, action):
-    path = os.path.join(COMPOSE_DIR, name)
+    path = _compose_project_path(name)
     cmd_map = {
         "up": ["docker", "compose", "up", "-d"],
         "down": ["docker", "compose", "down"],

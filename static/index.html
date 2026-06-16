@@ -887,6 +887,8 @@ const UI_PHRASES={
     "Compose project deleted":"Compose-Projekt gelöscht",
     "Compose projects":"Compose-Projekte",
     "Compose service setup":"Compose-Service einrichten",
+    "Stores a .env file next to docker-compose.yml.":"Speichert eine .env-Datei neben docker-compose.yml.",
+    "Use .env file":".env-Datei verwenden",
     "Configure IP":"IP konfigurieren",
     "Configured":"Konfiguriert",
     "Configured now":"Aktuell konfiguriert",
@@ -5321,12 +5323,26 @@ function openForm(title,icon,fields,onSubmit){
   body.innerHTML=fields.map(f=>{
     let inp='';
     if(f.type==='select') inp=`<select id="f_${f.name}">${(f.options||[]).map(o=>{const value=o.value??o;return`<option value="${esc(value)}" ${String(value)===String(f.value??'')?'selected':''}>${esc(uiText(o.label??o))}</option>`;}).join('')}</select>`;
-    else if(f.type==='textarea') inp=`<textarea id="f_${f.name}" rows="${f.rows||6}" style="font-family:'JetBrains Mono',monospace">${esc(f.value||'')}</textarea>`;
+    else if(f.type==='textarea') inp=`<textarea id="f_${f.name}" rows="${f.rows||6}" placeholder="${esc(uiText(f.placeholder||''))}" style="font-family:'JetBrains Mono',monospace">${esc(f.value||'')}</textarea>`;
     else if(f.type==='checkbox') inp=`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="f_${f.name}" ${f.value?'checked':''} style="width:auto"> ${esc(uiText(f.label))}</label>`;
     else inp=`<input id="f_${f.name}" type="${f.type||'text'}" value="${esc(f.value||'')}" placeholder="${esc(uiText(f.placeholder||''))}">`;
-    if(f.type==='checkbox') return `<div class="form-field">${inp}${f.hint?`<div class="hint">${esc(uiText(f.hint))}</div>`:''}</div>`;
-    return `<div class="form-field"><label>${esc(uiText(f.label))}</label>${inp}${f.hint?`<div class="hint">${esc(uiText(f.hint))}</div>`:''}</div>`;
+    const cond=f.showWhen?` data-show-when="${esc(f.showWhen)}" data-show-value="${esc(String(f.showValue??'true'))}"`:'';
+    if(f.type==='checkbox') return `<div class="form-field" id="field_${esc(f.name)}"${cond}>${inp}${f.hint?`<div class="hint">${esc(uiText(f.hint))}</div>`:''}</div>`;
+    return `<div class="form-field" id="field_${esc(f.name)}"${cond}><label>${esc(uiText(f.label))}</label>${inp}${f.hint?`<div class="hint">${esc(uiText(f.hint))}</div>`:''}</div>`;
   }).join('')+`<div class="form-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="form-go">${esc(tr('save'))}</button></div>`;
+  const syncFormConditions=()=>{
+    body.querySelectorAll('[data-show-when]').forEach(row=>{
+      const ctrl=$('#f_'+row.dataset.showWhen);
+      const expected=row.dataset.showValue||'true';
+      const visible=ctrl&&(ctrl.type==='checkbox'?String(ctrl.checked)===expected:String(ctrl.value)===expected);
+      row.hidden=!visible;
+    });
+  };
+  fields.forEach(f=>{
+    const el=$('#f_'+f.name);
+    if(el)el.addEventListener(f.type==='checkbox'?'change':'input',syncFormConditions);
+  });
+  syncFormConditions();
   formSubmitFn=()=>{const d={};fields.forEach(f=>{const el=$('#f_'+f.name);if(el)d[f.name]=f.type==='checkbox'?el.checked:el.value;});onSubmit(d);};
   $('#form-go').onclick=formSubmitFn;
   $('#form-overlay').classList.add('open');
@@ -6975,8 +6991,12 @@ function renderDockerSearch(body,term,results){
 }
 window.dockerPullFromSearch=name=>{toast('Ziehe '+name+'…');post('/docker/images/pull',{name}).then(r=>{if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Image geladen');renderDocker($('#modal-body'),'Images');}).catch(e=>toast('Error: '+e.message,'error'));};
 window.pullForm=()=>openForm('Image ziehen','🐳',[{name:'name',label:'Image-Name',placeholder:'nginx:latest'}],async d=>{closeForm();toast('Ziehe Image…');try{await post('/docker/images/pull',d);toast('Image geladen');renderDocker($('#modal-body'),'Images');}catch(e){toast('Error: '+e.message,'error');}});
-window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Project name',placeholder:'meine-app'},{name:'content',label:'docker-compose.yml',type:'textarea',rows:12,value:'services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"'}],async d=>{await post('/docker/compose/save',d);closeForm();toast('Project saved');renderDocker($('#modal-body'),'Compose');});
-window.composeEdit=async name=>{const c=await api('/docker/compose/get?name='+encodeURIComponent(name));openForm('Compose bearbeiten: '+name,'🐳',[{name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:c.content}],async d=>{await post('/docker/compose/save',{name,content:d.content});closeForm();toast('Gespeichert');});};
+const composeEnvFields=(data={})=>[
+  {name:'env_enabled',label:'Use .env file',type:'checkbox',value:!!data.env_enabled,hint:'Stores a .env file next to docker-compose.yml.'},
+  {name:'env_content',label:'.env',type:'textarea',rows:6,value:data.env_content||'',placeholder:'KEY=value\nANOTHER_KEY=value',showWhen:'env_enabled'}
+];
+window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Project name',placeholder:'meine-app'},{name:'content',label:'docker-compose.yml',type:'textarea',rows:12,value:'services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"'},...composeEnvFields()],async d=>{await post('/docker/compose/save',{name:d.name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''});closeForm();toast('Project saved');renderDocker($('#modal-body'),'Compose');});
+window.composeEdit=async name=>{const c=await api('/docker/compose/get?name='+encodeURIComponent(name));openForm('Compose bearbeiten: '+name,'🐳',[{name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:c.content},...composeEnvFields(c)],async d=>{await post('/docker/compose/save',{name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''});closeForm();toast('Gespeichert');});};
 window.composeAct=async(name,action)=>{toast(action==='up'?'Starte '+name+'…':'Stoppe '+name+'…');try{const r=await post('/docker/compose/action',{name,action});const msgs={up:'Project started: '+name,down:'Project stopped: '+name,restart:'Project restarted: '+name};toast(r.ok?(msgs[action]||'OK'):'Error',r.ok?'success':'error');renderDocker($('#modal-body'),'Compose');}catch(e){toast('Error: '+e.message,'error');}};
 window.composeDelete=name=>typedConfirm('Delete Compose project',`Compose project "${name}" will be stopped and removed.`,name,async()=>{try{const r=await post('/docker/compose/remove',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Compose project deleted');renderDocker($('#modal-body'),'Compose');}catch(e){toast('Error: '+e.message,'error');}});
 // Punkt 1: App-URL öffnen

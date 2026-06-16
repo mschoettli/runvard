@@ -846,8 +846,10 @@ def docker_compose_get(name: str, user: str = Depends(auth)):
 
 @app.post("/api/docker/compose/save")
 def docker_compose_save(name: str = Form(...), content: str = Form(...),
+                        env_enabled: bool = Form(False),
+                        env_content: str = Form(""),
                         user: str = Depends(auth)):
-    return docker_mgr.save_compose(name, content)
+    return docker_mgr.save_compose(name, content, env_enabled, env_content)
 
 
 @app.post("/api/docker/compose/action")
