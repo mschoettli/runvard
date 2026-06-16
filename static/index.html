@@ -6036,8 +6036,7 @@ window.fileClick=(e,path,isDir)=>{
     lastSelectedPath=path;
   }else{
     selectedFiles.clear();
-    selectedFiles.add(path);
-    lastSelectedPath=path;
+    lastSelectedPath=null;
   }
   updateFileSelectionUI();
 };
