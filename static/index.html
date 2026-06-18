@@ -195,6 +195,12 @@ tr{outline:none;user-select:none}
 .btn.danger{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.18);color:#f87171}
 .btn.danger:hover{background:var(--red);color:#fff}
 .btn.success{background:rgba(34,197,94,.15);border:.5px solid rgba(34,197,94,.3);color:var(--green)}
+.btn:disabled,.app-install-btn:disabled{opacity:.45;cursor:not-allowed;filter:saturate(.45)}
+.btn:disabled:hover{background:#7a4aff;color:#fff;border-color:transparent}
+.btn.ghost:disabled:hover{background:transparent;border-color:rgba(255,255,255,.1);color:rgba(240,240,255,.6)}
+.btn.success:disabled:hover{background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.3);color:var(--green)}
+.btn.danger:disabled:hover{background:rgba(239,68,68,.08);border-color:rgba(239,68,68,.18);color:#f87171}
+.btn.icon:disabled:hover{background:var(--glass);border-color:var(--border);color:var(--text2)}
 
 /* Icon-only buttons */
 .btn.icon{width:32px;height:32px;padding:0;display:inline-flex;align-items:center;justify-content:center;border-radius:8px;font-size:15px;background:var(--glass);border:.5px solid var(--border);color:var(--text2)}
@@ -392,6 +398,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .app-status-pill.run{background:rgba(34,197,94,.12);border:.5px solid rgba(34,197,94,.25);color:#4ade80}
 .app-status-pill.paused{background:rgba(234,179,8,.12);border:.5px solid rgba(234,179,8,.25);color:#eab308}
 .app-status-pill.upd{background:rgba(251,191,36,.12);border:.5px solid rgba(251,191,36,.25);color:#fbbf24}
+.app-status-pill.pending{background:rgba(96,165,250,.12);border:.5px solid rgba(96,165,250,.28);color:#93c5fd}
 .app-status-pill .sd{width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block}
 .app-install-btn{width:100%;background:transparent;border:.5px solid var(--border-accent);color:var(--accent-light);padding:7px;border-radius:8px;font-size:12px;font-weight:500;font-family:inherit;cursor:pointer;transition:background .15s,color .15s}
 .app-install-btn:hover{background:rgba(122,74,255,.12);color:#fff}
@@ -8307,6 +8314,7 @@ async function renderNetDetail(body){
 // ═══ Apps (App-Store) ═══
 let appsCatalog=[], appsActiveCat='all', appsSearch='', _activeInstalls=0;
 let appsCatalogCategories=[];
+const appPendingActions=new Map();
 
 const APP_LANGS=['de','en','fr','it','es','pt'];
 const APP_UI={
@@ -8322,6 +8330,10 @@ const APP_UI={
   installDefault:{de:'Diese App mit den Standardeinstellungen installieren.',en:'Install this app with the default settings.',fr:'Installer cette app avec les paramètres par défaut.',it:'Installa questa app con le impostazioni predefinite.',es:'Instala esta app con la configuración predeterminada.',pt:'Instale esta app com as definições predefinidas.'},
   installDidNotStart:{de:'Installation wurde nicht gestartet',en:'Install did not start',fr:'L’installation n’a pas démarré',it:'Installazione non avviata',es:'La instalación no empezó',pt:'A instalação não começou'},
   installFailed:{de:'Installation fehlgeschlagen',en:'Install failed',fr:'Échec de l’installation',it:'Installazione non riuscita',es:'Error de instalación',pt:'Falha na instalação'},
+  starting:{de:'Startet...',en:'Starting...',fr:'Démarrage...',it:'Avvio...',es:'Iniciando...',pt:'A iniciar...'},
+  stopping:{de:'Stoppt...',en:'Stopping...',fr:'Arrêt...',it:'Arresto...',es:'Deteniendo...',pt:'A parar...'},
+  restarting:{de:'Startet neu...',en:'Restarting...',fr:'Redémarrage...',it:'Riavvio...',es:'Reiniciando...',pt:'A reiniciar...'},
+  updating:{de:'Aktualisiert...',en:'Updating...',fr:'Mise à jour...',it:'Aggiornamento...',es:'Actualizando...',pt:'A atualizar...'},
 };
 const APP_CATEGORY_LABELS={
   all:{de:'Alle',en:'All',fr:'Toutes',it:'Tutte',es:'Todas',pt:'Todas'},
@@ -8334,6 +8346,7 @@ const APP_CATEGORY_LABELS={
   home:{de:'Smart Home',en:'Home',fr:'Maison connectée',it:'Smart Home',es:'Hogar inteligente',pt:'Casa inteligente'},
   developer:{de:'Entwicklung',en:'Developer',fr:'Développement',it:'Sviluppo',es:'Desarrollo',pt:'Desenvolvimento'},
   database:{de:'Datenbanken',en:'Databases',fr:'Bases de données',it:'Database',es:'Bases de datos',pt:'Bases de dados'},
+  compose:{de:'Compose',en:'Compose',fr:'Compose',it:'Compose',es:'Compose',pt:'Compose'},
 };
 const APP_CATEGORY_ALIASES={
   Alle:'all',All:'all',all:'all',
@@ -8346,6 +8359,7 @@ const APP_CATEGORY_ALIASES={
   Home:'home',
   Developer:'developer',
   Datenbank:'database',Datenbanken:'database',Database:'database',Databases:'database',
+  Compose:'compose',compose:'compose',
 };
 const APP_DESC_ROWS=[
   ['jellyfin','Freier Media-Server für Film, Serien & Musik','Free media server for movies, shows, and music','Serveur multimédia libre pour films, séries et musique','Server multimediale libero per film, serie e musica','Servidor multimedia libre para películas, series y música','Servidor multimédia livre para filmes, séries e música'],
@@ -8489,8 +8503,18 @@ function appCategoryKeys(categories){
   return keys;
 }
 function localizedAppDesc(app){
+  if(app.type==='compose')return app.desc||'Custom Docker Compose project';
   const item=APP_DESC_TRANSLATIONS[app.id];
   return item?(item[appLang()]||item.en||app.desc||''):(app.desc||'');
+}
+function appIsCompose(app){
+  return app?.type==='compose'||String(app?.id||'').startsWith('compose:');
+}
+function appById(id){
+  return appsCatalog.find(a=>a.id===id);
+}
+function appPendingLabel(action){
+  return appUi(({start:'starting',stop:'stopping',restart:'restarting',update:'updating',down:'stopping'})[action]||'starting');
 }
 function appMatchesSearch(app,q){
   if(!q)return true;
@@ -8567,36 +8591,47 @@ function renderAppsView(body,categories){
 
 function appTint(cat){
   return ({media:'#a78bfa',network:'#22d3ee',productivity:'#7a4aff',ai:'#f472b6',
-    monitoring:'#9ca3af',download:'#2dd4bf',home:'#fbbf24',developer:'#60a5fa',database:'#fb923c'})[appCategoryKey(cat)]||'#9d7aff';
+    monitoring:'#9ca3af',download:'#2dd4bf',home:'#fbbf24',developer:'#60a5fa',database:'#fb923c',compose:'#9ca3af'})[appCategoryKey(cat)]||'#9d7aff';
 }
 function appHexA(hex,al){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${al})`;}
 
 function appCardHtml(a){
   const tint=appTint(a.category);
+  const isCompose=appIsCompose(a);
+  const safeId=esc(a.id);
+  const pending=appPendingActions.get(a.id);
   let actions,pill='';
   if(!a.installed){
-    actions=`<button class="app-install-btn" onclick="appInstallForm('${a.id}')">${esc(uiText('Install'))}</button>`;
+    actions=`<button class="app-install-btn" onclick="appInstallForm('${safeId}')">${esc(uiText('Install'))}</button>`;
   } else {
-    pill=a.update_available
+    pill=pending
+      ? `<span class="app-status-pill pending" title="${esc(appPendingLabel(pending))}"><span class="sd"></span>${esc(appPendingLabel(pending))}</span>`
+      : a.update_available
       ? `<span class="app-status-pill upd" title="${esc(uiText('Update available'))}">↑ ${esc(uiText('Update'))}</span>`
       : a.running
         ? `<span class="app-status-pill run" title="${esc(uiText('Running'))}"><span class="sd"></span>${esc(uiText('Running'))}</span>`
         : `<span class="app-status-pill paused" title="${esc(uiText('Stopped'))}"><span class="sd"></span>${esc(uiText('Stopped'))}</span>`;
-    const primary=a.running
-      ? `<button class="btn sm success" style="flex:1" onclick="appOpen('${a.id}',${a.port})">↗ ${esc(uiText('Open'))}</button>`
-      : `<button class="btn sm" style="flex:1" onclick="appAct('${a.id}','start')">▶ ${esc(uiText('Start'))}</button>`;
+    const pendingButton=`<button class="btn sm ghost" style="flex:1" disabled>${esc(appPendingLabel(pending))}</button>`;
+    const primary=pending
+      ? pendingButton
+      : a.running
+      ? `<button class="btn sm success" style="flex:1" onclick="appOpen('${safeId}',${a.port})">↗ ${esc(uiText('Open'))}</button>`
+      : `<button class="btn sm" style="flex:1" onclick="appAct('${safeId}','start')">▶ ${esc(uiText('Start'))}</button>`;
     actions=`<div style="display:flex;gap:6px">
       ${primary}
-      <button class="btn icon" title="${esc(uiText('Actions'))}" onclick="appMenu(event,'${a.id}','${esc(a.name)}',${a.running?1:0},${a.update_available?1:0})" style="width:30px;height:30px;font-size:15px">⋯</button>
+      <button class="btn icon" title="${esc(uiText('Actions'))}" onclick="appMenu(event,'${safeId}','${esc(a.name)}',${a.running?1:0},${a.update_available?1:0})" style="width:30px;height:30px;font-size:15px" ${pending?'disabled':''}>⋯</button>
     </div>`;
   }
+  const iconHtml=isCompose
+    ? `<div class="app-icon-fallback" style="display:flex;background:${appHexA(tint,.18)};color:${tint}">${esc(a.icon||'⚙')}</div>`
+    : `<img src="${esc(a.icon)}" alt="${esc(a.name)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+          <div class="app-icon-fallback" style="display:none;background:${appHexA(tint,.18)};color:${tint}">${esc(a.name[0])}</div>`;
   return `
     <div class="app-card">
       ${pill}
       <div class="app-card-head">
         <div class="app-icon-wrap" style="background:${appHexA(tint,.12)};border-color:${appHexA(tint,.25)}">
-          <img src="${esc(a.icon)}" alt="${esc(a.name)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-          <div class="app-icon-fallback" style="display:none;background:${appHexA(tint,.18)};color:${tint}">${esc(a.name[0])}</div>
+          ${iconHtml}
         </div>
         <div class="app-card-info"${a.installed?' style="padding-right:62px"':''}>
           <div class="app-card-name">${esc(a.name)}</div>
@@ -8622,6 +8657,9 @@ window.appsDoSearch=v=>{appsSearch=v;const grid=$('#apps-grid');if(!grid)return;
 window.appAct=async(id,action)=>{
   const labels={start:'Starting…',stop:'Stopping…',restart:'Restarting…',update:'Refreshing…'};
   toast(uiText(labels[action]||'…'));
+  appPendingActions.set(id,action);
+  const body=$('#modal-body');
+  if(body)renderAppsView(body,appsCatalogCategories);
   try{
     const r=await post('/apps/action',{app_id:id,action});
     const msgs={start:'App started',stop:'App stopped',restart:'App restarted',update:'App updated ✓'};
@@ -8630,8 +8668,13 @@ window.appAct=async(id,action)=>{
       const detail=(r.output||'').split('\n').map(x=>x.trim()).filter(Boolean).pop();
       toast(detail||'Error','error');
     }
+    appPendingActions.delete(id);
     renderApps($('#modal-body'));
-  }catch(e){toast('Error: '+e.message,'error');}
+  }catch(e){
+    appPendingActions.delete(id);
+    if(body)renderAppsView(body,appsCatalogCategories);
+    toast('Error: '+e.message,'error');
+  }
 };
 
 window.appUninstall=(id,name)=>confirmDelete('Uninstall app',
@@ -8660,7 +8703,8 @@ window.appAddToDashboard=async id=>{
       toast(uiText('Already on dashboard'));
       return;
     }
-    await post('/dashboard/add',{tile_type:'app',tile_id:id,name:a.name,icon:a.icon,port:a.port||0});
+    const isCompose=appIsCompose(a);
+    await post('/dashboard/add',{tile_type:isCompose?'compose':'app',tile_id:id,name:a.name,icon:a.icon,port:a.port||0});
     loadDashboard();
     toast(uiText('Added to dashboard'));
   }catch(e){toast('Error: '+e.message,'error');}
@@ -8670,6 +8714,8 @@ window.closeAppMenu=()=>{const m=$('#app-menu');if(m)m.remove();};
 window.appMenu=(ev,id,name,running,upd)=>{
   ev.stopPropagation();
   closeAppMenu();
+  const app=appById(id)||{};
+  const isCompose=appIsCompose(app)||String(id||'').startsWith('compose:');
   const items=[];
   if(running){
     items.push(['⏸','Stop',()=>appAct(id,'stop')]);
@@ -8677,12 +8723,13 @@ window.appMenu=(ev,id,name,running,upd)=>{
   } else {
     items.push(['▶','Start',()=>appAct(id,'start')]);
   }
-  if(upd)items.push(['↑','Update',()=>appAct(id,'update')]);
+  if(upd&&!isCompose)items.push(['↑','Update',()=>appAct(id,'update')]);
   items.push('sep');
   items.push(['✎','Edit compose',()=>dashCompose(id)]);
+  items.push(['📂','Show files',()=>dashFiles(id)]);
   items.push(['▣','Show on dashboard',()=>appAddToDashboard(id)]);
   items.push('sep');
-  items.push(['🗑','Uninstall',()=>appUninstall(id,name),true]);
+  if(!isCompose)items.push(['🗑','Uninstall',()=>appUninstall(id,name),true]);
   const m=document.createElement('div');
   m.id='app-menu';m.className='app-menu';
   const r=ev.currentTarget.getBoundingClientRect();
@@ -8839,7 +8886,7 @@ window.dashAppAction=async(id,action)=>{
   toast(uiText(pending[action]||'…'));
   try{
     if(isCompose){
-      const composeAction={start:'up',stop:'down',restart:'restart'}[action]||action;
+      const composeAction={start:'up',stop:'stop',restart:'restart'}[action]||action;
       await post('/docker/compose/action',{name:dashComposeProject(t),action:composeAction});
     }else{
       await post('/apps/action',{app_id:id,action});
@@ -8851,24 +8898,27 @@ window.dashAppAction=async(id,action)=>{
 window.dashCompose=async id=>{
   document.querySelector('.dash-ctx')?.remove();
   try{
-    const t=dashTiles.find(x=>x.id===id);
-    const isCompose=t?.type==='compose';
-    const project=isCompose?dashComposeProject(t):id;
-    const a=isCompose?t:await api('/apps/get?app_id='+encodeURIComponent(id));
-    const c=await api('/docker/compose/get?name='+encodeURIComponent(project));
+    const t=dashTiles.find(x=>x.id===id)||appById(id);
+    const isCompose=appIsCompose(t)||String(id||'').startsWith('compose:');
+    const project=isCompose?dashComposeProject(t||{id}):id;
+    const a=isCompose?(t||{name:project}):await api('/apps/get?app_id='+encodeURIComponent(id));
+    const c=isCompose?await api('/docker/compose/get?name='+encodeURIComponent(project)):{content:a.compose||''};
     openForm('Compose: '+(a.name||project),'✎',[
       {name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:c.content||a.compose||''}
     ],async d=>{
-      await post('/docker/compose/save',{name:project,content:d.content});
+      if(isCompose)await post('/docker/compose/save',{name:project,content:d.content});
+      else await post('/apps/save-compose',{app_id:id,content:d.content});
       closeForm();toast(uiText('Saved'));
+      const body=$('#modal-body');if(body&&currentTile?.id==='apps')renderApps(body);
+      loadDashboard();
     });
   }catch(e){toast('Error: '+e.message,'error');}
 };
 window.dashFiles=id=>{
   document.querySelector('.dash-ctx')?.remove();
-  const t=dashTiles.find(x=>x.id===id);
+  const t=dashTiles.find(x=>x.id===id)||appById(id)||{id};
   openModal({id:'files',name:'Files',icon:'🗂️',color:'#22d3ee',desc:'Explorer'});
-  currentPath=t?.type==='compose'?'/opt/runvard/data/compose/'+dashComposeProject(t):'/opt/runvard/data/apps/'+id;
+  currentPath=appIsCompose(t)?'/opt/runvard/data/compose/'+dashComposeProject(t):'/opt/runvard/data/apps/'+id;
   renderFiles($('#modal-body'));
 };
 window.dashToggleUrl=async(id,show)=>{
@@ -9502,19 +9552,24 @@ window.appUninstall=(id,name)=>typedConfirm('Uninstall app',`"${name}" will be s
 });
 function appCardHtml(a){
   const tint=appTint(a.category);
+  const pending=appPendingActions.get(a.id);
   let actions,pill='';
   if(!a.installed){
     actions=`<button class="app-install-btn" onclick="appInstallForm('${a.id}')">${esc(uiText('Install'))}</button>`;
   } else {
-    pill=a.update_available
+    pill=pending
+      ? `<span class="app-status-pill pending" title="${esc(appPendingLabel(pending))}"><span class="sd"></span>${esc(appPendingLabel(pending))}</span>`
+      : a.update_available
       ? `<span class="app-status-pill upd" title="${esc(uiText('Update available'))}">${esc(uiText('Update'))}</span>`
       : a.running
         ? `<span class="app-status-pill run" title="${esc(uiText('Running'))}"><span class="sd"></span>${esc(uiText('Running'))}</span>`
         : `<span class="app-status-pill paused" title="${esc(uiText('Stopped'))}"><span class="sd"></span>${esc(uiText('Stopped'))}</span>`;
-    const primary=a.running
+    const primary=pending
+      ? `<button class="btn sm ghost" style="flex:1" disabled>${esc(appPendingLabel(pending))}</button>`
+      : a.running
       ? `<button class="btn sm success" style="flex:1" onclick="appOpen('${a.id}',${a.port})">${esc(uiText('Open'))}</button>`
       : `<button class="btn sm" style="flex:1" onclick="appAct('${a.id}','start')">${esc(uiText('Start'))}</button>`;
-    actions=`<div style="display:flex;gap:6px">${primary}<button class="btn icon" title="${esc(uiText('Actions'))}" onclick="appMenu(event,'${a.id}','${esc(a.name)}',${a.running?1:0},${a.update_available?1:0})" style="width:30px;height:30px;font-size:15px">⋯</button></div>`;
+    actions=`<div style="display:flex;gap:6px">${primary}<button class="btn icon" title="${esc(uiText('Actions'))}" onclick="appMenu(event,'${a.id}','${esc(a.name)}',${a.running?1:0},${a.update_available?1:0})" style="width:30px;height:30px;font-size:15px" ${pending?'disabled':''}>⋯</button></div>`;
   }
   return `<div class="app-card">
     ${pill}

@@ -1463,6 +1463,15 @@ def apps_install(app_id: str = Form(...), content: str = Form(...),
         raise HTTPException(400, str(e))
 
 
+@app.post("/api/apps/save-compose")
+def apps_save_compose(app_id: str = Form(...), content: str = Form(...),
+                      user: str = Depends(auth)):
+    try:
+        return apps.save_compose(app_id, content)
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
 @app.get("/api/apps/install-status")
 def apps_install_status(job_id: str, user: str = Depends(auth)):
     return apps.install_status(job_id)

@@ -332,6 +332,7 @@ def compose_action(name, action):
     path = _compose_project_path(name)
     cmd_map = {
         "up": ["docker", "compose", "up", "-d"],
+        "stop": ["docker", "compose", "stop"],
         "down": ["docker", "compose", "down"],
         "restart": ["docker", "compose", "restart"],
     }

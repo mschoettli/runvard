@@ -14,6 +14,8 @@ import time
 import subprocess
 import threading
 
+from modules import docker_mgr
+
 try:
     import yaml
 except ImportError:
@@ -33,7 +35,7 @@ PORT_SEARCH_LIMIT = 200
 
 CATEGORIES = [
     "Alle", "Media", "Netzwerk", "Produktivität", "AI",
-    "Monitoring", "Download", "Home", "Developer", "Datenbank",
+    "Monitoring", "Download", "Home", "Developer", "Datenbank", "Compose",
 ]
 
 
@@ -810,6 +812,34 @@ def _load_updates():
         return {"checked": 0, "updates": []}
 
 
+def _is_compose_app_id(app_id):
+    return str(app_id or "").startswith("compose:")
+
+
+def _compose_project_from_app_id(app_id):
+    project = str(app_id or "").split(":", 1)[1].strip()
+    if not project:
+        raise ValueError("Compose-Projekt nicht gefunden")
+    return project
+
+
+def _compose_app_entry(project, running=False, port=0, compose=""):
+    return {
+        "id": f"compose:{project}",
+        "type": "compose",
+        "project": project,
+        "name": project,
+        "icon": "⚙",
+        "category": "Compose",
+        "desc": "Custom Docker Compose project",
+        "port": port,
+        "installed": True,
+        "running": running,
+        "update_available": False,
+        "compose": compose,
+    }
+
+
 def get_catalog():
     """
     Return the full app catalog with live installation state.
@@ -829,6 +859,7 @@ def get_catalog():
             port = _first_host_port_from_compose(_read_compose(app["id"]), port)
         out.append({
             "id": app["id"],
+            "type": "app",
             "name": app["name"],
             "icon": f"{ICON_BASE}/{app['icon']}.svg",
             "category": app["category"],
@@ -838,6 +869,15 @@ def get_catalog():
             "running": running,
             "update_available": app["id"] in updates,
         })
+    for project in docker_mgr.list_compose_projects():
+        name = project["name"]
+        compose = docker_mgr.get_compose(name).get("content", "")
+        out.append(_compose_app_entry(
+            name,
+            running=project.get("running", False),
+            port=project.get("port", 0),
+            compose=compose,
+        ))
     return {"categories": CATEGORIES, "apps": out}
 
 
@@ -860,12 +900,25 @@ def get_app(app_id):
         ValueError:
             Raised when the app is unknown.
     """
+    if _is_compose_app_id(app_id):
+        project = _compose_project_from_app_id(app_id)
+        projects = docker_mgr.list_compose_projects()
+        status = next((p for p in projects if p.get("name") == project), None)
+        if not status:
+            raise ValueError("Compose-Projekt nicht gefunden")
+        data = docker_mgr.get_compose(project)
+        compose = data.get("content", "")
+        port = _first_host_port_from_compose(compose, 0)
+        return _compose_app_entry(project, running=status.get("running", False), port=port,
+                                  compose=compose)
+
     app = next((a for a in CATALOG if a["id"] == app_id), None)
     if not app:
         raise ValueError("App nicht gefunden")
     compose = _read_compose(app_id) if is_installed(app_id) else build_compose(app)
     return {
         "id": app["id"],
+        "type": "app",
         "name": app["name"],
         "icon": f"{ICON_BASE}/{app['icon']}.svg",
         "category": app["category"],
@@ -994,6 +1047,21 @@ def install_status(job_id):
     }
 
 
+def save_compose(app_id, content):
+    """Save an installed catalog app's docker-compose.yml without starting it."""
+    if _is_compose_app_id(app_id):
+        project = _compose_project_from_app_id(app_id)
+        return docker_mgr.save_compose(project, content)
+    app = next((a for a in CATALOG if a["id"] == app_id), None)
+    if not app:
+        raise ValueError("App nicht gefunden")
+    path = _app_dir(app_id)
+    os.makedirs(path, exist_ok=True)
+    with open(_compose_file(app_id), "w") as f:
+        f.write(content)
+    return {"ok": True}
+
+
 def action(app_id, act):
     """
     Execute an app lifecycle action.
@@ -1015,6 +1083,19 @@ def action(app_id, act):
         ValueError:
             Raised when the app is not installed or the action is unknown.
     """
+    if _is_compose_app_id(app_id):
+        project = _compose_project_from_app_id(app_id)
+        compose_action = {
+            "start": "up",
+            "stop": "stop",
+            "restart": "restart",
+            "down": "down",
+            "remove": "down",
+        }.get(act)
+        if not compose_action:
+            raise ValueError("Unbekannte Aktion")
+        return docker_mgr.compose_action(project, compose_action)
+
     path = _app_dir(app_id)
     if not os.path.isdir(path):
         raise ValueError("App nicht installiert")
