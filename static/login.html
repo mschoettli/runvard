@@ -3,7 +3,9 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ActaX · Anmeldung</title>
+<title>Runvard · Anmeldung</title>
+<link rel="icon" type="image/png" href="/static/runvard-icon.png">
+<link rel="apple-touch-icon" href="/static/runvard-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <style>
@@ -13,6 +15,7 @@ html{background:#0f0c1a}
 body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellipse at 60% 0%,#1a1040 0%,#0a0b14 60%);background-attachment:fixed;color:var(--text);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px}
 .login-wrap{width:100%;max-width:380px}
 .brand{text-align:center;margin-bottom:24px}
+.brand-icon{width:72px;height:72px;border-radius:18px;display:block;margin:0 auto 14px;box-shadow:0 16px 40px rgba(0,0,0,.34)}
 .brand .logo{font-size:26px;font-weight:700;letter-spacing:.06em;color:#fff}
 .brand .sub{font-size:12px;color:var(--text3);margin-top:6px;letter-spacing:.04em}
 .card{background:var(--bg2);border:1px solid var(--border-accent);border-radius:16px;padding:28px 26px;box-shadow:0 16px 48px rgba(0,0,0,.5)}
@@ -36,7 +39,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 <body>
   <div class="login-wrap">
     <div class="brand">
-      <div class="logo">ActaX</div>
+      <img class="brand-icon" src="/static/runvard-icon.png" alt="" aria-hidden="true">
+      <div class="logo">Runvard</div>
       <div class="sub">Server Panel</div>
     </div>
     <div class="card">
@@ -58,7 +62,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
       </form>
       <div class="lock-note" id="conn-note"></div>
     </div>
-    <div class="foot">ActaX Server Panel</div>
+    <div class="foot">Runvard Server Panel</div>
   </div>
 
 <script>
