@@ -1062,7 +1062,10 @@ const UI_PHRASES={
     "Formatting & mounting…":"Formatiere & hänge ein…",
     "From":"Von",
     "Generating diagnostic report…":"Diagnosebericht wird erstellt…",
+    "Git fallback":"Git-Fallback",
     "GitHub unavailable":"GitHub nicht verfügbar",
+    "GitHub rate limit":"GitHub-Limit",
+    "GitHub API rate limit reached. Try again later.":"GitHub API-Limit erreicht. Später erneut versuchen.",
     "Group":"Gruppe",
     "Group created":"Gruppe erstellt",
     "Group deleted":"Gruppe gelöscht",
@@ -9700,12 +9703,18 @@ const renderSystemOriginalFallback=async(body,tab)=>{
       api('/sysmgr/runvard-release').catch(e=>({remote:{ok:false,error:e.message}})),
     ]);
     const remote=runvard.remote||{};
+    const rateLimited=!!remote.rate_limited;
     const runvardTone=!remote.ok?'warn':runvard.update_available?'bad':'good';
-    const runvardLabel=!remote.ok?'Check failed':!runvard.local_known?'Local version unknown':runvard.update_available?'Update available':'Up to date';
+    const runvardLabel=!remote.ok&&rateLimited?'GitHub rate limit':!remote.ok?'Check failed':!runvard.local_known?'Local version unknown':runvard.update_available?'Update available':'Up to date';
+    const remoteSub=remote.ok
+      ? `Latest: ${esc(remote.short||'-')}${remote.source==='git'?' · '+uiText('Git fallback'):''}`
+      : rateLimited
+        ? 'GitHub API rate limit reached. Try again later.'
+        : esc(remote.error||'GitHub unavailable');
     body.innerHTML=viewIntro('Updates','Install security updates and check whether a newer runvard version is available on GitHub.',u.updates>0?`<button class="btn" id="upd-go" onclick="updatesInstall()">Install package updates</button>`:'')
       +`<div class="nx-summary-grid">
         ${summaryCard('System packages',u.updates,u.updates?'Install when you can reboot if needed':'System current')}
-        ${summaryCard('runvard GitHub',statusBadge(runvardLabel,runvardTone),remote.ok?`Latest: ${esc(remote.short||'-')}`:esc(remote.error||'GitHub unavailable'))}
+        ${summaryCard('runvard GitHub',statusBadge(runvardLabel,runvardTone),remoteSub)}
       </div>
       <div class="nx-card-grid">
         <div class="nx-action-card">

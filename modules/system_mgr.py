@@ -10,6 +10,7 @@ import urllib.request
 
 RUNVARD_REPO_API = "https://api.github.com/repos/mschoettli/runvard/commits/main"
 RUNVARD_REPO_URL = "https://github.com/mschoettli/runvard"
+RUNVARD_REPO_GIT_URL = "https://github.com/mschoettli/runvard.git"
 RUNVARD_INSTALL_URL = "https://raw.githubusercontent.com/mschoettli/runvard/main/install.sh"
 RUNVARD_UPDATE_LOG = "/opt/runvard/data/runvard-update.log"
 VERSION_FILE = os.environ.get(
@@ -162,6 +163,28 @@ def _stored_commit():
 
 
 def _remote_commit():
+    def git_fallback(error="", rate_limited=False):
+        r = _run(["git", "ls-remote", RUNVARD_REPO_GIT_URL, "refs/heads/main"], timeout=20)
+        line = r["stdout"].strip().splitlines()[0] if r["ok"] and r["stdout"].strip() else ""
+        commit = line.split(None, 1)[0] if line else ""
+        if re.fullmatch(r"[0-9a-f]{40}", commit):
+            return {
+                "ok": True,
+                "commit": commit,
+                "short": commit[:7],
+                "url": f"{RUNVARD_REPO_URL}/commit/{commit}",
+                "message": "",
+                "date": "",
+                "source": "git",
+                "warning": error,
+                "rate_limited": rate_limited,
+            }
+        return {
+            "ok": False,
+            "error": error or r["stderr"] or "GitHub unavailable",
+            "rate_limited": rate_limited,
+        }
+
     req = urllib.request.Request(
         RUNVARD_REPO_API,
         headers={
@@ -172,8 +195,14 @@ def _remote_commit():
     try:
         with urllib.request.urlopen(req, timeout=15) as res:
             data = json.loads(res.read().decode("utf-8"))
-    except (OSError, urllib.error.URLError, json.JSONDecodeError) as e:
-        return {"ok": False, "error": str(e)}
+    except urllib.error.HTTPError as e:
+        if e.code == 403:
+            return git_fallback("GitHub API rate limit reached. Using git fallback.", True)
+        return git_fallback(str(e))
+    except (OSError, urllib.error.URLError) as e:
+        return git_fallback(str(e))
+    except json.JSONDecodeError as e:
+        return git_fallback(str(e))
     commit = data.get("sha", "")
     info = data.get("commit", {})
     return {
