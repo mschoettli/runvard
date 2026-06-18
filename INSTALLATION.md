@@ -28,6 +28,37 @@ journalctl -u runvard -f
 systemctl stop runvard
 ```
 
+## Target-Host Verification
+
+After installation on a disposable Debian or Ubuntu host, run the verifier:
+
+```bash
+sudo /opt/runvard/scripts/verify-target-host.sh
+```
+
+The default verifier mode is non-destructive. It checks the systemd service,
+HTTP/API health, login, JSON error responses, confirmation-token enforcement,
+Docker/Compose/libvirt availability, read-only subsystem discovery APIs, and
+parameterized read API validation for host-command-backed endpoints.
+Use an admin account for the verifier. It checks `/api/auth/status` after login
+and stops early if `RUNVARD_USER`/`RUNVARD_PASS` belongs to a readonly account,
+because confirmation-token and mutation-boundary checks require admin
+privileges.
+It also sends valid confirmation tokens with intentionally invalid mutation
+requests and expects HTTP 400 before host tools run, covering account roles,
+unsafe backup rsync sources, unsafe NFS export options, invalid upload
+filenames, directory share-link attempts, empty file job path-list entries,
+invalid package names, filesystem types, VM volume formats, file job actions,
+AppArmor modes, and kdump actions.
+For a running staging instance that is not installed as the systemd service,
+set `RUNVARD_API_ONLY=1` to run only the HTTP/API contract checks; this does
+not replace the normal verifier on a disposable target host.
+Mutating checks are opt-in and should only run on a throwaway host:
+
+```bash
+sudo RUNVARD_DESTRUCTIVE=1 RUNVARD_TEST_SERVICE=cron.service /opt/runvard/scripts/verify-target-host.sh
+```
+
 ## Reverse Proxy
 
 runvard can run behind Nginx Proxy Manager, OpenResty, Nginx, Caddy, or another reverse proxy.

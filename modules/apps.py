@@ -11,16 +11,21 @@ import json
 import re
 import socket
 import time
+import uuid
 import subprocess
 import threading
+
+from modules.compose_utils import validate_compose_content
+from modules.runtime import data_path
+from modules import validators
 
 try:
     import yaml
 except ImportError:
     yaml = None
 
-APPS_DIR = "/opt/runvard/data/apps"
-UPDATE_CACHE = "/opt/runvard/data/apps_updates.json"
+APPS_DIR = data_path("apps")
+UPDATE_CACHE = data_path("apps_updates.json")
 UPDATE_INTERVAL = 12 * 3600  # 12 Stunden
 ICON_BASE = "https://cdn.jsdelivr.net/gh/selfhst/icons/svg"
 DEFAULT_RUNVARD_PORT = 8080
@@ -154,7 +159,8 @@ volumes:
     {"id": "traefik", "name": "Traefik", "icon": "traefik", "category": "Netzwerk",
      "desc": "Cloud-nativer Reverse-Proxy & Load-Balancer", "port": 8080,
      "tpl": _c("traefik:latest", ["80:80", "8080:8080"],
-               ["/var/run/docker.sock:/var/run/docker.sock:ro"])},
+               ["/var/run/docker.sock:/var/run/docker.sock:ro"]),
+     "allow_docker_socket": True},
     {"id": "caddy", "name": "Caddy", "icon": "caddy", "category": "Netzwerk",
      "desc": "Webserver mit automatischem HTTPS", "port": 80,
      "tpl": _c("caddy:latest", ["80:80", "443:443"],
@@ -280,11 +286,13 @@ volumes:
     {"id": "portainer", "name": "Portainer", "icon": "portainer", "category": "Monitoring",
      "desc": "Web-Oberfläche zur Docker-Verwaltung", "port": 9443,
      "tpl": _c("portainer/portainer-ce:latest", ["9443:9443", "8000:8000"],
-               ["/var/run/docker.sock:/var/run/docker.sock", "./data:/data"])},
+               ["/var/run/docker.sock:/var/run/docker.sock", "./data:/data"]),
+     "allow_docker_socket": True},
     {"id": "dozzle", "name": "Dozzle", "icon": "dozzle", "category": "Monitoring",
      "desc": "Echtzeit-Logs aller Container im Browser", "port": 8080,
      "tpl": _c("amir20/dozzle:latest", ["8080:8080"],
-               ["/var/run/docker.sock:/var/run/docker.sock"])},
+               ["/var/run/docker.sock:/var/run/docker.sock"]),
+     "allow_docker_socket": True},
     {"id": "netdata", "name": "Netdata", "icon": "netdata", "category": "Monitoring",
      "desc": "Echtzeit-Performance-Monitoring", "port": 19999,
      "tpl": _c("netdata/netdata:latest", ["19999:19999"],
@@ -299,7 +307,8 @@ volumes:
     {"id": "glances", "name": "Glances", "icon": "glances", "category": "Monitoring",
      "desc": "System-Übersicht im Terminal & Web", "port": 61208,
      "tpl": _c("nicolargo/glances:latest", ["61208:61208"],
-               ["/var/run/docker.sock:/var/run/docker.sock:ro"], {"GLANCES_OPT": "-w"})},
+               ["/var/run/docker.sock:/var/run/docker.sock:ro"], {"GLANCES_OPT": "-w"}),
+     "allow_docker_socket": True},
 
     # ─── Download ───────────────────────────────────────────────────────
     {"id": "qbittorrent", "name": "qBittorrent", "icon": "qbittorrent", "category": "Download",
@@ -413,7 +422,8 @@ volumes:
     {"id": "uptime-uptrace", "name": "Dockge", "icon": "dockge", "category": "Developer",
      "desc": "Eleganter Docker-Compose-Manager", "port": 5001,
      "tpl": _c("louislam/dockge:1", ["5001:5001"],
-               ["/var/run/docker.sock:/var/run/docker.sock", "./data:/app/data"])},
+               ["/var/run/docker.sock:/var/run/docker.sock", "./data:/app/data"]),
+     "allow_docker_socket": True},
 
     # ─── Datenbank ──────────────────────────────────────────────────────
     {"id": "postgres", "name": "PostgreSQL", "icon": "postgresql", "category": "Datenbank",
@@ -621,7 +631,10 @@ def _reserved_host_ports(exclude_app_id=""):
     for app_id in os.listdir(APPS_DIR):
         if app_id == exclude_app_id:
             continue
-        path = _compose_file(app_id)
+        try:
+            path = _compose_file(app_id)
+        except ValueError:
+            continue
         try:
             with open(path) as f:
                 ports.update(_host_ports_from_compose(f.read()))
@@ -680,6 +693,18 @@ def _last_output_line(output):
 def _failure_step(label, output):
     detail = _last_output_line(output)
     return f"{label}: {detail}" if detail else label
+
+
+def _command_exception_output(cmd, exc):
+    prefix = " ".join(cmd)
+    if isinstance(exc, FileNotFoundError):
+        return f"{cmd[0]} nicht gefunden"
+    if isinstance(exc, subprocess.TimeoutExpired):
+        stderr = exc.stderr
+        if isinstance(stderr, bytes):
+            stderr = stderr.decode(errors="replace")
+        return f"{prefix} timed out" + (f": {stderr[-500:]}" if stderr else "")
+    return f"{prefix} failed: {exc}"
 
 
 def _compose_diagnostics(path):
@@ -774,6 +799,7 @@ def build_compose(app):
 # ──────────────────────────────────────────────────────────────────────────
 
 def _app_dir(app_id):
+    app_id = validators.require_slug(app_id, "app id")
     return os.path.join(APPS_DIR, app_id)
 
 
@@ -908,7 +934,11 @@ def install(app_id, content):
     app = next((a for a in CATALOG if a["id"] == app_id), None)
     if not app:
         raise ValueError("App nicht gefunden")
-    job_id = f"{app_id}_{int(time.time())}"
+    validate_compose_content(
+        content,
+        allow_docker_socket=bool(app.get("allow_docker_socket")),
+    )
+    job_id = f"{app_id}_{uuid.uuid4().hex}"
     _install_jobs[job_id] = {
         "status": "preparing", "app_id": app_id, "app_name": app["name"],
         "ok": None, "output": "", "step": "Vorbereitung…"
@@ -931,10 +961,13 @@ def install(app_id, content):
                 job["ok"] = False
                 job["step"] = _failure_step("Image pull failed", job["output"])
                 return
-        except subprocess.TimeoutExpired:
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            job["output"] += "\n" + _command_exception_output(
+                ["docker", "compose", "pull"], exc
+            )
             job["status"] = "error"
             job["ok"] = False
-            job["step"] = "Image pull timed out"
+            job["step"] = _failure_step("Image pull failed", job["output"])
             return
 
         job["status"] = "starting"
@@ -958,10 +991,13 @@ def install(app_id, content):
                                             job["output"])
                 return
             job["step"] = "Fertig ✓"
-        except subprocess.TimeoutExpired:
+        except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
+            job["output"] += "\n" + _command_exception_output(
+                ["docker", "compose", "up", "-d"], exc
+            )
             job["status"] = "error"
             job["ok"] = False
-            job["step"] = "Container start timed out"
+            job["step"] = _failure_step("Container start failed", job["output"])
 
     threading.Thread(target=run, daemon=True).start()
     return {"job_id": job_id}
@@ -1031,7 +1067,18 @@ def action(app_id, act):
     output = ""
     ok = True
     for cmd in cmds[act]:
-        r = subprocess.run(cmd, cwd=path, capture_output=True, text=True, timeout=600)
+        try:
+            r = subprocess.run(
+                cmd, cwd=path, capture_output=True, text=True, timeout=600
+            )
+        except FileNotFoundError:
+            output += f"\n{cmd[0]} nicht gefunden"
+            ok = False
+            break
+        except subprocess.TimeoutExpired:
+            output += f"\n{' '.join(cmd)} timed out"
+            ok = False
+            break
         output += r.stdout + r.stderr
         if r.returncode != 0:
             ok = False
@@ -1089,7 +1136,10 @@ def check_updates(force=False):
     updates = []
     if os.path.isdir(APPS_DIR):
         for app_id in os.listdir(APPS_DIR):
-            path = _app_dir(app_id)
+            try:
+                path = _app_dir(app_id)
+            except ValueError:
+                continue
             if os.path.isfile(os.path.join(path, "docker-compose.yml")):
                 if _check_image_update(path):
                     updates.append(app_id)

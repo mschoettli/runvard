@@ -1,0 +1,115 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1100" viewBox="0 0 1600 1100">
+  <defs>
+    <style>
+      .bg { fill: #f7f9fb; }
+      .grid { stroke: #d9e1e7; stroke-width: 2; }
+      .label, .word { fill: #07131d; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-weight: 800; }
+      .label { font-size: 34px; }
+      .word { font-size: 58px; letter-spacing: 0; }
+      .tile { fill: #0d1b24; }
+      .r { fill: #ffffff; }
+      .cyan { fill: #18d2d0; }
+      .teal { fill: #12a89e; }
+      .green { fill: #35df72; }
+      .blue { fill: #4aa8ff; }
+      .muted { fill: #72b8b7; }
+      .white { fill: #ffffff; }
+    </style>
+  </defs>
+
+  <rect class="bg" width="1600" height="1100"/>
+  <path class="grid" d="M400 0v1100M800 0v1100M1200 0v1100M0 550h1600"/>
+
+  <g id="logo-base">
+    <rect class="tile" x="0" y="0" width="230" height="230" rx="34"/>
+    <path class="r" d="M49 39h126l36 35v37l-52 50 48 48h-55l-72-72v72H48V95h97l21 21-33 31H80v62H49z"/>
+  </g>
+
+  <g id="prompt-angle">
+    <path d="M0 0l25 25-25 25h-18l24-25-24-25z"/>
+  </g>
+
+  <g id="prompt-underscore">
+    <rect x="0" y="0" width="44" height="10" rx="2"/>
+  </g>
+
+  <g transform="translate(0 0)">
+    <text class="label" x="40" y="58">E1</text>
+    <g transform="translate(85 88)">
+      <use href="#logo-base"/>
+      <use href="#prompt-angle" class="cyan" transform="translate(145 151) scale(.72)"/>
+      <use href="#prompt-underscore" class="cyan" transform="translate(169 193)"/>
+    </g>
+    <text class="word" x="72" y="415">Runvard</text>
+  </g>
+
+  <g transform="translate(400 0)">
+    <text class="label" x="40" y="58">E2</text>
+    <g transform="translate(85 88)">
+      <use href="#logo-base"/>
+      <use href="#prompt-angle" class="cyan" transform="translate(145 151) scale(.72)"/>
+      <use href="#prompt-underscore" class="white" transform="translate(169 193)"/>
+    </g>
+    <text class="word" x="72" y="415">Runvard</text>
+  </g>
+
+  <g transform="translate(800 0)">
+    <text class="label" x="40" y="58">E3</text>
+    <g transform="translate(85 88)">
+      <use href="#logo-base"/>
+      <use href="#prompt-angle" class="cyan" transform="translate(145 151) scale(.72)"/>
+      <use href="#prompt-underscore" class="green" transform="translate(169 193)"/>
+    </g>
+    <text class="word" x="72" y="415">Runvard</text>
+  </g>
+
+  <g transform="translate(1200 0)">
+    <text class="label" x="40" y="58">E4</text>
+    <g transform="translate(85 88)">
+      <use href="#logo-base"/>
+      <path class="cyan" d="M161 155l28 27-28 27h-16l25-27-25-27z"/>
+      <rect class="cyan" x="170" y="194" width="39" height="9" rx="2"/>
+    </g>
+    <text class="word" x="72" y="415">Runvard</text>
+  </g>
+
+  <g transform="translate(0 550)">
+    <text class="label" x="40" y="58">E5</text>
+    <g transform="translate(85 88)">
+      <use href="#logo-base"/>
+      <path class="teal" d="M155 154h32l-31 55h-31z"/>
+      <rect class="cyan" x="170" y="194" width="42" height="10" rx="2"/>
+    </g>
+    <text class="word" x="72" y="415">Runvard</text>
+  </g>
+
+  <g transform="translate(400 550)">
+    <text class="label" x="40" y="58">E6</text>
+    <g transform="translate(85 88)">
+      <use href="#logo-base"/>
+      <path class="cyan" d="M157 156h31l-30 53h-31z"/>
+      <rect class="white" x="170" y="194" width="40" height="10" rx="2"/>
+    </g>
+    <text class="word" x="72" y="415">Runvard</text>
+  </g>
+
+  <g transform="translate(800 550)">
+    <text class="label" x="40" y="58">E7</text>
+    <g transform="translate(85 88)">
+      <use href="#logo-base"/>
+      <use href="#prompt-angle" class="muted" transform="translate(145 151) scale(.72)"/>
+      <use href="#prompt-underscore" class="muted" transform="translate(169 193)"/>
+    </g>
+    <text class="word" x="72" y="415">Runvard</text>
+  </g>
+
+  <g transform="translate(1200 550)">
+    <text class="label" x="40" y="58">E8</text>
+    <g transform="translate(85 88)">
+      <use href="#logo-base"/>
+      <path class="blue" d="M157 156h31l-30 53h-31z"/>
+      <rect class="blue" x="170" y="194" width="40" height="10" rx="2"/>
+    </g>
+    <text class="word" x="72" y="415">Runvard</text>
+  </g>
+</svg>

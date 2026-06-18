@@ -4,23 +4,48 @@ import json
 import time
 import subprocess
 
-ALERT_CONFIG = "/opt/runvard/data/alerts.json"
-ALERT_HISTORY = "/opt/runvard/data/alert_history.json"
+from modules.runtime import data_path
+from modules import validators
+
+ALERT_CONFIG = data_path("alerts.json")
+ALERT_HISTORY = data_path("alert_history.json")
+PRIORITIES = {"", "emerg", "alert", "crit", "err", "warning", "notice", "info", "debug",
+              "0", "1", "2", "3", "4", "5", "6", "7"}
+ALERT_METRICS = {"cpu", "ram", "disk", "smart", "service_down", "raid_degraded"}
+ALERT_CHANNELS = {"webhook", "email"}
 
 
 def _run(cmd, timeout=30):
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
-        return r.stdout
+        return {
+            "ok": r.returncode == 0,
+            "stdout": r.stdout,
+            "stderr": r.stderr,
+        }
+    except subprocess.TimeoutExpired as e:
+        return {
+            "ok": False,
+            "stdout": e.stdout or "",
+            "stderr": f"{cmd[0]} timed out",
+        }
     except Exception as e:
-        return f"Fehler: {e}"
+        return {"ok": False, "stdout": "", "stderr": str(e)}
 
 
 def _load(path, default):
     try:
         with open(path) as f:
             return json.load(f)
-    except (OSError, json.JSONDecodeError):
+    except FileNotFoundError:
+        return default
+    except json.JSONDecodeError:
+        try:
+            os.replace(path, f"{path}.corrupt-{int(time.time())}")
+        except OSError:
+            pass
+        return default
+    except OSError:
         return default
 
 
@@ -49,6 +74,16 @@ def get_logs(source: str, lines: int = 200, priority: str = "",
         lines = max(1, min(int(lines), 5000))
     except (TypeError, ValueError):
         lines = 200
+    if priority not in PRIORITIES:
+        return {"logs": "Ungueltige Prioritaet"}
+    if unit:
+        try:
+            unit = validators.require_service(unit)
+        except ValueError:
+            return {"logs": "Ungueltige Unit"}
+    grep = str(grep or "")
+    if len(grep) > 200 or "\n" in grep or "\r" in grep:
+        return {"logs": "Ungueltiger Suchfilter"}
     # journalctl-Quellen: Filter direkt an journalctl uebergeben
     if base[0] == "journalctl":
         cmd = list(base)
@@ -62,14 +97,27 @@ def get_logs(source: str, lines: int = 200, priority: str = "",
             cmd += ["-u", unit]
         if grep:
             cmd += ["--case-sensitive=no", "-g", grep]
-        out = _run(cmd)
-        return {"logs": out}
+        result = _run(cmd)
+        if not result["ok"]:
+            return {
+                "ok": False,
+                "logs": result["stderr"] or result["stdout"],
+                "stderr": result["stderr"],
+            }
+        return {"ok": True, "logs": result["stdout"]}
     # Nicht-journald-Quellen (z. B. dmesg): clientseitige Filterung
-    log_lines = _run(base).splitlines()
+    result = _run(base)
+    if not result["ok"]:
+        return {
+            "ok": False,
+            "logs": result["stderr"] or result["stdout"],
+            "stderr": result["stderr"],
+        }
+    log_lines = result["stdout"].splitlines()
     if grep:
         gl = grep.lower()
         log_lines = [l for l in log_lines if gl in l.lower()]
-    return {"logs": "\n".join(log_lines[-lines:])}
+    return {"ok": True, "logs": "\n".join(log_lines[-lines:])}
 
 
 # --- Alerts ---
@@ -88,6 +136,16 @@ def save_alert_rules(config: dict):
 
 def add_alert_rule(metric: str, threshold: float, channel: str):
     """metric: cpu, ram, disk, smart, service_down, raid_degraded."""
+    if metric not in ALERT_METRICS:
+        return {"ok": False, "stderr": "Ungueltige Metrik"}
+    if channel not in ALERT_CHANNELS:
+        return {"ok": False, "stderr": "Ungueltiger Kanal"}
+    try:
+        threshold = float(threshold)
+    except (TypeError, ValueError):
+        return {"ok": False, "stderr": "Ungueltiger Schwellwert"}
+    if not (0 <= threshold <= 100000):
+        return {"ok": False, "stderr": "Ungueltiger Schwellwert"}
     cfg = list_alert_rules()
     cfg["rules"].append({
         "id": int(time.time()),

@@ -60,6 +60,11 @@ def start_sampler(interval=5):
 
 
 def get_history(minutes=60):
+    try:
+        minutes = int(minutes)
+    except (TypeError, ValueError):
+        minutes = 60
+    minutes = max(1, min(minutes, 240))
     cutoff = time.time() - minutes * 60
     with _lock:
         pts = [p for p in RING if p["t"] >= cutoff]

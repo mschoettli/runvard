@@ -1,6 +1,8 @@
 """Helpers for reading Docker Compose files."""
 import re
 
+from modules import validators
+
 try:
     import yaml
 except ImportError:
@@ -29,6 +31,7 @@ NON_WEB_SERVICE_RE = re.compile(
     r"rabbit|broker|kafka|zookeeper|memcached|mqtt)",
     re.I,
 )
+ALLOWED_READONLY_BINDS = {"/etc/localtime", "/etc/timezone", "/proc", "/sys"}
 
 
 def _as_int(value):
@@ -50,6 +53,178 @@ def _published_and_target(port_mapping):
     if len(parts) == 2:
         return _as_int(parts[0]), _as_int(parts[1])
     return _as_int(parts[-2]), _as_int(parts[-1])
+
+
+def _validate_port_mapping(port_mapping):
+    published, target = _published_and_target(port_mapping)
+    for port in (published, target):
+        if port is not None and not (1 <= port <= 65535):
+            raise ValueError("Compose port outside valid range")
+
+
+def _bind_mode_is_readonly(mode):
+    return str(mode or "").lower() in {"ro", "readonly", "read_only", "ro,z", "ro,Z"}
+
+
+def _validate_bind_source(source, readonly=False, allow_docker_socket=False):
+    source = str(source or "").strip()
+    if not source:
+        return
+    if source.startswith(("./", "../")):
+        return
+    if not source.startswith("/"):
+        return
+    original = source.rstrip("/") or "/"
+    if (
+        allow_docker_socket
+        and validators.real_path(original) == validators.real_path("/var/run/docker.sock")
+    ):
+        return
+    if original in ALLOWED_READONLY_BINDS:
+        if readonly:
+            return
+        raise PermissionError("Host path must be mounted read-only")
+    if validators.is_under(original, validators.SENSITIVE_HOST_PATHS | validators.BLOCKED_PATHS):
+        raise PermissionError("Sensitive host path cannot be mounted")
+    resolved = validators.real_path(source)
+    if resolved in ALLOWED_READONLY_BINDS and readonly:
+        return
+    validators.guard_host_mount(resolved)
+
+
+def _validate_volume_entry(volume, allow_docker_socket=False):
+    if isinstance(volume, dict):
+        if str(volume.get("type", "")).lower() not in {"", "bind"}:
+            return
+        source = volume.get("source") or volume.get("src") or volume.get("host")
+        readonly = bool(volume.get("read_only")) or _bind_mode_is_readonly(volume.get("mode"))
+        _validate_bind_source(
+            source,
+            readonly=readonly,
+            allow_docker_socket=allow_docker_socket,
+        )
+        return
+
+    spec = str(volume or "").strip().strip("\"'")
+    if not spec:
+        return
+    parts = spec.split(":")
+    if not parts:
+        return
+    source = parts[0]
+    mode = parts[2] if len(parts) >= 3 else ""
+    _validate_bind_source(
+        source,
+        readonly=_bind_mode_is_readonly(mode),
+        allow_docker_socket=allow_docker_socket,
+    )
+
+
+def _compose_service_entries(content):
+    if yaml is not None:
+        try:
+            data = yaml.safe_load(content) or {}
+        except Exception as exc:
+            raise ValueError(f"Invalid Compose YAML: {exc}") from exc
+        services = data.get("services") if isinstance(data, dict) else {}
+        if not isinstance(services, dict) or not services:
+            raise ValueError("Compose file must define services")
+        return services
+    return None
+
+
+def validate_compose_content(content, allow_docker_socket=False):
+    """
+    Validate high-risk Docker Compose fields before writing or running them.
+
+    The validator focuses on host-impacting settings: bind mounts and published
+    ports. It allows relative project volumes and named Docker volumes.
+    """
+    services = _compose_service_entries(content)
+    if services is not None:
+        for service in services.values():
+            if not isinstance(service, dict):
+                continue
+            for volume in service.get("volumes") or []:
+                _validate_volume_entry(
+                    volume,
+                    allow_docker_socket=allow_docker_socket,
+                )
+            for port in service.get("ports") or []:
+                _validate_port_mapping(port)
+        return True
+
+    def clean_scalar(value):
+        return str(value or "").strip().strip("\"'")
+
+    def flush_pending():
+        nonlocal pending_kind, pending_entry
+        if not pending_entry:
+            return
+        if pending_kind == "volumes":
+            _validate_volume_entry(
+                pending_entry,
+                allow_docker_socket=allow_docker_socket,
+            )
+        elif pending_kind == "ports":
+            _validate_port_mapping(pending_entry)
+        pending_kind = ""
+        pending_entry = {}
+
+    service_seen = False
+    in_volumes = False
+    in_ports = False
+    section_indent = 0
+    pending_kind = ""
+    pending_entry = {}
+    for raw in str(content or "").splitlines():
+        line = raw.split("#", 1)[0].rstrip()
+        if not line.strip():
+            continue
+        indent = len(line) - len(line.lstrip(" "))
+        stripped = line.strip()
+        if stripped == "volumes:":
+            flush_pending()
+            in_volumes = True
+            in_ports = False
+            section_indent = indent
+        elif stripped == "ports:":
+            flush_pending()
+            in_ports = True
+            in_volumes = False
+            section_indent = indent
+        elif re.match(r"^[A-Za-z0-9_.-]+:\s*$", stripped) and indent == 2:
+            flush_pending()
+            service_seen = True
+            in_volumes = False
+            in_ports = False
+        elif indent <= section_indent:
+            flush_pending()
+            in_volumes = False
+            in_ports = False
+        elif stripped.startswith("- "):
+            flush_pending()
+            item = stripped[2:].strip()
+            if (in_volumes or in_ports) and re.match(r"^[A-Za-z_][A-Za-z0-9_-]*\s*:", item):
+                key, value = item.split(":", 1)
+                pending_kind = "volumes" if in_volumes else "ports"
+                pending_entry = {key.strip(): clean_scalar(value)}
+                continue
+            if in_volumes:
+                _validate_volume_entry(
+                    item,
+                    allow_docker_socket=allow_docker_socket,
+                )
+            if in_ports:
+                _validate_port_mapping(item)
+        elif pending_entry and indent > section_indent:
+            match = re.match(r"^([A-Za-z_][A-Za-z0-9_-]*)\s*:\s*(.*)$", stripped)
+            if match:
+                pending_entry[match.group(1)] = clean_scalar(match.group(2))
+    flush_pending()
+    if not service_seen:
+        raise ValueError("Compose file must define services")
+    return True
 
 
 def _compose_port_entries(content):

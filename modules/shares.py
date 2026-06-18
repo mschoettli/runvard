@@ -2,6 +2,8 @@
 import os
 import subprocess
 
+from modules import validators
+
 SMB_CONF = "/etc/samba/smb.conf"
 NFS_EXPORTS = "/etc/exports"
 
@@ -42,6 +44,8 @@ def list_samba_shares():
 
 
 def add_samba_share(name: str, path: str, writable=True, guest=False):
+    name = validators.require_slug(name, "share name")
+    path = validators.guard_write_path(path)
     os.makedirs(path, exist_ok=True)
     block = f"""
 [{name}]
@@ -52,8 +56,9 @@ def add_samba_share(name: str, path: str, writable=True, guest=False):
 """
     with open(SMB_CONF, "a") as f:
         f.write(block)
-    _run(["systemctl", "restart", "smbd"])
-    return {"ok": True}
+    result = _run(["systemctl", "restart", "smbd"])
+    result.update({"name": name, "path": path})
+    return result
 
 
 # --- NFS ---
@@ -74,18 +79,25 @@ def list_nfs_exports():
 
 
 def add_nfs_export(path: str, clients="*", options="rw,sync,no_subtree_check"):
+    path = validators.guard_write_path(path)
+    clients = validators.require_nfs_clients(clients)
+    options = validators.require_mount_options(options, "NFS options")
     os.makedirs(path, exist_ok=True)
     with open(NFS_EXPORTS, "a") as f:
         f.write(f"\n{path} {clients}({options})\n")
-    _run(["exportfs", "-ra"])
-    return {"ok": True}
+    result = _run(["exportfs", "-ra"])
+    result.update({"path": path, "clients": clients, "options": options})
+    return result
 
 
 # --- FTP (vsftpd) ---
 
 def ftp_status():
     r = _run(["systemctl", "is-active", "vsftpd"])
-    return {"active": r["stdout"].strip() == "active"}
+    return {
+        "active": r.get("stdout", "").strip() == "active",
+        "error": "" if r.get("ok") else r.get("stderr", ""),
+    }
 
 
 def ftp_action(action: str):

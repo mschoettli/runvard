@@ -15,6 +15,7 @@ INSTALL="/opt/runvard"
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ENV_FILE="${INSTALL}/data/runvard.env"
 VERSION_FILE="${INSTALL}/data/runvard.version"
+SERVICE_FILE="/etc/systemd/system/runvard.service"
 
 echo -e "${CYAN}Updating runvard...${NC}"
 
@@ -25,18 +26,30 @@ fi
 
 TS=$(date +%Y%m%d%H%M%S)
 echo -e "${CYAN}Backing up current files (.bak.${TS})...${NC}"
-for f in server.py requirements.txt static/index.html static/login.html; do
+for f in server.py requirements.txt runvard.service static/index.html static/login.html static/btop.html; do
   [ -f "$INSTALL/$f" ] && cp -f "$INSTALL/$f" "$INSTALL/$f.bak.$TS"
 done
 for m in "$INSTALL/modules/"*.py; do
   [ -f "$m" ] && cp -f "$m" "$m.bak.$TS"
 done
 
-cp -f "$SRC/server.py" "$INSTALL/server.py"
-cp -f "$SRC/requirements.txt" "$INSTALL/requirements.txt"
-cp -f "$SRC/static/index.html" "$INSTALL/static/index.html"
-[ -f "$SRC/static/login.html" ] && cp -f "$SRC/static/login.html" "$INSTALL/static/login.html"
-cp -f "$SRC/modules/"*.py "$INSTALL/modules/"
+if [ "$SRC" != "$INSTALL" ]; then
+  rsync -a --delete \
+    --exclude '.git' --exclude '.DS_Store' \
+    --exclude 'data' --exclude 'venv' --exclude '.venv' \
+    --exclude '__pycache__' --exclude '.pytest_cache' \
+    --exclude '*.pyc' --exclude '*.pyo' --exclude '*.bak*' \
+    "$SRC"/ "$INSTALL"/
+else
+  echo -e "${CYAN}Update source is already ${INSTALL}; skipping file sync.${NC}"
+fi
+chmod +x "$INSTALL/scripts/verify-local.sh" \
+         "$INSTALL/scripts/verify-target-host.sh" \
+         "$INSTALL/scripts/verify-api-only.sh" 2>/dev/null || true
+if [ -f "$INSTALL/runvard.service" ]; then
+  cp -f "$INSTALL/runvard.service" "$SERVICE_FILE"
+  systemctl daemon-reload
+fi
 SOURCE_COMMIT="${RUNVARD_SOURCE_COMMIT:-}"
 if [ -z "$SOURCE_COMMIT" ] && [ -d "$SRC/.git" ] && command -v git >/dev/null 2>&1; then
   SOURCE_COMMIT="$(git -C "$SRC" rev-parse HEAD 2>/dev/null || true)"

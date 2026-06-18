@@ -13,12 +13,20 @@ except ImportError:
     HAS_PTY = False
 
 
+def default_shell():
+    return "/bin/bash" if os.path.exists("/bin/bash") else "/bin/sh"
+
+
+def default_cwd():
+    return "/home" if os.path.isdir("/home") else "/"
+
+
 class TerminalSession:
     """Eine PTY-Shell-Session, an einen WebSocket gebunden."""
 
-    def __init__(self, shell="/bin/bash", cwd="/root", argv=None):
-        self.shell = shell
-        self.cwd = cwd if os.path.isdir(cwd) else "/"
+    def __init__(self, shell=None, cwd=None, argv=None):
+        self.shell = shell or default_shell()
+        self.cwd = cwd if cwd and os.path.isdir(cwd) else default_cwd()
         self.argv = argv
         self.proc = None
 

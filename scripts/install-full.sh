@@ -230,6 +230,18 @@ ask() {  # ask "Frage" "default" -> Antwort auf stdout
   echo "${ans:-$def}"
 }
 
+quote_env_value() {
+  local value="${1-}" out="" i ch
+  for ((i=0; i<${#value}; i++)); do
+    ch="${value:i:1}"
+    case "$ch" in
+      "\\"|"\""|"\$"|\`) out="${out}\\${ch}" ;;
+      *) out="${out}${ch}" ;;
+    esac
+  done
+  printf '"%s"' "$out"
+}
+
 step "Konfiguration"
 ADMIN_USER="$(ask 'Admin-Benutzername' "${RUNVARD_USER:-${ACTAX_USER:-admin}}")"
 
@@ -334,13 +346,18 @@ mkdir -p "$INSTALL_DIR" "$INSTALL_DIR/data"
 if [ "$SRC" != "$INSTALL_DIR" ]; then
   # data/ niemals überschreiben; venv & Müll ausschließen
   rsync -a --delete \
-    --exclude 'data' --exclude 'venv' --exclude '__pycache__' \
-    --exclude '*.pyc' --exclude '*.bak*' \
+    --exclude '.git' --exclude '.DS_Store' \
+    --exclude 'data' --exclude 'venv' --exclude '.venv' \
+    --exclude '__pycache__' --exclude '.pytest_cache' \
+    --exclude '*.pyc' --exclude '*.pyo' --exclude '*.bak*' \
     "$SRC"/ "$INSTALL_DIR"/
   ok "Programmdateien kopiert."
 else
   info "Installation läuft bereits im Zielverzeichnis – kein Kopieren nötig."
 fi
+chmod +x "$INSTALL_DIR/scripts/verify-local.sh" \
+         "$INSTALL_DIR/scripts/verify-target-host.sh" \
+         "$INSTALL_DIR/scripts/verify-api-only.sh" 2>/dev/null || true
 SOURCE_COMMIT="${RUNVARD_SOURCE_COMMIT:-${ACTAX_SOURCE_COMMIT:-}}"
 if [ -z "$SOURCE_COMMIT" ] && [ -d "$SRC/.git" ] && command -v git >/dev/null 2>&1; then
   SOURCE_COMMIT="$(git -C "$SRC" rev-parse HEAD 2>/dev/null || true)"
@@ -393,8 +410,8 @@ phase "Zugangsdaten & Konfiguration schreiben"
 umask 077
 cat > "$ENV_FILE" << EOF
 # Von install.sh erzeugt – zentrale Konfiguration für runvard
-RUNVARD_USER=${ADMIN_USER}
-RUNVARD_PASS=${ADMIN_PASS}
+RUNVARD_USER=$(quote_env_value "$ADMIN_USER")
+RUNVARD_PASS=$(quote_env_value "$ADMIN_PASS")
 RUNVARD_PORT=${PORT}
 EOF
 chmod 600 "$ENV_FILE"
@@ -412,11 +429,12 @@ Wants=network-online.target
 Type=simple
 User=root
 WorkingDirectory=${INSTALL_DIR}
-EnvironmentFile=${ENV_FILE}
-ExecStart=${INSTALL_DIR}/venv/bin/uvicorn server:app --host 0.0.0.0 --port ${PORT} --workers 1
+Environment=RUNVARD_PORT=8080
+EnvironmentFile=-${ENV_FILE}
+ExecStart=${INSTALL_DIR}/venv/bin/uvicorn server:app --host 0.0.0.0 --port \${RUNVARD_PORT} --workers 1
 # TLS/HTTPS optional: Zertifikat unter System → Sicherheit → SSL erzeugen, dann
 # obige Zeile durch folgende ersetzen und 'systemctl daemon-reload && systemctl restart runvard':
-# ExecStart=${INSTALL_DIR}/venv/bin/uvicorn server:app --host 0.0.0.0 --port ${PORT} --workers 1 --ssl-keyfile ${INSTALL_DIR}/data/certs/<CN>.key --ssl-certfile ${INSTALL_DIR}/data/certs/<CN>.crt
+# ExecStart=${INSTALL_DIR}/venv/bin/uvicorn server:app --host 0.0.0.0 --port \${RUNVARD_PORT} --workers 1 --ssl-keyfile ${INSTALL_DIR}/data/certs/<CN>.key --ssl-certfile ${INSTALL_DIR}/data/certs/<CN>.crt
 Restart=always
 RestartSec=5
 

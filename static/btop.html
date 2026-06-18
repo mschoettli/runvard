@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>btop - runvard</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
+<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/xterm-addon-unicode11@0.6.0/lib/xterm-addon-unicode11.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;background:#0a0810;overflow:hidden}
+#t{width:100%;height:100vh}
+#msg{position:fixed;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;gap:14px;background:rgba(10,8,16,.85);backdrop-filter:blur(4px);color:#e2e8f0;font-family:'JetBrains Mono',monospace;text-align:center;padding:24px;z-index:10}
+#msg.show{display:flex}
+#msg .ic{font-size:34px}
+#msg .tx{font-size:14px;color:rgba(240,240,255,.7);max-width:420px;line-height:1.6}
+#msg button{background:#7a4aff;color:#fff;border:none;padding:8px 18px;border-radius:8px;font-size:13px;cursor:pointer;font-family:inherit}
+#msg button:hover{background:#8d64ff}
+::-webkit-scrollbar{width:5px;height:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:rgba(139,92,246,.3);border-radius:3px}::-webkit-scrollbar-thumb:hover{background:rgba(139,92,246,.6)}
+</style>
+</head><body>
+<div id="t"></div>
+<div id="msg"><div class="ic">!</div><div class="tx" id="msg-tx"></div><button onclick="location.reload()">Neu laden</button></div>
+<script>
+const THEME={
+  background:'#0a0810',foreground:'#e2e8f0',cursor:'#a78bfa',
+  cursorAccent:'#0a0810',selectionBackground:'rgba(139,92,246,.35)',
+  black:'#1e293b',brightBlack:'#64748b',
+  red:'#f87171',brightRed:'#fca5a5',
+  green:'#4ade80',brightGreen:'#86efac',
+  yellow:'#fbbf24',brightYellow:'#fde68a',
+  blue:'#60a5fa',brightBlue:'#93c5fd',
+  magenta:'#c084fc',brightMagenta:'#d8b4fe',
+  cyan:'#22d3ee',brightCyan:'#67e8f9',
+  white:'#e2e8f0',brightWhite:'#f8fafc',
+};
+function showMsg(t){document.getElementById('msg-tx').textContent=t;document.getElementById('msg').classList.add('show');}
+
+if(typeof Terminal==='undefined'||typeof FitAddon==='undefined'){
+  showMsg('Terminal libraries are unavailable. Check browser access to the bundled or CDN assets.');
+  throw new Error('Missing terminal browser libraries');
+}
+
+const term=new Terminal({fontFamily:"'JetBrains Mono','Cascadia Code',monospace",fontSize:13,lineHeight:1.2,
+  cursorBlink:false,copyOnSelect:true,scrollback:1000,allowProposedApi:true,theme:THEME});
+const fit=new FitAddon.FitAddon();
+term.loadAddon(fit);
+term.open(document.getElementById('t'));
+try{term.loadAddon(new Unicode11Addon.Unicode11Addon());term.unicode.activeVersion='11';}catch(e){}
+fit.fit();
+term.focus();
+
+const proto=location.protocol==='https:'?'wss':'ws';
+const ws=new WebSocket(proto+'://'+location.host+'/ws/btop');
+ws.onopen=()=>{ws.send(JSON.stringify({type:'resize',rows:term.rows,cols:term.cols}));term.focus();};
+ws.onmessage=e=>term.write(e.data);
+ws.onclose=ev=>{
+  if(ev.code===1008)showMsg('Kein Zugriff. Bitte in runvard anmelden - Konten mit Nur-Lesen koennen den Monitor nicht oeffnen.');
+  else showMsg('Sitzung beendet. (Monitor geschlossen oder Verbindung getrennt.)');
+};
+term.onData(d=>{if(ws.readyState===1)ws.send(JSON.stringify({type:'input',data:d}));});
+window.addEventListener('resize',()=>{fit.fit();if(ws.readyState===1)ws.send(JSON.stringify({type:'resize',rows:term.rows,cols:term.cols}));});
+</script>
+</body></html>

@@ -4,15 +4,47 @@ import json
 import time
 import subprocess
 
-CONFIG = "/opt/runvard/data/backup_jobs.json"
-HISTORY = "/opt/runvard/data/backup_history.json"
+from modules.runtime import data_path
+from modules import validators
+
+CONFIG = data_path("backup_jobs.json")
+HISTORY = data_path("backup_history.json")
+SCHEDULES = {"manual", "hourly", "daily", "weekly"}
+
+
+def _is_remote_path(path: str) -> bool:
+    return not path.startswith("/") and ":" in path
+
+
+def _validate_backup_source(path: str) -> str:
+    if _is_remote_path(path):
+        return validators.require_rsync_remote(path, "backup source")
+    if not str(path or "").startswith("/"):
+        raise ValueError("Backup source must be absolute")
+    return validators.guard_read_path(path)
+
+
+def _validate_backup_dest(path: str) -> str:
+    if _is_remote_path(path):
+        return validators.require_rsync_remote(path, "backup destination")
+    if not str(path or "").startswith("/"):
+        raise ValueError("Backup destination must be absolute")
+    return validators.guard_write_path(path)
 
 
 def _load(path, default):
     try:
         with open(path) as f:
             return json.load(f)
-    except (OSError, json.JSONDecodeError):
+    except FileNotFoundError:
+        return default
+    except json.JSONDecodeError:
+        try:
+            os.replace(path, f"{path}.corrupt-{int(time.time())}")
+        except OSError:
+            pass
+        return default
+    except OSError:
         return default
 
 
@@ -27,6 +59,11 @@ def list_jobs():
 
 
 def add_job(name, source, dest, schedule="manual", direction="push"):
+    name = validators.require_slug(name, "backup name")
+    source = _validate_backup_source(source)
+    dest = _validate_backup_dest(dest)
+    if schedule not in SCHEDULES:
+        return {"ok": False, "error": "Ungueltiger Zeitplan"}
     jobs = _load(CONFIG, [])
     jobs.append({
         "id": int(time.time()),
@@ -54,10 +91,24 @@ def run_job(job_id: int):
         return {"ok": False, "error": "Job nicht gefunden"}
 
     start = time.time()
-    r = subprocess.run(
-        ["rsync", "-a", "--delete", "--stats", job["source"] + "/", job["dest"]],
-        capture_output=True, text=True, timeout=3600,
-    )
+    success = False
+    output = ""
+    try:
+        r = subprocess.run(
+            ["rsync", "-a", "--delete", "--stats", job["source"] + "/", job["dest"]],
+            capture_output=True, text=True, timeout=3600,
+        )
+        success = r.returncode == 0
+        output = r.stdout[-2000:] if success else r.stderr[-2000:]
+    except FileNotFoundError:
+        output = "rsync nicht gefunden"
+    except subprocess.TimeoutExpired as exc:
+        stderr = (
+            exc.stderr.decode(errors="replace")
+            if isinstance(exc.stderr, bytes)
+            else exc.stderr
+        )
+        output = (stderr or "rsync Zeitlimit erreicht")[-2000:]
     duration = round(time.time() - start, 1)
 
     job["last_run"] = start
@@ -69,12 +120,15 @@ def run_job(job_id: int):
         "name": job["name"],
         "time": start,
         "duration": duration,
-        "success": r.returncode == 0,
-        "output": r.stdout[-2000:] if r.returncode == 0 else r.stderr[-2000:],
+        "success": success,
+        "output": output,
     })
     _save(HISTORY, history[:100])
 
-    return {"ok": r.returncode == 0, "duration": duration}
+    result = {"ok": success, "duration": duration}
+    if not success:
+        result["error"] = output
+    return result
 
 
 def get_history():

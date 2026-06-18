@@ -6,6 +6,8 @@ import re
 import subprocess
 import time
 
+from modules import validators
+
 
 def _run(cmd, timeout=60, input_text=None):
     """Shell-Kommando ausführen, Ergebnis als dict.
@@ -29,7 +31,10 @@ def list_block_devices():
               "NAME,SIZE,TYPE,FSTYPE,MOUNTPOINT,MODEL,SERIAL,ROTA,RM"])
     if not r["ok"]:
         return {"devices": [], "error": r["stderr"]}
-    data = json.loads(r["stdout"])
+    try:
+        data = json.loads(r["stdout"])
+    except json.JSONDecodeError:
+        return {"devices": [], "error": "lsblk parse error"}
 
     # Welches Device trägt das Root-Filesystem?
     root_dev = _root_device()
@@ -55,11 +60,24 @@ def _root_device():
     return ""
 
 
+def _root_zpool():
+    r = _run(["findmnt", "-n", "-o", "SOURCE,FSTYPE", "/"])
+    if not r["ok"]:
+        return ""
+    parts = r["stdout"].split()
+    if len(parts) >= 2 and parts[1] == "zfs" and parts[0]:
+        return parts[0].split("/", 1)[0]
+    return ""
+
+
 def _base_device_name(device: str):
     """Return the parent disk name for a block device."""
-    name = os.path.basename(device.replace("/dev/", ""))
+    name = device[5:] if device.startswith("/dev/") else device
     if name.startswith("mapper/"):
         return name
+    if "/" in name:
+        return name
+    name = os.path.basename(name)
     if re.fullmatch(r"(nvme\d+n\d+|mmcblk\d+|loop\d+)p\d+", name):
         return re.sub(r"p\d+$", "", name)
     if re.fullmatch(r"[A-Za-z]+\d+", name):
@@ -69,6 +87,7 @@ def _base_device_name(device: str):
 
 def _partition_name(device: str, number: int = 1):
     """Return the partition name for a disk and partition number."""
+    validators.require_device(device)
     name = os.path.basename(device.replace("/dev/", ""))
     suffix = f"p{number}" if name[-1:].isdigit() else str(number)
     return f"{name}{suffix}"
@@ -76,8 +95,12 @@ def _partition_name(device: str, number: int = 1):
 
 def _settle_device(device: str, wait_for: str | None = None, timeout: int = 10):
     """Ask the kernel to refresh partition metadata and wait for a device."""
-    _run(["partprobe", device])
-    _run(["udevadm", "settle"])
+    probe = _run(["partprobe", device])
+    if not probe["ok"]:
+        return False
+    settle = _run(["udevadm", "settle"])
+    if not settle["ok"]:
+        return False
     target = wait_for or device
     deadline = time.time() + timeout
     while time.time() < deadline:
@@ -108,6 +131,7 @@ def _first_partition_name(device: str):
 
 def smart_data(device: str):
     """SMART-Werte einer Disk via smartctl."""
+    validators.require_device(device)
     dev = f"/dev/{device}" if not device.startswith("/dev/") else device
     r = _run(["smartctl", "-a", "-j", dev])
     if not r["ok"] and not r["stdout"]:
@@ -135,6 +159,7 @@ def smart_data(device: str):
 
 def _guard(device: str):
     """Sicherheitscheck: Root-Device niemals anfassen."""
+    validators.require_device(device)
     base = _base_device_name(device)
     if base == _root_device():
         raise PermissionError("Root-Device kann nicht verändert werden")
@@ -142,11 +167,16 @@ def _guard(device: str):
 
 def create_partition_table(device: str, label: str = "gpt"):
     _guard(device)
+    if label not in ("gpt", "msdos"):
+        return {"ok": False, "stderr": "Unbekanntes Partitionsschema"}
     dev = f"/dev/{device}" if not device.startswith("/dev/") else device
-    _run(["wipefs", "-a", dev])
+    wipe = _run(["wipefs", "-a", dev])
+    if not wipe["ok"]:
+        return wipe
     res = _run(["parted", "-s", dev, "mklabel", label])
-    if res["ok"]:
-        _settle_device(dev)
+    if res["ok"] and not _settle_device(dev):
+        res["ok"] = False
+        res["stderr"] = f"{dev} could not be refreshed after partition table change"
     return res
 
 
@@ -175,7 +205,9 @@ def format_partition(partition: str, fstype: str = "ext4"):
     dev = f"/dev/{partition}" if not partition.startswith("/dev/") else partition
     if not os.path.exists(dev):
         return {"ok": False, "stderr": f"{dev} does not exist"}
-    _run(["wipefs", "-a", dev])
+    wipe = _run(["wipefs", "-a", dev])
+    if not wipe["ok"]:
+        return wipe
     mkfs_map = {
         "ext4": ["mkfs.ext4", "-F", dev],
         "xfs": ["mkfs.xfs", "-f", dev],
@@ -189,33 +221,41 @@ def format_partition(partition: str, fstype: str = "ext4"):
 def mount_device(partition: str, mountpoint: str, persist=False):
     _guard(partition)
     dev = f"/dev/{partition}" if not partition.startswith("/dev/") else partition
-    import os
     if not os.path.exists(dev):
         return {"ok": False, "stderr": f"{dev} does not exist"}
-    if not mountpoint or not mountpoint.startswith("/"):
-        return {"ok": False, "stderr": "Mountpoint must be an absolute path"}
+    mountpoint = validators.guard_mountpoint(mountpoint)
     os.makedirs(mountpoint, exist_ok=True)
     res = _run(["mount", dev, mountpoint])
     if res["ok"] and persist:
-        uuid = _run(["blkid", "-s", "UUID", "-o", "value", dev])["stdout"].strip()
-        if uuid:
-            entry = f"UUID={uuid} {mountpoint} auto defaults 0 2"
-            try:
-                with open("/etc/fstab") as f:
-                    exists = any(
-                        line.strip() and not line.lstrip().startswith("#")
-                        and line.split()[0] == f"UUID={uuid}"
-                        for line in f
-                    )
-            except OSError:
-                exists = False
-            if not exists:
-                with open("/etc/fstab", "a") as f:
-                    f.write(f"\n{entry}\n")
+        uuid_res = _run(["blkid", "-s", "UUID", "-o", "value", dev])
+        uuid = uuid_res["stdout"].strip()
+        if not uuid:
+            return {
+                "ok": False,
+                "stdout": res.get("stdout", ""),
+                "stderr": (
+                    "Mount aktiv, Persistenz fehlgeschlagen: "
+                    + (uuid_res.get("stderr") or "UUID nicht gefunden")
+                ),
+            }
+        entry = f"UUID={uuid} {mountpoint} auto defaults 0 2"
+        try:
+            with open("/etc/fstab") as f:
+                exists = any(
+                    line.strip() and not line.lstrip().startswith("#")
+                    and line.split()[0] == f"UUID={uuid}"
+                    for line in f
+                )
+        except OSError:
+            exists = False
+        if not exists:
+            with open("/etc/fstab", "a") as f:
+                f.write(f"\n{entry}\n")
     return res
 
 
 def unmount_device(mountpoint: str):
+    mountpoint = validators.guard_mountpoint(mountpoint)
     return _run(["umount", mountpoint])
 
 
@@ -242,15 +282,16 @@ def list_swap():
 
 def create_swapfile(path: str, size_mb, persist=False):
     """Swapfile anlegen, aktivieren, optional in /etc/fstab eintragen."""
-    import os
     try:
         size_mb = int(size_mb)
         if not (1 <= size_mb <= 1024 * 1024):
             raise ValueError
     except (TypeError, ValueError):
         return {"ok": False, "stderr": "Ungueltige Groesse"}
-    if not path or " " in path or not path.startswith("/"):
-        return {"ok": False, "stderr": "Ungueltiger Pfad"}
+    try:
+        path = validators.guard_write_path(path)
+    except (PermissionError, ValueError) as exc:
+        return {"ok": False, "stderr": str(exc)}
     if os.path.exists(path):
         return {"ok": False, "stderr": "Pfad existiert bereits"}
     r = _run(["fallocate", "-l", f"{size_mb}M", path])
@@ -270,13 +311,27 @@ def create_swapfile(path: str, size_mb, persist=False):
         try:
             with open("/etc/fstab", "a") as f:
                 f.write(f"\n{path} none swap sw 0 0\n")
-        except OSError:
-            pass
+        except OSError as exc:
+            return {
+                "ok": False,
+                "stderr": f"Swap aktiv, Persistenz fehlgeschlagen: {exc}",
+            }
     return {"ok": True}
+
+
+def _swap_target(target: str) -> str:
+    target = str(target or "").strip()
+    if target.startswith("/dev/"):
+        return validators.require_device(target)
+    return validators.guard_write_path(target)
 
 
 def swap_action(target: str, action: str):
     """action: on | off."""
+    try:
+        target = _swap_target(target)
+    except (PermissionError, ValueError) as exc:
+        return {"ok": False, "stderr": str(exc)}
     if action == "on":
         return _run(["swapon", target])
     if action == "off":
@@ -304,6 +359,11 @@ def list_raid():
 
 def create_raid(name: str, level: int, devices: list):
     """RAID-Array erstellen. level: 0,1,5,6,10."""
+    validators.require_slug(name, "RAID name")
+    if level not in (0, 1, 5, 6, 10):
+        return {"ok": False, "stderr": "Unbekanntes RAID-Level"}
+    if not devices:
+        return {"ok": False, "stderr": "Keine Devices angegeben"}
     for d in devices:
         _guard(d)
     dev_paths = [f"/dev/{d}" if not d.startswith("/dev/") else d for d in devices]
@@ -317,12 +377,12 @@ def create_raid(name: str, level: int, devices: list):
 def _lvm_report(cmd, key):
     r = _run(cmd)
     if not r["ok"]:
-        return []
+        return {"ok": False, "items": [], "error": r["stderr"]}
     try:
         data = json.loads(r["stdout"])
-        return data.get("report", [{}])[0].get(key, [])
+        return {"ok": True, "items": data.get("report", [{}])[0].get(key, [])}
     except (json.JSONDecodeError, KeyError, IndexError):
-        return []
+        return {"ok": False, "items": [], "error": "lvm json parse error"}
 
 
 def lvm_overview():
@@ -330,40 +390,65 @@ def lvm_overview():
     available = _run(["vgs", "--version"])["ok"]
     if not available:
         return {"available": False, "pvs": [], "vgs": [], "lvs": []}
+    pvs = _lvm_report(["pvs", "--reportformat", "json", "-o",
+                       "pv_name,vg_name,pv_size,pv_free"], "pv")
+    vgs = _lvm_report(["vgs", "--reportformat", "json", "-o",
+                       "vg_name,vg_size,vg_free,pv_count,lv_count"], "vg")
+    lvs = _lvm_report(["lvs", "--reportformat", "json", "-o",
+                       "lv_name,vg_name,lv_size,lv_path"], "lv")
+    errors = [
+        report.get("error", "")
+        for report in (pvs, vgs, lvs)
+        if not report["ok"]
+    ]
     return {
         "available": True,
-        "pvs": _lvm_report(["pvs", "--reportformat", "json", "-o",
-                            "pv_name,vg_name,pv_size,pv_free"], "pv"),
-        "vgs": _lvm_report(["vgs", "--reportformat", "json", "-o",
-                            "vg_name,vg_size,vg_free,pv_count,lv_count"], "vg"),
-        "lvs": _lvm_report(["lvs", "--reportformat", "json", "-o",
-                            "lv_name,vg_name,lv_size,lv_path"], "lv"),
+        "ok": not errors,
+        "error": "; ".join(e for e in errors if e),
+        "pvs": pvs["items"],
+        "vgs": vgs["items"],
+        "lvs": lvs["items"],
     }
 
 
 def vg_create(name, devices):
     """Physical Volumes anlegen und zu einer Volume Group zusammenfassen."""
+    validators.require_slug(name, "volume group name")
+    if not devices:
+        return {"ok": False, "stderr": "Keine Devices angegeben"}
     for d in devices:
         _guard(d)
     dev_paths = [f"/dev/{d}" if not d.startswith("/dev/") else d for d in devices]
     for dp in dev_paths:
-        _run(["pvcreate", "-y", dp])
+        result = _run(["pvcreate", "-y", dp])
+        if not result["ok"]:
+            result["device"] = dp
+            return result
     return _run(["vgcreate", name] + dev_paths)
 
 
 def lv_create(vg, name, size):
     """size z.B. '10G' (absolut) oder '100%FREE' (Anteil)."""
+    validators.require_slug(vg, "volume group name")
+    validators.require_slug(name, "logical volume name")
     size = str(size)
+    if not re.fullmatch(r"(\+?\d+(\.\d+)?[KMGTP]?)|(\d+%FREE)", size):
+        return {"ok": False, "stderr": "Ungueltige Groesse"}
     flag = "-l" if "%" in size else "-L"
     return _run(["lvcreate", flag, size, "-n", name, vg])
 
 
 def lv_extend(lv_path, size):
     """size z.B. '+5G' (zusätzlich) oder '20G' (absolut); Dateisystem wird mitgewachsen."""
+    validators.require_device(lv_path)
+    size = str(size)
+    if not re.fullmatch(r"\+?\d+(\.\d+)?[KMGTP]?", size):
+        return {"ok": False, "stderr": "Ungueltige Groesse"}
     return _run(["lvextend", "-L", str(size), "--resizefs", lv_path])
 
 
 def lv_remove(lv_path):
+    _guard(lv_path)
     return _run(["lvremove", "-y", lv_path])
 
 
@@ -375,6 +460,7 @@ _IQN_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._:-]{2,255}$")
 
 
 def _devpath(d):
+    validators.require_device(d)
     return d if d.startswith("/dev/") else f"/dev/{d}"
 
 
@@ -461,18 +547,22 @@ def fs_grow(device="", mountpoint="", size="max"):
     src = ""
     fstype = ""
     if mountpoint:
+        mountpoint = validators.guard_mountpoint(mountpoint)
         info = _run(["findmnt", "-n", "-o", "SOURCE,FSTYPE", mountpoint])
         parts = info["stdout"].split()
         if info["ok"] and parts:
             src = parts[0]
             fstype = parts[1] if len(parts) > 1 else ""
     if not fstype and device:
+        validators.require_device(device)
         src = _devpath(device)
         out = _run(["lsblk", "-no", "FSTYPE", src])["stdout"].split()
         fstype = out[0] if out else ""
     if not src and device:
         src = _devpath(device)
     _guard(src or device or "")
+    if size and size != "max" and not re.fullmatch(r"\+?\d+(\.\d+)?[KMGTP]?", str(size)):
+        return {"ok": False, "stderr": "Ungueltige Groesse"}
     if fstype.startswith("ext"):
         cmd = ["resize2fs", src]
         if size and size != "max":
@@ -502,14 +592,20 @@ def zfs_pools():
     r = _run(["zpool", "list", "-H", "-o",
               "name,size,alloc,free,cap,frag,health"])
     pools = []
-    if r["ok"]:
-        for line in r["stdout"].splitlines():
-            f = line.split("\t")
-            if len(f) >= 7:
-                pools.append({"name": f[0], "size": f[1], "alloc": f[2],
-                              "free": f[3], "cap": f[4], "frag": f[5],
-                              "health": f[6]})
-    return {"available": True, "pools": pools}
+    if not r["ok"]:
+        return {
+            "available": True,
+            "ok": False,
+            "pools": [],
+            "error": r.get("stderr", "") or "zpool list failed",
+        }
+    for line in r["stdout"].splitlines():
+        f = line.split("\t")
+        if len(f) >= 7:
+            pools.append({"name": f[0], "size": f[1], "alloc": f[2],
+                          "free": f[3], "cap": f[4], "frag": f[5],
+                          "health": f[6]})
+    return {"available": True, "ok": True, "pools": pools}
 
 
 def zfs_datasets():
@@ -517,13 +613,19 @@ def zfs_datasets():
         return {"available": False, "datasets": []}
     r = _run(["zfs", "list", "-H", "-o", "name,used,avail,refer,mountpoint"])
     ds = []
-    if r["ok"]:
-        for line in r["stdout"].splitlines():
-            f = line.split("\t")
-            if len(f) >= 5:
-                ds.append({"name": f[0], "used": f[1], "avail": f[2],
-                           "refer": f[3], "mountpoint": f[4]})
-    return {"available": True, "datasets": ds}
+    if not r["ok"]:
+        return {
+            "available": True,
+            "ok": False,
+            "datasets": [],
+            "error": r.get("stderr", "") or "zfs list failed",
+        }
+    for line in r["stdout"].splitlines():
+        f = line.split("\t")
+        if len(f) >= 5:
+            ds.append({"name": f[0], "used": f[1], "avail": f[2],
+                       "refer": f[3], "mountpoint": f[4]})
+    return {"available": True, "ok": True, "datasets": ds}
 
 
 def zpool_create(name, raid, devices):
@@ -546,6 +648,8 @@ def zpool_create(name, raid, devices):
 def zpool_destroy(name):
     if not _valid_name(name):
         return {"ok": False, "stderr": "Ungueltiger Pool-Name"}
+    if name == _root_zpool():
+        raise PermissionError("Root-Pool kann nicht zerstoert werden")
     return _run(["zpool", "destroy", name])
 
 
@@ -567,18 +671,24 @@ def btrfs_filesystems():
     r = _run(["btrfs", "filesystem", "show"])
     fss = []
     cur = None
-    if r["ok"]:
-        for raw in r["stdout"].splitlines():
-            line = raw.strip()
-            if line.startswith("Label:"):
-                m = re.search(r"Label:\s*(\S+)\s+uuid:\s*(\S+)", line)
-                label = m.group(1).strip("'") if m else ""
-                cur = {"label": "" if label in ("none", "") else label,
-                       "uuid": m.group(2) if m else "", "devices": []}
-                fss.append(cur)
-            elif line.startswith("devid") and cur is not None:
-                cur["devices"].append(line.split()[-1])
-    return {"available": True, "filesystems": fss}
+    if not r["ok"]:
+        return {
+            "available": True,
+            "ok": False,
+            "filesystems": [],
+            "error": r.get("stderr", "") or "btrfs filesystem show failed",
+        }
+    for raw in r["stdout"].splitlines():
+        line = raw.strip()
+        if line.startswith("Label:"):
+            m = re.search(r"Label:\s*(\S+)\s+uuid:\s*(\S+)", line)
+            label = m.group(1).strip("'") if m else ""
+            cur = {"label": "" if label in ("none", "") else label,
+                   "uuid": m.group(2) if m else "", "devices": []}
+            fss.append(cur)
+        elif line.startswith("devid") and cur is not None:
+            cur["devices"].append(line.split()[-1])
+    return {"available": True, "ok": True, "filesystems": fss}
 
 
 def btrfs_create(label, profile, devices):
@@ -601,6 +711,7 @@ def btrfs_create(label, profile, devices):
 
 
 def btrfs_scrub(mountpoint):
+    mountpoint = validators.guard_mountpoint(mountpoint)
     return _run(["btrfs", "scrub", "start", mountpoint])
 
 
@@ -615,18 +726,19 @@ def iscsi_sessions():
         return {"available": False, "sessions": []}
     r = _run(["iscsiadm", "-m", "session"])
     sessions = []
-    if r["ok"]:
-        for line in r["stdout"].splitlines():
-            parts = line.split()
-            # z.B.: tcp: [1] 192.168.1.10:3260,1 iqn.2003-01.org... (non-flash)
-            if len(parts) >= 4:
-                sessions.append({
-                    "proto": parts[0].rstrip(":"),
-                    "id": parts[1].strip("[]"),
-                    "portal": parts[2].split(",")[0],
-                    "target": parts[3],
-                })
-    return {"available": True, "sessions": sessions}
+    if not r["ok"]:
+        return {"available": True, "ok": False, "sessions": [], "stderr": r["stderr"]}
+    for line in r["stdout"].splitlines():
+        parts = line.split()
+        # z.B.: tcp: [1] 192.168.1.10:3260,1 iqn.2003-01.org... (non-flash)
+        if len(parts) >= 4:
+            sessions.append({
+                "proto": parts[0].rstrip(":"),
+                "id": parts[1].strip("[]"),
+                "portal": parts[2].split(",")[0],
+                "target": parts[3],
+            })
+    return {"available": True, "ok": True, "sessions": sessions}
 
 
 def iscsi_discover(portal):

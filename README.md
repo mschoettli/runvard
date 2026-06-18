@@ -9,3 +9,9 @@ runvard should be deployed on a trusted local network or behind a secure reverse
 ## Installation
 
 See [INSTALLATION.md](INSTALLATION.md) for installation, offline setup, service management, and uninstall instructions.
+
+## Development
+
+See [DEVELOPMENT.md](DEVELOPMENT.md) for dependency-light checks, local data
+directory overrides, the local API-only verifier, and target-host verification
+notes.

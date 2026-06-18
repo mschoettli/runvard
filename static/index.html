@@ -597,7 +597,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   <div class="dash-section" id="dash-section">
     <div class="dash-head">
       <div style="flex:1"></div>
-      <button class="dash-add-btn" onclick="dashAddForm()" data-i18n-title="addTile" title="Kachel hinzufügen">+</button>
+      <button class="dash-add-btn" id="dash-add-btn" onclick="dashAddForm()" data-i18n-title="addTile" title="Kachel hinzufügen">+</button>
     </div>
     <div class="dash-grid" id="dash-grid"></div>
   </div>
@@ -682,11 +682,33 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 <script>
 // ═══ Helpers ═══
 const $=s=>document.querySelector(s);
-const api=async(p,o)=>{const r=await fetch('/api'+p,o);if(!r.ok)throw new Error((await r.text()).slice(0,300));return r.json();};
+const api=async(p,o)=>{const r=await fetch('/api'+p,o);const txt=await r.text();let data=null;try{data=txt?JSON.parse(txt):{};}catch(e){}if(!r.ok){const msg=(data&&(data.error||data.detail))||txt||r.statusText;throw new Error(String(msg).slice(0,300));}return data??{};};
 const post=(p,d)=>{const fd=new FormData();for(const k in d)fd.append(k,d[k]);return api(p,{method:'POST',body:fd});};
+const confirmedPost=async(p,d,action,target)=>{const t=await post('/confirm-token',{action,target});return post(p,{...d,confirm_token:t.token});};
 const fmtBytes=b=>{if(!b)return'0 B';const u=['B','KB','MB','GB','TB'],i=Math.floor(Math.log(b)/Math.log(1024));return(b/Math.pow(1024,i)).toFixed(1)+' '+u[i];};
 const fmtUptime=s=>{const d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60);return`${d}d ${h}h ${m}m`;};
 const esc=s=>(s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const missingDeps=()=>[
+  ['Chart.js',typeof Chart==='undefined'],
+  ['xterm.js',typeof Terminal==='undefined'],
+  ['marked',typeof marked==='undefined']
+].filter(x=>x[1]).map(x=>x[0]);
+function showDependencyWarning(){const miss=missingDeps();if(!miss.length)return;setTimeout(()=>toast('Missing browser libraries: '+miss.join(', '),'error'),300);}
+const RUNVARD_DEFAULT_DATA_DIR='/opt/runvard/data';
+const runvardConfig={data_dir:RUNVARD_DEFAULT_DATA_DIR};
+const authState={user:null,role:'admin',login_enabled:false};
+const isAdmin=()=>authState.role==='admin';
+const syncAdminUi=()=>{const add=$('#dash-add-btn');if(add)add.style.display=isAdmin()?'':'none';};
+const dashRequireAdmin=()=>{if(isAdmin())return true;toast('Admin required','error');return false;};
+const runvardDataPath=(...parts)=>[runvardConfig.data_dir||RUNVARD_DEFAULT_DATA_DIR,...parts]
+  .map((part,i)=>String(part||'').replace(i===0?/\/+$/g:/^\/+|\/+$/g,''))
+  .filter(Boolean).join('/');
+async function loadRunvardConfig(){
+  try{
+    const cfg=await api('/config');
+    if(cfg.data_dir)runvardConfig.data_dir=cfg.data_dir;
+  }catch(e){}
+}
 const LANGUAGE_KEY='runvard_language';
 const LANGUAGES=[
   {code:'de',name:'Deutsch'},
@@ -741,7 +763,9 @@ function currentLanguage(){
 }
 function tr(key){
   const lang=currentLanguage();
-  return (I18N[lang]&&I18N[lang][key])||I18N_BASE[key]||key;
+  if(I18N[lang]&&Object.prototype.hasOwnProperty.call(I18N[lang],key))return I18N[lang][key];
+  if(Object.prototype.hasOwnProperty.call(I18N_BASE,key))return I18N_BASE[key];
+  return key;
 }
 const UI_PHRASES={
   en:{"Benutzer":"Users",
@@ -5430,10 +5454,14 @@ document.addEventListener('click',e=>{const m=$('#user-menu');if(m&&m.classList.
 async function loadAuthStatus(){
   try{
     const s=await api('/auth/status');
+    authState.user=s.user||null;
+    authState.role=s.role||'readonly';
+    authState.login_enabled=!!s.login_enabled;
     const tu=$('#topbar-user'); if(tu) tu.textContent=s.user||tr('loginDisabled');
     const h=$('#um-head'); if(h) h.innerHTML=s.user?`${esc(tr('signedInAs'))} <strong>${esc(s.user)}</strong>`:tr('loginDisabledHead');
     const t=$('#um-login-toggle'); if(t) t.checked=!!s.login_enabled;
-    const acc=$('#um-accounts'); if(acc) acc.style.display=(s.role==='admin')?'block':'none';
+    const acc=$('#um-accounts'); if(acc) acc.style.display=isAdmin()?'block':'none';
+    syncAdminUi();
   }catch(e){}
 }
 async function doLogout(){
@@ -5442,7 +5470,7 @@ async function doLogout(){
 }
 async function toggleLogin(on){
   try{
-    await post('/auth/toggle',{enabled:on?'1':'0'});
+    await confirmedPost('/auth/toggle',{enabled:on?'1':'0'},'auth-toggle',on?'1':'0');
     toast(on?tr('loginEnabled'):tr('loginDisabled'));
     loadAuthStatus();
   }catch(e){toast('Error: '+e.message,'error');const t=$('#um-login-toggle');if(t)t.checked=!on;}
@@ -5476,17 +5504,19 @@ window.acctAddForm=()=>openForm('Create account','👥',[
   {name:'username',label:'Username',placeholder:'monitor'},
   {name:'password',label:'Password',type:'password'},
   {name:'role',label:'Rolle',type:'select',options:[{value:'readonly',label:'Read only'},{value:'admin',label:'Administrator'}]},
-],async d=>{try{const r=await post('/accounts/add',d);if(r&&r.ok===false){toast(r.error||'Error','error');return;}closeForm();toast('Account created');renderAccounts();}catch(e){toast(e.message,'error');}});
-window.acctPass=username=>openForm('Change password: '+username,'⚿',[{name:'password',label:'New password',type:'password'}],async d=>{try{const r=await post('/accounts/password',{username,password:d.password});if(r&&r.ok===false){toast(r.error||'Error','error');return;}closeForm();toast('Password changed');}catch(e){toast(e.message,'error');}});
-window.acctRole=async(username,role)=>{try{const r=await post('/accounts/role',{username,role});if(r&&r.ok===false){toast(r.error||'Error','error');return;}toast('Rolle: '+(role==='admin'?'Admin':'Read only'));renderAccounts();}catch(e){toast(e.message,'error');}};
-window.acctDel=username=>confirmDelete('Delete account',`Delete runvard account "${username}"?`,async()=>{try{await post('/accounts/delete',{username});toast('Account deleted');renderAccounts();}catch(e){toast(e.message,'error');}});
+],async d=>{try{const r=await confirmedPost('/accounts/add',d,'account-add',d.username);if(r&&r.ok===false){toast(r.error||'Error','error');return;}closeForm();toast('Account created');renderAccounts();}catch(e){toast(e.message,'error');}});
+window.acctPass=username=>openForm('Change password: '+username,'⚿',[{name:'password',label:'New password',type:'password'}],async d=>{try{const r=await confirmedPost('/accounts/password',{username,password:d.password},'account-password',username);if(r&&r.ok===false){toast(r.error||'Error','error');return;}closeForm();toast('Password changed');}catch(e){toast(e.message,'error');}});
+window.acctRole=async(username,role)=>{try{const r=await confirmedPost('/accounts/role',{username,role},'account-role',username);if(r&&r.ok===false){toast(r.error||'Error','error');return;}toast('Rolle: '+(role==='admin'?'Admin':'Read only'));renderAccounts();}catch(e){toast(e.message,'error');}};
+window.acctDel=username=>confirmDelete('Delete account',`Delete runvard account "${username}"?`,async()=>{try{await confirmedPost('/accounts/delete',{username},'account-delete',username);toast('Account deleted');renderAccounts();}catch(e){toast(e.message,'error');}});
 
+loadRunvardConfig();
 loadAuthStatus();
+showDependencyWarning();
 
 // ═══ Sparklines ═══
-function makeSpark(id,color){return new Chart($(id),{type:'line',data:{labels:Array(30).fill(''),datasets:[{data:Array(30).fill(0),borderColor:color,borderWidth:1.5,fill:true,backgroundColor:color+'22',tension:.4,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false,min:0,max:100}},animation:false}});}
+function makeSpark(id,color){if(typeof Chart==='undefined')return null;return new Chart($(id),{type:'line',data:{labels:Array(30).fill(''),datasets:[{data:Array(30).fill(0),borderColor:color,borderWidth:1.5,fill:true,backgroundColor:color+'22',tension:.4,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false,min:0,max:100}},animation:false}});}
 const cpuSpark=makeSpark('#cpu-spark','#8b5cf6'),ramSpark=makeSpark('#ram-spark','#06b6d4'),netSpark=makeSpark('#net-spark','#22c55e');
-function pushData(c,v){c.data.datasets[0].data.shift();c.data.datasets[0].data.push(v);c.update('none');}
+function pushData(c,v){if(!c)return;c.data.datasets[0].data.shift();c.data.datasets[0].data.push(v);c.update('none');}
 async function poll(){try{const s=await api('/system/stats');$('#cpu-val').textContent=s.cpu.percent;$('#cpu-sub').textContent=`${s.cpu.cores} Kerne · ${s.cpu.freq||'?'} MHz`;pushData(cpuSpark,s.cpu.percent);$('#ram-val').textContent=(s.memory.used/1073741824).toFixed(1);$('#ram-sub').textContent=`${fmtBytes(s.memory.total)} · ${s.memory.percent}%`;pushData(ramSpark,s.memory.percent);const mb=(s.network.down_rate/1048576).toFixed(1);$('#net-val').textContent=mb;$('#net-sub').innerHTML=`▲ ${(s.network.up_rate/1048576).toFixed(1)} ▼ ${mb} MB/s`;pushData(netSpark,Math.min(100,s.network.down_rate/1048576*2));}catch(e){}}
 api('/system/disks').then(d=>{if(d.length){const r=d.find(x=>x.mountpoint==='/')||d[0];$('#disk-val').textContent=r.percent;$('#disk-bar').style.width=r.percent+'%';$('#disk-sub').textContent=`${fmtBytes(r.used)} / ${fmtBytes(r.total)}`;}});
 poll();setInterval(poll,2000);
@@ -5554,7 +5584,9 @@ async function refreshSystemUpdateBadge(){
 }
 async function loadTileBadges(){
   try{
-    const dc=await api('/docker/containers');
+    const data=await api('/docker/containers');
+    const dc=Array.isArray(data)?data:(data.containers||[]);
+    if(data&&data.ok===false)throw new Error(data.stderr||'Docker query failed');
     const running=dc.filter(x=>x.state==='running').length;
     const el=$('#badge-docker');
     if(el){
@@ -5563,7 +5595,9 @@ async function loadTileBadges(){
     }
   }catch(e){}
   try{
-    const vms=await api('/vms/list');
+    const data=await api('/vms/list');
+    const vms=Array.isArray(data)?data:(data.vms||[]);
+    if(data&&data.ok===false)throw new Error(data.stderr||'VM query failed');
     const running=vms.filter(x=>x.active).length;
     const el=$('#badge-vms');
     if(el){
@@ -5678,6 +5712,10 @@ function renderTerminal(body){
   body.style.flexDirection='column';
   body.style.padding='0';
   body.style.overflow='hidden';
+  if(typeof Terminal==='undefined'||typeof FitAddon==='undefined'){
+    body.innerHTML='<div class="empty-state">Terminal libraries are unavailable. Check browser access to the bundled or CDN assets.</div>';
+    return;
+  }
   body.innerHTML=`
     <div class="term-toolbar">
       <div class="term-status"><span class="dot wait" id="term-dot"></span><span id="term-state">verbindet…</span></div>
@@ -5855,15 +5893,14 @@ function renderTerminal(body){
 
 // ═══ Dateien – vollständig ═══
 const QUICKLINKS=[
-  {label:'🏠 Home',path:'/root'},
-  {label:'📂 /home',path:'/home'},
+  {label:'🏠 /home',path:'/home'},
   {label:'📂 /mnt',path:'/mnt'},
   {label:'📂 /media',path:'/media'},
   {label:'📀 VM-Images',path:'/var/lib/libvirt/images'},
-  {label:'🧩 Apps',path:'/opt/runvard/data/apps'},
+  {label:'🧩 Apps',path:()=>runvardDataPath('apps')},
   {label:'🗑 Trash',path:'__trash__'},
 ];
-let currentPath='/root', clipboard=null, viewMode='grid', sortBy='name', sortDir='asc', selectedFiles=new Set(), fileSelectionOrder=[], lastSelectedPath=null, fileJobsTimer=null, filesHotkeysReady=false, filesGlobalDropReady=false;
+let currentPath='/home', clipboard=null, viewMode='grid', sortBy='name', sortDir='asc', selectedFiles=new Set(), fileSelectionOrder=[], lastSelectedPath=null, fileJobsTimer=null, filesHotkeysReady=false, filesGlobalDropReady=false;
 const FILE_I18N={
   up:{de:'Hoch',en:'Up',fr:'Remonter',it:'Su',es:'Subir',pt:'Subir'},
   parentFolder:{de:'Übergeordneter Ordner',en:'Parent folder',fr:'Dossier parent',it:'Cartella superiore',es:'Carpeta superior',pt:'Pasta superior'},
@@ -5995,7 +6032,7 @@ async function renderFiles(body){
   <div class="files-layout">
     <div class="files-sidebar">
       <div class="files-sb-label">${esc(uiText('Quick access'))}</div>
-      ${QUICKLINKS.map(q=>`<div class="files-quicklink${currentPath===q.path?' active':''}" onclick="navTo('${esc(q.path)}')">${q.label}</div>`).join('')}
+      ${QUICKLINKS.map(q=>{const path=typeof q.path==='function'?q.path():q.path;return `<div class="files-quicklink${currentPath===path?' active':''}" onclick="navTo('${esc(path)}')">${q.label}</div>`;}).join('')}
       <div style="height:.5px;background:var(--border);margin:6px 8px"></div>
       <div class="files-sb-label">${esc(uiText('Remote'))}</div>
       ${remoteMounts.map(m=>`<div class="files-quicklink${currentPath===m.mountpoint?' active':''}" title="${esc(m.source)}" onclick="navTo('${esc(m.mountpoint)}')">${m.type==='SMB'?'🖧':'📡'} ${esc(m.label)}</div>`).join('')}
@@ -6239,12 +6276,12 @@ async function uploadFileList(files,targetPath=currentPath){
 
 async function startFileJob(action,paths,opts={}){
   if(!paths||!paths.length){toast(fileText('selectFiles'),'error');return null;}
-  const job=await post('/files/job',{
+  const job=await confirmedPost('/files/job',{
     action,
     paths:paths.join('|'),
     dst_dir:opts.dst_dir||'',
     output:opts.output||''
-  });
+  },'files-job:'+action,paths.join('|').slice(0,240));
   watchFileJob(job.id);
   return job;
 }
@@ -6410,8 +6447,8 @@ window.openFile=async path=>{
     }
   }catch(e){ toast(uiText('File not readable: ')+e.message,'error'); }
 };
-window.updatePreview=()=>{const p=$('#md-prev');if(p)p.innerHTML=marked.parse($('#md-edit').value);};
-window.saveFile=async path=>{await post('/files/write',{path,content:$('#md-edit').value});toast(uiText('Saved'));};
+window.updatePreview=()=>{const p=$('#md-prev');if(!p)return;p.innerHTML=typeof marked==='undefined'?`<pre>${esc($('#md-edit').value)}</pre>`:marked.parse($('#md-edit').value);};
+window.saveFile=async path=>{await confirmedPost('/files/write',{path,content:$('#md-edit').value},'files-write',path);toast(uiText('Saved'));};
 
 // Suche
 let searchTimeout;
@@ -6437,12 +6474,14 @@ window.fileSearch=q=>{
 };
 
 // Ordner/Upload
-window.mkdirForm=()=>openForm(uiText('Create folder'),'📁',[{name:'name',label:uiText('Folder name')}],async d=>{await post('/files/mkdir',{path:currentPath,name:d.name});closeForm();toast(uiText('Folder created'));renderFiles($('#modal-body'));});
-function uploadFileWithProgress(file,index,total,targetPath){
+window.mkdirForm=()=>openForm(uiText('Create folder'),'📁',[{name:'name',label:uiText('Folder name')}],async d=>{await confirmedPost('/files/mkdir',{path:currentPath,name:d.name},'files-mkdir',currentPath+'/'+d.name);closeForm();toast(uiText('Folder created'));renderFiles($('#modal-body'));});
+async function uploadFileWithProgress(file,index,total,targetPath){
+  const token=await post('/confirm-token',{action:'files-upload',target:targetPath});
   return new Promise((resolve,reject)=>{
     const fd=new FormData();
     fd.append('path',targetPath);
     fd.append('file',file);
+    fd.append('confirm_token',token.token);
     const xhr=new XMLHttpRequest();
     xhr.open('POST','/api/files/upload');
     xhr.upload.onprogress=e=>{
@@ -6466,7 +6505,7 @@ window.uploadFiles=async inp=>{
 window.downloadFile=path=>window.open('/api/files/download?path='+encodeURIComponent(path),'_blank');
 
 // Umbenennen
-window.renameForm=path=>openForm(uiText('Rename'),'✎',[{name:'new_name',label:uiText('New name'),value:path.split('/').pop()}],async d=>{try{await post('/files/rename',{path,new_name:d.new_name});closeForm();toast('Renamed');renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
+window.renameForm=path=>openForm(uiText('Rename'),'✎',[{name:'new_name',label:uiText('New name'),value:path.split('/').pop()}],async d=>{try{await confirmedPost('/files/rename',{path,new_name:d.new_name},'files-rename',path);closeForm();toast('Renamed');renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
 
 // Kopieren / Ausschneiden / Einfügen
 function selectedOrPath(path){
@@ -6521,13 +6560,13 @@ window.zipFile=async path=>{
 };
 window.unzipFile=async path=>{
   startTopProgress('Unpacking ZIP',100);
-  try{setTopProgress(15,'Unpacking ZIP');await post('/files/unzip',{path,dst_dir:currentPath});setTopProgress(95,'Unpacking ZIP');finishTopProgress('Unpacked');toast('Unpacked');renderFiles($('#modal-body'));}
+  try{setTopProgress(15,'Unpacking ZIP');await confirmedPost('/files/unzip',{path,dst_dir:currentPath},'files-unzip',path);setTopProgress(95,'Unpacking ZIP');finishTopProgress('Unpacked');toast('Unpacked');renderFiles($('#modal-body'));}
   catch(e){failTopProgress('Unpack failed');toast(e.message,'error');}
 };
 
 // Share-Link
 window.createShareLink=async path=>{
-  const r=await post('/files/share',{path});
+  const r=await confirmedPost('/files/share',{path},'files-share-link',path);
   const url=`${location.origin}/dl/${r.token}`;
   openForm(uiText('Link created 🔗'),'🔗',[{name:'url',label:uiText('Download link (copy)'),value:url}],()=>{closeForm();});
   setTimeout(()=>{const inp=$('#f_url');if(inp){inp.select();document.execCommand('copy');toast('Link copied');}},100);
@@ -6539,7 +6578,7 @@ window.sambaShareForm=(path,name)=>openForm(uiText('Create Samba share'),'🔗',
   {name:'writable',label:uiText('Schreibbar'),type:'checkbox',value:true},
 ],async d=>{
   try{
-    await post('/files/samba-share',{path,name:d.name,writable:d.writable});
+    await confirmedPost('/files/samba-share',{path,name:d.name,writable:d.writable},'files-samba-share',d.name);
     const ip=location.hostname;
     const smbWin=`\\\\${ip}\\${d.name}`;
     const smbMac=`smb://${ip}/${d.name}`;
@@ -6573,7 +6612,7 @@ window.mountSmbForm=()=>openForm(uiText('Connect SMB'),'🔗',[
   {name:'mountpoint',label:uiText('Mountpoint'),placeholder:'/mnt/nas'},
   {name:'username',label:uiText('Username'),value:'guest'},
   {name:'password',label:uiText('Password'),type:'password'},
-],async d=>{try{const r=await post('/files/mount-smb',d);if(r&&r.ok===false){toast((r.stderr||r.stdout||'SMB mount failed').slice(0,300),'error');return;}closeForm();toast('SMB share connected');currentPath=(r&&r.mountpoint)||d.mountpoint;renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
+],async d=>{try{const r=await confirmedPost('/files/mount-smb',d,'files-mount-smb',d.mountpoint);if(r&&r.ok===false){toast((r.stderr||r.stdout||'SMB mount failed').slice(0,300),'error');return;}closeForm();toast('SMB share connected');currentPath=(r&&r.mountpoint)||d.mountpoint;renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
 
 // Externes NFS mounten
 window.mountNfsForm=()=>openForm(uiText('Connect NFS'),'🔗',[
@@ -6581,7 +6620,7 @@ window.mountNfsForm=()=>openForm(uiText('Connect NFS'),'🔗',[
   {name:'export',label:uiText('Export path'),placeholder:'/srv/nfs/media'},
   {name:'mountpoint',label:uiText('Mountpoint'),placeholder:'/mnt/nfs'},
   {name:'options',label:uiText('Options (optional)'),placeholder:'ro,soft',hint:uiText('Comma-separated mount options')},
-],async d=>{try{const r=await post('/files/mount-nfs',d);if(r&&r.ok===false){toast((r.stderr||r.stdout||'NFS mount failed').slice(0,300),'error');return;}closeForm();toast('NFS share connected');currentPath=(r&&r.mountpoint)||d.mountpoint;renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
+],async d=>{try{const r=await confirmedPost('/files/mount-nfs',d,'files-mount-nfs',d.mountpoint);if(r&&r.ok===false){toast((r.stderr||r.stdout||'NFS mount failed').slice(0,300),'error');return;}closeForm();toast('NFS share connected');currentPath=(r&&r.mountpoint)||d.mountpoint;renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
 
 // Eigenschaften
 window.showProps=async path=>{
@@ -6600,7 +6639,7 @@ async function renderTrash(body){
   body.innerHTML=`
   <div class="files-layout">
     <div class="files-sidebar">
-      ${QUICKLINKS.map(q=>`<div class="files-quicklink${currentPath===q.path?' active':''}" onclick="navTo('${esc(q.path)}')">${q.label}</div>`).join('')}
+      ${QUICKLINKS.map(q=>{const path=typeof q.path==='function'?q.path():q.path;return `<div class="files-quicklink${currentPath===path?' active':''}" onclick="navTo('${esc(path)}')">${q.label}</div>`;}).join('')}
     </div>
     <div>
       <div class="toolbar">
@@ -6617,13 +6656,13 @@ async function renderTrash(body){
     </div>
   </div>`;
 }
-window.emptyTrash=()=>confirmDelete(uiText('Empty trash'),fileText('emptyTrashConfirm'),async()=>{await post('/files/trash/empty',{});toast('Trash emptied');renderTrash($('#modal-body'));});
-window.restoreTrash=async(id,name)=>{try{await post('/files/trash/restore',{item_id:id});toast(name+' wiederhergestellt');renderTrash($('#modal-body'));}catch(e){toast(e.message,'error');}};
+window.emptyTrash=()=>confirmDelete(uiText('Empty trash'),fileText('emptyTrashConfirm'),async()=>{await confirmedPost('/files/trash/empty',{},'files-trash-empty','trash');toast('Trash emptied');renderTrash($('#modal-body'));});
+window.restoreTrash=async(id,name)=>{try{await confirmedPost('/files/trash/restore',{item_id:id},'files-trash-restore',id);toast(name+' wiederhergestellt');renderTrash($('#modal-body'));}catch(e){toast(e.message,'error');}};
 
 
 
 // ═══ Storage ═══
-async function renderStorage(body,tab){
+async function renderStorageLegacy(body,tab){
  if(tab==='Disks'||!tab){
    const d=await api('/storage/devices');
    body.innerHTML=`<table><thead><tr><th>Device</th><th>Size</th><th>Type</th><th>FS</th><th>Mount</th><th></th></tr></thead><tbody>${renderBlockDevices(d.devices)}</tbody></table>`;
@@ -6672,12 +6711,13 @@ window.swapForm=()=>openForm('Create swap file','💾',[
   {name:'path',label:'Pfad',value:'/swapfile',placeholder:'/swapfile'},
   {name:'size_mb',label:'Size (MB)',type:'number',value:2048},
   {name:'persist',label:'Add to /etc/fstab (permanent)',type:'checkbox',value:true},
-],async d=>{closeForm();toast('Erstelle Swapfile…');try{const r=await post('/storage/swap/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Swap file active');renderStorage($('#modal-body'),'Swap');}catch(e){toast('Error: '+e.message,'error');}});
-window.swapOff=target=>confirmDelete('Disable swap',`Disable swap area "${target}"?`,async()=>{try{await post('/storage/swap/action',{target,action:'off'});toast('Disabled');renderStorage($('#modal-body'),'Swap');}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();toast('Erstelle Swapfile…');try{const r=await confirmedPost('/storage/swap/create',d,'storage-swap-create',d.path);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Swap file active');renderStorage($('#modal-body'),'Swap');}catch(e){toast('Error: '+e.message,'error');}});
+window.swapOff=target=>confirmDelete('Disable swap',`Disable swap area "${target}"?`,async()=>{try{await confirmedPost('/storage/swap/action',{target,action:'off'},'storage-swap-action:off',target);toast('Disabled');renderStorage($('#modal-body'),'Swap');}catch(e){toast('Error: '+e.message,'error');}});
 
 async function renderLvm(body){
   const d=await api('/storage/lvm');
   if(!d.available){body.innerHTML='<div class="empty-state">LVM unavailable – <span class="mono">lvm2</span> not installed</div>';return;}
+  if(d.ok===false){body.innerHTML=`<div class="empty-state">${esc(d.error||'LVM query failed')}</div>`;return;}
   body.innerHTML=`
     <div class="sec-hdr"><h3>LVM</h3><button class="btn" onclick="vgForm()">+ Volume Group</button></div>
     <div class="section-label" style="margin:4px 0 8px">Volume Groups</div>
@@ -6711,16 +6751,16 @@ window.vgForm=async()=>{
   openForm('Create volume group','💾',[
     {name:'name',label:'VG-Name',value:'vg0'},
     {name:'devices',label:'Disks (comma-separated)',value:free.join(','),hint:'Available: '+(free.join(', ')||'none') + ' · Warning: PVs will be initialized'},
-  ],async d=>{closeForm();toast('Erstelle VG…');try{const r=await post('/storage/lvm/vg-create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Volume group created');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
+  ],async d=>{closeForm();toast('Erstelle VG…');try{const r=await confirmedPost('/storage/lvm/vg-create',d,'storage-vg-create',d.name);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Volume group created');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
 };
 window.lvForm=vg=>openForm('Logical Volume in '+vg,'💾',[
   {name:'name',label:'LV-Name',placeholder:'data'},
   {name:'size',label:'Size',placeholder:'10G',hint:'e.g. 10G (absolute) or 100%FREE (rest of the VG)'},
-],async d=>{closeForm();try{const r=await post('/storage/lvm/lv-create',{vg,name:d.name,size:d.size});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Logical volume created');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();try{const r=await confirmedPost('/storage/lvm/lv-create',{vg,name:d.name,size:d.size},'storage-lv-create',vg+'/'+d.name);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Logical volume created');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
 window.lvExtendForm=lvpath=>openForm('LV erweitern','💾',[
   {name:'size',label:'Size',placeholder:'+5G',hint:'e.g. +5G (additional) or 20G (absolute) · filesystem grows along'},
-],async d=>{closeForm();try{const r=await post('/storage/lvm/lv-extend',{lv_path:lvpath,size:d.size});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('LV erweitert');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
-window.lvRemove=lvpath=>confirmDelete('Delete logical volume',`Delete logical volume "${lvpath}" permanently? All data on it will be lost.`,async()=>{try{const r=await post('/storage/lvm/lv-remove',{lv_path:lvpath});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Logical volume deleted');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();try{const r=await confirmedPost('/storage/lvm/lv-extend',{lv_path:lvpath,size:d.size},'storage-lv-extend',lvpath);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('LV erweitert');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
+window.lvRemoveLegacy=lvpath=>confirmDelete('Delete logical volume',`Delete logical volume "${lvpath}" permanently? All data on it will be lost.`,async()=>{try{const r=await confirmedPost('/storage/lvm/lv-remove',{lv_path:lvpath},'storage-lv-remove',lvpath);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Logical volume deleted');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
 function renderBlockDevices(devs,depth=0){return devs.map(d=>{
   const canResize=!d.protected&&/^(ext[234]|xfs|btrfs)$/.test(d.fstype||'');
   const actions=[
@@ -6731,7 +6771,7 @@ function renderBlockDevices(devs,depth=0){return devs.map(d=>{
 }).join('');}
 window.fsGrowForm=(name,mountpoint,fstype)=>openForm('Grow filesystem: '+name,'⤢',[
   {name:'size',label:'Target size',value:'max',hint:'"max" fills the entire device. For ext filesystems an absolute size like "20G" is also possible. Important: first grow the underlying device/partition, then grow the filesystem here.'},
-],async d=>{closeForm();toast('Growing filesystem…');try{const r=await post('/storage/fs-grow',{device:'/dev/'+name,mountpoint:mountpoint||'',size:d.size||'max'});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Filesystem grown');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();toast('Growing filesystem…');try{const device='/dev/'+name;const r=await confirmedPost('/storage/fs-grow',{device,mountpoint:mountpoint||'',size:d.size||'max'},'storage-fs-grow',device);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Filesystem grown');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}});
 window.loadSmart=async()=>{
   const dev=$('#smart-dev').value;
   const s=await api('/storage/smart?device='+dev);
@@ -6746,8 +6786,8 @@ window.loadSmart=async()=>{
     <div class="nx-card-inner"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Modell</div><span style="font-size:12px;color:var(--text2)">${esc(s.model)||'—'}</span></div>
   </div>`;
 };
-window.diskWizard=dev=>openForm('Set up disk: '+dev,'💿',[{name:'fstype',label:'Filesystem',type:'select',options:['ext4','xfs','btrfs']},{name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/data'},{name:'persist',label:'Add to /etc/fstab (permanent)',type:'checkbox',value:true}],async d=>{closeForm();toast('Partitioniere & formatiere…');try{await post('/storage/partition-table',{device:dev,label:'gpt'});await post('/storage/partition',{device:dev});await post('/storage/format',{partition:dev+'1',fstype:d.fstype});await post('/storage/mount',{partition:dev+'1',mountpoint:d.mountpoint,persist:d.persist});toast('Disk eingerichtet');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}});
-window.raidForm=async()=>{const d=await api('/storage/devices');const disks=d.devices.filter(x=>x.type==='disk'&&!x.protected).map(x=>x.name);openForm('Create RAID','🗄',[{name:'name',label:'Array-Name',value:'md0'},{name:'level',label:'RAID-Level',type:'select',options:[{value:0,label:'RAID 0 (Stripe)'},{value:1,label:'RAID 1 (Mirror)'},{value:5,label:'RAID 5'},{value:6,label:'RAID 6'},{value:10,label:'RAID 10'}]},{name:'devices',label:'Disks (comma-separated)',value:disks.join(','),hint:'Available: '+(disks.join(', ')||'none')}],async f=>{closeForm();toast('Erstelle RAID…');try{await post('/storage/raid/create',f);toast('RAID created');renderStorage($('#modal-body'),'RAID');}catch(e){toast('Error: '+e.message,'error');}});};
+window.diskWizardLegacy=dev=>openForm('Set up disk: '+dev,'💿',[{name:'fstype',label:'Filesystem',type:'select',options:['ext4','xfs','btrfs']},{name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/data'},{name:'persist',label:'Add to /etc/fstab (permanent)',type:'checkbox',value:true}],async d=>{closeForm();toast('Partitioniere & formatiere…');try{await confirmedPost('/storage/partition-table',{device:dev,label:'gpt'},'storage-partition-table',dev);const part=await confirmedPost('/storage/partition',{device:dev},'storage-partition',dev);const partition=(part&&part.partition)||dev+'1';await confirmedPost('/storage/format',{partition,fstype:d.fstype},'storage-format',partition);await confirmedPost('/storage/mount',{partition,mountpoint:d.mountpoint,persist:d.persist},'storage-mount',partition);toast('Disk eingerichtet');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}});
+window.raidForm=async()=>{const d=await api('/storage/devices');const disks=d.devices.filter(x=>x.type==='disk'&&!x.protected).map(x=>x.name);openForm('Create RAID','🗄',[{name:'name',label:'Array-Name',value:'md0'},{name:'level',label:'RAID-Level',type:'select',options:[{value:0,label:'RAID 0 (Stripe)'},{value:1,label:'RAID 1 (Mirror)'},{value:5,label:'RAID 5'},{value:6,label:'RAID 6'},{value:10,label:'RAID 10'}]},{name:'devices',label:'Disks (comma-separated)',value:disks.join(','),hint:'Available: '+(disks.join(', ')||'none')}],async f=>{closeForm();toast('Erstelle RAID…');try{await confirmedPost('/storage/raid/create',f,'storage-raid-create',f.name);toast('RAID created');renderStorage($('#modal-body'),'RAID');}catch(e){toast('Error: '+e.message,'error');}});};
 
 // ═══ Phase 5: LUKS / ZFS·Btrfs / iSCSI ═══
 function flattenDevs(devs,out=[]){(devs||[]).forEach(d=>{out.push(d);if(d.children)flattenDevs(d.children,out);});return out;}
@@ -6783,7 +6823,7 @@ window.luksFormatForm=async()=>{
     if(d.passphrase!==d.passphrase2){toast('Passphrases do not match','error');return;}
     confirmDelete('Encrypt device',`Encrypt "${d.device}" as LUKS2? All existing data will be lost.`,async()=>{
       toast('Encrypting device…');
-      try{const r=await post('/storage/luks/format',{device:d.device,passphrase:d.passphrase});closeForm();if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Device encrypted – unlock now');renderStorage($('#modal-body'),'LUKS');}
+      try{const r=await confirmedPost('/storage/luks/format',{device:d.device,passphrase:d.passphrase},'storage-luks-format',d.device);closeForm();if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Device encrypted – unlock now');renderStorage($('#modal-body'),'LUKS');}
       catch(e){toast('Error: '+e.message,'error');}
     });
   });
@@ -6791,16 +6831,16 @@ window.luksFormatForm=async()=>{
 window.luksOpenForm=device=>openForm('Unlock container','🔓',[
   {name:'name',label:'Mapper-Name',value:'crypt'+Math.floor(Math.random()*1000),hint:'Erscheint als /dev/mapper/<Name>'},
   {name:'passphrase',label:'Passphrase',type:'password'},
-],async d=>{closeForm();toast('Unlocking…');try{const r=await post('/storage/luks/open',{device,name:d.name,passphrase:d.passphrase});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Unlocked');renderStorage($('#modal-body'),'LUKS');}catch(e){toast('Error: '+e.message,'error');}});
-window.luksClose=mapper=>confirmDelete('Lock container',`Lock "${mapper}"? The mapping will be closed (unmount first).`,async()=>{try{const r=await post('/storage/luks/close',{name:mapper});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Locked');renderStorage($('#modal-body'),'LUKS');}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();toast('Unlocking…');try{const r=await confirmedPost('/storage/luks/open',{device,name:d.name,passphrase:d.passphrase},'storage-luks-open',device);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Unlocked');renderStorage($('#modal-body'),'LUKS');}catch(e){toast('Error: '+e.message,'error');}});
+window.luksClose=mapper=>confirmDelete('Lock container',`Lock "${mapper}"? The mapping will be closed (unmount first).`,async()=>{try{const r=await confirmedPost('/storage/luks/close',{name:mapper},'storage-luks-close',mapper);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Locked');renderStorage($('#modal-body'),'LUKS');}catch(e){toast('Error: '+e.message,'error');}});
 window.luksSetupForm=mapper=>openForm('Format & mount: '+mapper,'⚙',[
   {name:'fstype',label:'Filesystem',type:'select',options:['ext4','xfs','btrfs']},
   {name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/crypt'},
   {name:'persist',label:'Add to /etc/fstab (permanent)',type:'checkbox',value:false},
 ],async d=>{closeForm();toast('Formatting & mounting…');try{
   const part='mapper/'+mapper;
-  const f=await post('/storage/format',{partition:part,fstype:d.fstype});if(f&&f.ok===false){toast(f.stderr||'Format error','error');return;}
-  const m=await post('/storage/mount',{partition:part,mountpoint:d.mountpoint,persist:d.persist});if(m&&m.ok===false){toast(m.stderr||'Mount error','error');return;}
+  const f=await confirmedPost('/storage/format',{partition:part,fstype:d.fstype},'storage-format',part);if(f&&f.ok===false){toast(f.stderr||'Format error','error');return;}
+  const m=await confirmedPost('/storage/mount',{partition:part,mountpoint:d.mountpoint,persist:d.persist},'storage-mount',part);if(m&&m.ok===false){toast(m.stderr||'Mount error','error');return;}
   toast('Eingerichtet');renderStorage($('#modal-body'),'LUKS');
 }catch(e){toast('Error: '+e.message,'error');}});
 
@@ -6851,10 +6891,10 @@ window.zpoolForm=async()=>{
     {name:'name',label:'Pool-Name',value:'tank'},
     {name:'raid',label:'Layout',type:'select',options:[{value:'stripe',label:'Stripe (no protection)'},{value:'mirror',label:'Mirror'},{value:'raidz',label:'RAIDZ1'},{value:'raidz2',label:'RAIDZ2'},{value:'raidz3',label:'RAIDZ3'}]},
     {name:'devices',label:'Devices (comma-separated)',value:disks.join(','),hint:'Available: '+(disks.join(', ')||'none')+' · Warning: devices will be overwritten'},
-  ],async d=>{closeForm();toast('Erstelle Pool…');try{const r=await post('/storage/zfs/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool created');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
+  ],async d=>{closeForm();toast('Erstelle Pool…');try{const r=await confirmedPost('/storage/zfs/create',d,'storage-zfs-create',d.name);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool created');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
 };
-window.zpoolScrub=name=>{toast('Scrub started…');post('/storage/zfs/scrub',{name}).then(r=>{if(r&&r.ok===false)toast(r.stderr||'Error','error');else toast('Scrub running');}).catch(e=>toast('Error: '+e.message,'error'));};
-window.zpoolDestroy=name=>confirmDelete('Destroy pool',`Destroy ZFS pool "${name}"? All data will be irreversibly lost.`,async()=>{try{const r=await post('/storage/zfs/destroy',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool destroyed');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
+window.zpoolScrub=name=>{toast('Scrub started…');confirmedPost('/storage/zfs/scrub',{name},'storage-zfs-scrub',name).then(r=>{if(r&&r.ok===false)toast(r.stderr||'Error','error');else toast('Scrub running');}).catch(e=>toast('Error: '+e.message,'error'));};
+window.zpoolDestroyLegacy=name=>confirmDelete('Destroy pool',`Destroy ZFS pool "${name}"? All data will be irreversibly lost.`,async()=>{try{const r=await confirmedPost('/storage/zfs/destroy',{name},'storage-zfs-destroy',name);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool destroyed');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
 window.btrfsForm=async()=>{
   const free=await freeDevList();
   const disks=free.filter(x=>x.type==='disk').map(x=>x.name);
@@ -6862,16 +6902,17 @@ window.btrfsForm=async()=>{
     {name:'label',label:'Label (optional)',placeholder:'daten'},
     {name:'profile',label:'Profile',type:'select',options:[{value:'single',label:'Single (1 Device)'},{value:'raid0',label:'RAID0 (Stripe)'},{value:'raid1',label:'RAID1 (Mirror)'},{value:'raid10',label:'RAID10'}]},
     {name:'devices',label:'Devices (comma-separated)',value:disks.join(','),hint:'Available: '+(disks.join(', ')||'none')+' · Warning: devices will be overwritten'},
-  ],async d=>{closeForm();toast('Erstelle Btrfs-Pool…');try{const r=await post('/storage/btrfs/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Btrfs pool created');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
+  ],async d=>{closeForm();toast('Erstelle Btrfs-Pool…');try{const target=d.label||d.devices;const r=await confirmedPost('/storage/btrfs/create',d,'storage-btrfs-create',target);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Btrfs pool created');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
 };
 window.btrfsScrubForm=()=>openForm('Btrfs-Scrub','🧹',[
   {name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/daten',hint:'Mount path of the Btrfs filesystem'},
-],async d=>{closeForm();toast('Scrub started…');try{const r=await post('/storage/btrfs/scrub',{mountpoint:d.mountpoint});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Scrub running');}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();toast('Scrub started…');try{const r=await confirmedPost('/storage/btrfs/scrub',{mountpoint:d.mountpoint},'storage-btrfs-scrub',d.mountpoint);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Scrub running');}catch(e){toast('Error: '+e.message,'error');}});
 
 // ---- iSCSI ----
 async function renderIscsi(body){
   const d=await api('/storage/iscsi');
   if(!d.available){body.innerHTML='<div class="empty-state">iSCSI unavailable – <span class="mono">open-iscsi</span> not installed</div>';return;}
+  if(d.ok===false){body.innerHTML=`<div class="empty-state">${esc(d.stderr||'iSCSI query failed')}</div>`;return;}
   body.innerHTML=`<div class="sec-hdr"><h3>iSCSI sessions</h3><button class="btn" onclick="iscsiDiscoverForm()">+ Find target</button></div>
   <table style="table-layout:fixed;width:100%"><thead><tr><th style="width:150px">Portal</th><th>Target (IQN)</th><th style="width:70px;text-align:right"></th></tr></thead><tbody>
   ${d.sessions.map(s=>`<tr>
@@ -6883,7 +6924,7 @@ async function renderIscsi(body){
 }
 window.iscsiDiscoverForm=()=>openForm('iSCSI-Target suchen','📡',[
   {name:'portal',label:'Portal',placeholder:'192.168.1.10:3260',hint:'IP or hostname, optional :port'},
-],async d=>{closeForm();toast('Suche Targets…');try{const r=await post('/storage/iscsi/discover',{portal:d.portal});if(r&&r.ok===false){toast(r.stderr||'No targets found','error');return;}renderIscsiTargets($('#modal-body'),d.portal,r.targets||[]);}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();toast('Suche Targets…');try{const r=await confirmedPost('/storage/iscsi/discover',{portal:d.portal},'storage-iscsi-discover',d.portal);if(r&&r.ok===false){toast(r.stderr||'No targets found','error');return;}renderIscsiTargets($('#modal-body'),d.portal,r.targets||[]);}catch(e){toast('Error: '+e.message,'error');}});
 function renderIscsiTargets(body,portal,targets){
   body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderStorage($('#modal-body'),'iSCSI')">← Back</button><span style="padding:6px;color:var(--text2)">Gefundene Targets auf ${esc(portal)}</span></div>
   <table style="table-layout:fixed;width:100%"><thead><tr><th style="width:150px">Portal</th><th>Target (IQN)</th><th style="width:80px;text-align:right"></th></tr></thead><tbody>
@@ -6894,8 +6935,8 @@ function renderIscsiTargets(body,portal,targets){
   </tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">No targets found</div></td></tr>'}
   </tbody></table>`;
 }
-window.iscsiLogin=(portal,target)=>{toast('Melde an…');post('/storage/iscsi/login',{portal,target}).then(r=>{if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Angemeldet');renderStorage($('#modal-body'),'iSCSI');}).catch(e=>toast('Error: '+e.message,'error'));};
-window.iscsiLogout=(portal,target)=>confirmDelete('Target abmelden',`Disconnect session to "${target}"?`,async()=>{try{const r=await post('/storage/iscsi/logout',{portal,target});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Abgemeldet');renderStorage($('#modal-body'),'iSCSI');}catch(e){toast('Error: '+e.message,'error');}});
+window.iscsiLogin=(portal,target)=>{toast('Melde an…');confirmedPost('/storage/iscsi/login',{portal,target},'storage-iscsi-login',portal+'/'+target).then(r=>{if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Angemeldet');renderStorage($('#modal-body'),'iSCSI');}).catch(e=>toast('Error: '+e.message,'error'));};
+window.iscsiLogout=(portal,target)=>confirmDelete('Target abmelden',`Disconnect session to "${target}"?`,async()=>{try{const r=await confirmedPost('/storage/iscsi/logout',{portal,target},'storage-iscsi-logout',portal+'/'+target);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Abgemeldet');renderStorage($('#modal-body'),'iSCSI');}catch(e){toast('Error: '+e.message,'error');}});
 
 // ═══ Docker – Punkte 1 & 2 ═══
 const NON_WEB_PORTS=new Set([21,22,25,53,110,139,143,389,445,587,636,993,995,1883,2049,2181,3306,33060,4222,5432,5671,5672,6379,8883,9092,9300,11211,27017,27018]);
@@ -6938,10 +6979,12 @@ function composeBestWebPort(content){
 function extractPort(content){return composeBestWebPort(content);}
 function serverHost(){return location.hostname;}
 
-async function renderDocker(body,tab){
+async function renderDockerLegacy(body,tab){
  const av=await api('/docker/available');if(!av.available){body.innerHTML='<div class="empty-state">🐳 Docker unavailable</div>';return;}
  if(tab==='Container'||!tab){
-   const c=await api('/docker/containers');
+   const data=await api('/docker/containers');
+   const c=Array.isArray(data)?data:(data.containers||[]);
+   if(data&&data.ok===false){body.innerHTML=`<div class="empty-state">${esc(data.stderr||'Docker query failed')}</div>`;return;}
    body.innerHTML=`<div class="sec-hdr" style="margin-bottom:14px"><h3>Container</h3><button class="btn" onclick="dockerCreateForm()">+ Container</button></div>
    <table style="table-layout:fixed;width:100%"><thead><tr><th style="width:20%">Name</th><th>Image</th><th style="width:85px">Status</th><th style="width:120px">Ports</th><th style="width:240px;text-align:right;padding-right:16px">Aktionen</th></tr></thead><tbody>
    ${c.map(x=>`<tr>
@@ -6977,7 +7020,9 @@ async function renderDocker(body,tab){
        </div>
      </td></tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">No projects</div></td></tr>'}</tbody></table>`;}
  else if(tab==='Images'){
-   const im=await api('/docker/images');
+   const data=await api('/docker/images');
+   const im=Array.isArray(data)?data:(data.images||[]);
+   if(data&&data.ok===false){body.innerHTML=`<div class="empty-state">${esc(data.stderr||'Docker image query failed')}</div>`;return;}
    body.innerHTML=`<div class="sec-hdr"><h3>Images</h3><div style="display:flex;gap:8px"><button class="btn ghost" onclick="dockerSearchForm()">🔍 Registry search</button><button class="btn" onclick="pullForm()">+ Pull image</button></div></div>
    <table style="table-layout:fixed"><thead><tr><th>Tags</th><th style="width:100px">Size</th><th style="width:50px;text-align:right"></th></tr></thead><tbody>
    ${im.map(x=>`<tr>
@@ -6986,17 +7031,19 @@ async function renderDocker(body,tab){
      <td style="text-align:right"><button class="btn icon danger" title="Delete" onclick="imageDel('${x.id}','${esc(x.tags[0]||x.id)}')" style="width:26px;height:26px;font-size:12px">✕</button></td>
    </tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">No images</div></td></tr>'}</tbody></table>`;}
  else{
-   const v=await api('/docker/volumes');
+   const data=await api('/docker/volumes');
+   const v=Array.isArray(data)?data:(data.volumes||[]);
+   if(data&&data.ok===false){body.innerHTML=`<div class="empty-state">${esc(data.stderr||'Docker volume query failed')}</div>`;return;}
    body.innerHTML=`<div class="sec-hdr"><h3>Volumes</h3></div>
    <table><thead><tr><th>Name</th><th>Driver</th><th>Mountpoint</th><th style="width:50px;text-align:right"></th></tr></thead><tbody>
    ${v.map(x=>`<tr><td style="font-weight:500">${esc(x.name)}</td><td style="color:var(--text2)">${x.driver}</td><td class="mono" style="font-size:11px;color:var(--text3)">${esc(x.mountpoint)}</td><td style="text-align:right"><button class="btn icon danger" title="Delete" onclick="volumeDel('${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">✕</button></td></tr>`).join('')||'<tr><td colspan="4"><div class="empty-state">No volumes</div></td></tr>'}</tbody></table>`;}
 }
 
 // Punkt 2: Icon-Buttons + Punkt 4: Bestätigung
-window.dockerAct=async(id,action)=>{try{await post('/docker/action',{container_id:id,action});const msgs={start:'Container started',stop:'Container stopped',restart:'Container restarted',remove:'Container entfernt'};toast(msgs[action]||'OK');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}};
-window.dockerDel=(id,name)=>confirmDelete('Delete container',`Really delete "${name}"? The container will be permanently removed.`,async()=>{try{await post('/docker/action',{container_id:id,action:'remove'});toast('Container deleted');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}});
-window.imageDel=(id,name)=>confirmDelete('Delete image',`Really delete "${name}"?`,async()=>{try{await post('/docker/images/remove',{image_id:id});toast('Image deleted');renderDocker($('#modal-body'),'Images');}catch(e){toast('Error: '+e.message,'error');}});
-window.volumeDel=name=>confirmDelete('Delete volume',`Really delete "${name}"? All data in this volume will be lost.`,async()=>{try{await post('/docker/volumes/remove',{name});toast('Volume deleted');renderDocker($('#modal-body'),'Volumes');}catch(e){toast('Error: '+e.message,'error');}});
+window.dockerAct=async(id,action)=>{try{const call=action==='remove'?confirmedPost('/docker/action',{container_id:id,action},'docker-container-remove',id):confirmedPost('/docker/action',{container_id:id,action},'docker-container-action:'+action,id);await call;const msgs={start:'Container started',stop:'Container stopped',restart:'Container restarted',remove:'Container entfernt'};toast(msgs[action]||'OK');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}};
+window.dockerDel=(id,name)=>confirmDelete('Delete container',`Really delete "${name}"? The container will be permanently removed.`,async()=>{try{await confirmedPost('/docker/action',{container_id:id,action:'remove'},'docker-container-remove',id);toast('Container deleted');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}});
+window.imageDel=(id,name)=>confirmDelete('Delete image',`Really delete "${name}"?`,async()=>{try{await confirmedPost('/docker/images/remove',{image_id:id},'docker-image-remove',id);toast('Image deleted');renderDocker($('#modal-body'),'Images');}catch(e){toast('Error: '+e.message,'error');}});
+window.volumeDelLegacy=name=>confirmDelete('Delete volume',`Really delete "${name}"? All data in this volume will be lost.`,async()=>{try{await confirmedPost('/docker/volumes/remove',{name},'docker-volume-remove',name);toast('Volume deleted');renderDocker($('#modal-body'),'Volumes');}catch(e){toast('Error: '+e.message,'error');}});
 window.dockerLogs=async(id,name)=>{const l=await api('/docker/logs?container_id='+id);$('#modal-body').innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderDocker($('#modal-body'),'Container')">← Back</button><span style="padding:6px;color:var(--text2)">${esc(name)}</span></div><pre class="logbox">${esc(l.logs)||'(leer)'}</pre>`;};
 
 // Container-Statistik (Momentaufnahme, auto-refresh alle 3s)
@@ -7024,6 +7071,10 @@ window.dockerStatsBack=()=>{if(_dockerStatsTimer){clearInterval(_dockerStatsTime
 // Container-Shell via PTY-WebSocket (/ws/docker-exec), nutzt xterm wie das Terminal-Modul
 window.dockerExec=(id,name)=>{
   const body=$('#modal-body');
+  if(typeof Terminal==='undefined'||typeof FitAddon==='undefined'){
+    body.innerHTML='<div class="empty-state">Terminal libraries are unavailable. Check browser access to the bundled or CDN assets.</div>';
+    return;
+  }
   body.style.display='flex';body.style.flexDirection='column';body.style.padding='0';body.style.overflow='hidden';
   body.innerHTML=`
     <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;background:rgba(0,0,0,.3);border-bottom:.5px solid rgba(255,255,255,.06);flex-shrink:0">
@@ -7060,8 +7111,8 @@ window.dockerExecBack=()=>{
   const b=$('#modal-body');b.style.display='';b.style.flexDirection='';b.style.padding='';b.style.overflow='';
   renderDocker(b,'Container');
 };
-window.dockerCreateForm=()=>openForm('Create container','🐳',[{name:'image',label:'Image',placeholder:'nginx:latest'},{name:'name',label:'Name (optional)',placeholder:'mein-container'},{name:'ports',label:'Ports',placeholder:'8080:80,8443:443',hint:'host:container, comma-separated'},{name:'volumes',label:'Volumes',placeholder:'/host/pfad:/container/pfad'},{name:'env',label:'Env-Variablen',placeholder:'KEY=wert,KEY2=wert2'},{name:'cpus',label:'CPU-Limit',placeholder:'e.g. 1.5 (empty = unlimited)'},{name:'memory',label:'RAM-Limit',placeholder:'e.g. 512m or 2g (empty = unlimited)'},{name:'restart',label:'Restart-Policy',type:'select',options:['no','always','unless-stopped','on-failure']}],async d=>{closeForm();toast('Erstelle Container…');try{await post('/docker/create',d);toast('Container running');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}});
-window.dockerLimitsForm=async(id,name)=>{const c=await api('/docker/containers');const cur=c.find(x=>x.id===id)||{};const cpus=cur.nano_cpus?(cur.nano_cpus/1e9).toString():'';const mem=cur.mem_limit?Math.round(cur.mem_limit/1048576)+'m':'';openForm('Limits: '+name,'📊',[{name:'cpus',label:'CPU-Limit',value:cpus,placeholder:'z. B. 1.5',hint:'0 = unlimited, empty = unchanged'},{name:'memory',label:'RAM-Limit',value:mem,placeholder:'z. B. 512m / 2g',hint:'empty = unchanged'}],async d=>{closeForm();toast('Setze Limits…');try{const r=await post('/docker/update',{container_id:id,cpus:d.cpus,memory:d.memory});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Limits updated');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}});};
+window.dockerCreateForm=()=>openForm('Create container','🐳',[{name:'image',label:'Image',placeholder:'nginx:latest'},{name:'name',label:'Name (optional)',placeholder:'mein-container'},{name:'ports',label:'Ports',placeholder:'8080:80,8443:443',hint:'host:container, comma-separated'},{name:'volumes',label:'Volumes',placeholder:'/host/pfad:/container/pfad'},{name:'env',label:'Env-Variablen',placeholder:'KEY=wert,KEY2=wert2'},{name:'cpus',label:'CPU-Limit',placeholder:'e.g. 1.5 (empty = unlimited)'},{name:'memory',label:'RAM-Limit',placeholder:'e.g. 512m or 2g (empty = unlimited)'},{name:'restart',label:'Restart-Policy',type:'select',options:['no','always','unless-stopped','on-failure']}],async d=>{closeForm();toast('Erstelle Container…');try{await confirmedPost('/docker/create',d,'docker-container-create',d.name||d.image);toast('Container running');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}});
+window.dockerLimitsForm=async(id,name)=>{const data=await api('/docker/containers');const c=Array.isArray(data)?data:(data.containers||[]);if(data&&data.ok===false){toast(data.stderr||'Docker query failed','error');return;}const cur=c.find(x=>x.id===id)||{};const cpus=cur.nano_cpus?(cur.nano_cpus/1e9).toString():'';const mem=cur.mem_limit?Math.round(cur.mem_limit/1048576)+'m':'';openForm('Limits: '+name,'📊',[{name:'cpus',label:'CPU-Limit',value:cpus,placeholder:'z. B. 1.5',hint:'0 = unlimited, empty = unchanged'},{name:'memory',label:'RAM-Limit',value:mem,placeholder:'z. B. 512m / 2g',hint:'empty = unchanged'}],async d=>{closeForm();toast('Setze Limits…');try{const r=await confirmedPost('/docker/update',{container_id:id,cpus:d.cpus,memory:d.memory},'docker-container-update',id);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Limits updated');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}});};
 window.dockerSearchForm=()=>openForm('Registry-Suche','🔍',[{name:'term',label:'Suchbegriff',placeholder:'z. B. postgres'}],async d=>{closeForm();if(!d.term){return;}toast('Suche…');try{const r=await api('/docker/search?term='+encodeURIComponent(d.term));if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}renderDockerSearch($('#modal-body'),d.term,r.results||[]);}catch(e){toast('Error: '+e.message,'error');}});
 function renderDockerSearch(body,term,results){
   body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderDocker($('#modal-body'),'Images')">← Back</button><span style="padding:6px;color:var(--text2)">Results for "${esc(term)}"</span></div>
@@ -7074,18 +7125,19 @@ function renderDockerSearch(body,term,results){
   </tr>`).join('')||'<tr><td colspan="4"><div class="empty-state">No matches</div></td></tr>'}
   </tbody></table>`;
 }
-window.dockerPullFromSearch=name=>{toast('Ziehe '+name+'…');post('/docker/images/pull',{name}).then(r=>{if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Image geladen');renderDocker($('#modal-body'),'Images');}).catch(e=>toast('Error: '+e.message,'error'));};
-window.pullForm=()=>openForm('Image ziehen','🐳',[{name:'name',label:'Image-Name',placeholder:'nginx:latest'}],async d=>{closeForm();toast('Ziehe Image…');try{await post('/docker/images/pull',d);toast('Image geladen');renderDocker($('#modal-body'),'Images');}catch(e){toast('Error: '+e.message,'error');}});
+window.dockerPullFromSearch=name=>{toast('Ziehe '+name+'…');confirmedPost('/docker/images/pull',{name},'docker-image-pull',name).then(r=>{if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Image geladen');renderDocker($('#modal-body'),'Images');}).catch(e=>toast('Error: '+e.message,'error'));};
+window.pullForm=()=>openForm('Image ziehen','🐳',[{name:'name',label:'Image-Name',placeholder:'nginx:latest'}],async d=>{closeForm();toast('Ziehe Image…');try{await confirmedPost('/docker/images/pull',d,'docker-image-pull',d.name);toast('Image geladen');renderDocker($('#modal-body'),'Images');}catch(e){toast('Error: '+e.message,'error');}});
 const composeEnvFields=(data={})=>[
   {name:'env_enabled',label:'Use .env file',type:'checkbox',value:!!data.env_enabled,hint:'Stores a .env file next to docker-compose.yml.'},
   {name:'env_content',label:'.env',type:'textarea',rows:6,value:data.env_content||'',placeholder:'KEY=value\nANOTHER_KEY=value',showWhen:'env_enabled'}
 ];
-window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Project name',placeholder:'meine-app'},{name:'content',label:'docker-compose.yml',type:'textarea',rows:12,value:'services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"'},...composeEnvFields()],async d=>{await post('/docker/compose/save',{name:d.name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''});await composeAddToDashboard(d.name,composeFirstPort(d.content),false);closeForm();toast('Project saved');renderDocker($('#modal-body'),'Compose');});
-window.composeEdit=async name=>{const c=await api('/docker/compose/get?name='+encodeURIComponent(name));openForm('Compose bearbeiten: '+name,'🐳',[{name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:c.content},...composeEnvFields(c)],async d=>{await post('/docker/compose/save',{name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''});closeForm();toast('Gespeichert');});};
-window.composeAct=async(name,action)=>{toast(action==='up'?'Starte '+name+'…':'Stoppe '+name+'…');try{const r=await post('/docker/compose/action',{name,action});const msgs={up:'Project started: '+name,down:'Project stopped: '+name,restart:'Project restarted: '+name};toast(r.ok?(msgs[action]||'OK'):'Error',r.ok?'success':'error');renderDocker($('#modal-body'),'Compose');}catch(e){toast('Error: '+e.message,'error');}};
-window.composeDelete=name=>typedConfirm('Delete Compose project',`Compose project "${name}" will be stopped and removed.`,name,async()=>{try{const r=await post('/docker/compose/remove',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Compose project deleted');renderDocker($('#modal-body'),'Compose');}catch(e){toast('Error: '+e.message,'error');}});
+window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Project name',placeholder:'meine-app'},{name:'content',label:'docker-compose.yml',type:'textarea',rows:12,value:'services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"'},...composeEnvFields()],async d=>{await confirmedPost('/docker/compose/save',{name:d.name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''},'docker-compose-save',d.name);await composeAddToDashboard(d.name,composeFirstPort(d.content),false);closeForm();toast('Project saved');renderDocker($('#modal-body'),'Compose');});
+window.composeEdit=async name=>{const c=await api('/docker/compose/get?name='+encodeURIComponent(name));openForm('Compose bearbeiten: '+name,'🐳',[{name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:c.content},...composeEnvFields(c)],async d=>{await confirmedPost('/docker/compose/save',{name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''},'docker-compose-save',name);closeForm();toast('Gespeichert');});};
+window.composeAct=async(name,action)=>{toast(action==='up'?'Starte '+name+'…':'Stoppe '+name+'…');try{const r=await confirmedPost('/docker/compose/action',{name,action},'docker-compose-action:'+action,name);const msgs={up:'Project started: '+name,down:'Project stopped: '+name,restart:'Project restarted: '+name};toast(r.ok?(msgs[action]||'OK'):'Error',r.ok?'success':'error');renderDocker($('#modal-body'),'Compose');}catch(e){toast('Error: '+e.message,'error');}};
+window.composeDelete=name=>typedConfirm('Delete Compose project',`Compose project "${name}" will be stopped and removed.`,name,async()=>{try{const r=await confirmedPost('/docker/compose/remove',{name},'docker-compose-remove',name);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Compose project deleted');renderDocker($('#modal-body'),'Compose');}catch(e){toast('Error: '+e.message,'error');}});
 function composeFirstPort(content){return composeBestWebPort(content)||0;}
 window.composeAddToDashboard=async(name,port=0,announce=true)=>{
+  if(!isAdmin())return;
   try{
     await post('/dashboard/add',{tile_type:'compose',tile_id:'compose:'+name,name,icon:'🐳',port:port||0});
     if(announce)toast(uiText('Added to dashboard'));
@@ -7097,7 +7149,9 @@ window.composeOpen=async name=>{const c=await api('/docker/compose/get?name='+en
 
 // ═══ Services (Punkt 5: Suche via Lupe) ═══
 async function renderServices(body){
-  const s=await api('/services/list');
+  const data=await api('/services/list');
+  const s=Array.isArray(data)?data:(data.services||[]);
+  if(data&&data.ok===false){body.innerHTML=`<div class="sec-hdr"><h3>Services</h3></div><div class="empty-state">${esc(data.stderr||'systemctl failed')}</div>`;return;}
   body.innerHTML=`<div class="sec-hdr"><h3>Services</h3></div>
   <table id="svc-table" style="font-size:12px"><thead><tr><th>Service</th><th style="width:100px">Status</th><th style="width:110px;text-align:right">Aktionen</th></tr></thead><tbody>
   ${s.map(x=>`<tr data-q="${esc(x.name)}" style="height:36px">
@@ -7110,14 +7164,16 @@ async function renderServices(body){
         <button class="btn icon" title="Logs" onclick="svcLogs('${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">≡</button>
       </div>
     </td></tr>`).join('')}</tbody></table>`;}
-window.svcAct=async(name,action)=>{try{await post('/services/action',{name,action});const msgs={start:'Service started: '+name,stop:'Service stopped: '+name,restart:'Service restarted: '+name};toast(msgs[action]||'OK');renderServices($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}};
+window.svcAct=async(name,action)=>{try{await confirmedPost('/services/action',{name,action},'service-action:'+action,name);const msgs={start:'Service started: '+name,stop:'Service stopped: '+name,restart:'Service restarted: '+name};toast(msgs[action]||'OK');renderServices($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}};
 window.svcLogs=async name=>{const l=await api('/services/logs?name='+encodeURIComponent(name));$('#modal-body').innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderServices($('#modal-body'))">← Back</button><span style="padding:6px;color:var(--text2)">${esc(name)}</span></div><pre class="logbox">${esc(l.logs)}</pre>`;};
 
 // ═══ VMs (Punkt 4+5) ═══
-async function renderVMs(body,tab){
+async function renderVMsLegacy(body,tab){
   const av=await api('/vms/available');if(!av.available){body.innerHTML='<div class="loading">libvirt unavailable</div>';return;}
   if(tab==='Speicher-Pools')return renderVmPools(body);
-  const v=await api('/vms/list');
+  const data=await api('/vms/list');
+  const v=Array.isArray(data)?data:(data.vms||[]);
+  if(data&&data.ok===false){body.innerHTML=`<div class="empty-state">${esc(data.stderr||'VM query failed')}</div>`;return;}
   body.innerHTML=`<div class="sec-hdr"><h3>Virtual machines</h3><button class="btn" onclick="vmCreateForm()">+ Create VM</button></div>
   <table><thead><tr><th>Name</th><th>Status</th><th>RAM</th><th>vCPUs</th><th>Aktionen</th></tr></thead><tbody>
   ${v.map(x=>`<tr data-q="${esc(x.name)}">
@@ -7134,7 +7190,7 @@ async function renderVMs(body,tab){
       <button class="btn icon" title="CD-ROM wechseln" onclick="vmCdromForm('${esc(x.name)}')">💿</button>
       <button class="btn icon danger" title="Delete" onclick="vmDeleteConfirm('${esc(x.name)}')">🗑</button>
     </td></tr>`).join('')||'<tr><td colspan="5" class="loading">No VMs</td></tr>'}</tbody></table>`;}
-window.vmAct=async(name,action)=>{try{await post('/vms/action',{name,action});const msgs={start:'VM started: '+name,shutdown:'VM heruntergefahren: '+name,reboot:'VM restarted: '+name,delete:'VM deleted: '+name};toast(msgs[action]||'OK');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}};
+window.vmAct=async(name,action)=>{try{const call=action==='delete'?confirmedPost('/vms/action',{name,action},'vm-delete',name):confirmedPost('/vms/action',{name,action},'vm-action:'+action,name);await call;const msgs={start:'VM started: '+name,shutdown:'VM heruntergefahren: '+name,reboot:'VM restarted: '+name,delete:'VM deleted: '+name};toast(msgs[action]||'OK');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}};
 
 // VM-Konsole via noVNC (RFB über /ws/vnc-Proxy)
 let _vncRfb=null;
@@ -7167,15 +7223,15 @@ window.vmConsoleBack=()=>{
   renderVMs(b);
 };
 // Punkt 4: VM löschen Bestätigung
-window.vmDeleteConfirm=name=>confirmDelete('Delete VM',`Really delete "${name}" permanently? The VM and its disk will be removed.`,async()=>{try{await post('/vms/action',{name,action:'delete'});toast('VM deleted');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
-window.vmCreateForm=async()=>{const [iso,net]=await Promise.all([api('/vms/isos'),api('/vms/networks').catch(()=>({networks:[]}))]);const nets=(net.networks||[]).map(n=>n.name);openForm('Create VM','🖥',[{name:'name',label:'Name',placeholder:'debian-vm'},{name:'memory_mb',label:'RAM (MB)',value:2048},{name:'vcpus',label:'CPU-Kerne',value:2},{name:'disk_gb',label:'Disk (GB)',value:20},{name:'iso',label:'ISO',type:'select',options:[{value:'',label:'— none —'}].concat(iso.isos.map(i=>({value:i,label:i}))),hint:iso.isos.length?'':'Upload ISOs via Files → VM images'},{name:'network',label:'Network',type:'select',options:nets.length?nets:['default']}],async d=>{closeForm();toast('Erstelle VM…');try{await post('/vms/create',d);toast('VM created');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});};
-window.vmClone=name=>openForm('VM klonen: '+name,'⎘',[{name:'newname',label:'Name des Klons',value:name+'-clone'}],async d=>{closeForm();toast('Klone VM… (kann dauern)');try{const r=await post('/vms/clone',{name,newname:d.newname});if(r&&r.ok===false){toast((r.output||r.stderr||'Error').slice(0,200),'error');return;}toast('VM geklont');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
-window.vmCdromForm=async name=>{const iso=await api('/vms/isos');openForm('CD-ROM wechseln: '+name,'💿',[{name:'iso',label:'ISO',type:'select',options:[{value:'',label:'— auswerfen —'}].concat((iso.isos||[]).map(i=>({value:i,label:i})))}],async d=>{closeForm();try{const r=await post('/vms/cdrom',{name,iso:d.iso});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast(d.iso?'CD-ROM eingelegt':'CD-ROM ausgeworfen');}catch(e){toast('Error: '+e.message,'error');}});};
+window.vmDeleteConfirmLegacy=name=>confirmDelete('Delete VM',`Really delete "${name}" permanently? The VM and its disk will be removed.`,async()=>{try{await confirmedPost('/vms/action',{name,action:'delete'},'vm-delete',name);toast('VM deleted');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+window.vmCreateForm=async()=>{const [iso,net]=await Promise.all([api('/vms/isos'),api('/vms/networks').catch(()=>({networks:[]}))]);const nets=(net.networks||[]).map(n=>n.name);openForm('Create VM','🖥',[{name:'name',label:'Name',placeholder:'debian-vm'},{name:'memory_mb',label:'RAM (MB)',value:2048},{name:'vcpus',label:'CPU-Kerne',value:2},{name:'disk_gb',label:'Disk (GB)',value:20},{name:'iso',label:'ISO',type:'select',options:[{value:'',label:'— none —'}].concat(iso.isos.map(i=>({value:i,label:i}))),hint:iso.isos.length?'':'Upload ISOs via Files → VM images'},{name:'network',label:'Network',type:'select',options:nets.length?nets:['default']}],async d=>{closeForm();toast('Erstelle VM…');try{await confirmedPost('/vms/create',d,'vm-create',d.name);toast('VM created');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});};
+window.vmClone=name=>openForm('VM klonen: '+name,'⎘',[{name:'newname',label:'Name des Klons',value:name+'-clone'}],async d=>{closeForm();toast('Klone VM… (kann dauern)');try{const r=await confirmedPost('/vms/clone',{name,newname:d.newname},'vm-clone',name+'/'+d.newname);if(r&&r.ok===false){toast((r.output||r.stderr||'Error').slice(0,200),'error');return;}toast('VM geklont');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+window.vmCdromForm=async name=>{const iso=await api('/vms/isos');openForm('CD-ROM wechseln: '+name,'💿',[{name:'iso',label:'ISO',type:'select',options:[{value:'',label:'— auswerfen —'}].concat((iso.isos||[]).map(i=>({value:i,label:i})))}],async d=>{closeForm();try{const r=await confirmedPost('/vms/cdrom',{name,iso:d.iso},'vm-cdrom',name);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast(d.iso?'CD-ROM eingelegt':'CD-ROM ausgeworfen');}catch(e){toast('Error: '+e.message,'error');}});};
 window.vmSnaps=async name=>{const s=await api('/vms/snapshots?name='+encodeURIComponent(name));$('#modal-body').innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">← Back</button><button class="btn sm" onclick="snapCreate('${esc(name)}')">+ Snapshot</button><span style="padding:6px;color:var(--text2)">${esc(name)}</span></div><table><thead><tr><th>Snapshot</th><th>Aktionen</th></tr></thead><tbody>${s.map(x=>`<tr><td>${esc(x.name)}</td><td style="display:flex;gap:6px"><button class="btn icon" title="Restore" onclick="snapAct('${esc(name)}','${esc(x.name)}','revert')">↺</button><button class="btn icon danger" title="Delete" onclick="snapDelConfirm('${esc(name)}','${esc(x.name)}')">🗑</button></td></tr>`).join('')||'<tr><td colspan="2" class="loading">No snapshots</td></tr>'}</tbody></table>`;};
-window.snapCreate=name=>openForm('Create snapshot','📸',[{name:'snap_name',label:'Name',value:'snap-'+new Date().toISOString().slice(0,10)}],async d=>{await post('/vms/snapshot',{name,snap_name:d.snap_name});closeForm();toast('Snapshot created');vmSnaps(name);});
-window.snapAct=async(name,snap,action)=>{try{await post('/vms/snapshot/action',{name,snap_name:snap,action});const msgs={revert:'Snapshot restored: '+snap,delete:'Snapshot deleted: '+snap};toast(msgs[action]||'OK');vmSnaps(name);}catch(e){toast('Error: '+e.message,'error');}};
+window.snapCreate=name=>openForm('Create snapshot','📸',[{name:'snap_name',label:'Name',value:'snap-'+new Date().toISOString().slice(0,10)}],async d=>{await confirmedPost('/vms/snapshot',{name,snap_name:d.snap_name},'vm-snapshot-create',name+'/'+d.snap_name);closeForm();toast('Snapshot created');vmSnaps(name);});
+window.snapAct=async(name,snap,action)=>{try{const call=action==='delete'?confirmedPost('/vms/snapshot/action',{name,snap_name:snap,action},'vm-snapshot-delete',name+'/'+snap):confirmedPost('/vms/snapshot/action',{name,snap_name:snap,action},'vm-snapshot-action:'+action,name+'/'+snap);await call;const msgs={revert:'Snapshot restored: '+snap,delete:'Snapshot deleted: '+snap};toast(msgs[action]||'OK');vmSnaps(name);}catch(e){toast('Error: '+e.message,'error');}};
 // Punkt 4: Snapshot löschen Bestätigung
-window.snapDelConfirm=(name,snap)=>confirmDelete('Delete snapshot',`Delete snapshot "${snap}" from VM "${name}"?`,()=>snapAct(name,snap,'delete'));
+window.snapDelConfirm=(name,snap)=>confirmDelete('Delete snapshot',`Delete snapshot "${snap}" from VM "${name}"?`,async()=>{try{const r=await confirmedPost('/vms/snapshot/action',{name,snap_name:snap,action:'delete'},'vm-snapshot-delete',name+'/'+snap);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Snapshot deleted: '+snap);vmSnaps(name);}catch(e){toast('Error: '+e.message,'error');}});
 
 // ── VM-Hardware: Disks & NICs (Hot-Edit) ──
 window.vmHardware=async name=>{
@@ -7207,18 +7263,18 @@ window.vmDiskForm=async name=>{
     {name:'source',label:'Quell-Image/Device',placeholder:'/var/lib/libvirt/images/data.qcow2',hint:'Path to an existing qcow2/raw image or block device'+(p.pools&&p.pools.length?' · Pools: '+p.pools.map(x=>x.name).join(', '):'')},
     {name:'target',label:'Target-Device',value:'vdb',hint:'z. B. vdb, vdc …'},
     {name:'bus',label:'Bus',type:'select',options:['virtio','sata','scsi','ide']},
-  ],async d=>{closeForm();toast('Attaching disk…');try{const r=await post('/vms/disk/attach',{name,source:d.source,target:d.target,bus:d.bus});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Disk attached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
+  ],async d=>{closeForm();toast('Attaching disk…');try{const r=await confirmedPost('/vms/disk/attach',{name,source:d.source,target:d.target,bus:d.bus},'vm-disk-attach',name+'/'+d.target);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Disk attached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
 };
-window.vmDiskDetach=(name,target)=>confirmDelete('Detach disk',`Detach disk "${target}" from "${name}"? (The image is kept)`,async()=>{try{const r=await post('/vms/disk/detach',{name,target});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Disk detached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
+window.vmDiskDetach=(name,target)=>confirmDelete('Detach disk',`Detach disk "${target}" from "${name}"? (The image is kept)`,async()=>{try{const r=await confirmedPost('/vms/disk/detach',{name,target},'vm-disk-detach',name+'/'+target);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Disk detached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
 window.vmNicForm=async name=>{
   const net=await api('/vms/networks').catch(()=>({networks:[]}));
   const nets=(net.networks||[]).map(n=>n.name);
   openForm('Attach NIC: '+name,'🔌',[
     {name:'network',label:'Network',type:'select',options:nets.length?nets:['default']},
     {name:'model',label:'Modell',type:'select',options:['virtio','e1000','rtl8139']},
-  ],async d=>{closeForm();toast('Attaching NIC…');try{const r=await post('/vms/nic/attach',{name,network:d.network,model:d.model});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('NIC attached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
+  ],async d=>{closeForm();toast('Attaching NIC…');try{const r=await confirmedPost('/vms/nic/attach',{name,network:d.network,model:d.model},'vm-nic-attach',name+'/'+d.network);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('NIC attached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
 };
-window.vmNicDetach=(name,type,mac)=>confirmDelete('Detach NIC',`Detach network card ${mac} from "${name}"?`,async()=>{try{const r=await post('/vms/nic/detach',{name,type,mac});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('NIC detached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
+window.vmNicDetach=(name,type,mac)=>confirmDelete('Detach NIC',`Detach network card ${mac} from "${name}"?`,async()=>{try{const r=await confirmedPost('/vms/nic/detach',{name,type,mac},'vm-nic-detach',name+'/'+mac);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('NIC detached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
 
 // ── VM-Storage-Pools ──
 async function renderVmPools(body){
@@ -7243,9 +7299,9 @@ window.vmPoolForm=()=>openForm('Create storage pool','📂',[
   {name:'name',label:'Pool-Name',placeholder:'vmdata'},
   {name:'ptype',label:'Type',type:'select',options:[{value:'dir',label:'Verzeichnis (dir)'},{value:'fs',label:'Filesystem (fs)'}]},
   {name:'target',label:'Zielverzeichnis',placeholder:'/var/lib/libvirt/pools/vmdata',hint:'Created when needed (pool-build)'},
-],async d=>{closeForm();toast('Erstelle Pool…');try{const r=await post('/vms/pool/create',d);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Pool created');renderVmPools($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
-window.vmPoolAct=async(name,action)=>{try{const r=await post('/vms/pool/action',{name,action});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('OK');renderVmPools($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}};
-window.vmPoolDel=name=>confirmDelete('Delete pool',`Delete storage pool "${name}"? (The pool definition is removed, files stay on disk)`,async()=>{try{const r=await post('/vms/pool/action',{name,action:'delete'});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Pool deleted');renderVmPools($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();toast('Erstelle Pool…');try{const r=await confirmedPost('/vms/pool/create',d,'vm-pool-create',d.name);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Pool created');renderVmPools($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+window.vmPoolAct=async(name,action)=>{try{const r=await confirmedPost('/vms/pool/action',{name,action},action==='delete'?'vm-pool-delete':'vm-pool-action:'+action,name);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('OK');renderVmPools($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}};
+window.vmPoolDel=name=>confirmDelete('Delete pool',`Delete storage pool "${name}"? (The pool definition is removed, files stay on disk)`,async()=>{try{const r=await confirmedPost('/vms/pool/action',{name,action:'delete'},'vm-pool-delete',name);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Pool deleted');renderVmPools($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
 window.vmPoolVols=async pool=>{
   const v=await api('/vms/pool/volumes?pool='+encodeURIComponent(pool));
   $('#modal-body').innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'),'Speicher-Pools')">← Back</button><button class="btn sm" onclick="vmVolForm('${esc(pool)}')">+ Volume</button><span style="padding:6px;color:var(--text2)">Pool: ${esc(pool)}</span></div>
@@ -7257,11 +7313,11 @@ window.vmVolForm=pool=>openForm('Create volume in '+pool,'📂',[
   {name:'name',label:'Volume-Name',placeholder:'disk1'},
   {name:'size_gb',label:'Size (GB)',type:'number',value:20},
   {name:'format',label:'Format',type:'select',options:['qcow2','raw']},
-],async d=>{closeForm();toast('Erstelle Volume…');try{const r=await post('/vms/pool/vol-create',{pool,name:d.name,size_gb:d.size_gb,format:d.format});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Volume created');vmPoolVols(pool);}catch(e){toast('Error: '+e.message,'error');}});
-window.vmVolDel=(pool,vol)=>confirmDelete('Delete volume',`Delete volume "${vol}" from pool "${pool}" permanently?`,async()=>{try{const r=await post('/vms/pool/vol-delete',{pool,vol});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Volume deleted');vmPoolVols(pool);}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();toast('Erstelle Volume…');try{const r=await confirmedPost('/vms/pool/vol-create',{pool,name:d.name,size_gb:d.size_gb,format:d.format},'vm-volume-create',pool+'/'+d.name);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Volume created');vmPoolVols(pool);}catch(e){toast('Error: '+e.message,'error');}});
+window.vmVolDel=(pool,vol)=>confirmDelete('Delete volume',`Delete volume "${vol}" from pool "${pool}" permanently?`,async()=>{try{const r=await confirmedPost('/vms/pool/vol-delete',{pool,vol},'vm-volume-delete',pool+'/'+vol);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Volume deleted');vmPoolVols(pool);}catch(e){toast('Error: '+e.message,'error');}});
 
 // ═══ Backup ═══
-async function renderBackup(body,tab){
+async function renderBackupLegacy(body,tab){
  if(tab==='Jobs'||!tab){
    const j=await api('/backup/jobs');
    body.innerHTML=`<div class="sec-hdr"><h3>Backup jobs</h3><button class="btn" onclick="backupForm()">+ New job</button></div>
@@ -7284,8 +7340,8 @@ async function renderBackup(body,tab){
      <td><span class="status-pill ${x.success?'run':'stop'}">${x.success?'OK':'Error'}</span></td>
    </tr>`).join('')||'<tr><td colspan="4"><div class="empty-state">No history</div></td></tr>'}</tbody></table>`;}
 }
-window.backupForm=()=>openForm('Backup job','🗄',[{name:'name',label:'Name',placeholder:'Dokumente sichern'},{name:'source',label:'Quellpfad',placeholder:'/home/user/docs'},{name:'dest',label:'Zielpfad',placeholder:'/mnt/backup/docs'},{name:'schedule',label:'Schedule',type:'select',options:[{value:'manual',label:'Manuell'},{value:'hourly',label:'Hourly'},{value:'daily',label:'Daily'},{value:'weekly',label:'Weekly'}]}],async d=>{await post('/backup/add',d);closeForm();toast('Task created');renderBackup($('#modal-body'),'Jobs');});
-window.runBackup=async id=>{toast('Backup started…');try{const r=await post('/backup/run',{job_id:id});toast(r.ok?'Backup complete':'Error',r.ok?'success':'error');}catch(e){toast('Error: '+e.message,'error');}};
+window.backupForm=()=>openForm('Backup job','🗄',[{name:'name',label:'Name',placeholder:'Dokumente sichern'},{name:'source',label:'Quellpfad',placeholder:'/home/user/docs'},{name:'dest',label:'Zielpfad',placeholder:'/mnt/backup/docs'},{name:'schedule',label:'Schedule',type:'select',options:[{value:'manual',label:'Manuell'},{value:'hourly',label:'Hourly'},{value:'daily',label:'Daily'},{value:'weekly',label:'Weekly'}]}],async d=>{await confirmedPost('/backup/add',d,'backup-add',d.name);closeForm();toast('Task created');renderBackup($('#modal-body'),'Jobs');});
+window.runBackup=async id=>{toast('Backup started…');try{const r=await confirmedPost('/backup/run',{job_id:id},'backup-run',String(id));toast(r.ok?'Backup complete':'Error',r.ok?'success':'error');}catch(e){toast('Error: '+e.message,'error');}};
 
 // ═══ Freigaben – alle auf einer Seite ═══
 async function renderSharesAll(body){
@@ -7398,17 +7454,22 @@ async function renderShares(body,tab){
  else if(tab==='NFS'){const s=await api('/shares/nfs');body.innerHTML=`<button class="btn" onclick="nfsForm()">+ Export</button><table><thead><tr><th>Pfad</th><th>Clients</th></tr></thead><tbody>${s.map(x=>`<tr><td class="mono">${esc(x.path)}</td><td>${esc(x.clients)}</td></tr>`).join('')||'<tr><td colspan="2" class="loading">No exports</td></tr>'}</tbody></table>`;}
  else{const s=await api('/shares/ftp');body.innerHTML=`<div style="padding:20px;display:flex;align-items:center;gap:16px">FTP-Server (vsftpd): <span class="status-pill ${s.active?'run':'stop'}">${s.active?'active':'inactive'}</span></div>`;}
 }
-window.sambaForm=()=>openForm('Samba share','🔗',[{name:'name',label:'Share name',placeholder:'medien'},{name:'path',label:'Pfad',placeholder:'/mnt/data/medien'},{name:'writable',label:'Schreibbar',type:'checkbox',value:true}],async d=>{await post('/shares/samba/add',d);closeForm();toast('Share created');renderShares($('#modal-body'),'Samba');});
-window.nfsForm=()=>openForm('NFS-Export','🔗',[{name:'path',label:'Pfad',placeholder:'/mnt/data'},{name:'clients',label:'Clients',value:'*',hint:'z.B. 192.168.1.0/24 oder *'}],async d=>{await post('/shares/nfs/add',d);closeForm();toast('Export created');renderShares($('#modal-body'),'NFS');});
+window.sambaForm=()=>openForm('Samba share','🔗',[{name:'name',label:'Share name',placeholder:'medien'},{name:'path',label:'Pfad',placeholder:'/mnt/data/medien'},{name:'writable',label:'Schreibbar',type:'checkbox',value:true}],async d=>{await confirmedPost('/shares/samba/add',d,'share-samba-add',d.name);closeForm();toast('Share created');renderShares($('#modal-body'),'Samba');});
+window.nfsForm=()=>openForm('NFS-Export','🔗',[{name:'path',label:'Pfad',placeholder:'/mnt/data'},{name:'clients',label:'Clients',value:'*',hint:'z.B. 192.168.1.0/24 oder *'}],async d=>{await confirmedPost('/shares/nfs/add',d,'share-nfs-add',d.path);closeForm();toast('Export created');renderShares($('#modal-body'),'NFS');});
 
 // ═══ Netzwerk ═══
-async function renderNetwork(body,tab){
+function normalizeNetworkInterfaces(data){
+  if(Array.isArray(data))return data;
+  if(data&&data.ok===false)throw new Error(data.stderr||'Network query failed');
+  return (data&&data.interfaces)||[];
+}
+async function renderNetworkLegacy(body,tab){
  const sub=(tab==='Firewall')?'Firewall':'Interfaces';
  const tabBar=`<div style="display:flex;gap:2px;margin-bottom:16px;border-bottom:.5px solid var(--border)">
    ${['Interfaces','Firewall'].map(t=>`<div onclick="renderNetwork($('#modal-body'),'${t}')" style="padding:8px 14px;font-size:12px;cursor:pointer;color:${t===sub?'var(--accent-light)':'var(--text2)'};border-bottom:2px solid ${t===sub?'var(--accent)':'transparent'};margin-bottom:-.5px;transition:color .15s">${t}</div>`).join('')}
  </div>`;
  if(sub==='Interfaces'){
-   const ifs=await api('/network/interfaces');
+   let ifs=[];try{ifs=normalizeNetworkInterfaces(await api('/network/interfaces'));}catch(e){body.innerHTML=tabBar+`<div class="empty-state">${esc(e.message)}</div>`;return;}
    body.innerHTML=tabBar+`
    <div style="display:flex;gap:6px;margin-bottom:12px;justify-content:flex-end">
      <button class="btn ghost sm" onclick="bridgeForm()">+ Bridge</button>
@@ -7465,17 +7526,17 @@ window.fwAddForm=()=>openForm('Firewall rule','🛡',[
   {name:'action',label:'Action',type:'select',options:[{value:'allow',label:'Erlauben (allow)'},{value:'deny',label:'Verweigern (deny)'},{value:'reject',label:'Ablehnen (reject)'},{value:'limit',label:'Begrenzen (limit)'}]},
 ],async d=>{
   if(!d.port){toast('Bitte Port angeben','error');return;}
-  try{const r=await post('/network/firewall/add',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}closeForm();toast('Rule added');renderNetwork($('#modal-body'),'Firewall');}catch(e){toast('Error: '+e.message,'error');}
+  try{const r=await confirmedPost('/network/firewall/add',d,'network-firewall-add',String(d.port));if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}closeForm();toast('Rule added');renderNetwork($('#modal-body'),'Firewall');}catch(e){toast('Error: '+e.message,'error');}
 });
-window.fwDelete=num=>confirmDelete('Delete rule',`Remove firewall rule no. ${num}?`,async()=>{try{await post('/network/firewall/remove',{num});toast('Rule removed');renderNetwork($('#modal-body'),'Firewall');}catch(e){toast('Error: '+e.message,'error');}});
+window.fwDeleteLegacy=num=>confirmDelete('Delete rule',`Remove firewall rule no. ${num}?`,async()=>{try{await confirmedPost('/network/firewall/remove',{num},'network-firewall-remove',String(num));toast('Rule removed');renderNetwork($('#modal-body'),'Firewall');}catch(e){toast('Error: '+e.message,'error');}});
 window.toggleBondCard=el=>{
   const selected=el.style.borderColor==='rgba(122, 74, 255, 0.5)';
   el.style.borderColor=selected?'var(--border)':'rgba(122,74,255,.5)';
   el.style.background=selected?'var(--bg)':'rgba(122,74,255,.08)';
   el.querySelector('div').style.color=selected?'var(--text)':'#9d7aff';
 };
-window.createBond=async()=>{const name=$('#bond-name').value;const members=[...document.querySelectorAll('.bond-iface-card')].filter(el=>el.style.borderColor==='rgba(122, 74, 255, 0.5)').map(el=>el.dataset.iface).join(',');const mode=$('#bond-mode').value;if(!members){toast('Select at least one interface','error');return;}try{await post('/network/bond/create',{name,members,mode});toast('Bond created');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}};
-window.bondForm=async()=>{const ifs=await api('/network/interfaces');const phys=ifs.filter(i=>!i.is_bond&&!/^(bond|br|docker|veth)/.test(i.name)&&!/\.\d+$/.test(i.name)).map(i=>i.name);openForm('Create bond','⬡',[{name:'name',label:'Bond-Name',value:'bond0'},{name:'mode',label:'Modus',type:'select',options:[{value:'802.3ad',label:'LACP (802.3ad)'},{value:'active-backup',label:'Active-Backup'},{value:'balance-rr',label:'Round-Robin'}]},{name:'members',label:'Interfaces (comma-separated)',value:phys.slice(0,2).join(','),hint:'Available: '+(phys.join(', ')||'none')}],async d=>{closeForm();if(!d.members){toast('Select at least one interface','error');return;}try{const r=await post('/network/bond/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Bond created');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});};
+window.createBond=async()=>{const name=$('#bond-name').value;const members=[...document.querySelectorAll('.bond-iface-card')].filter(el=>el.style.borderColor==='rgba(122, 74, 255, 0.5)').map(el=>el.dataset.iface).join(',');const mode=$('#bond-mode').value;if(!members){toast('Select at least one interface','error');return;}try{await confirmedPost('/network/bond/create',{name,members,mode},'network-bond-create',name);toast('Bond created');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}};
+window.bondForm=async()=>{let ifs=[];try{ifs=normalizeNetworkInterfaces(await api('/network/interfaces'));}catch(e){toast(e.message,'error');return;}const phys=ifs.filter(i=>!i.is_bond&&!/^(bond|br|docker|veth)/.test(i.name)&&!/\.\d+$/.test(i.name)).map(i=>i.name);openForm('Create bond','⬡',[{name:'name',label:'Bond-Name',value:'bond0'},{name:'mode',label:'Modus',type:'select',options:[{value:'802.3ad',label:'LACP (802.3ad)'},{value:'active-backup',label:'Active-Backup'},{value:'balance-rr',label:'Round-Robin'}]},{name:'members',label:'Interfaces (comma-separated)',value:phys.slice(0,2).join(','),hint:'Available: '+(phys.join(', ')||'none')}],async d=>{closeForm();if(!d.members){toast('Select at least one interface','error');return;}try{const r=await confirmedPost('/network/bond/create',d,'network-bond-create',d.name);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Bond created');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});};
 window.ipConfigForm=(iface,cur)=>openForm('IP konfigurieren: '+iface,'⚙',[
   {name:'mode',label:'Modus',type:'select',options:[{value:'static',label:'Statisch'},{value:'dhcp',label:'DHCP'}]},
   {name:'ip',label:'IP-Adresse',value:cur,placeholder:'192.168.1.50'},
@@ -7483,18 +7544,28 @@ window.ipConfigForm=(iface,cur)=>openForm('IP konfigurieren: '+iface,'⚙',[
   {name:'gateway',label:'Gateway',placeholder:'192.168.1.1'},
   {name:'dns',label:'DNS (optional)',placeholder:'1.1.1.1'},
   {name:'persist',label:'Dauerhaft speichern (/etc/network/interfaces.d)',type:'checkbox',value:false},
-],async d=>{closeForm();toast('Setze IP…');try{const r=await post('/network/configure-ip',Object.assign({iface},d));if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('IP konfiguriert');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});
-window.bridgeForm=async()=>{const ifs=await api('/network/interfaces');const phys=ifs.filter(i=>!i.is_bond).map(i=>i.name);openForm('Create bridge','🌉',[{name:'name',label:'Bridge-Name',value:'br0'},{name:'members',label:'Members (comma-separated)',placeholder:phys.slice(0,2).join(','),hint:'Available: '+phys.join(', ')}],async d=>{closeForm();try{const r=await post('/network/bridge/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Bridge created');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});};
-window.vlanForm=async()=>{const ifs=await api('/network/interfaces');openForm('Create VLAN','🔖',[{name:'parent',label:'Parent-Interface',type:'select',options:ifs.map(i=>i.name)},{name:'vlan_id',label:'VLAN-ID',type:'number',placeholder:'10'},{name:'name',label:'Name (optional)',placeholder:'leer = parent.id'}],async d=>{closeForm();try{const r=await post('/network/vlan/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('VLAN created');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});};
-window.linkDelete=name=>confirmDelete('Interface entfernen',`"${name}" entfernen?`,async()=>{try{const r=await post('/network/link/delete',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Entfernt');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();toast('Setze IP…');try{const r=await confirmedPost('/network/configure-ip',Object.assign({iface},d),'network-configure-ip',iface);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('IP konfiguriert');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});
+window.bridgeForm=async()=>{let ifs=[];try{ifs=normalizeNetworkInterfaces(await api('/network/interfaces'));}catch(e){toast(e.message,'error');return;}const phys=ifs.filter(i=>!i.is_bond).map(i=>i.name);openForm('Create bridge','🌉',[{name:'name',label:'Bridge-Name',value:'br0'},{name:'members',label:'Members (comma-separated)',placeholder:phys.slice(0,2).join(','),hint:'Available: '+phys.join(', ')}],async d=>{closeForm();try{const r=await confirmedPost('/network/bridge/create',d,'network-bridge-create',d.name);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Bridge created');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});};
+window.vlanForm=async()=>{let ifs=[];try{ifs=normalizeNetworkInterfaces(await api('/network/interfaces'));}catch(e){toast(e.message,'error');return;}openForm('Create VLAN','🔖',[{name:'parent',label:'Parent-Interface',type:'select',options:ifs.map(i=>i.name)},{name:'vlan_id',label:'VLAN-ID',type:'number',placeholder:'10'},{name:'name',label:'Name (optional)',placeholder:'leer = parent.id'}],async d=>{closeForm();try{const target=d.name||d.parent+'.'+d.vlan_id;const r=await confirmedPost('/network/vlan/create',d,'network-vlan-create',target);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('VLAN created');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});};
+window.linkDelete=name=>confirmDelete('Interface entfernen',`"${name}" entfernen?`,async()=>{try{const r=await confirmedPost('/network/link/delete',{name},'network-link-delete',name);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Entfernt');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});
 
 // ═══ Sicherheit ═══
-async function renderSecurity(body,tab){
+function normalizeSmbUsers(data){
+  if(Array.isArray(data))return data;
+  if(data&&data.ok===false)throw new Error(data.stderr||'Samba user query failed');
+  return (data&&data.users)||[];
+}
+function normalizeCertificates(data){
+  if(Array.isArray(data))return {certificates:data,error:''};
+  return {certificates:(data&&data.certificates)||[],error:(data&&data.ok===false)?((data.errors||[]).map(x=>`${x.file}: ${x.stderr}`).join('\n')||'Certificate query failed'):''};
+}
+async function renderSecurityLegacy(body,tab){
  if(tab==='Benutzer'||!tab){
    const u=await api('/security/users');
    let smbSet=new Set();
-   try{const smb=await api('/security/smb-users');smbSet=new Set(smb.users||[]);}catch(e){}
-   body.innerHTML=`<div class="sec-hdr"><h3>Benutzer</h3><button class="btn" onclick="userForm()">+ User</button></div>
+   let smbError='';
+   try{smbSet=new Set(normalizeSmbUsers(await api('/security/smb-users')));}catch(e){smbError=e.message;}
+   body.innerHTML=`<div class="sec-hdr"><h3>Benutzer</h3><button class="btn" onclick="userForm()">+ User</button></div>${smbError?`<div class="empty-state">${esc(smbError)}</div>`:''}
    <table style="table-layout:fixed;width:100%"><thead><tr><th style="width:120px">Name</th><th style="width:60px">UID</th><th style="width:160px">Home</th><th>Gruppen</th><th style="width:110px;text-align:right">Aktionen</th></tr></thead><tbody>
    ${u.map(x=>`<tr>
      <td style="font-weight:500">${esc(x.name)}</td>
@@ -7528,10 +7599,10 @@ async function renderSecurity(body,tab){
        </div>
      </td>
    </tr>`).join('')}</tbody></table>`;}
- else{const c=await api('/security/certs');body.innerHTML=`<button class="btn" onclick="certForm()">+ Self-signed certificate</button>${c.length?c.map(x=>`<pre class="logbox">${esc(x.file)}\n${esc(x.info)}</pre>`).join(''):'<div class="loading">No certificates</div>'}`;}
+ else{const certData=normalizeCertificates(await api('/security/certs'));const c=certData.certificates;body.innerHTML=`<button class="btn" onclick="certForm()">+ Self-signed certificate</button>${certData.error?`<pre class="logbox">${esc(certData.error)}</pre>`:''}${c.length?c.map(x=>`<pre class="logbox">${esc(x.file)}\n${esc(x.info||x.error||'')}</pre>`).join(''):'<div class="loading">No certificates</div>'}`;}
 }
-window.userForm=()=>openForm('Create user','👤',[{name:'name',label:'Username',placeholder:'maxmuster'},{name:'password',label:'Password',type:'password'}],async d=>{closeForm();try{await post('/security/users/add',{name:d.name});if(d.password)await post('/security/users/password',{name:d.name,password:d.password});toast('User created');renderSecurity($('#modal-body'),'Benutzer');}catch(e){toast('Error: '+e.message,'error');}});
-window.passForm=name=>openForm('Linux password: '+name,'🔑',[{name:'password',label:'New password',type:'password'}],async d=>{await post('/security/users/password',{name,password:d.password});closeForm();toast('Password set');});
+window.userForm=()=>openForm('Create user','👤',[{name:'name',label:'Username',placeholder:'maxmuster'},{name:'password',label:'Password',type:'password'}],async d=>{closeForm();try{await confirmedPost('/security/users/add',{name:d.name},'security-user-add',d.name);if(d.password)await confirmedPost('/security/users/password',{name:d.name,password:d.password},'security-user-password',d.name);toast('User created');renderSecurity($('#modal-body'),'Benutzer');}catch(e){toast('Error: '+e.message,'error');}});
+window.passForm=name=>openForm('Linux password: '+name,'🔑',[{name:'password',label:'New password',type:'password'}],async d=>{await confirmedPost('/security/users/password',{name,password:d.password},'security-user-password',name);closeForm();toast('Password set');});
 window.userSecForm=async name=>{
   let s;
   try{s=await api('/security/users/secinfo?name='+encodeURIComponent(name));}catch(e){toast('Error: '+e.message,'error');return;}
@@ -7566,9 +7637,9 @@ window.userSecForm=async name=>{
     <div class="form-actions"><button class="btn ghost" onclick="closeForm()">Close</button></div>`;
   $('#form-overlay').classList.add('open');
 };
-window.userSecSudo=async name=>{const enable=$('#sec-sudo').checked;const nopasswd=$('#sec-nopasswd').checked;toast('Applying…');try{const r=await post('/security/users/sudo',{name,enable:enable?'true':'false',nopasswd:nopasswd?'true':'false'});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('sudo rights updated');userSecForm(name);}catch(e){toast('Error: '+e.message,'error');}};
-window.userSecAging=async name=>{const d={name,max_days:$('#sec-max').value,min_days:$('#sec-min').value,warn_days:$('#sec-warn').value,expire:$('#sec-expire').value};try{const r=await post('/security/users/aging',d);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Password expiry saved');userSecForm(name);}catch(e){toast('Error: '+e.message,'error');}};
-window.userSecExpire=name=>confirmDelete('Force password change',`"${name}" must change the password at next login. Continue?`,async()=>{try{const r=await post('/security/users/expire',{name});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Erzwungen');userSecForm(name);}catch(e){toast('Error: '+e.message,'error');}});
+window.userSecSudo=async name=>{const enable=$('#sec-sudo').checked;const nopasswd=$('#sec-nopasswd').checked;toast('Applying…');try{const r=await confirmedPost('/security/users/sudo',{name,enable:enable?'true':'false',nopasswd:nopasswd?'true':'false'},'security-sudo',name);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('sudo rights updated');userSecForm(name);}catch(e){toast('Error: '+e.message,'error');}};
+window.userSecAging=async name=>{const d={name,max_days:$('#sec-max').value,min_days:$('#sec-min').value,warn_days:$('#sec-warn').value,expire:$('#sec-expire').value};try{const r=await confirmedPost('/security/users/aging',d,'security-aging',name);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Password expiry saved');userSecForm(name);}catch(e){toast('Error: '+e.message,'error');}};
+window.userSecExpire=name=>confirmDelete('Force password change',`"${name}" must change the password at next login. Continue?`,async()=>{try{const r=await confirmedPost('/security/users/expire',{name},'security-expire',name);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Erzwungen');userSecForm(name);}catch(e){toast('Error: '+e.message,'error');}});
 
 // SSH-Keys verwalten
 let _sshKeys=[];
@@ -7600,7 +7671,7 @@ async function renderSshKeys(name){
 window.sshKeyAdd=async name=>{
   const key=($('#ssh-new-key')?.value||'').trim();
   if(!key){toast('Please paste a key','error');return;}
-  try{const r=await post('/security/users/ssh-keys/add',{name,key});
+  try{const r=await confirmedPost('/security/users/ssh-keys/add',{name,key},'security-ssh-key-add',name);
     if(r&&r.ok===false){toast(r.error||'Error','error');return;}
     toast(r&&r.duplicate?'Key already exists':'Key added');renderSshKeys(name);
   }catch(e){toast('Error: '+e.message,'error');}
@@ -7608,7 +7679,7 @@ window.sshKeyAdd=async name=>{
 window.sshKeyRemove=(name,i)=>{
   const k=_sshKeys[i];if(!k)return;
   confirmDelete('Key entfernen',`SSH-Key (${k.comment||k.type}) von ${name} entfernen?`,async()=>{
-    try{await post('/security/users/ssh-keys/remove',{name,key:k.key});toast('Key entfernt');renderSshKeys(name);}
+    try{await confirmedPost('/security/users/ssh-keys/remove',{name,key:k.key},'security-ssh-key-remove',name);toast('Key entfernt');renderSshKeys(name);}
     catch(e){toast('Error: '+e.message,'error');}
   });
 };
@@ -7620,22 +7691,22 @@ window.smbPassForm=name=>openForm('Samba access: '+name,'🔗',[
   if(!d.password){toast('Password cannot be empty','error');return;}
   closeForm();
   try{
-    const r=await post('/security/users/smb-password',{name,password:d.password});
+    const r=await confirmedPost('/security/users/smb-password',{name,password:d.password},'security-smb-password',name);
     if(r.ok){toast('Samba access for '+name+' enabled ✓');renderSecurity($('#modal-body'),'Benutzer');}
     else toast('Error: '+r.stderr,'error');
   }catch(e){toast('Error: '+e.message,'error');}
 });
 
 // Gruppen-Management
-window.addGroupForm=()=>openForm('Create group','👥',[{name:'name',label:'Group name',placeholder:'entwickler'}],async d=>{try{await post('/security/groups/add',{name:d.name});closeForm();toast('Group created');renderSecurity($('#modal-body'),'Gruppen');}catch(e){toast(e.message,'error');}});
-window.deleteGroupConfirm=name=>confirmDelete('Delete group',`Really delete group "${name}"?`,async()=>{try{await post('/security/groups/delete',{name});toast('Group deleted');renderSecurity($('#modal-body'),'Gruppen');}catch(e){toast(e.message,'error');}});
+window.addGroupForm=()=>openForm('Create group','👥',[{name:'name',label:'Group name',placeholder:'entwickler'}],async d=>{try{await confirmedPost('/security/groups/add',{name:d.name},'security-group-add',d.name);closeForm();toast('Group created');renderSecurity($('#modal-body'),'Gruppen');}catch(e){toast(e.message,'error');}});
+window.deleteGroupConfirm=name=>confirmDelete('Delete group',`Really delete group "${name}"?`,async()=>{try{await confirmedPost('/security/groups/delete',{name},'security-group-delete',name);toast('Group deleted');renderSecurity($('#modal-body'),'Gruppen');}catch(e){toast(e.message,'error');}});
 window.addMemberForm=(group,usersJson)=>{
   let users=[];try{users=JSON.parse(decodeURIComponent(usersJson));}catch(e){}
   openForm('Add member: '+group,'👥',[
     {name:'member',label:'Benutzer',type:'select',options:users.map(u=>({value:u,label:u}))}
-  ],async d=>{try{await post('/security/groups/add-member',{group,member:d.member});closeForm();toast(d.member+' zu '+group+' added');renderSecurity($('#modal-body'),'Gruppen');}catch(e){toast(e.message,'error');}});
+  ],async d=>{try{await confirmedPost('/security/groups/add-member',{group,member:d.member},'security-group-add-member',group+'/'+d.member);closeForm();toast(d.member+' zu '+group+' added');renderSecurity($('#modal-body'),'Gruppen');}catch(e){toast(e.message,'error');}});
 };
-window.removeMember=async(group,member)=>{try{await post('/security/groups/remove-member',{group,member});toast(member+' aus '+group+' entfernt');renderSecurity($('#modal-body'),'Gruppen');}catch(e){toast(e.message,'error');}};
+window.removeMember=async(group,member)=>{try{await confirmedPost('/security/groups/remove-member',{group,member},'security-group-remove-member',group+'/'+member);toast(member+' aus '+group+' entfernt');renderSecurity($('#modal-body'),'Gruppen');}catch(e){toast(e.message,'error');}};
 window.manageGroups=async name=>{
   const g=await api('/security/groups');
   const userGroups=g.filter(x=>x.members.includes(name)).map(x=>x.name);
@@ -7643,7 +7714,7 @@ window.manageGroups=async name=>{
     {name:'add_group',label:'Add to group',type:'select',options:[{value:'',label:'— choose —'},...g.map(x=>({value:x.name,label:x.name}))]}
   ],async d=>{
     if(!d.add_group){closeForm();return;}
-    try{await post('/security/groups/add-member',{group:d.add_group,member:name});closeForm();toast(name+' zu '+d.add_group+' added');renderSecurity($('#modal-body'),'Benutzer');}
+    try{await confirmedPost('/security/groups/add-member',{group:d.add_group,member:name},'security-group-add-member',d.add_group+'/'+name);closeForm();toast(name+' zu '+d.add_group+' added');renderSecurity($('#modal-body'),'Benutzer');}
     catch(e){toast(e.message,'error');}
   });
   setTimeout(()=>{
@@ -7654,10 +7725,10 @@ window.manageGroups=async name=>{
     fb.insertBefore(info,fb.firstChild);
   },50);
 };
-window.certForm=()=>openForm('SSL certificate','🔒',[{name:'common_name',label:'Common Name',placeholder:'runvard.local'}],async d=>{await post('/security/certs/generate',d);closeForm();toast('Certificate created');renderSecurity($('#modal-body'),'SSL');});
+window.certForm=()=>openForm('SSL certificate','🔒',[{name:'common_name',label:'Common Name',placeholder:'runvard.local'}],async d=>{await confirmedPost('/security/certs/generate',d,'security-cert-generate',d.common_name);closeForm();toast('Certificate created');renderSecurity($('#modal-body'),'SSL');});
 
 // ═══ Monitoring ═══
-async function renderMonitoring(body,tab){
+async function renderMonitoringLegacy(body,tab){
  if(tab==='Logs'||!tab){
    body.style.overflow='hidden';
    body.innerHTML=`
@@ -7717,12 +7788,12 @@ window.loadLog=async()=>{
   const grep=$('#log-grep')?.value.trim(); if(grep)p.set('grep',grep);
   const lines=$('#log-lines')?.value; if(lines)p.set('lines',lines);
   if($('#log-out'))$('#log-out').textContent=tr('loading');
-  try{const l=await api('/monitoring/logs?'+p.toString());if($('#log-out'))$('#log-out').textContent=l.logs||phrase('(empty)');}
+  try{const l=await api('/monitoring/logs?'+p.toString());if($('#log-out'))$('#log-out').textContent=(l&&l.ok===false?tr('error')+': ':'')+(l.logs||phrase('(empty)'));}
   catch(e){if($('#log-out'))$('#log-out').textContent=tr('error')+': '+e.message;}
 };
 
 // ═══ System ═══
-async function renderSystem(body,tab){
+async function renderSystemLegacy(body,tab){
  if(tab==='Info'||!tab){
    const i=await api('/system/info');
    body.innerHTML=`<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
@@ -7809,7 +7880,7 @@ window.pkgSearch=async()=>{
 };
 window.pkgAction=async(name,action)=>{
   const out=$('#pkg-out'); if(out){out.style.display='block';out.textContent=(action==='install'?'Installiere ':'Entferne ')+name+' …';}
-  try{const r=await post('/sysmgr/packages/'+action,{name});
+  try{const r=await confirmedPost('/sysmgr/packages/'+action,{name},'sysmgr-package-'+action,name);
     if(!r||!r.job_id){toast('Start fehlgeschlagen','error');return;}
     pollPkgJob(r.job_id);
   }catch(e){toast('Error: '+e.message,'error');}
@@ -7835,7 +7906,7 @@ async function renderAppArmor(body){
 window.aaSetForm=()=>openForm('Set AppArmor profile','🛡',[
   {name:'profile',label:'Profile (path or name)',placeholder:'/usr/sbin/nginx'},
   {name:'mode',label:'Modus',type:'select',options:[{value:'enforce',label:'Enforce (erzwingen)'},{value:'complain',label:'Complain (protokollieren)'},{value:'disable',label:'Disable'}]},
-],async d=>{try{const r=await post('/sysmgr/apparmor/set',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}closeForm();toast('Profile updated');renderSystem($('#modal-body'),'AppArmor');}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{try{const r=await confirmedPost('/sysmgr/apparmor/set',d,'sysmgr-apparmor-set',d.profile);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}closeForm();toast('Profile updated');renderSystem($('#modal-body'),'AppArmor');}catch(e){toast('Error: '+e.message,'error');}});
 
 // ── Wartung: unattended-upgrades / tuned / kdump / sosreport ──
 async function renderMaintenance(body){
@@ -7913,11 +7984,11 @@ async function renderMaintenance(body){
   html+='</div>';
   body.innerHTML=html;
 }
-window.uuInstall=async()=>{toast('Installation started…');try{const r=await post('/sysmgr/packages/install',{name:'unattended-upgrades'});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Installing – wait a moment, then reopen the tab');}catch(e){toast('Error: '+e.message,'error');}};
-window.uuSave=async()=>{const d={enable:$('#uu-enable').checked?'true':'false',auto_reboot:$('#uu-reboot').checked?'true':'false',reboot_time:$('#uu-time').value};try{const r=await post('/sysmgr/unattended/set',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Gespeichert');renderSystem($('#modal-body'),'Wartung');}catch(e){toast('Error: '+e.message,'error');}};
-window.tunedSet=async()=>{const profile=$('#tuned-sel').value;toast('Applying profile…');try{const r=await post('/sysmgr/tuned/set',{profile});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Profile active: '+profile);renderSystem($('#modal-body'),'Wartung');}catch(e){toast('Error: '+e.message,'error');}};
-window.kdumpAct=async action=>{try{const r=await post('/sysmgr/kdump/action',{action});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('OK');renderSystem($('#modal-body'),'Wartung');}catch(e){toast('Error: '+e.message,'error');}};
-window.sosRun=async()=>{const out=$('#sos-out');if(out){out.style.display='block';out.textContent='Starte sosreport …';}toast('Generating diagnostic report…');try{const r=await post('/sysmgr/sosreport/run',{});if(!r||!r.job_id){toast('Start fehlgeschlagen','error');return;}sosPoll(r.job_id);}catch(e){toast('Error: '+e.message,'error');}};
+window.uuInstall=async()=>{toast('Installation started…');try{const r=await confirmedPost('/sysmgr/packages/install',{name:'unattended-upgrades'},'sysmgr-package-install','unattended-upgrades');if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Installing – wait a moment, then reopen the tab');}catch(e){toast('Error: '+e.message,'error');}};
+window.uuSave=async()=>{const d={enable:$('#uu-enable').checked?'true':'false',auto_reboot:$('#uu-reboot').checked?'true':'false',reboot_time:$('#uu-time').value};try{const r=await confirmedPost('/sysmgr/unattended/set',d,'sysmgr-unattended-set','unattended-upgrades');if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Gespeichert');renderSystem($('#modal-body'),'Wartung');}catch(e){toast('Error: '+e.message,'error');}};
+window.tunedSet=async()=>{const profile=$('#tuned-sel').value;toast('Applying profile…');try{const r=await confirmedPost('/sysmgr/tuned/set',{profile},'sysmgr-tuned-set',profile);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Profile active: '+profile);renderSystem($('#modal-body'),'Wartung');}catch(e){toast('Error: '+e.message,'error');}};
+window.kdumpAct=async action=>{try{const r=await confirmedPost('/sysmgr/kdump/action',{action},'sysmgr-kdump-action:'+action,'kdump');if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('OK');renderSystem($('#modal-body'),'Wartung');}catch(e){toast('Error: '+e.message,'error');}};
+window.sosRun=async()=>{const out=$('#sos-out');if(out){out.style.display='block';out.textContent='Starte sosreport …';}toast('Generating diagnostic report…');try{const r=await confirmedPost('/sysmgr/sosreport/run',{},'sysmgr-sosreport-run','sosreport');if(!r||!r.job_id){toast('Start fehlgeschlagen','error');return;}sosPoll(r.job_id);}catch(e){toast('Error: '+e.message,'error');}};
 function sosPoll(id){
   const out=$('#sos-out');
   const tick=async()=>{
@@ -7929,8 +8000,8 @@ function sosPoll(id){
   tick();
 }
 
-window.cronForm=()=>openForm('Cron-Job','⏱',[{name:'schedule',label:'Schedule',placeholder:'0 3 * * *',hint:'Min Hour Day Month Weekday (e.g. daily 3:00)'},{name:'command',label:'Command',placeholder:'/usr/bin/backup.sh'}],async d=>{await post('/sysmgr/cron/add',d);closeForm();toast('Cron job created');renderSystem($('#modal-body'),'Cron');});
-window.powerForm=action=>openForm(action==='shutdown'?'Shut down':'Restart','⏻',[{name:'delay',label:'Delay (minutes)',value:0}],async d=>{closeForm();await post('/sysmgr/power',{action,delay:d.delay});toast('Running…');});
+window.cronForm=()=>openForm('Cron-Job','⏱',[{name:'schedule',label:'Schedule',placeholder:'0 3 * * *',hint:'Min Hour Day Month Weekday (e.g. daily 3:00)'},{name:'command',label:'Command',placeholder:'/usr/bin/backup.sh'}],async d=>{await confirmedPost('/sysmgr/cron/add',d,'sysmgr-cron-add',d.schedule);closeForm();toast('Cron job created');renderSystem($('#modal-body'),'Cron');});
+window.powerForm=action=>openForm(action==='shutdown'?'Shut down':'Restart','⏻',[{name:'delay',label:'Delay (minutes)',value:0}],async d=>{closeForm();await confirmedPost('/sysmgr/power',{action,delay:d.delay},'power:'+action,action);toast('Running…');});
 
 // Updates installieren (Hintergrund-Job + Polling)
 window.updatesInstall=async()=>{
@@ -7938,7 +8009,7 @@ window.updatesInstall=async()=>{
   const btn=$('#upd-go'); if(btn){btn.disabled=true;btn.textContent='Installiere…';}
   const out=$('#upd-out'); if(out){out.style.display='block';out.textContent='Starte apt-get upgrade …';}
   try{
-    const r=await post('/sysmgr/updates/apply',{});
+    const r=await confirmedPost('/sysmgr/updates/apply',{},'sysmgr-updates-apply','apt-upgrade');
     if(!r||!r.job_id){toast('Start fehlgeschlagen','error');if(btn){btn.disabled=false;btn.textContent=uiText('⬇ Install updates');}return;}
     pollUpdateJob(r.job_id,reboot);
   }catch(e){toast('Error: '+e.message,'error');if(btn){btn.disabled=false;btn.textContent=uiText('⬇ Install updates');}}
@@ -7956,7 +8027,7 @@ function pollUpdateJob(id,reboot){
       if(out)out.textContent=(res.stdout||'')+(res.stderr?('\n'+res.stderr):'')||'(no output)';
       toast(res.ok===false?'Mit Fehlern beendet':'Updates installed',res.ok===false?'error':'success');
       if(btn){btn.disabled=false;btn.textContent='✓ Fertig';}
-      if(reboot){toast('Reboot starting…');post('/sysmgr/power',{action:'reboot',delay:0});}
+      if(reboot){toast('Reboot starting…');confirmedPost('/sysmgr/power',{action:'reboot',delay:0},'power:reboot','reboot');}
     } else {
       if(out)out.textContent='Error: '+(j.error||'unbekannt');
       toast('Update fehlgeschlagen','error');
@@ -7991,7 +8062,7 @@ window.runvardUpdateInstall=async()=>{
     );
   }
   try{
-    const r=await post('/sysmgr/runvard-update/apply',{});
+    const r=await confirmedPost('/sysmgr/runvard-update/apply',{},'sysmgr-runvard-update','runvard');
     if(!r||r.ok===false){
       throw new Error((r&&r.error)||uiText('Update did not start'));
     }
@@ -8135,6 +8206,7 @@ let _histChart=null;
 const histBlock=(id,title)=>`<div class="nx-card-inner" style="margin-bottom:20px"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px"><span style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em">${title}</span><span style="font-size:10px;color:var(--text3)">last hour</span></div><div style="height:140px;position:relative"><canvas id="${id}"></canvas></div></div>`;
 async function loadHistoryChart(canvasId,keys,opts){
   opts=opts||{};
+  if(typeof Chart==='undefined')return;
   let data;try{data=await api('/system/history?minutes='+(opts.minutes||60));}catch(e){return;}
   const pts=data.points||[];
   const cv=document.getElementById(canvasId);if(!cv)return;
@@ -8167,10 +8239,26 @@ function openWidgetDetail(type){
   else if(type==='network') renderNetDetail(body);
 }
 
+function normalizeProcesses(data){
+  if(Array.isArray(data))return data;
+  if(data&&data.ok===false)throw new Error(data.stderr||'Process query failed');
+  return (data&&data.processes)||[];
+}
+function normalizeDiskIo(data){
+  if(data&&data.ok===false)throw new Error(data.stderr||'Disk I/O query failed');
+  return (data&&data.disk_io)||data||{};
+}
+function normalizeNetDetail(data){
+  if(Array.isArray(data))return data;
+  if(data&&data.ok===false)throw new Error(data.stderr||'Network detail query failed');
+  return (data&&data.interfaces)||[];
+}
+
 async function renderCpuDetail(body){
-  const [stats,temps,procs]=await Promise.all([
+  const [stats,temps,procData]=await Promise.all([
     api('/system/stats'), api('/system/temps'), api('/system/processes?sort_by=cpu')
   ]);
+  let procs=[];try{procs=normalizeProcesses(procData);}catch(e){toast(e.message,'error');}
   const cpu=stats.cpu;
   const tempList=Object.values(temps).flat();
   const cpuTemp=tempList.find(t=>/(cpu|core|k10|coretemp|acpi)/i.test(t.label));
@@ -8206,9 +8294,10 @@ async function renderCpuDetail(body){
 }
 
 async function renderRamDetail(body){
-  const [stats,procs]=await Promise.all([
+  const [stats,procData]=await Promise.all([
     api('/system/stats'), api('/system/processes?sort_by=ram')
   ]);
+  let procs=[];try{procs=normalizeProcesses(procData);}catch(e){toast(e.message,'error');}
   const m=stats.memory,sw=stats.swap;
   const barW=v=>Math.round(v/m.total*100);
   body.innerHTML=`
@@ -8246,9 +8335,10 @@ async function renderRamDetail(body){
 }
 
 async function renderDiskDetail(body){
-  const [disks,io]=await Promise.all([
+  const [disks,ioData]=await Promise.all([
     api('/system/disks'), api('/system/disk-io')
   ]);
+  let io={};try{io=normalizeDiskIo(ioData);}catch(e){toast(e.message,'error');}
   body.innerHTML=`
     <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px">Partitionen</div>
     ${disks.map(d=>`
@@ -8275,7 +8365,7 @@ async function renderDiskDetail(body){
 }
 
 async function renderNetDetail(body){
-  const ifaces=await api('/system/net-detail');
+  let ifaces=[];try{ifaces=normalizeNetDetail(await api('/system/net-detail'));}catch(e){toast(e.message,'error');}
   body.innerHTML=`
     ${histBlock('hist-net','Network throughput')}
     <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:14px">Interfaces</div>
@@ -8569,7 +8659,7 @@ function appTint(cat){
 }
 function appHexA(hex,al){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${al})`;}
 
-function appCardHtml(a){
+function appCardHtmlLegacy(a){
   const tint=appTint(a.category);
   let actions,pill='';
   if(!a.installed){
@@ -8621,7 +8711,7 @@ window.appAct=async(id,action)=>{
   const labels={start:'Starting…',stop:'Stopping…',restart:'Restarting…',update:'Refreshing…'};
   toast(uiText(labels[action]||'…'));
   try{
-    const r=await post('/apps/action',{app_id:id,action});
+    const r=await confirmedPost('/apps/action',{app_id:id,action},'apps-action:'+action,id);
     const msgs={start:'App started',stop:'App stopped',restart:'App restarted',update:'App updated ✓'};
     if(r.ok)toast(uiText(msgs[action]||'OK'));
     else {
@@ -8632,12 +8722,12 @@ window.appAct=async(id,action)=>{
   }catch(e){toast('Error: '+e.message,'error');}
 };
 
-window.appUninstall=(id,name)=>confirmDelete('Uninstall app',
-  `Uninstall "${name}"? Container & network will be removed. Your data in /opt/runvard/data/apps/${id}/ is kept.`,
+window.appUninstallLegacy=(id,name)=>confirmDelete('Uninstall app',
+  `Uninstall "${name}"? Container & network will be removed. Your data in ${runvardDataPath('apps',id)}/ is kept.`,
   async()=>{
     toast(uiText('Uninstalling…'));
     try{
-      await post('/apps/action',{app_id:id,action:'down'});
+      await confirmedPost('/apps/action',{app_id:id,action:'down'},'apps-action:down',id);
       toast(name+' uninstalled');
       renderApps($('#modal-body'));
     }catch(e){toast('Error: '+e.message,'error');}
@@ -8649,6 +8739,7 @@ window.appOpen=(id,port)=>{
 };
 
 window.appAddToDashboard=async id=>{
+  if(!dashRequireAdmin())return;
   try{
     const [a,d]=await Promise.all([
       api('/apps/get?app_id='+encodeURIComponent(id)),
@@ -8724,10 +8815,11 @@ async function loadDashboard(){
   }catch(e){}
 }
 
-function renderDashboard(){
+function renderDashboardLegacy(){
   const grid=$('#dash-grid');
   const section=$('#dash-section');
   if(!grid||!section)return;
+  syncAdminUi();
   section.style.display='block';
   if(!dashTiles.length){grid.innerHTML='';return;}
   grid.innerHTML=dashTiles.map(t=>{
@@ -8747,7 +8839,7 @@ function renderDashboard(){
     </div>`;
   }).join('');
   // Drag & Drop
-  if(typeof Sortable!=='undefined'){
+  if(isAdmin()&&typeof Sortable!=='undefined'){
     Sortable.create(grid,{animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',
       onEnd:()=>{
         const order=[...grid.querySelectorAll('.dash-tile')].map(el=>el.dataset.id);
@@ -8797,26 +8889,28 @@ window.dashCtx=(e,id)=>{
   const urlLabel=uiText(t.show_url?'Hide IP':'Show IP');
   const isCompose=t.type==='compose';
   const canRun=isApp||isCompose;
-  menu.innerHTML=`
-    <div class="dash-ctx-item" onclick="dashOpen('${esc(id)}')"><span>↗ ${esc(uiText('Open'))}</span></div>
-    ${canRun&&t.running?`
+  const admin=isAdmin();
+  const parts=[`<div class="dash-ctx-item" onclick="dashOpen('${esc(id)}')"><span>↗ ${esc(uiText('Open'))}</span></div>`];
+  if(canRun)parts.push(`<div class="dash-ctx-item" onclick="dashFiles('${esc(id)}')"><span>${esc(uiText('📂 Show files'))}</span></div>`);
+  if(admin){
+    if(canRun&&t.running)parts.push(`
     <div class="dash-ctx-item" onclick="dashAppAction('${esc(id)}','restart')"><span>↻ ${esc(uiText('Restart'))}</span></div>
-    <div class="dash-ctx-item" onclick="dashAppAction('${esc(id)}','stop')"><span>⏸ ${esc(uiText('Pause'))}</span></div>`:''}
-    ${canRun&&!t.running?`
-    <div class="dash-ctx-item" onclick="dashAppAction('${esc(id)}','start')"><span>▶ ${esc(uiText('Start'))}</span></div>`:''}
-    <div class="dash-ctx-sep"></div>
-    ${canRun?`
+    <div class="dash-ctx-item" onclick="dashAppAction('${esc(id)}','stop')"><span>⏸ ${esc(uiText('Pause'))}</span></div>`);
+    if(canRun&&!t.running)parts.push(`<div class="dash-ctx-item" onclick="dashAppAction('${esc(id)}','start')"><span>▶ ${esc(uiText('Start'))}</span></div>`);
+    parts.push('<div class="dash-ctx-sep"></div>');
+    parts.push(canRun?`
     <div class="dash-ctx-item" onclick="dashCompose('${esc(id)}')"><span>${esc(uiText('✎ Edit compose'))}</span></div>
-    <div class="dash-ctx-item" onclick="dashFiles('${esc(id)}')"><span>${esc(uiText('📂 Show files'))}</span></div>
     <div class="dash-ctx-item" onclick="dashEditHost('${esc(id)}')"><span>${esc(uiText('IP anpassen'))}</span></div>`:`
-    <div class="dash-ctx-item" onclick="dashEditCustom('${esc(id)}')"><span>✎ ${esc(uiText('Edit'))}</span></div>`}
-    <div class="dash-ctx-sep"></div>
+    <div class="dash-ctx-item" onclick="dashEditCustom('${esc(id)}')"><span>✎ ${esc(uiText('Edit'))}</span></div>`);
+    parts.push(`<div class="dash-ctx-sep"></div>
     <div class="dash-ctx-item" onclick="dashToggleUrl('${esc(id)}',${!t.show_url})">
       <span>${urlLabel}</span>
       <div class="dash-toggle${t.show_url?' on':''}"></div>
     </div>
     <div class="dash-ctx-sep"></div>
-    <div class="dash-ctx-item danger" onclick="dashRemove('${esc(id)}','${esc(t.name)}')"><span>🗑 ${esc(uiText('Remove'))}</span></div>`;
+    <div class="dash-ctx-item danger" onclick="dashRemove('${esc(id)}','${esc(t.name)}')"><span>🗑 ${esc(uiText('Remove'))}</span></div>`);
+  }
+  menu.innerHTML=parts.join('');
   document.body.appendChild(menu);
   setTimeout(()=>document.addEventListener('click',()=>{menu.remove();},{once:true}),10);
 };
@@ -8829,6 +8923,7 @@ window.dashOpen=id=>{
   document.querySelector('.dash-ctx')?.remove();
 };
 window.dashAppAction=async(id,action)=>{
+  if(!dashRequireAdmin())return;
   document.querySelector('.dash-ctx')?.remove();
   const t=dashTiles.find(x=>x.id===id);
   const isCompose=t?.type==='compose';
@@ -8838,15 +8933,17 @@ window.dashAppAction=async(id,action)=>{
   try{
     if(isCompose){
       const composeAction={start:'up',stop:'down',restart:'restart'}[action]||action;
-      await post('/docker/compose/action',{name:dashComposeProject(t),action:composeAction});
+      const project=dashComposeProject(t);
+      await confirmedPost('/docker/compose/action',{name:project,action:composeAction},'docker-compose-action:'+composeAction,project);
     }else{
-      await post('/apps/action',{app_id:id,action});
+      await confirmedPost('/apps/action',{app_id:id,action},'apps-action:'+action,id);
     }
     toast(uiText(msgs[action]||'OK'));loadDashboard();
   }
   catch(e){toast('Error: '+e.message,'error');}
 };
 window.dashCompose=async id=>{
+  if(!dashRequireAdmin())return;
   document.querySelector('.dash-ctx')?.remove();
   try{
     const t=dashTiles.find(x=>x.id===id);
@@ -8857,7 +8954,7 @@ window.dashCompose=async id=>{
     openForm('Compose: '+(a.name||project),'✎',[
       {name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:c.content||a.compose||''}
     ],async d=>{
-      await post('/docker/compose/save',{name:project,content:d.content});
+      await confirmedPost('/docker/compose/save',{name:project,content:d.content},'docker-compose-save',project);
       closeForm();toast(uiText('Saved'));
     });
   }catch(e){toast('Error: '+e.message,'error');}
@@ -8866,10 +8963,11 @@ window.dashFiles=id=>{
   document.querySelector('.dash-ctx')?.remove();
   const t=dashTiles.find(x=>x.id===id);
   openModal({id:'files',name:'Files',icon:'🗂️',color:'#22d3ee',desc:'Explorer'});
-  currentPath=t?.type==='compose'?'/opt/runvard/data/compose/'+dashComposeProject(t):'/opt/runvard/data/apps/'+id;
+  currentPath=t?.type==='compose'?runvardDataPath('compose',dashComposeProject(t)):runvardDataPath('apps',id);
   renderFiles($('#modal-body'));
 };
 window.dashToggleUrl=async(id,show)=>{
+  if(!dashRequireAdmin())return;
   document.querySelector('.dash-ctx')?.remove();
   await post('/dashboard/toggle-url',{tile_id:id,show});
   const t=dashTiles.find(x=>x.id===id);
@@ -8877,6 +8975,7 @@ window.dashToggleUrl=async(id,show)=>{
   renderDashboard();
 };
 window.dashEditHost=id=>{
+  if(!dashRequireAdmin())return;
   document.querySelector('.dash-ctx')?.remove();
   const t=dashTiles.find(x=>x.id===id);
   if(!t)return;
@@ -8888,6 +8987,7 @@ window.dashEditHost=id=>{
   });
 };
 window.dashRemove=(id,name)=>{
+  if(!dashRequireAdmin())return;
   document.querySelector('.dash-ctx')?.remove();
   confirmDelete('Remove from dashboard',`Remove "${name}" from the dashboard? The project will not be deleted.`,async()=>{
     await post('/dashboard/remove',{tile_id:id});
@@ -8896,6 +8996,7 @@ window.dashRemove=(id,name)=>{
   });
 };
 window.dashEditCustom=id=>{
+  if(!dashRequireAdmin())return;
   document.querySelector('.dash-ctx')?.remove();
   const t=dashTiles.find(x=>x.id===id);
   if(!t)return;
@@ -8911,6 +9012,7 @@ window.dashEditCustom=id=>{
 
 // Custom-Link hinzufügen
 window.dashAddForm=()=>{
+  if(!dashRequireAdmin())return;
   openForm('Add tile','+',[
     {name:'name',label:'Name',placeholder:'Home Assistant'},
     {name:'url',label:'URL',placeholder:'http://192.168.1.50:8123'},
@@ -8925,6 +9027,7 @@ window.dashAddForm=()=>{
 
 // Auto-Add nach App-Installation
 window.dashAutoAdd=async(appId,appName,appIcon,port)=>{
+  if(!isAdmin())return;
   try{await post('/dashboard/add',{tile_type:'app',tile_id:appId,name:appName,icon:appIcon,port:port||0});}catch(e){}
   loadDashboard();
 };
@@ -9115,6 +9218,7 @@ async function renderSwapSimple(body){
 async function renderLvmSimple(body){
   const d=await api('/storage/lvm');
   if(!d.available){body.innerHTML=viewIntro('Storage pools','LVM is not installed on this server.','')+emptyState('LVM is unavailable');return;}
+  if(d.ok===false){body.innerHTML=viewIntro('Storage pools','LVM groups disks into pools, then creates volumes from those pools.','')+emptyState(d.error||'LVM query failed');return;}
   body.innerHTML=viewIntro('Storage pools','LVM groups disks into pools, then creates volumes from those pools.',`<button class="btn" onclick="vgForm()">Create pool</button>`)
     +`<div class="nx-card-grid">${(d.vgs||[]).map(v=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(v.vg_name)}</div>${statusBadge('Pool','good')}</div><div class="nx-kv">${cardMetric('Size',esc(v.vg_size))}${cardMetric('Free',esc(v.vg_free))}${cardMetric('Disks',esc(v.pv_count))}${cardMetric('Volumes',esc(v.lv_count))}</div><button class="btn sm" onclick="lvForm('${esc(v.vg_name)}')">Create volume</button></div>`).join('')||emptyState('No storage pools yet')}</div>`
     +advancedDetails('Volumes and physical disks',simpleTable(['Volume','Pool','Size','Path',''],(d.lvs||[]).map(l=>`<tr><td>${esc(l.lv_name)}</td><td>${esc(l.vg_name)}</td><td>${esc(l.lv_size)}</td><td class="mono">${esc(l.lv_path)}</td><td><button class="btn danger sm" onclick="lvRemove('${esc(l.lv_path)}')">Delete</button></td></tr>`).join('')),false);
@@ -9136,6 +9240,7 @@ async function renderZfsBtrfsSimple(body){
 async function renderIscsiSimple(body){
   const d=await api('/storage/iscsi');
   if(!d.available){body.innerHTML=viewIntro('Remote disks','iSCSI tools are not installed on this server.','')+emptyState('iSCSI is unavailable');return;}
+  if(d.ok===false){body.innerHTML=viewIntro('Remote disks','Connect storage from another server. After login, the remote disk appears like a local disk.','')+emptyState(d.stderr||'iSCSI query failed');return;}
   body.innerHTML=viewIntro('Remote disks','Connect storage from another server. After login, the remote disk appears like a local disk.',`<button class="btn" onclick="iscsiDiscoverForm()">Find target</button>`)
     +`<div class="nx-card-grid">${(d.sessions||[]).map(s=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(s.portal)}</div>${statusBadge('Connected','good')}</div><div class="nx-action-sub mono">${esc(s.target)}</div><button class="btn ghost sm" onclick="iscsiLogout('${esc(s.portal)}','${esc(s.target)}')">Disconnect</button></div>`).join('')||emptyState('No remote disks connected')}</div>`;
 }
@@ -9143,18 +9248,20 @@ window.diskWizard=dev=>typedConfirm('Erase and set up disk',`This will create a 
   {name:'fstype',label:'Filesystem',type:'select',options:['ext4','xfs','btrfs']},
   {name:'mountpoint',label:'Mount point',value:defaultMountPoint(dev)},
   {name:'persist',label:'Mount automatically after reboot',type:'checkbox',value:true},
-],async d=>{closeForm();toast('Setting up disk…');try{const mountpoint=normalizeMountPoint(d.mountpoint,dev);requireOk(await post('/storage/partition-table',{device:dev,label:'gpt'}),'Could not create partition table');const part=requireOk(await post('/storage/partition',{device:dev}),'Could not create partition');const partition=part.partition||partitionName(dev);requireOk(await post('/storage/format',{partition,fstype:d.fstype}),'Could not format partition');requireOk(await post('/storage/mount',{partition,mountpoint,persist:d.persist}),'Could not mount partition');toast('Disk ready');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}}));
+],async d=>{closeForm();toast('Setting up disk…');try{const mountpoint=normalizeMountPoint(d.mountpoint,dev);requireOk(await confirmedPost('/storage/partition-table',{device:dev,label:'gpt'},'storage-partition-table',dev),'Could not create partition table');const part=requireOk(await confirmedPost('/storage/partition',{device:dev},'storage-partition',dev),'Could not create partition');const partition=part.partition||partitionName(dev);requireOk(await confirmedPost('/storage/format',{partition,fstype:d.fstype},'storage-format',partition),'Could not format partition');requireOk(await confirmedPost('/storage/mount',{partition,mountpoint,persist:d.persist},'storage-mount',partition),'Could not mount partition');toast('Disk ready');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}}));
 window.mountVolumeForm=dev=>openForm('Mount volume: '+dev,'💿',[
   {name:'mountpoint',label:'Mount point',value:defaultMountPoint(dev)},
   {name:'persist',label:'Mount automatically after reboot',type:'checkbox',value:true},
-],async d=>{closeForm();toast('Mounting volume…');try{const mountpoint=normalizeMountPoint(d.mountpoint,dev);requireOk(await post('/storage/mount',{partition:dev,mountpoint,persist:d.persist}),'Could not mount volume');toast('Volume mounted');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}});
-window.zpoolDestroy=name=>typedConfirm('Destroy ZFS pool',`Pool "${name}" and its data will be removed permanently.`,name,async()=>{try{const r=await post('/storage/zfs/destroy',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool destroyed');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
-window.lvRemove=lvpath=>typedConfirm('Delete logical volume',`Logical volume "${lvpath}" will be deleted permanently.`,lvpath,async()=>{try{const r=await post('/storage/lvm/lv-remove',{lv_path:lvpath});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Volume deleted');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();toast('Mounting volume…');try{const mountpoint=normalizeMountPoint(d.mountpoint,dev);requireOk(await confirmedPost('/storage/mount',{partition:dev,mountpoint,persist:d.persist},'storage-mount',dev),'Could not mount volume');toast('Volume mounted');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}});
+window.zpoolDestroy=name=>typedConfirm('Destroy ZFS pool',`Pool "${name}" and its data will be removed permanently.`,name,async()=>{try{const r=await confirmedPost('/storage/zfs/destroy',{name},'storage-zfs-destroy',name);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool destroyed');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
+window.lvRemove=lvpath=>typedConfirm('Delete logical volume',`Logical volume "${lvpath}" will be deleted permanently.`,lvpath,async()=>{try{const r=await confirmedPost('/storage/lvm/lv-remove',{lv_path:lvpath},'storage-lv-remove',lvpath);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Volume deleted');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
 
 async function renderDocker(body,tab){
   const av=await api('/docker/available');if(!av.available){body.innerHTML=viewIntro('Containers','Docker is not available on this server.','')+emptyState('Docker unavailable');return;}
   if(tab==='Container'||!tab){
-    const c=await api('/docker/containers');
+    const data=await api('/docker/containers');
+    const c=Array.isArray(data)?data:(data.containers||[]);
+    if(data&&data.ok===false){body.innerHTML=viewIntro('Containers','Start, stop and inspect services running in Docker. Advanced image and volume tools are in the other tabs.','')+emptyState(data.stderr||'Docker query failed');return;}
     body.innerHTML=viewIntro('Container services','Start, stop and inspect services running in Docker. Advanced image and volume tools are in the other tabs.',`<button class="btn" onclick="dockerCreateForm()">Create container</button>`)
       +`<div class="nx-summary-grid">${summaryCard('Containers',c.length,'Total')}${summaryCard('Running',c.filter(x=>x.state==='running').length,'Active now')}</div>
       <div class="nx-card-grid">${c.map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${statusBadge(x.state,x.state==='running'?'good':'warn')}</div><div class="nx-action-sub mono">${esc(x.image)}</div><div class="nx-chip-list">${(x.ports||[]).slice(0,3).map(p=>`<span class="nx-chip">${esc(p)}</span>`).join('')||'<span class="nx-chip">No public ports</span>'}</div><div class="nx-action-row" style="margin-top:12px"><button class="btn sm ${x.state==='running'?'ghost':'play'}" onclick="dockerAct('${x.id}','${x.state==='running'?'restart':'start'}')">${x.state==='running'?'Restart':'Start'}</button><button class="btn ghost sm" onclick="dockerLogs('${x.id}','${esc(x.name)}')">Logs</button><button class="btn ghost sm" onclick="dockerStats('${x.id}','${esc(x.name)}')">Stats</button><button class="btn danger sm" onclick="dockerDel('${x.id}','${esc(x.name)}')">Delete</button></div></div>`).join('')||emptyState('No containers')}</div>`;
@@ -9170,21 +9277,27 @@ async function renderDockerAdvanced(body,tab){
     body.innerHTML=viewIntro('Compose projects','Advanced multi-container projects. Editing Compose files can break services.',`<button class="btn" onclick="composeForm()">Create project</button>`)
       +simpleTable(['Project','Status','Actions'],p.map(x=>`<tr><td>${esc(x.name)}</td><td>${statusBadge(x.running?'Running':'Stopped',x.running?'good':'warn')}</td><td><button class="btn sm" onclick="composeAct('${esc(x.name)}','up')">Start</button> <button class="btn ghost sm" onclick="composeAct('${esc(x.name)}','down')">Stop</button> <button class="btn ghost sm" onclick="composeEdit('${esc(x.name)}')">Edit</button> <button class="btn ghost sm" onclick="composeAddToDashboard('${esc(x.name)}',${Number(x.port||0)})">Dashboard</button> <button class="btn danger sm" onclick="composeDelete('${esc(x.name)}')">Delete</button></td></tr>`).join(''));
   } else if(oldTab==='Images'){
-    const im=await api('/docker/images');
+    const data=await api('/docker/images');
+    const im=Array.isArray(data)?data:(data.images||[]);
+    if(data&&data.ok===false){body.innerHTML=viewIntro('Images','Images are templates used to create containers.','')+emptyState(data.stderr||'Docker image query failed');return;}
     body.innerHTML=viewIntro('Images','Images are templates used to create containers.',`<button class="btn" onclick="pullForm()">Pull image</button>`)
       +simpleTable(['Tags','Size',''],im.map(x=>`<tr><td class="mono">${esc(x.tags.join(', ')||x.id.slice(0,12))}</td><td>${fmtBytes(x.size)}</td><td><button class="btn danger sm" onclick="imageDel('${x.id}','${esc(x.tags[0]||x.id)}')">Delete</button></td></tr>`).join(''));
   } else {
-    const v=await api('/docker/volumes');
+    const data=await api('/docker/volumes');
+    const v=Array.isArray(data)?data:(data.volumes||[]);
+    if(data&&data.ok===false){body.innerHTML=viewIntro('Volumes','Volumes hold persistent container data. Delete only when you know the data is no longer needed.','')+emptyState(data.stderr||'Docker volume query failed');return;}
     body.innerHTML=viewIntro('Volumes','Volumes hold persistent container data. Delete only when you know the data is no longer needed.','')
       +simpleTable(['Name','Driver','Mount point',''],v.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.driver)}</td><td class="mono">${esc(x.mountpoint)}</td><td><button class="btn danger sm" onclick="volumeDel('${esc(x.name)}')">Delete</button></td></tr>`).join(''));
   }
 }
-window.volumeDel=name=>typedConfirm('Delete Docker volume',`Volume "${name}" and all data inside it will be removed.`,name,async()=>{try{await post('/docker/volumes/remove',{name});toast('Volume deleted');renderDocker($('#modal-body'),'Volumes');}catch(e){toast('Error: '+e.message,'error');}});
+window.volumeDel=name=>typedConfirm('Delete Docker volume',`Volume "${name}" and all data inside it will be removed.`,name,async()=>{try{await confirmedPost('/docker/volumes/remove',{name},'docker-volume-remove',name);toast('Volume deleted');renderDocker($('#modal-body'),'Volumes');}catch(e){toast('Error: '+e.message,'error');}});
 
 async function renderVMs(body,tab){
   const av=await api('/vms/available');if(!av.available){body.innerHTML=viewIntro('Virtual machines','Virtualization is not available on this server.','')+emptyState('VM support unavailable');return;}
   if(tab==='Speicher-Pools'||tab==='Storage pools')return renderVmPoolsSimple(body);
-  const v=await api('/vms/list');
+  const data=await api('/vms/list');
+  const v=Array.isArray(data)?data:(data.vms||[]);
+  if(data&&data.ok===false){body.innerHTML=viewIntro('Virtual machines','Create and run complete guest systems. Advanced hardware and snapshots are inside Manage.','')+emptyState(data.stderr||'VM query failed');return;}
   body.innerHTML=viewIntro('Virtual machines','Create and run complete guest systems. Advanced hardware and snapshots are inside Manage.',`<button class="btn" onclick="vmCreateForm()">Create VM</button>`)
     +`<div class="nx-card-grid">${v.map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${statusBadge(x.state,x.active?'good':'warn')}</div><div class="nx-kv">${cardMetric('RAM',fmtBytes(x.max_mem))}${cardMetric('CPU',x.vcpus)}${cardMetric('Console',x.active?'Available':'Start first')}${cardMetric('State',esc(x.state))}</div><div class="nx-action-row"><button class="btn sm" onclick="vmAct('${esc(x.name)}','${x.active?'reboot':'start'}')">${x.active?'Restart':'Start'}</button><button class="btn ghost sm" onclick="vmManage('${esc(x.name)}')">Manage</button><button class="btn danger sm" onclick="vmDeleteConfirm('${esc(x.name)}')">Delete</button></div></div>`).join('')||emptyState('No virtual machines')}</div>`;
 }
@@ -9194,7 +9307,7 @@ async function renderVmPoolsSimple(body){
     +`<div class="nx-card-grid">${(d.pools||[]).map(p=>{const pct=p.capacity?Math.round(p.allocation/p.capacity*100):0;return `<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(p.name)}</div>${statusBadge(p.state,p.state==='active'?'good':'warn')}</div>${usageBar(pct)}<div class="nx-kv">${cardMetric('Used',fmtBytes(p.allocation))}${cardMetric('Size',fmtBytes(p.capacity))}</div><button class="btn ghost sm" onclick="vmPoolVols('${esc(p.name)}')">Volumes</button></div>`}).join('')||emptyState('No VM storage pools')}</div>`;
 }
 window.vmManage=name=>{const body=$('#modal-body');body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">Back</button><span>${esc(name)}</span></div><div class="nx-card-grid"><div class="nx-action-card"><div class="nx-action-title">Console</div><p class="nx-action-sub">Open the VM screen.</p><button class="btn sm" onclick="vmConsole('${esc(name)}')">Open console</button></div><div class="nx-action-card"><div class="nx-action-title">Hardware</div><p class="nx-action-sub">Attach disks or network cards.</p><button class="btn sm" onclick="vmHardware('${esc(name)}')">Manage hardware</button></div><div class="nx-action-card"><div class="nx-action-title">Snapshots</div><p class="nx-action-sub">Save or restore a VM state.</p><button class="btn sm" onclick="vmSnaps('${esc(name)}')">Open snapshots</button></div><div class="nx-action-card"><div class="nx-action-title">Advanced</div><p class="nx-action-sub">Clone the VM or change the CD-ROM.</p><button class="btn ghost sm" onclick="vmClone('${esc(name)}')">Clone</button> <button class="btn ghost sm" onclick="vmCdromForm('${esc(name)}')">CD-ROM</button></div></div>`;translateRenderedText(body);};
-window.vmDeleteConfirm=name=>typedConfirm('Delete virtual machine',`VM "${name}" and its disk will be removed permanently.`,name,async()=>{try{await post('/vms/action',{name,action:'delete'});toast('VM deleted');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+window.vmDeleteConfirm=name=>typedConfirm('Delete virtual machine',`VM "${name}" and its disk will be removed permanently.`,name,async()=>{try{await confirmedPost('/vms/action',{name,action:'delete'},'vm-delete',name);toast('VM deleted');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
 
 let _appInstallDraft=null;
 function appInstallSlug(value,fallback){
@@ -9211,7 +9324,7 @@ function appInstallIsManagedSource(source){
 }
 function appInstallMountRoot(mountpoint,appId){
   const mp=String(mountpoint||'/').replace(/\/+$/,'')||'/';
-  if(mp==='/')return `/opt/runvard/data/apps/${appId}`;
+  if(mp==='/')return runvardDataPath('apps',appId);
   return `${mp}/runvard/apps/${appId}`;
 }
 function appInstallJoin(root,folder){
@@ -9421,7 +9534,7 @@ async function appInstallStart(draft){
   indicator.innerHTML=`<span class="install-dot"></span><span class="install-label">${esc(draft.app.name)}</span><span class="install-bar-wrap"><span class="install-bar-fill" id="inst-bar-${esc(draft.app.id)}"></span></span><span class="install-pct" id="inst-step-${esc(draft.app.id)}">…</span>`;
   if(host)host.insertBefore(indicator,host.firstChild);
   try{
-    const r=await post('/apps/install',{app_id:draft.app.id,content});
+    const r=await confirmedPost('/apps/install',{app_id:draft.app.id,content},'apps-install',draft.app.id);
     if(!r.job_id){indicator.remove();toast(appUi('installDidNotStart'),'error');return;}
     _activeInstalls++;updateAppsBadge();
     let progress=8;
@@ -9494,9 +9607,9 @@ window.appInstallForm=async id=>{
     requestAnimationFrame(()=>$('#app-compose-service')?.focus());
   }catch(e){toast('Error: '+e.message,'error');}
 };
-window.appUninstall=(id,name)=>typedConfirm('Uninstall app',`"${name}" will be stopped and removed. Data in /opt/runvard/data/apps/${id}/ stays on disk.`,name,async()=>{
+window.appUninstall=(id,name)=>typedConfirm('Uninstall app',`"${name}" will be stopped and removed. Data in ${runvardDataPath('apps',id)}/ stays on disk.`,name,async()=>{
   toast(uiText('Uninstalling…'));
-  try{await post('/apps/action',{app_id:id,action:'down'});toast(name+' uninstalled');renderApps($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}
+  try{await confirmedPost('/apps/action',{app_id:id,action:'down'},'apps-action:down',id);toast(name+' uninstalled');renderApps($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}
 });
 function appCardHtml(a){
   const tint=appTint(a.category);
@@ -9571,11 +9684,11 @@ async function renderNetwork(body,tab){
       +simpleTable(['No.','To','Action','From',''],(f.rules||[]).map(r=>`<tr><td>${r.num}</td><td class="mono">${esc(r.to)}</td><td>${statusBadge(esc(r.action),/ALLOW/i.test(r.action)?'good':'bad')}</td><td>${esc(r.from)}</td><td><button class="btn danger sm" onclick="fwDelete(${r.num})">Delete</button></td></tr>`).join(''));
     return;
   }
-  const ifs=await api('/network/interfaces');
+  let ifs=[];try{ifs=normalizeNetworkInterfaces(await api('/network/interfaces'));}catch(e){body.innerHTML=tabs+viewIntro('Network interfaces','Most servers only need one connected interface with an IP address. Advanced networking is below.','')+emptyState(e.message);return;}
   body.innerHTML=tabs+viewIntro('Network interfaces','Most servers only need one connected interface with an IP address. Advanced networking is below.',`<button class="btn ghost" onclick="bondForm()">Bond</button><button class="btn ghost" onclick="bridgeForm()">Advanced: bridge</button><button class="btn ghost" onclick="vlanForm()">VLAN</button>`)
     +`<div class="nx-card-grid">${ifs.map(i=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(i.name)}</div>${statusBadge(i.up?'Connected':'Down',i.up?'good':'bad')}</div><div class="nx-kv">${cardMetric('IP',esc(i.ipv4||'No IP'))}${cardMetric('Speed',i.speed?i.speed+' Mbit':'Unknown')}${cardMetric('MAC',esc(i.mac||'-'))}${cardMetric('Type',i.is_bond?'Bond':'Interface')}</div><button class="btn ghost sm" onclick="ipConfigForm('${esc(i.name)}','${i.ipv4||''}')">Configure IP</button></div>`).join('')}</div>`;
 }
-window.fwDelete=num=>typedConfirm('Delete firewall rule',`Firewall rule ${num} will be removed.`,String(num),async()=>{try{await post('/network/firewall/remove',{num});toast('Rule removed');renderNetwork($('#modal-body'),'Firewall');}catch(e){toast('Error: '+e.message,'error');}});
+window.fwDelete=num=>typedConfirm('Delete firewall rule',`Firewall rule ${num} will be removed.`,String(num),async()=>{try{await confirmedPost('/network/firewall/remove',{num},'network-firewall-remove',String(num));toast('Rule removed');renderNetwork($('#modal-body'),'Firewall');}catch(e){toast('Error: '+e.message,'error');}});
 
 async function renderSecurity(body,tab){
   if(tab==='Gruppen'){
@@ -9584,12 +9697,15 @@ async function renderSecurity(body,tab){
     body.innerHTML=viewIntro('Groups','Groups control access for multiple users.','')+simpleTable(['Group','GID','Members',''],g.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.gid}</td><td>${esc((x.members||[]).join(', ')||'-')}</td><td><button class="btn ghost sm" onclick="addMemberForm('${esc(x.name)}','${userNames}')">Add member</button></td></tr>`).join(''));return;
   }
   if(tab==='SSL'){
-    const c=await api('/security/certs');
+    const certData=normalizeCertificates(await api('/security/certs'));
+    const c=certData.certificates;
     body.innerHTML=viewIntro('Certificates','Create local certificates for services that need HTTPS.',`<button class="btn" onclick="certForm()">Create certificate</button>`)
-      +advancedDetails('Certificate details',c.map(x=>`<pre class="logbox">${esc(x.file)}\n${esc(x.info)}</pre>`).join('')||emptyState('No certificates'),true);return;
+      +(certData.error?emptyState(certData.error):'')
+      +advancedDetails('Certificate details',c.map(x=>`<pre class="logbox">${esc(x.file)}\n${esc(x.info||x.error||'')}</pre>`).join('')||emptyState('No certificates'),true);return;
   }
-  const u=await api('/security/users');let smbSet=new Set();try{const smb=await api('/security/smb-users');smbSet=new Set(smb.users||[]);}catch(e){}
+  const u=await api('/security/users');let smbSet=new Set();let smbError='';try{smbSet=new Set(normalizeSmbUsers(await api('/security/smb-users')));}catch(e){smbError=e.message;}
   body.innerHTML=viewIntro('Users','Manage Linux users, passwords, file sharing access and admin rights.',`<button class="btn" onclick="userForm()">Create user</button>`)
+    +(smbError?emptyState(smbError):'')
     +`<div class="nx-card-grid">${u.map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${statusBadge(x.uid<1000?'System':'User',x.uid<1000?'warn':'good')}</div><div class="nx-kv">${cardMetric('Home',esc(x.home))}${cardMetric('Groups',esc((x.groups||[]).slice(0,3).join(', ')||'-'))}${cardMetric('Samba',smbSet.has(x.name)?'Enabled':'Off')}${cardMetric('UID',x.uid)}</div><div class="nx-action-row"><button class="btn ghost sm" onclick="passForm('${esc(x.name)}')">Password</button><button class="btn ghost sm" onclick="smbPassForm('${esc(x.name)}')">File sharing</button><button class="btn ghost sm" onclick="userSecForm('${esc(x.name)}')">Admin rights</button><button class="btn ghost sm" onclick="sshKeysForm('${esc(x.name)}')">SSH keys</button></div></div>`).join('')}</div>`;
 }
 
@@ -9631,7 +9747,9 @@ async function renderSystem(body,tab){
   return renderSystemOriginalFallback(body,tab);
 }
 async function renderServicesSimple(body){
-  const s=await api('/services/list');
+  const data=await api('/services/list');
+  const s=Array.isArray(data)?data:(data.services||[]);
+  if(data&&data.ok===false){body.innerHTML=viewIntro('Services','Start, stop or inspect system services. Changing core services can disconnect runvard.', '')+`<div class="empty-state">${esc(data.stderr||'systemctl failed')}</div>`;return;}
   body.innerHTML=viewIntro('Services','Start, stop or inspect system services. Changing core services can disconnect runvard.', '')
     +`<div class="nx-card-grid">${s.slice(0,80).map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="service-title mono">${esc(x.name)}</div>${statusBadge(x.active,x.active==='active'?'good':'warn')}</div><div class="nx-action-row"><button class="btn ghost sm" onclick="svcAct('${esc(x.name)}','${x.active==='active'?'restart':'start'}')">${x.active==='active'?'Restart':'Start'}</button><button class="btn ghost sm" onclick="svcLogs('${esc(x.name)}')">Logs</button></div></div>`).join('')}</div>`;
 }
@@ -9676,13 +9794,14 @@ const renderSystemOriginalFallback=async(body,tab)=>{
 };
 function renderDashboard(){
   const grid=$('#dash-grid');const section=$('#dash-section');if(!grid||!section)return;
+  syncAdminUi();
   section.style.display='block';
   if(!dashTiles.length){grid.innerHTML=`<div class="nx-view-intro" style="grid-column:1/-1"><div><h3>Ready for apps</h3><p>Install apps or add custom shortcuts.</p></div><button class="btn" onclick="openTileById('apps')">Open apps</button></div>`;return;}
   grid.innerHTML=dashTiles.map(t=>{
     const isService=t.type==='app'||t.type==='compose';const statusCls=isService?(t.running?'run':'stop'):'ext';const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
     return `<div class="dash-tile" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')"><div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${statusCls}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div></div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
   }).join('');
-  if(typeof Sortable!=='undefined'){Sortable.create(grid,{animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:()=>{const order=[...grid.querySelectorAll('.dash-tile')].map(el=>el.dataset.id);post('/dashboard/order',{order:JSON.stringify(order)});}});}
+  if(isAdmin()&&typeof Sortable!=='undefined'){Sortable.create(grid,{animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:()=>{const order=[...grid.querySelectorAll('.dash-tile')].map(el=>el.dataset.id);post('/dashboard/order',{order:JSON.stringify(order)});}});}
 }
 
 // ═══ Lösch-X für Suchleisten (generisch, auch für dynamisch gerenderte Felder) ═══

@@ -2,9 +2,17 @@
 import time
 import socket
 import platform
+from types import SimpleNamespace
 import psutil
 
 _last_net = {"time": None, "sent": 0, "recv": 0}
+
+
+def _safe_psutil(call, fallback):
+    try:
+        return call()
+    except (PermissionError, OSError, psutil.Error):
+        return fallback
 
 
 def get_stats():
@@ -12,10 +20,17 @@ def get_stats():
     cpu_percent = psutil.cpu_percent(interval=None)
     per_cpu = psutil.cpu_percent(interval=None, percpu=True)
     mem = psutil.virtual_memory()
-    swap = psutil.swap_memory()
+    swap = _safe_psutil(
+        psutil.swap_memory,
+        SimpleNamespace(total=0, used=0, percent=0),
+    )
+    freq = _safe_psutil(psutil.cpu_freq, None)
 
     # Netzwerk-Durchsatz berechnen
-    net = psutil.net_io_counters()
+    net = _safe_psutil(
+        psutil.net_io_counters,
+        SimpleNamespace(bytes_sent=0, bytes_recv=0),
+    )
     now = time.time()
     up_rate = down_rate = 0.0
     if _last_net["time"] is not None:
@@ -30,7 +45,7 @@ def get_stats():
             "percent": round(cpu_percent, 1),
             "per_core": [round(c, 1) for c in per_cpu],
             "cores": psutil.cpu_count(logical=True),
-            "freq": round(psutil.cpu_freq().current) if psutil.cpu_freq() else None,
+            "freq": round(freq.current) if freq else None,
         },
         "memory": {
             "total": mem.total,
@@ -72,7 +87,7 @@ def get_disk_usage():
 def get_system_info():
     """Statische System-Infos."""
     uname = platform.uname()
-    boot = psutil.boot_time()
+    boot = _safe_psutil(psutil.boot_time, time.time())
     return {
         "hostname": socket.gethostname(),
         "os": f"{uname.system} {uname.release}",
@@ -113,31 +128,40 @@ def get_temps():
 
 def get_processes(sort_by="cpu", limit=15):
     """Top-Prozesse sortiert nach CPU oder RAM."""
+    sort_by = sort_by if sort_by in ("cpu", "ram") else "cpu"
+    try:
+        limit = int(limit)
+    except (TypeError, ValueError):
+        limit = 15
+    limit = max(1, min(limit, 100))
     procs = []
-    for p in psutil.process_iter(["pid", "name", "cpu_percent",
-                                   "memory_info", "status", "username"]):
-        try:
-            info = p.info
-            procs.append({
-                "pid": info["pid"],
-                "name": info["name"],
-                "cpu": round(info["cpu_percent"] or 0, 1),
-                "ram": info["memory_info"].rss if info["memory_info"] else 0,
-                "status": info["status"],
-                "user": info["username"] or "",
-            })
-        except (psutil.NoSuchProcess, psutil.AccessDenied):
-            continue
-    key = "cpu" if sort_by == "cpu" else "ram"
-    procs.sort(key=lambda x: x[key], reverse=True)
-    return procs[:limit]
+    try:
+        iterator = psutil.process_iter(["pid", "name", "cpu_percent",
+                                        "memory_info", "status", "username"])
+        for p in iterator:
+            try:
+                info = p.info
+                procs.append({
+                    "pid": info["pid"],
+                    "name": info["name"],
+                    "cpu": round(info["cpu_percent"] or 0, 1),
+                    "ram": info["memory_info"].rss if info["memory_info"] else 0,
+                    "status": info["status"],
+                    "user": info["username"] or "",
+                })
+            except (psutil.NoSuchProcess, psutil.AccessDenied):
+                continue
+    except (PermissionError, psutil.Error, OSError) as exc:
+        return {"ok": False, "processes": [], "stderr": str(exc)}
+    procs.sort(key=lambda x: x[sort_by], reverse=True)
+    return {"ok": True, "processes": procs[:limit]}
 
 
 def get_disk_io():
     """Disk-IO-Statistiken pro Device."""
     try:
         counters = psutil.disk_io_counters(perdisk=True)
-        return {
+        return {"ok": True, "disk_io": {
             dev: {
                 "read_bytes": c.read_bytes,
                 "write_bytes": c.write_bytes,
@@ -145,35 +169,41 @@ def get_disk_io():
                 "write_count": c.write_count,
             }
             for dev, c in counters.items()
-        }
-    except (AttributeError, OSError):
-        return {}
+        }}
+    except (AttributeError, OSError, psutil.Error) as exc:
+        return {"ok": False, "disk_io": {}, "stderr": str(exc)}
 
 
 def get_net_detail():
     """Detaillierte Netzwerk-Statistiken pro Interface."""
-    addrs = psutil.net_if_addrs()
-    stats = psutil.net_if_stats()
-    counters = psutil.net_io_counters(pernic=True)
+    try:
+        addrs = psutil.net_if_addrs()
+        stats = psutil.net_if_stats()
+        counters = psutil.net_io_counters(pernic=True)
+    except (AttributeError, OSError, psutil.Error) as exc:
+        return {"ok": False, "interfaces": [], "stderr": str(exc)}
     result = []
-    for name in stats:
-        if name == "lo":
-            continue
-        st = stats[name]
-        ctr = counters.get(name)
-        ipv4 = next((a.address for a in addrs.get(name, [])
-                     if a.family.name == "AF_INET"), None)
-        result.append({
-            "name": name,
-            "ipv4": ipv4,
-            "up": st.isup,
-            "speed": st.speed,
-            "mtu": st.mtu,
-            "bytes_sent": ctr.bytes_sent if ctr else 0,
-            "bytes_recv": ctr.bytes_recv if ctr else 0,
-            "packets_sent": ctr.packets_sent if ctr else 0,
-            "packets_recv": ctr.packets_recv if ctr else 0,
-            "errin": ctr.errin if ctr else 0,
-            "errout": ctr.errout if ctr else 0,
-        })
-    return result
+    try:
+        for name in stats:
+            if name == "lo":
+                continue
+            st = stats[name]
+            ctr = counters.get(name)
+            ipv4 = next((a.address for a in addrs.get(name, [])
+                         if a.family == socket.AF_INET), None)
+            result.append({
+                "name": name,
+                "ipv4": ipv4,
+                "up": st.isup,
+                "speed": st.speed,
+                "mtu": st.mtu,
+                "bytes_sent": ctr.bytes_sent if ctr else 0,
+                "bytes_recv": ctr.bytes_recv if ctr else 0,
+                "packets_sent": ctr.packets_sent if ctr else 0,
+                "packets_recv": ctr.packets_recv if ctr else 0,
+                "errin": ctr.errin if ctr else 0,
+                "errout": ctr.errout if ctr else 0,
+            })
+    except Exception as exc:
+        return {"ok": False, "interfaces": [], "stderr": str(exc)}
+    return {"ok": True, "interfaces": result}

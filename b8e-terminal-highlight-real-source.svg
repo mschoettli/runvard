@@ -1,0 +1,101 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1050" viewBox="0 0 1500 1050" xmlns:xlink="http://www.w3.org/1999/xlink">
+  <defs>
+    <style>
+      .page { fill: #f6f8fa; }
+      .card { fill: #ffffff; stroke: #d9e1e7; stroke-width: 2; }
+      .label { fill: #07131d; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 34px; font-weight: 850; }
+      .note { fill: #35424d; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; font-size: 20px; font-weight: 650; }
+      .cyan { fill: #13d6d2; }
+      .green { fill: #32e26f; }
+      .teal { fill: #0fb0a7; }
+      .blue { fill: #4aa8ff; }
+      .white { fill: #ffffff; }
+      .muted { fill: #7fc4c2; }
+    </style>
+  </defs>
+
+  <rect class="page" width="1500" height="1050"/>
+  <text class="label" x="48" y="62">B8-E echte Form, nur Terminal-Farbe variiert</text>
+
+  <g id="b8e-crop">
+    <svg width="320" height="320" viewBox="418 418 418 418">
+      <image href="b8-options-source.png" x="0" y="0" width="1254" height="1254"/>
+    </svg>
+  </g>
+
+  <g id="angle-small">
+    <path d="M0 0l24 24-24 24h-17l23-24-23-24z"/>
+  </g>
+  <g id="angle-soft">
+    <path d="M0 0h30l-28 48h-30z"/>
+  </g>
+  <g id="cursor">
+    <rect width="46" height="9" rx="2"/>
+  </g>
+
+  <g transform="translate(40 100)">
+    <rect class="card" width="440" height="410" rx="10"/>
+    <text class="label" x="24" y="44">H1</text>
+    <g transform="translate(60 58)">
+      <use href="#b8e-crop"/>
+      <use href="#angle-soft" class="cyan" transform="translate(226 240)"/>
+      <use href="#cursor" class="cyan" transform="translate(256 283)"/>
+    </g>
+    <text class="note" x="24" y="382">beide cyan, sehr technisch</text>
+  </g>
+
+  <g transform="translate(530 100)">
+    <rect class="card" width="440" height="410" rx="10"/>
+    <text class="label" x="24" y="44">H2</text>
+    <g transform="translate(60 58)">
+      <use href="#b8e-crop"/>
+      <use href="#angle-soft" class="cyan" transform="translate(226 240)"/>
+      <use href="#cursor" class="green" transform="translate(256 283)"/>
+    </g>
+    <text class="note" x="24" y="382">&gt; cyan, _ gruen</text>
+  </g>
+
+  <g transform="translate(1020 100)">
+    <rect class="card" width="440" height="410" rx="10"/>
+    <text class="label" x="24" y="44">H3</text>
+    <g transform="translate(60 58)">
+      <use href="#b8e-crop"/>
+      <use href="#angle-soft" class="teal" transform="translate(226 240)"/>
+      <use href="#cursor" class="white" transform="translate(256 283)"/>
+    </g>
+    <text class="note" x="24" y="382">&gt; teal, _ weiss ruhiger</text>
+  </g>
+
+  <g transform="translate(40 570)">
+    <rect class="card" width="440" height="410" rx="10"/>
+    <text class="label" x="24" y="44">H4</text>
+    <g transform="translate(60 58)">
+      <use href="#b8e-crop"/>
+      <use href="#angle-small" class="cyan" transform="translate(240 238)"/>
+      <use href="#cursor" class="cyan" transform="translate(258 286) scale(.85 1)"/>
+    </g>
+    <text class="note" x="24" y="382">mehr echtes &gt;_ Terminal</text>
+  </g>
+
+  <g transform="translate(530 570)">
+    <rect class="card" width="440" height="410" rx="10"/>
+    <text class="label" x="24" y="44">H5</text>
+    <g transform="translate(60 58)">
+      <use href="#b8e-crop"/>
+      <use href="#angle-soft" class="muted" transform="translate(226 240)"/>
+      <use href="#cursor" class="muted" transform="translate(256 283)"/>
+    </g>
+    <text class="note" x="24" y="382">gedaempft, enterprise-clean</text>
+  </g>
+
+  <g transform="translate(1020 570)">
+    <rect class="card" width="440" height="410" rx="10"/>
+    <text class="label" x="24" y="44">H6</text>
+    <g transform="translate(60 58)">
+      <use href="#b8e-crop"/>
+      <use href="#angle-soft" class="blue" transform="translate(226 240)"/>
+      <use href="#cursor" class="cyan" transform="translate(256 283)"/>
+    </g>
+    <text class="note" x="24" y="382">blau/cyan, weniger gruen</text>
+  </g>
+</svg>
