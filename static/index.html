@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>runvard</title>
+<link rel="icon" type="image/png" href="/static/runvard-icon.png">
+<link rel="apple-touch-icon" href="/static/runvard-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
@@ -52,6 +54,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 .bg-btn-icon{background:transparent;border:none;color:rgba(240,240,255,.35);width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s}
 .bg-btn-icon:hover{background:rgba(122,74,255,.1);color:#9d7aff}
 .logo{font-size:15px;font-weight:700;letter-spacing:.04em;color:#fff;display:flex;align-items:center;gap:10px}
+.brand-icon{width:28px;height:28px;border-radius:8px;display:block;box-shadow:0 8px 22px rgba(0,0,0,.28)}
 .logo span{color:var(--text3);font-weight:400;font-size:13px;margin-left:12px}
 .topright{display:flex;align-items:center;gap:6px;justify-content:flex-end}.topbar-sep{width:1px;height:14px;background:rgba(255,255,255,.08);margin:0 4px}
 .time{font-size:14px;color:var(--text2)}.uptime{font-size:12px;color:var(--text3)}
@@ -551,6 +554,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 
 <div class="topbar">
   <div class="logo">
+    <img class="brand-icon" src="/static/runvard-icon.png" alt="" aria-hidden="true">
     RUNVARD
     <span style="font-size:11px;font-weight:400;color:rgba(240,240,255,.3);letter-spacing:0">·</span>
     <span id="hostname" style="font-size:12px;font-weight:400;color:rgba(240,240,255,.4);letter-spacing:0">…</span>
@@ -5367,7 +5371,20 @@ function openForm(title,icon,fields,onSubmit){
     if(el)el.addEventListener(f.type==='checkbox'?'change':'input',syncFormConditions);
   });
   syncFormConditions();
-  formSubmitFn=()=>{const d={};fields.forEach(f=>{const el=$('#f_'+f.name);if(el)d[f.name]=f.type==='checkbox'?el.checked:el.value;});onSubmit(d);};
+  formSubmitFn=async()=>{
+    const d={};
+    fields.forEach(f=>{const el=$('#f_'+f.name);if(el)d[f.name]=f.type==='checkbox'?el.checked:el.value;});
+    const btn=$('#form-go');
+    if(btn&&btn.disabled)return;
+    if(btn)btn.disabled=true;
+    try{
+      await onSubmit(d);
+    }catch(e){
+      toast('Error: '+(e&&e.message?e.message:e),'error');
+    }finally{
+      if(btn)btn.disabled=false;
+    }
+  };
   $('#form-go').onclick=formSubmitFn;
   $('#form-overlay').classList.add('open');
 }
@@ -7131,7 +7148,7 @@ const composeEnvFields=(data={})=>[
   {name:'env_enabled',label:'Use .env file',type:'checkbox',value:!!data.env_enabled,hint:'Stores a .env file next to docker-compose.yml.'},
   {name:'env_content',label:'.env',type:'textarea',rows:6,value:data.env_content||'',placeholder:'KEY=value\nANOTHER_KEY=value',showWhen:'env_enabled'}
 ];
-window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Project name',placeholder:'meine-app'},{name:'content',label:'docker-compose.yml',type:'textarea',rows:12,value:'services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"'},...composeEnvFields()],async d=>{await confirmedPost('/docker/compose/save',{name:d.name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''},'docker-compose-save',d.name);await composeAddToDashboard(d.name,composeFirstPort(d.content),false);closeForm();toast('Project saved');renderDocker($('#modal-body'),'Compose');});
+window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Project name',placeholder:'meine-app'},{name:'content',label:'docker-compose.yml',type:'textarea',rows:12,value:'services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"'},...composeEnvFields()],async d=>{await confirmedPost('/docker/compose/save',{name:d.name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''},'docker-compose-save',d.name);closeForm();toast('Project saved');try{await composeAddToDashboard(d.name,composeFirstPort(d.content),false);}catch(e){toast('Saved, dashboard tile not added: '+e.message,'error');}renderDocker($('#modal-body'),'Compose');});
 window.composeEdit=async name=>{const c=await api('/docker/compose/get?name='+encodeURIComponent(name));openForm('Compose bearbeiten: '+name,'🐳',[{name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:c.content},...composeEnvFields(c)],async d=>{await confirmedPost('/docker/compose/save',{name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''},'docker-compose-save',name);closeForm();toast('Gespeichert');});};
 window.composeAct=async(name,action)=>{toast(action==='up'?'Starte '+name+'…':'Stoppe '+name+'…');try{const r=await confirmedPost('/docker/compose/action',{name,action},'docker-compose-action:'+action,name);const msgs={up:'Project started: '+name,down:'Project stopped: '+name,restart:'Project restarted: '+name};toast(r.ok?(msgs[action]||'OK'):'Error',r.ok?'success':'error');renderDocker($('#modal-body'),'Compose');}catch(e){toast('Error: '+e.message,'error');}};
 window.composeDelete=name=>typedConfirm('Delete Compose project',`Compose project "${name}" will be stopped and removed.`,name,async()=>{try{const r=await confirmedPost('/docker/compose/remove',{name},'docker-compose-remove',name);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Compose project deleted');renderDocker($('#modal-body'),'Compose');}catch(e){toast('Error: '+e.message,'error');}});
