@@ -7,21 +7,16 @@ import subprocess
 import urllib.error
 import urllib.request
 
-from modules.runtime import data_path
-from modules import validators
-
 
 RUNVARD_REPO_API = "https://api.github.com/repos/mschoettli/runvard/commits/main"
 RUNVARD_REPO_URL = "https://github.com/mschoettli/runvard"
 RUNVARD_INSTALL_URL = "https://raw.githubusercontent.com/mschoettli/runvard/main/install.sh"
-RUNVARD_UPDATE_LOG = data_path("runvard-update.log")
+RUNVARD_UPDATE_LOG = "/opt/runvard/data/runvard-update.log"
 VERSION_FILE = os.environ.get(
     "RUNVARD_VERSION_FILE",
-    data_path("runvard.version"),
+    "/opt/runvard/data/runvard.version",
 )
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-CRON_SCHEDULE_RE = re.compile(r"^(@(reboot|yearly|annually|monthly|weekly|daily|hourly)|(\S+\s+){4}\S+)$")
-HOSTNAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]{0,252}$")
 
 
 def _run(cmd, timeout=60):
@@ -34,40 +29,21 @@ def _run(cmd, timeout=60):
 
 # --- Updates ---
 
-def check_updates(refresh=False):
+def check_updates():
     """Verfügbare apt-Updates zählen."""
-    if refresh:
-        updated = _run(["apt-get", "update", "-qq"])
-        if not updated["ok"]:
-            return {
-                "ok": False,
-                "updates": 0,
-                "error": updated.get("stderr", "") or "apt-get update failed",
-            }
+    _run(["apt-get", "update", "-qq"])
     r = _run(["apt-get", "--just-print", "upgrade"])
-    if not r["ok"]:
-        return {
-            "ok": False,
-            "updates": 0,
-            "error": r.get("stderr", "") or "apt-get upgrade check failed",
-        }
     count = r["stdout"].count("Inst ")
-    return {"ok": True, "updates": count}
+    return {"updates": count}
 
 
 def list_upgradable():
     r = _run(["apt", "list", "--upgradable"])
-    if not r["ok"]:
-        return {
-            "ok": False,
-            "packages": [],
-            "error": r.get("stderr", "") or "apt list failed",
-        }
     pkgs = []
     for line in r["stdout"].splitlines()[1:]:
         if "/" in line:
             pkgs.append(line.split("/")[0])
-    return {"ok": True, "packages": pkgs}
+    return {"packages": pkgs}
 
 
 def apply_updates():
@@ -86,8 +62,10 @@ def start_runvard_update():
         dict[str, str | bool]:
             Contains the start result and update log path.
 
-    Operational start failures are returned as ``ok: false`` so the API can
-    report them without turning them into generic server errors.
+    Raises:
+    -------
+    RuntimeError:
+        Raised when the transient update unit cannot be started.
     """
     os.makedirs(os.path.dirname(RUNVARD_UPDATE_LOG), exist_ok=True)
     script = f"""#!/usr/bin/env bash
@@ -125,34 +103,20 @@ echo "runvard update finished: $(date -Is)"
         tmp.write(script)
         script_path = tmp.name
     os.chmod(script_path, 0o700)
-    try:
-        result = subprocess.run(
-            [
-                "systemd-run",
-                "--unit=runvard-self-update",
-                "--collect",
-                "/bin/bash",
-                script_path,
-            ],
-            capture_output=True,
-            text=True,
-            timeout=30,
-        )
-    except (FileNotFoundError, subprocess.TimeoutExpired, OSError) as exc:
-        try:
-            os.unlink(script_path)
-        except OSError:
-            pass
-        return {"ok": False, "error": str(exc) or exc.__class__.__name__}
+    result = subprocess.run(
+        [
+            "systemd-run",
+            "--unit=runvard-self-update",
+            "--collect",
+            "/bin/bash",
+            script_path,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
     if result.returncode != 0:
-        try:
-            os.unlink(script_path)
-        except OSError:
-            pass
-        return {
-            "ok": False,
-            "error": result.stderr.strip() or result.stdout.strip() or "systemd-run failed",
-        }
+        raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "systemd-run failed")
     return {
         "ok": True,
         "message": "runvard update started. The service will restart when the update finishes.",
@@ -241,8 +205,6 @@ def runvard_release_status():
 # --- Cron ---
 
 def list_cron_jobs(user="root"):
-    if user != "root":
-        validators.require_linux_name(user, "cron user")
     r = _run(["crontab", "-l", "-u", user])
     jobs = []
     for line in r["stdout"].splitlines():
@@ -259,22 +221,7 @@ def list_cron_jobs(user="root"):
 
 def add_cron_job(schedule: str, command: str, user="root"):
     """schedule z.B. '0 3 * * *' für täglich 3 Uhr."""
-    if user != "root":
-        validators.require_linux_name(user, "cron user")
-    schedule = str(schedule or "").strip()
-    command = str(command or "").strip()
-    if not CRON_SCHEDULE_RE.fullmatch(schedule):
-        return {"ok": False, "stderr": "Ungueltiger Cron-Zeitplan"}
-    if not command or "\n" in command or "\r" in command:
-        return {"ok": False, "stderr": "Ungueltiger Cron-Befehl"}
-    existing = _run(["crontab", "-l", "-u", user])
-    no_crontab = "no crontab" in (existing.get("stderr", "") or "").lower()
-    if not existing["ok"] and not no_crontab:
-        return {
-            "ok": False,
-            "stderr": existing.get("stderr", "") or "crontab -l failed",
-        }
-    current = existing["stdout"]
+    current = _run(["crontab", "-l", "-u", user])["stdout"]
     new = current + f"\n{schedule} {command}\n"
     try:
         p = subprocess.run(["crontab", "-u", user, "-"], input=new,
@@ -287,12 +234,6 @@ def add_cron_job(schedule: str, command: str, user="root"):
 # --- Power ---
 
 def power_action(action: str, delay_min: int = 0):
-    try:
-        delay_min = int(delay_min)
-    except (TypeError, ValueError):
-        return {"ok": False, "stderr": "Ungueltige Verzoegerung"}
-    if not (0 <= delay_min <= 1440):
-        return {"ok": False, "stderr": "Ungueltige Verzoegerung"}
     if action == "shutdown":
         return _run(["shutdown", "-h", f"+{delay_min}"])
     elif action == "reboot":
@@ -303,8 +244,6 @@ def power_action(action: str, delay_min: int = 0):
 
 
 def set_hostname(name: str):
-    if not HOSTNAME_RE.fullmatch(name or "") or ".." in name or name.endswith((".", "-")):
-        return {"ok": False, "stderr": "Ungueltiger Hostname"}
     return _run(["hostnamectl", "set-hostname", name])
 
 
@@ -322,44 +261,34 @@ def apparmor_set(profile: str, mode: str):
             "disable": "aa-disable"}.get(mode)
     if not tool:
         return {"ok": False, "stderr": "Unbekannter Modus"}
-    try:
-        profile = validators.require_apparmor_profile(profile)
-    except ValueError:
+    if not re.match(r"^[A-Za-z0-9._/-]+$", profile or ""):
         return {"ok": False, "stderr": "Ungueltiges Profil"}
     return _run([tool, profile])
 
 
 # --- Generische Paketverwaltung (apt) ---
 
+_PKG_RE = re.compile(r"^[a-z0-9][a-z0-9.+:_-]*$")
+
 
 def pkg_search(query: str):
     r = _run(["apt-cache", "search", query or ""])
-    if not r["ok"]:
-        return {
-            "ok": False,
-            "packages": [],
-            "error": r.get("stderr", "") or "apt-cache search failed",
-        }
     pkgs = []
     for line in r["stdout"].splitlines()[:100]:
         if " - " in line:
             n, d = line.split(" - ", 1)
             pkgs.append({"name": n.strip(), "desc": d.strip()})
-    return {"ok": True, "packages": pkgs}
+    return {"packages": pkgs}
 
 
 def pkg_install(name: str):
-    try:
-        name = validators.require_apt_package_name(name)
-    except ValueError:
+    if not _PKG_RE.match(name or ""):
         return {"ok": False, "stderr": "Ungueltiger Paketname"}
     return _run(["apt-get", "install", "-y", name], timeout=1800)
 
 
 def pkg_remove(name: str):
-    try:
-        name = validators.require_apt_package_name(name)
-    except ValueError:
+    if not _PKG_RE.match(name or ""):
         return {"ok": False, "stderr": "Ungueltiger Paketname"}
     return _run(["apt-get", "remove", "-y", name], timeout=900)
 
@@ -373,23 +302,16 @@ def gpu_info():
               "--format=csv,noheader,nounits"])
     if not r["ok"]:
         return {"available": False}
-
-    def _gpu_int(value):
-        try:
-            return int(str(value).strip())
-        except (TypeError, ValueError):
-            return 0
-
     gpus = []
     for line in r["stdout"].strip().splitlines():
         parts = [p.strip() for p in line.split(",")]
         if len(parts) >= 5:
             gpus.append({
                 "name": parts[0],
-                "util": _gpu_int(parts[1]),
-                "mem_used": _gpu_int(parts[2]),
-                "mem_total": _gpu_int(parts[3]),
-                "temp": _gpu_int(parts[4]),
+                "util": int(parts[1]),
+                "mem_used": int(parts[2]),
+                "mem_total": int(parts[3]),
+                "temp": int(parts[4]),
             })
     return {"available": True, "gpus": gpus}
 

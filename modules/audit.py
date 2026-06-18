@@ -9,9 +9,19 @@ import os
 import time
 from typing import Any
 
-from modules.runtime import data_dir
-
 SECRET_KEYS = {"password", "token", "confirm_token", "secret", "key"}
+
+
+def data_dir() -> str:
+    """
+    Return the configured runvard data directory.
+
+    Returns:
+    --------
+        str:
+            Data directory.
+    """
+    return os.environ.get("RUNVARD_DATA_DIR", "/opt/runvard/data")
 
 
 def audit_log() -> str:

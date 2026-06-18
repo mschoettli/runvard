@@ -49,14 +49,9 @@ def start_job(name: str, func: Callable[..., Any], *args: Any, **kwargs: Any) ->
     def runner() -> None:
         try:
             result = func(*args, **kwargs)
-            status = (
-                "failed"
-                if isinstance(result, dict) and result.get("ok") is False
-                else "succeeded"
-            )
             with _lock:
                 _jobs[job_id].update(
-                    {"status": status, "finished_at": time.time(), "result": result}
+                    {"status": "succeeded", "finished_at": time.time(), "result": result}
                 )
         except Exception as exc:  # pragma: no cover - defensive job boundary.
             with _lock:

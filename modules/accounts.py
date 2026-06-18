@@ -4,12 +4,8 @@ import json
 import hmac
 import hashlib
 import secrets
-import time
 
-from modules.runtime import data_path
-from modules import validators
-
-STORE = data_path("users.json")
+STORE = "/opt/runvard/data/users.json"
 ROLES = ("admin", "readonly")
 
 
@@ -17,15 +13,7 @@ def _load():
     try:
         with open(STORE) as f:
             return json.load(f)
-    except FileNotFoundError:
-        return {}
-    except json.JSONDecodeError:
-        try:
-            os.replace(STORE, f"{STORE}.corrupt-{int(time.time())}")
-        except OSError:
-            pass
-        return {}
-    except OSError:
+    except (OSError, ValueError):
         return {}
 
 
@@ -51,9 +39,8 @@ def list_users():
 
 
 def add_user(username, password, role="readonly"):
-    try:
-        username = validators.require_slug((username or "").strip(), "username")
-    except ValueError:
+    username = (username or "").strip()
+    if not username or "|" in username:
         return {"ok": False, "error": "Ungueltiger Benutzername"}
     if not password:
         return {"ok": False, "error": "Passwort erforderlich"}
@@ -67,10 +54,6 @@ def add_user(username, password, role="readonly"):
 
 
 def set_password(username, password):
-    try:
-        username = validators.require_slug((username or "").strip(), "username")
-    except ValueError:
-        return {"ok": False, "error": "Ungueltiger Benutzername"}
     d = _load()
     if username not in d:
         return {"ok": False, "error": "Unbekannter Benutzer"}
@@ -84,10 +67,6 @@ def set_password(username, password):
 
 
 def set_role(username, role):
-    try:
-        username = validators.require_slug((username or "").strip(), "username")
-    except ValueError:
-        return {"ok": False, "error": "Ungueltiger Benutzername"}
     d = _load()
     if username not in d:
         return {"ok": False, "error": "Unbekannter Benutzer"}
@@ -99,10 +78,6 @@ def set_role(username, role):
 
 
 def delete_user(username):
-    try:
-        username = validators.require_slug((username or "").strip(), "username")
-    except ValueError:
-        return {"ok": False, "error": "Ungueltiger Benutzername"}
     d = _load()
     d.pop(username, None)
     _save(d)
@@ -111,10 +86,6 @@ def delete_user(username):
 
 def verify(username, password):
     """Gibt die Rolle zurück, wenn Benutzer/Passwort passen, sonst None."""
-    try:
-        username = validators.require_slug((username or "").strip(), "username")
-    except ValueError:
-        return None
     u = _load().get(username)
     if not u:
         return None

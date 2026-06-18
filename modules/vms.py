@@ -2,8 +2,6 @@
 import os
 import subprocess
 
-from modules import validators
-
 try:
     import libvirt
     HAS_LIBVIRT = True
@@ -14,12 +12,6 @@ import xml.etree.ElementTree as ET
 
 _conn = None
 ISO_DIR = "/var/lib/libvirt/images"
-VM_MEMORY_MIN_MB = 256
-VM_MEMORY_MAX_MB = 1024 * 1024
-VM_VCPU_MIN = 1
-VM_VCPU_MAX = 256
-VM_DISK_MIN_GB = 1
-VM_DISK_MAX_GB = 65536
 
 
 def _connect():
@@ -49,61 +41,49 @@ _STATES = {
 
 def list_vms():
     if not available():
-        return {"ok": False, "vms": [], "stderr": "libvirt unavailable"}
-    try:
-        conn = _connect()
-    except Exception as exc:
-        return {"ok": False, "vms": [], "stderr": str(exc)}
+        return []
+    conn = _connect()
     vms = []
-    try:
-        for dom in conn.listAllDomains():
-            state, _ = dom.state()
-            info = dom.info()
-            vms.append({
-                "name": dom.name(),
-                "uuid": dom.UUIDString(),
-                "state": _STATES.get(state, "unknown"),
-                "active": dom.isActive() == 1,
-                "autostart": dom.autostart() == 1,
-                "max_mem": info[1] * 1024,
-                "mem": info[2] * 1024,
-                "vcpus": info[3],
-            })
-    except Exception as exc:
-        return {"ok": False, "vms": [], "stderr": str(exc)}
-    return {"ok": True, "vms": vms}
+    for dom in conn.listAllDomains():
+        state, _ = dom.state()
+        info = dom.info()
+        vms.append({
+            "name": dom.name(),
+            "uuid": dom.UUIDString(),
+            "state": _STATES.get(state, "unknown"),
+            "active": dom.isActive() == 1,
+            "autostart": dom.autostart() == 1,
+            "max_mem": info[1] * 1024,
+            "mem": info[2] * 1024,
+            "vcpus": info[3],
+        })
+    return vms
 
 
 def vm_action(name, action):
-    _require_vm_name(name)
-    try:
-        conn = _connect()
-        dom = conn.lookupByName(name)
-        if action == "start":
-            dom.create()
-        elif action == "shutdown":
-            dom.shutdown()
-        elif action == "reboot":
-            dom.reboot()
-        elif action == "force-off":
+    conn = _connect()
+    dom = conn.lookupByName(name)
+    if action == "start":
+        dom.create()
+    elif action == "shutdown":
+        dom.shutdown()
+    elif action == "reboot":
+        dom.reboot()
+    elif action == "force-off":
+        dom.destroy()
+    elif action == "autostart-on":
+        dom.setAutostart(1)
+    elif action == "autostart-off":
+        dom.setAutostart(0)
+    elif action == "delete":
+        if dom.isActive():
             dom.destroy()
-        elif action == "autostart-on":
-            dom.setAutostart(1)
-        elif action == "autostart-off":
-            dom.setAutostart(0)
-        elif action == "delete":
-            if dom.isActive():
-                dom.destroy()
-            dom.undefineFlags(
-                getattr(libvirt, "VIR_DOMAIN_UNDEFINE_SNAPSHOTS_METADATA", 0))
-            return {"ok": True, "deleted": True}
-        else:
-            raise ValueError("Unbekannte Aktion")
-        return {"ok": True}
-    except ValueError:
-        raise
-    except Exception as exc:
-        return {"ok": False, "stderr": str(exc)}
+        dom.undefineFlags(
+            getattr(libvirt, "VIR_DOMAIN_UNDEFINE_SNAPSHOTS_METADATA", 0))
+        return {"ok": True, "deleted": True}
+    else:
+        raise ValueError("Unbekannte Aktion")
+    return {"ok": True}
 
 
 def list_isos():
@@ -123,12 +103,6 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso, network="default"):
     disk_gb:   Disk-Größe in GB
     iso:       ISO-Dateiname aus ISO_DIR (oder leer für PXE/Netzwerk)
     """
-    _require_vm_name(name)
-    _require_vm_name(network, "network")
-    memory_mb = _bounded_int(memory_mb, VM_MEMORY_MIN_MB, VM_MEMORY_MAX_MB, "RAM")
-    vcpus = _bounded_int(vcpus, VM_VCPU_MIN, VM_VCPU_MAX, "vCPUs")
-    disk_gb = _bounded_int(disk_gb, VM_DISK_MIN_GB, VM_DISK_MAX_GB, "Disk size")
-    iso_path = _iso_path(iso) if iso else ""
     disk_path = os.path.join(ISO_DIR, f"{name}.qcow2")
     cmd = [
         "virt-install",
@@ -142,63 +116,42 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso, network="default"):
         "--osinfo", "detect=on,require=off",
     ]
     if iso:
-        cmd += ["--cdrom", iso_path]
+        cmd += ["--cdrom", os.path.join(ISO_DIR, iso)]
     else:
         cmd += ["--pxe"]
 
-    try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-        return {"ok": r.returncode == 0, "output": r.stdout + r.stderr}
-    except FileNotFoundError:
-        return {"ok": False, "output": "virt-install nicht installiert (Paket virtinst)"}
-    except subprocess.TimeoutExpired:
-        return {"ok": False, "output": "virt-install timed out"}
-    except Exception as exc:
-        return {"ok": False, "output": str(exc)}
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    return {"ok": r.returncode == 0, "output": r.stdout + r.stderr}
 
 
 def list_snapshots(name):
-    _require_vm_name(name)
     conn = _connect()
     dom = conn.lookupByName(name)
     return [{"name": s.getName()} for s in dom.listAllSnapshots()]
 
 
 def create_snapshot(name, snap_name):
-    _require_vm_name(name)
-    _require_vm_name(snap_name, "snapshot")
-    try:
-        conn = _connect()
-        dom = conn.lookupByName(name)
-        root = ET.Element("domainsnapshot")
-        ET.SubElement(root, "name").text = snap_name
-        xml = ET.tostring(root, encoding="unicode")
-        dom.snapshotCreateXML(xml, 0)
-        return {"ok": True}
-    except Exception as exc:
-        return {"ok": False, "stderr": str(exc)}
+    conn = _connect()
+    dom = conn.lookupByName(name)
+    xml = f"<domainsnapshot><name>{snap_name}</name></domainsnapshot>"
+    dom.snapshotCreateXML(xml, 0)
+    return {"ok": True}
 
 
 def snapshot_action(name, snap_name, action):
-    _require_vm_name(name)
-    _require_vm_name(snap_name, "snapshot")
-    if action not in ("revert", "delete"):
+    conn = _connect()
+    dom = conn.lookupByName(name)
+    snap = dom.snapshotLookupByName(snap_name)
+    if action == "revert":
+        dom.revertToSnapshot(snap)
+    elif action == "delete":
+        snap.delete()
+    else:
         raise ValueError("Unbekannte Aktion")
-    try:
-        conn = _connect()
-        dom = conn.lookupByName(name)
-        snap = dom.snapshotLookupByName(snap_name)
-        if action == "revert":
-            dom.revertToSnapshot(snap)
-        else:
-            snap.delete()
-        return {"ok": True}
-    except Exception as exc:
-        return {"ok": False, "stderr": str(exc)}
+    return {"ok": True}
 
 
 def get_vnc_port(name):
-    _require_vm_name(name)
     conn = _connect()
     dom = conn.lookupByName(name)
     root = ET.fromstring(dom.XMLDesc())
@@ -218,31 +171,25 @@ def _virsh(args, timeout=120):
 
 def list_networks():
     r = _virsh(["net-list", "--all"])
-    if not r["ok"]:
-        return {"ok": False, "networks": [], "error": r.get("stderr", "")}
     nets = []
     for line in r["stdout"].splitlines()[2:]:
         p = line.split()
         if len(p) >= 3:
             nets.append({"name": p[0], "state": p[1], "autostart": p[2]})
-    return {"ok": True, "networks": nets}
+    return {"networks": nets}
 
 
 def list_pools():
     r = _virsh(["pool-list", "--all"])
-    if not r["ok"]:
-        return {"ok": False, "pools": [], "error": r.get("stderr", "")}
     pools = []
     for line in r["stdout"].splitlines()[2:]:
         p = line.split()
         if len(p) >= 2:
             pools.append({"name": p[0], "state": p[1]})
-    return {"ok": True, "pools": pools}
+    return {"pools": pools}
 
 
 def clone_vm(name, newname):
-    _require_vm_name(name)
-    _require_vm_name(newname, "new VM name")
     try:
         r = subprocess.run(
             ["virt-clone", "--original", name, "--name", newname, "--auto-clone"],
@@ -255,78 +202,33 @@ def clone_vm(name, newname):
 
 
 def change_cdrom(name, iso):
-    _require_vm_name(name)
-    iso_path = _iso_path(iso) if iso else ""
-    try:
-        conn = _connect()
-        dom = conn.lookupByName(name)
-        root = ET.fromstring(dom.XMLDesc())
-        target = root.find(".//disk[@device='cdrom']/target")
-        if target is None:
-            return {"ok": False, "stderr": "Kein CD-ROM-Laufwerk vorhanden"}
-        dev = target.get("dev")
-        args = ["change-media", name, dev]
-        if iso:
-            args += [iso_path, "--update"]
-        else:
-            args += ["--eject", "--force"]
-        return _virsh(args)
-    except Exception as exc:
-        return {"ok": False, "stderr": str(exc)}
+    conn = _connect()
+    dom = conn.lookupByName(name)
+    root = ET.fromstring(dom.XMLDesc())
+    target = root.find(".//disk[@device='cdrom']/target")
+    if target is None:
+        return {"ok": False, "stderr": "Kein CD-ROM-Laufwerk vorhanden"}
+    dev = target.get("dev")
+    args = ["change-media", name, dev]
+    if iso:
+        args += [os.path.join(ISO_DIR, iso), "--update"]
+    else:
+        args += ["--eject", "--force"]
+    return _virsh(args)
 
 
 # --- Phase 5: Hot-Edit (Disks/NICs) + Storage-Pools ---
 
 import re as _re
 
+_VM_NAME_RE = _re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 _VOL_NAME_RE = _re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 _TARGET_RE = _re.compile(r"^[a-z]{2,4}[a-z0-9]{0,4}$")
 _MAC_RE = _re.compile(r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
 
 
 def _valid_vm(name):
-    try:
-        validators.require_vm_name(name)
-        return True
-    except ValueError:
-        return False
-
-
-def _require_vm_name(name, label="VM name"):
-    return validators.require_vm_name(name, label)
-
-
-def _bounded_int(value, minimum, maximum, label):
-    try:
-        num = int(value)
-    except (TypeError, ValueError):
-        raise ValueError(f"Ungueltige {label}") from None
-    if not (minimum <= num <= maximum):
-        raise ValueError(f"Ungueltige {label}")
-    return num
-
-
-def _iso_path(iso):
-    if not iso or "/" in iso or "\\" in iso or iso in {".", ".."}:
-        raise ValueError("Ungueltige ISO-Datei")
-    if not iso.lower().endswith(".iso"):
-        raise ValueError("Ungueltige ISO-Datei")
-    path = os.path.realpath(os.path.join(ISO_DIR, iso))
-    root = os.path.realpath(ISO_DIR)
-    if not path.startswith(root + os.sep):
-        raise ValueError("Ungueltige ISO-Datei")
-    return path
-
-
-def _disk_source_path(source):
-    if not source or "\n" in source or "\r" in source or source.startswith("-"):
-        raise ValueError("Ungueltige Quelle")
-    if not source.startswith("/"):
-        raise ValueError("Ungueltige Quelle")
-    path = validators.guard_read_path(source)
-    if validators.is_readonly_path(path):
-        raise PermissionError("Disk source is protected")
-    return path
+    return bool(_VM_NAME_RE.fullmatch(name or ""))
 
 
 def list_hardware(name):
@@ -386,10 +288,8 @@ def attach_disk(name, source, target, bus="virtio"):
         return {"ok": False, "stderr": "Ungueltiger VM-Name"}
     if not _TARGET_RE.fullmatch(target or ""):
         return {"ok": False, "stderr": "Ungueltiges Target (z. B. vdb)"}
-    try:
-        source = _disk_source_path(source)
-    except (PermissionError, ValueError) as exc:
-        return {"ok": False, "stderr": str(exc)}
+    if not source or "\n" in source or source.startswith("-"):
+        return {"ok": False, "stderr": "Ungueltige Quelle"}
     if bus not in ("virtio", "sata", "scsi", "ide"):
         return {"ok": False, "stderr": "Ungueltiger Bus"}
     args = ["attach-disk", name, source, target, "--targetbus", bus,
@@ -408,7 +308,7 @@ def detach_disk(name, target):
 def attach_nic(name, network, model="virtio"):
     if not _valid_vm(name):
         return {"ok": False, "stderr": "Ungueltiger VM-Name"}
-    if not _valid_vm(network):
+    if not _VM_NAME_RE.fullmatch(network or ""):
         return {"ok": False, "stderr": "Ungueltiges Netzwerk"}
     if model not in ("virtio", "e1000", "rtl8139"):
         return {"ok": False, "stderr": "Ungueltiges Modell"}
@@ -480,23 +380,15 @@ def pool_create(name, ptype, target):
         return {"ok": False, "stderr": "Ungueltiger Pool-Name"}
     if ptype not in ("dir", "fs"):
         return {"ok": False, "stderr": "Nur dir/fs werden unterstützt"}
-    try:
-        target = validators.guard_mountpoint(target)
-    except (PermissionError, ValueError) as exc:
-        return {"ok": False, "stderr": str(exc)}
+    if not target or not target.startswith("/") or "\n" in target:
+        return {"ok": False, "stderr": "Ungueltiges Zielverzeichnis"}
     r = _virsh(["pool-define-as", name, ptype, "--target", target])
     if not r["ok"]:
         return r
-    build = _virsh(["pool-build", name])
-    if not build["ok"]:
-        return build
+    _virsh(["pool-build", name])
     start = _virsh(["pool-start", name])
-    if not start["ok"]:
-        return start
-    autostart = _virsh(["pool-autostart", name])
-    if not autostart["ok"]:
-        return autostart
-    return {"ok": True}
+    _virsh(["pool-autostart", name])
+    return start if not start["ok"] else {"ok": True}
 
 
 def pool_action(name, action):
@@ -511,30 +403,22 @@ def pool_action(name, action):
     if action == "autostart-off":
         return _virsh(["pool-autostart", name, "--disable"])
     if action == "delete":
-        destroyed = _virsh(["pool-destroy", name])
-        inactive = any(
-            marker in (destroyed.get("stderr", "") or "").lower()
-            for marker in ("not active", "not running", "inactive")
-        )
-        if not destroyed["ok"] and not inactive:
-            return destroyed
+        _virsh(["pool-destroy", name])
         return _virsh(["pool-undefine", name])
     return {"ok": False, "stderr": "Unbekannte Aktion"}
 
 
 def pool_volumes(pool):
     if not _valid_vm(pool):
-        return {"ok": False, "volumes": [], "error": "Ungueltiger Pool-Name"}
+        return {"volumes": []}
     r = _virsh(["vol-list", pool, "--details"])
-    if not r["ok"]:
-        return {"ok": False, "volumes": [], "error": r.get("stderr", "")}
     vols = []
     lines = r["stdout"].splitlines()
     for line in lines[2:]:
         p = line.split()
         if len(p) >= 2 and not p[0].startswith("-"):
             vols.append({"name": p[0], "path": p[1] if p[1].startswith("/") else ""})
-    return {"ok": True, "volumes": vols}
+    return {"volumes": vols}
 
 
 def vol_create(pool, name, size_gb, fmt="qcow2"):

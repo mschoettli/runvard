@@ -8,12 +8,11 @@ Type=simple
 User=root
 WorkingDirectory=/opt/runvard
 # Zugangsdaten & Port kommen aus data/runvard.env (von install.sh erzeugt: RUNVARD_USER/RUNVARD_PASS/RUNVARD_PORT)
-Environment=RUNVARD_PORT=8080
 EnvironmentFile=-/opt/runvard/data/runvard.env
-ExecStart=/opt/runvard/venv/bin/uvicorn server:app --host 0.0.0.0 --port ${RUNVARD_PORT} --workers 1
+ExecStart=/opt/runvard/venv/bin/uvicorn server:app --host 0.0.0.0 --port 8080 --workers 1
 # TLS/HTTPS (optional): Zertifikat unter System -> Sicherheit -> SSL erzeugen,
 # obige Zeile auskommentieren und stattdessen verwenden:
-# ExecStart=/opt/runvard/venv/bin/uvicorn server:app --host 0.0.0.0 --port ${RUNVARD_PORT} --workers 1 --ssl-keyfile /opt/runvard/data/certs/<CN>.key --ssl-certfile /opt/runvard/data/certs/<CN>.crt
+# ExecStart=/opt/runvard/venv/bin/uvicorn server:app --host 0.0.0.0 --port 8080 --workers 1 --ssl-keyfile /opt/runvard/data/certs/<CN>.key --ssl-certfile /opt/runvard/data/certs/<CN>.crt
 # danach: systemctl daemon-reload && systemctl restart runvard  (Aufruf dann via https://)
 Restart=always
 RestartSec=5

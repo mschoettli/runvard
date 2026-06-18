@@ -1,8 +1,6 @@
 """Systemd-Services: auflisten, steuern, Journal-Logs."""
 import subprocess
 
-from modules import validators
-
 
 def _run(cmd, timeout=30):
     try:
@@ -16,8 +14,6 @@ def list_services():
     """Alle Service-Units mit Status."""
     r = _run(["systemctl", "list-units", "--type=service", "--all",
               "--no-pager", "--no-legend", "--plain"])
-    if not r["ok"]:
-        return {"ok": False, "services": [], "stderr": r["stderr"]}
     services = []
     for line in r["stdout"].splitlines():
         parts = line.split(None, 4)
@@ -34,28 +30,20 @@ def list_services():
             "sub": sub,
             "description": desc,
         })
-    return {"ok": True, "services": services}
+    return services
 
 
 def service_action(name: str, action: str):
-    name = validators.require_service(name)
     if action not in ("start", "stop", "restart", "enable", "disable"):
         raise ValueError("Unbekannte Aktion")
     return _run(["systemctl", action, name])
 
 
 def service_status(name: str):
-    name = validators.require_service(name)
     r = _run(["systemctl", "status", name, "--no-pager", "-l"])
-    if not r["ok"]:
-        return {"ok": False, "status": r["stdout"], "stderr": r["stderr"]}
-    return {"ok": True, "status": r["stdout"]}
+    return {"status": r["stdout"]}
 
 
 def service_logs(name: str, lines: int = 100):
-    name = validators.require_service(name)
-    lines = validators.require_int_range(lines, 1, 5000, "lines")
     r = _run(["journalctl", "-u", name, "-n", str(lines), "--no-pager"])
-    if not r["ok"]:
-        return {"ok": False, "logs": r["stdout"], "stderr": r["stderr"]}
-    return {"ok": True, "logs": r["stdout"]}
+    return {"logs": r["stdout"]}

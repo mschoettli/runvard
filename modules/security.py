@@ -4,9 +4,6 @@ import pwd
 import grp
 import subprocess
 
-from modules.runtime import data_path
-from modules import validators
-
 
 def _run(cmd, timeout=30):
     try:
@@ -37,9 +34,6 @@ def list_users(min_uid=1000):
 
 
 def add_user(name: str, create_home=True, shell="/bin/bash"):
-    validators.require_linux_name(name, "username")
-    if shell not in ("/bin/bash", "/bin/sh", "/usr/bin/zsh", "/bin/zsh"):
-        return {"ok": False, "stderr": "Ungueltige Shell"}
     cmd = ["useradd"]
     if create_home:
         cmd.append("-m")
@@ -48,7 +42,6 @@ def add_user(name: str, create_home=True, shell="/bin/bash"):
 
 
 def delete_user(name: str, remove_home=False):
-    validators.require_linux_name(name, "username")
     cmd = ["userdel"]
     if remove_home:
         cmd.append("-r")
@@ -58,11 +51,6 @@ def delete_user(name: str, remove_home=False):
 
 def set_password(name: str, password: str):
     """Passwort setzen via chpasswd."""
-    validators.require_linux_name(name, "username")
-    try:
-        password = validators.require_password_value(password)
-    except ValueError:
-        return {"ok": False, "stderr": "Ungueltiges Passwort"}
     try:
         p = subprocess.run(["chpasswd"], input=f"{name}:{password}",
                            text=True, capture_output=True, timeout=15)
@@ -72,15 +60,11 @@ def set_password(name: str, password: str):
 
 
 def add_to_group(name: str, group: str):
-    validators.require_linux_name(name, "username")
-    validators.require_linux_name(group, "group")
     return _run(["usermod", "-aG", group, name])
 
 
 def remove_from_group(name: str, group: str):
     """User aus Gruppe entfernen via gpasswd."""
-    validators.require_linux_name(name, "username")
-    validators.require_linux_name(group, "group")
     return _run(["gpasswd", "-d", name, group])
 
 
@@ -92,19 +76,16 @@ def list_groups():
 
 
 def add_group(name: str):
-    validators.require_linux_name(name, "group")
     return _run(["groupadd", name])
 
 
 def delete_group(name: str):
-    validators.require_linux_name(name, "group")
     return _run(["groupdel", name])
 
 
 # --- SSH-Keys ---
 
 def list_ssh_keys(user: str):
-    validators.require_linux_name(user, "username")
     try:
         home = pwd.getpwnam(user).pw_dir
     except KeyError:
@@ -127,11 +108,6 @@ def list_ssh_keys(user: str):
 
 def set_smb_password(name: str, password: str):
     """Samba-Passwort für einen User setzen (smbpasswd -a)."""
-    validators.require_linux_name(name, "username")
-    try:
-        password = validators.require_password_value(password)
-    except ValueError:
-        return {"ok": False, "stderr": "Ungueltiges Passwort"}
     try:
         p = subprocess.run(
             ["smbpasswd", "-a", "-s", name],
@@ -153,21 +129,20 @@ def set_smb_password(name: str, password: str):
 def list_smb_users():
     """Liste aller Samba-User via pdbedit."""
     r = _run(["pdbedit", "-L"])
-    if not r["ok"]:
-        return {"ok": False, "users": [], "stderr": r["stderr"]}
     users = []
     for line in r["stdout"].splitlines():
         if ":" in line:
             users.append(line.split(":")[0].strip())
-    return {"ok": True, "users": users}
+    return users
 
 
 def add_ssh_key(user: str, key: str):
     """Public-Key an ~/.ssh/authorized_keys eines Benutzers anhaengen."""
-    validators.require_linux_name(user, "username")
-    try:
-        key = validators.require_ssh_public_key(key)
-    except ValueError:
+    key = (key or "").strip()
+    if not key or key.startswith("#"):
+        return {"ok": False, "error": "Kein Schluessel angegeben"}
+    parts = key.split()
+    if len(parts) < 2 or not parts[0].startswith(("ssh-", "ecdsa-", "sk-")):
         return {"ok": False, "error": "Kein gueltiger SSH-Public-Key"}
     try:
         pw = pwd.getpwnam(user)
@@ -195,7 +170,6 @@ def add_ssh_key(user: str, key: str):
 
 def remove_ssh_key(user: str, key: str):
     """Eine Schluessel-Zeile aus authorized_keys entfernen (exakter Abgleich)."""
-    validators.require_linux_name(user, "username")
     key = (key or "").strip()
     try:
         pw = pwd.getpwnam(user)
@@ -219,29 +193,23 @@ def remove_ssh_key(user: str, key: str):
 
 # --- SSL-Zertifikate ---
 
-CERT_DIR = data_path("certs")
+CERT_DIR = "/opt/runvard/data/certs"
 
 
 def list_certificates():
     certs = []
     if not os.path.isdir(CERT_DIR):
-        return {"ok": True, "certificates": certs, "errors": []}
-    errors = []
+        return certs
     for f in os.listdir(CERT_DIR):
         if f.endswith(".crt") or f.endswith(".pem"):
             path = os.path.join(CERT_DIR, f)
             info = _run(["openssl", "x509", "-in", path, "-noout",
                          "-subject", "-enddate"])
-            if info["ok"]:
-                certs.append({"file": f, "info": info["stdout"]})
-            else:
-                errors.append({"file": f, "stderr": info["stderr"]})
-                certs.append({"file": f, "info": "", "error": info["stderr"]})
-    return {"ok": not errors, "certificates": certs, "errors": errors}
+            certs.append({"file": f, "info": info["stdout"]})
+    return certs
 
 
 def generate_self_signed(common_name: str, days=365):
-    validators.require_slug(common_name, "certificate name")
     os.makedirs(CERT_DIR, exist_ok=True)
     key = os.path.join(CERT_DIR, f"{common_name}.key")
     crt = os.path.join(CERT_DIR, f"{common_name}.crt")
@@ -360,23 +328,19 @@ def set_password_aging(name, max_days="", min_days="", warn_days="", expire=""):
         return {"ok": False, "stderr": "Ungueltiger Benutzername"}
     cmd = ["chage"]
 
-    def _num(v, label):
+    def _num(v):
         v = str(v).strip()
         if v == "":
             return None
         if v == "-1":
             return "-1"
-        return str(validators.require_int_range(v, 0, 99999, label))
+        return v if v.lstrip("-").isdigit() else None
 
-    pairs = [("-M", max_days, "max_days"), ("-m", min_days, "min_days"),
-             ("-W", warn_days, "warn_days")]
-    try:
-        for flag, val, label in pairs:
-            n = _num(val, label)
-            if n is not None:
-                cmd += [flag, n]
-    except ValueError:
-        return {"ok": False, "stderr": "Tage muessen Zahlen >= 0 oder -1 sein"}
+    pairs = [("-M", max_days), ("-m", min_days), ("-W", warn_days)]
+    for flag, val in pairs:
+        n = _num(val)
+        if n is not None:
+            cmd += [flag, n]
     exp = str(expire).strip()
     if exp:
         if exp == "-1":
