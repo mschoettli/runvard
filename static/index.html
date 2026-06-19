@@ -1928,8 +1928,11 @@ const UI_PHRASES={
     "Export path":"Chemin d’export",
     "From":"De",
     "Generating diagnostic report…":"Génération du rapport de diagnostic…",
+    "Git fallback":"Repli Git",
     "GitHub main":"Branche principale GitHub",
     "GitHub unavailable":"GitHub indisponible",
+    "GitHub rate limit":"Limite GitHub",
+    "GitHub API rate limit reached. Try again later.":"Limite de l’API GitHub atteinte. Réessayez plus tard.",
     "Group":"Groupe",
     "Group created":"Groupe créé",
     "Group deleted":"Groupe supprimé",
@@ -2754,8 +2757,11 @@ const UI_PHRASES={
     "Export path":"Percorso export",
     "From":"Da",
     "Generating diagnostic report…":"Generazione report diagnostico…",
+    "Git fallback":"Fallback Git",
     "GitHub main":"Ramo principale GitHub",
     "GitHub unavailable":"GitHub non disponibile",
+    "GitHub rate limit":"Limite GitHub",
+    "GitHub API rate limit reached. Try again later.":"Limite API GitHub raggiunto. Riprova più tardi.",
     "Group":"Gruppo",
     "Group created":"Gruppo creato",
     "Group deleted":"Gruppo eliminato",
@@ -3581,8 +3587,11 @@ const UI_PHRASES={
     "Export path":"Ruta de exportación",
     "From":"Desde",
     "Generating diagnostic report…":"Generando informe de diagnóstico…",
+    "Git fallback":"Respaldo Git",
     "GitHub main":"Rama principal de GitHub",
     "GitHub unavailable":"GitHub no disponible",
+    "GitHub rate limit":"Límite de GitHub",
+    "GitHub API rate limit reached. Try again later.":"Se alcanzó el límite de la API de GitHub. Inténtalo de nuevo más tarde.",
     "Group":"Grupo",
     "Group created":"Grupo creado",
     "Group deleted":"Grupo eliminado",
@@ -4416,8 +4425,11 @@ const UI_PHRASES={
     "Export path":"Caminho de exportação",
     "From":"De",
     "Generating diagnostic report…":"A gerar relatório de diagnóstico…",
+    "Git fallback":"Fallback Git",
     "GitHub main":"GitHub principal",
     "GitHub unavailable":"GitHub indisponível",
+    "GitHub rate limit":"Limite do GitHub",
+    "GitHub API rate limit reached. Try again later.":"Limite da API do GitHub atingido. Tente novamente mais tarde.",
     "Group":"Grupo",
     "Group created":"Grupo criado",
     "Group deleted":"Grupo eliminado",
@@ -6951,6 +6963,34 @@ function composeBestWebPort(content){
 }
 function extractPort(content){return composeBestWebPort(content);}
 function serverHost(){return location.hostname;}
+function composeProjectCards(projects){
+  const running=(projects||[]).filter(x=>x.running).length;
+  return `<div class="nx-summary-grid">${summaryCard('Compose projects',(projects||[]).length,'Total')}${summaryCard('Running',running,'Active now')}</div>
+    <div class="nx-card-grid">${(projects||[]).map(x=>{
+      const pending=composePendingActions.get(x.name);
+      const safeName=esc(x.name);
+      const port=Number(x.port||0);
+      const primaryAction=x.running?'restart':'up';
+      const primaryLabel=x.running?'Restart':'Start';
+      const portChip=port?`<span class="nx-chip">Port ${port}</span>`:`<span class="nx-chip">${esc(uiText('No public ports'))}</span>`;
+      return `<div class="nx-action-card">
+        <div class="nx-action-head">
+          <div class="nx-action-title">${safeName}</div>
+          ${pending?statusBadge(appPendingLabel(pending),'warn'):statusBadge(x.running?'Running':'Stopped',x.running?'good':'warn')}
+        </div>
+        <div class="nx-action-sub mono">docker-compose.yml</div>
+        <div class="nx-chip-list">${portChip}<span class="nx-chip">Compose</span></div>
+        <div class="nx-action-row" style="margin-top:12px">
+          <button class="btn sm ${x.running?'ghost':'play'}" onclick="composeAct('${safeName}','${primaryAction}')" ${pending?'disabled':''}>${pending?esc(appPendingLabel(pending)):esc(uiText(primaryLabel))}</button>
+          ${x.running?`<button class="btn ghost sm" onclick="composeAct('${safeName}','stop')" ${pending?'disabled':''}>${esc(uiText('Stop'))}</button>`:''}
+          ${port?`<button class="btn ghost sm" onclick="composeOpen('${safeName}')">${esc(uiText('Open'))}</button>`:''}
+          <button class="btn ghost sm" onclick="composeEdit('${safeName}')">${esc(uiText('Edit'))}</button>
+          <button class="btn ghost sm" onclick="composeAddToDashboard('${safeName}',${port})">Dashboard</button>
+          <button class="btn danger sm" onclick="composeDelete('${safeName}')">${esc(uiText('Delete'))}</button>
+        </div>
+      </div>`;
+    }).join('')||emptyState('No projects')}</div>`;
+}
 
 async function renderDocker(body,tab){
  const av=await api('/docker/available');if(!av.available){body.innerHTML='<div class="empty-state">🐳 Docker unavailable</div>';return;}
@@ -6976,20 +7016,7 @@ async function renderDocker(body,tab){
      </td></tr>`}).join('')||'<tr><td colspan="5"><div class="empty-state">No containers</div></td></tr>'}</tbody></table>`;}
  else if(tab==='Compose'){
    const p=await api('/docker/compose');
-   body.innerHTML=`<div class="sec-hdr" style="margin-bottom:14px"><h3>Compose projects</h3><button class="btn" onclick="composeForm()">+ Project</button></div>
-   <table style="table-layout:fixed;width:100%"><thead><tr><th>Project</th><th style="width:100px">Status</th><th style="width:140px;text-align:right;padding-right:12px">Aktionen</th></tr></thead><tbody>
-   ${p.map(x=>{const pending=composePendingActions.get(x.name);return `<tr>
-     <td style="font-weight:500">${esc(x.name)}</td>
-     <td>${pending?statusBadge(appPendingLabel(pending),'warn'):`<span class="status-pill ${x.running?'run':'stop'}" style="font-size:10px">${x.running?'running':'stopped'}</span>`}</td>
-     <td style="text-align:right;padding-right:12px">
-       <div style="display:inline-flex;gap:4px">
-         <button class="btn icon play" title="Start" onclick="composeAct('${esc(x.name)}','up')" ${pending?'disabled ':''}style="width:26px;height:26px;font-size:12px">▶</button>
-         <button class="btn icon stop" title="Stoppen" onclick="composeAct('${esc(x.name)}','stop')" ${pending?'disabled ':''}style="width:26px;height:26px;font-size:12px">⏹</button>
-         <button class="btn icon" title="Bearbeiten" onclick="composeEdit('${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">✎</button>
-         <button class="btn icon" title="Dashboard" onclick="composeAddToDashboard('${esc(x.name)}',${Number(x.port||0)})" style="width:26px;height:26px;font-size:12px">▣</button>
-         <button class="btn icon" title="Open app" onclick="composeOpen('${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">↗</button>
-       </div>
-     </td></tr>`}).join('')||'<tr><td colspan="3"><div class="empty-state">No projects</div></td></tr>'}</tbody></table>`;}
+   body.innerHTML=`<div class="sec-hdr" style="margin-bottom:14px"><h3>${esc(uiText('Compose projects'))}</h3><button class="btn" onclick="composeForm()">+ ${esc(uiText('Project'))}</button></div>${composeProjectCards(p)}`;}
  else if(tab==='Images'){
    const im=await api('/docker/images');
    body.innerHTML=`<div class="sec-hdr"><h3>Images</h3><div style="display:flex;gap:8px"><button class="btn ghost" onclick="dockerSearchForm()">🔍 Registry search</button><button class="btn" onclick="pullForm()">+ Pull image</button></div></div>
@@ -9258,7 +9285,7 @@ async function renderDockerAdvanced(body,tab){
   if(oldTab==='Compose'){
     const p=await api('/docker/compose');
     body.innerHTML=viewIntro('Compose projects','Advanced multi-container projects. Editing Compose files can break services.',`<button class="btn" onclick="composeForm()">Create project</button>`)
-      +simpleTable(['Project','Status','Actions'],p.map(x=>{const pending=composePendingActions.get(x.name);return `<tr><td>${esc(x.name)}</td><td>${pending?statusBadge(appPendingLabel(pending),'warn'):statusBadge(x.running?'Running':'Stopped',x.running?'good':'warn')}</td><td><button class="btn sm" onclick="composeAct('${esc(x.name)}','up')" ${pending?'disabled':''}>${pending?esc(appPendingLabel(pending)):esc(uiText('Start'))}</button> <button class="btn ghost sm" onclick="composeAct('${esc(x.name)}','stop')" ${pending?'disabled':''}>${esc(uiText('Stop'))}</button> <button class="btn ghost sm" onclick="composeEdit('${esc(x.name)}')">Edit</button> <button class="btn ghost sm" onclick="composeAddToDashboard('${esc(x.name)}',${Number(x.port||0)})">Dashboard</button> <button class="btn danger sm" onclick="composeDelete('${esc(x.name)}')">Delete</button></td></tr>`}).join(''));
+      +composeProjectCards(p);
   } else if(oldTab==='Images'){
     const im=await api('/docker/images');
     body.innerHTML=viewIntro('Images','Images are templates used to create containers.',`<button class="btn" onclick="pullForm()">Pull image</button>`)
