@@ -530,6 +530,13 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .tile-edit-preview-url{padding:5px 9px;border-top:.5px solid rgba(255,255,255,.06);background:rgba(0,0,0,.16);font:8px 'JetBrains Mono',monospace;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tile-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
 .tile-edit-grid .form-field{margin-bottom:0}
+.tile-edit-control{display:flex;align-items:center;gap:8px}
+.tile-edit-control input{min-width:0}
+.tile-edit-icon-btn{width:38px;height:38px;flex:0 0 38px;border:1px solid var(--border);border-radius:9px;background:rgba(255,255,255,.045);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;font:15px/1 inherit;transition:background .15s,border-color .15s,color .15s}
+.tile-edit-icon-btn:hover,.tile-edit-icon-btn:focus{background:var(--glass-hover);border-color:rgba(122,74,255,.34);color:var(--text);outline:none}
+.tile-edit-icon-btn.visible{display:flex}
+.tile-edit-upload-btn{display:none}
+.tile-edit-upload-btn.visible{display:flex}
 .tile-edit-wide{grid-column:1/-1}
 .tile-edit-options{display:grid;gap:10px;margin-top:16px}
 .tile-edit-option{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px;background:rgba(255,255,255,.035)}
@@ -1043,6 +1050,8 @@ const UI_PHRASES={
     "Optional short note":"Optionale kurze Notiz",
     "Show the address under this dashboard tile.":"Adresse unter dieser Dashboard-Kachel anzeigen.",
     "Copy address":"Adresse kopieren",
+    "Upload icon":"Eigenes Icon hochladen",
+    "Use default color":"Standardfarbe wählen",
     "Open the project actions for logs and diagnostics":"Öffne die Projektaktionen für Logs und Diagnose.",
     "Container logs are available in Docker":"Container-Logs sind im Docker-Bereich verfügbar",
     "Edit compose":"Compose bearbeiten",
@@ -1917,6 +1926,8 @@ const UI_PHRASES={
     "Optional short note":"Courte note facultative",
     "Show the address under this dashboard tile.":"Afficher l’adresse sous cette tuile du tableau de bord.",
     "Copy address":"Copier l’adresse",
+    "Upload icon":"Importer une icône",
+    "Use default color":"Utiliser la couleur par défaut",
     "Open the project actions for logs and diagnostics":"Ouvrez les actions du projet pour les journaux et le diagnostic.",
     "Container logs are available in Docker":"Les journaux du conteneur sont disponibles dans Docker",
     "Edit compose":"Modifier le compose",
@@ -2758,6 +2769,8 @@ const UI_PHRASES={
     "Optional short note":"Breve nota opzionale",
     "Show the address under this dashboard tile.":"Mostra l’indirizzo sotto questo riquadro della dashboard.",
     "Copy address":"Copia indirizzo",
+    "Upload icon":"Carica icona",
+    "Use default color":"Usa colore predefinito",
     "Open the project actions for logs and diagnostics":"Apri le azioni del progetto per log e diagnostica.",
     "Container logs are available in Docker":"I log del container sono disponibili in Docker",
     "Edit compose":"Modifica compose",
@@ -3600,6 +3613,8 @@ const UI_PHRASES={
     "Optional short note":"Nota breve opcional",
     "Show the address under this dashboard tile.":"Mostrar la dirección debajo de este mosaico del panel.",
     "Copy address":"Copiar dirección",
+    "Upload icon":"Subir icono",
+    "Use default color":"Usar color predeterminado",
     "Open the project actions for logs and diagnostics":"Abre las acciones del proyecto para registros y diagnóstico.",
     "Container logs are available in Docker":"Los registros del contenedor están disponibles en Docker",
     "Edit compose":"Editar compose",
@@ -4444,6 +4459,8 @@ const UI_PHRASES={
     "Optional short note":"Nota curta opcional",
     "Show the address under this dashboard tile.":"Mostrar o endereço por baixo deste mosaico do painel.",
     "Copy address":"Copiar endereço",
+    "Upload icon":"Carregar ícone",
+    "Use default color":"Usar cor predefinida",
     "Open the project actions for logs and diagnostics":"Abra as ações do projeto para registos e diagnóstico.",
     "Container logs are available in Docker":"Os registos do contentor estão disponíveis no Docker",
     "Edit compose":"Editar compose",
@@ -9079,18 +9096,106 @@ window.dashToggleUrl=async(id,show)=>{
   if(t)t.show_url=show;
   renderDashboard();
 };
+const DASH_DEFAULT_ACCENT='#7a4aff';
+let dashIconLookupTimer=null,dashIconLookupSeq=0;
 function dashTileIconHtml(icon,name){
   const value=String(icon||'').trim();
   if(value&&value.length<=2)return esc(value);
   if(value)return `<img src="${esc(value)}" onerror="this.parentElement.textContent='${esc((name||'?')[0])}'">`;
   return esc((name||'?')[0]);
 }
+function dashSelfhstSlug(value){
+  return String(value||'')
+    .trim()
+    .toLowerCase()
+    .replace(/^https?:\/\//,'')
+    .replace(/\.[a-z0-9]+$/,'')
+    .replace(/&/g,' and ')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+    .replace(/[^a-z0-9]+/g,'-')
+    .replace(/^-+|-+$/g,'');
+}
+function dashSelfhstIconCandidates(value){
+  const slug=dashSelfhstSlug(value);
+  if(!slug)return[];
+  const file=encodeURIComponent(slug);
+  return [
+    `https://cdn.jsdelivr.net/gh/selfhst/icons/svg/${file}.svg`,
+    `https://cdn.jsdelivr.net/gh/selfhst/icons/png/${file}.png`,
+    `https://raw.githubusercontent.com/selfhst/icons/main/svg/${file}.svg`,
+    `https://selfh.st/icons/${file}.svg`
+  ];
+}
+function dashProbeIcon(url){
+  return new Promise(resolve=>{
+    const img=new Image();
+    img.onload=()=>resolve(true);
+    img.onerror=()=>resolve(false);
+    img.referrerPolicy='no-referrer';
+    img.src=url;
+  });
+}
+function dashShowIconUpload(show){
+  const btn=$('#tile-edit-upload-btn');
+  if(!btn)return;
+  btn.classList.toggle('visible',!!show);
+  btn.setAttribute('aria-hidden',show?'false':'true');
+}
+async function dashFindSelfhstIcon(value,seq){
+  for(const url of dashSelfhstIconCandidates(value)){
+    if(seq!==dashIconLookupSeq)return null;
+    if(await dashProbeIcon(url))return url;
+  }
+  return '';
+}
+function dashHandleIconInput(){
+  const inp=$('#tile-edit-icon');if(!inp)return;
+  const value=inp.value.trim();
+  dashUpdateEditPreview();
+  clearTimeout(dashIconLookupTimer);
+  if(!value||value.length<=2||/^https?:\/\//i.test(value)||value.startsWith('data:image/')){
+    dashShowIconUpload(false);
+    return;
+  }
+  const seq=++dashIconLookupSeq;
+  dashIconLookupTimer=setTimeout(async()=>{
+    const found=await dashFindSelfhstIcon(value,seq);
+    if(seq!==dashIconLookupSeq||found===null)return;
+    if(found){
+      inp.value=found;
+      dashShowIconUpload(false);
+      dashUpdateEditPreview();
+    }else{
+      dashShowIconUpload(true);
+      dashUpdateEditPreview();
+    }
+  },320);
+}
+window.dashResetTileAccent=()=>{
+  const inp=$('#tile-edit-accent');if(!inp)return;
+  inp.value=DASH_DEFAULT_ACCENT;
+  dashUpdateEditPreview();
+};
+window.dashUploadTileIcon=()=>{
+  $('#tile-edit-icon-file')?.click();
+};
+window.dashReadTileIconFile=file=>{
+  if(!file||!file.type.startsWith('image/'))return;
+  const reader=new FileReader();
+  reader.onload=()=>{
+    const inp=$('#tile-edit-icon');if(!inp)return;
+    inp.value=String(reader.result||'');
+    dashShowIconUpload(false);
+    dashUpdateEditPreview();
+  };
+  reader.readAsDataURL(file);
+};
 function dashUpdateEditPreview(){
   const card=$('#tile-edit-preview');if(!card)return;
   const name=$('#tile-edit-name')?.value||'Tile';
   const icon=$('#tile-edit-icon')?.value||'';
   const note=$('#tile-edit-note')?.value||'';
-  const accent=$('#tile-edit-accent')?.value||'#7a4aff';
+  const accent=$('#tile-edit-accent')?.value||DASH_DEFAULT_ACCENT;
   const showUrl=!!$('#tile-edit-show-url')?.checked;
   const address=$('#tile-edit-address')?.dataset.address||'';
   card.style.setProperty('--tile-accent',accent);
@@ -9115,7 +9220,7 @@ window.dashEditTile=id=>{
   if(!t)return;
   const isService=t.type==='app'||t.type==='compose';
   const address=isService?dashTileAddress(t):String(t.url||'').replace(/^https?:\/\//,'');
-  const accent=t.accent||'#7a4aff';
+  const accent=t.accent||DASH_DEFAULT_ACCENT;
   const formCard=document.querySelector('#form-overlay .form-card');
   if(formCard){formCard.classList.remove('compose-install-card');formCard.classList.add('tile-edit-card');}
   $('#form-head').innerHTML=`<span>✎</span> ${esc(uiText('Edit tile'))}`;
@@ -9133,8 +9238,8 @@ window.dashEditTile=id=>{
     </div>
     <div class="tile-edit-grid">
       <div class="form-field"><label>${esc(uiText('Display name'))}</label><input id="tile-edit-name" value="${esc(t.name||'')}" placeholder="${esc(uiText('Name'))}"></div>
-      <div class="form-field"><label>${esc(uiText('Icon'))}</label><input id="tile-edit-icon" value="${esc(t.icon||'')}" placeholder="🏠 or https://..."></div>
-      <div class="form-field"><label>${esc(uiText('Accent color'))}</label><input id="tile-edit-accent" type="color" value="${esc(accent)}" style="height:38px;padding:4px"></div>
+      <div class="form-field"><label>${esc(uiText('Icon'))}</label><div class="tile-edit-control"><input id="tile-edit-icon" value="${esc(t.icon||'')}" placeholder="home assistant, plex or https://..."><button type="button" class="tile-edit-icon-btn tile-edit-upload-btn" id="tile-edit-upload-btn" onclick="dashUploadTileIcon()" title="${esc(uiText('Upload icon'))}" aria-label="${esc(uiText('Upload icon'))}">⇧</button><input id="tile-edit-icon-file" type="file" accept="image/*" hidden onchange="dashReadTileIconFile(this.files&&this.files[0])"></div></div>
+      <div class="form-field"><label>${esc(uiText('Accent color'))}</label><div class="tile-edit-control"><input id="tile-edit-accent" type="color" value="${esc(accent)}" style="height:38px;padding:4px"><button type="button" class="tile-edit-icon-btn" onclick="dashResetTileAccent()" title="${esc(uiText('Use default color'))}" aria-label="${esc(uiText('Use default color'))}">↺</button></div></div>
       <div class="form-field"><label>${esc(uiText('Visible address'))}</label><input id="tile-edit-address" data-address="${esc(address)}" value="${esc(address)}" readonly></div>
       <div class="form-field tile-edit-wide"><label>${esc(uiText('Note'))}</label><input id="tile-edit-note" value="${esc(t.note||'')}" placeholder="${esc(uiText('Optional short note'))}"></div>
       ${t.type==='custom'?`<div class="form-field tile-edit-wide"><label>URL</label><input id="tile-edit-url" value="${esc(t.url||'')}" placeholder="http://192.168.1.50:8123"></div>`:''}
@@ -9146,7 +9251,8 @@ window.dashEditTile=id=>{
       <button class="btn ghost" onclick="dashCopyTileAddress()">${esc(uiText('Copy address'))}</button>
       <div class="tile-edit-actions-main"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="tile-edit-save">${esc(tr('save'))}</button></div>
     </div>`;
-  ['tile-edit-name','tile-edit-icon','tile-edit-note','tile-edit-accent','tile-edit-show-url'].forEach(sel=>$('#'+sel)?.addEventListener(sel==='tile-edit-show-url'?'change':'input',dashUpdateEditPreview));
+  ['tile-edit-name','tile-edit-note','tile-edit-accent','tile-edit-show-url'].forEach(sel=>$('#'+sel)?.addEventListener(sel==='tile-edit-show-url'?'change':'input',dashUpdateEditPreview));
+  $('#tile-edit-icon')?.addEventListener('input',dashHandleIconInput);
   $('#tile-edit-save').onclick=async()=>{
     const payload={
       tile_id:id,
