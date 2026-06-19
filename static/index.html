@@ -9097,16 +9097,23 @@ window.dashCompose=async id=>{
     const t=dashTiles.find(x=>x.id===id)||appById(id);
     const isCompose=appIsCompose(t)||String(id||'').startsWith('compose:');
     const project=isCompose?dashComposeProject(t||{id}):id;
-    const a=isCompose?(t||{name:project}):await api('/apps/get?app_id='+encodeURIComponent(id));
+    const appId=isCompose?'compose:'+project:id;
+    const a=isCompose?await api('/apps/get?app_id='+encodeURIComponent(appId)):await api('/apps/get?app_id='+encodeURIComponent(id));
     const c=isCompose?await api('/docker/compose/get?name='+encodeURIComponent(project)):{content:a.compose||''};
-    openForm('Compose: '+(a.name||project),'✎',[
-      {name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:c.content||a.compose||''}
-    ],async d=>{
-      if(isCompose)await post('/docker/compose/save',{name:project,content:d.content});
-      else await post('/apps/save-compose',{app_id:id,content:d.content});
-      closeForm();toast(uiText('Saved'));
-      const body=$('#modal-body');if(body&&currentTile?.id==='apps')renderApps(body);
-      loadDashboard();
+    const draft=await appComposeDraft(appId,c.content||a.compose||'');
+    appComposeFormOpen(draft,{
+      title:'Compose: '+(a.name||project),
+      icon:'✎',
+      description:localizedAppDesc(a)||a.desc||'Docker Compose',
+      primaryLabel:'Save',
+      onSubmit:async currentDraft=>{
+        const content=appInstallCompose(currentDraft);
+        if(isCompose)await post('/docker/compose/save',{name:project,content});
+        else await post('/apps/save-compose',{app_id:id,content});
+        closeForm();toast(uiText('Saved'));
+        const body=$('#modal-body');if(body&&currentTile?.id==='apps')renderApps(body);
+        loadDashboard();
+      },
     });
   }catch(e){toast('Error: '+e.message,'error');}
 };
@@ -9845,23 +9852,25 @@ async function appInstallStart(draft){
     },2000);
   }catch(e){indicator.classList.add('error');toast('Error: '+e.message,'error');setTimeout(()=>indicator.remove(),3000);}
 }
-window.appInstallForm=async id=>{
-  try{
-    const [a,diskData]=await Promise.all([api('/apps/get?app_id='+encodeURIComponent(id)),api('/system/disks').catch(()=>[])]);
-    const draft=appInstallParseCompose(a.compose||'');
-    draft.app=a;
-    draft.mounts=appInstallMounts(diskData);
-    draft.volumes.forEach(v=>{if(v.managed)v.mountpoint=appInstallBestMount(draft.mounts,appInstallVolumeRole(v));});
-    _appInstallDraft=draft;
-    const formCard=document.querySelector('#form-overlay .form-card');
-    if(formCard)formCard.classList.add('compose-install-card');
-    $('#form-head').innerHTML=`<span>🧩</span> ${esc(uiText('Install'))}: ${esc(a.name)}`;
-    const advancedTemplate=draft.lockedCompose;
-    $('#form-body').innerHTML=`
+function appComposeIconHtml(a){
+  const icon=String(a?.icon||'').trim();
+  const fallback=esc((a?.name||'?')[0]);
+  if(/^https?:\/\//.test(icon)||icon.startsWith('/')){
+    return `<img src="${esc(icon)}" alt="" onerror="this.style.display='none';this.parentElement.textContent='${fallback}'">`;
+  }
+  return esc(icon||fallback);
+}
+function appComposeFormOpen(draft,options){
+  const a=draft.app||{};
+  const formCard=document.querySelector('#form-overlay .form-card');
+  if(formCard)formCard.classList.add('compose-install-card');
+  $('#form-head').innerHTML=`<span>${esc(options.icon||'🧩')}</span> ${esc(options.title)}`;
+  const advancedTemplate=draft.lockedCompose;
+  $('#form-body').innerHTML=`
       <div class="compose-install-shell">
         <div class="compose-install-head">
-          <div class="compose-install-icon"><img src="${esc(a.icon)}" alt="" onerror="this.style.display='none';this.parentElement.textContent='${esc((a.name||'?')[0])}'"></div>
-          <div class="compose-install-title"><h3>${esc(a.name)}</h3><p>${esc(localizedAppDesc(a)||appUi('installDefault'))}</p></div>
+          <div class="compose-install-icon">${appComposeIconHtml(a)}</div>
+          <div class="compose-install-title"><h3>${esc(a.name)}</h3><p>${esc(options.description||localizedAppDesc(a)||appUi('installDefault'))}</p></div>
           <div class="compose-install-badges"><span class="compose-install-badge">Docker ready</span><span class="compose-install-badge info">Compose</span></div>
         </div>
         <div class="service-summary">
@@ -9884,14 +9893,36 @@ window.appInstallForm=async id=>{
           `}
           <div class="compose-block compose-preview-card"><div class="compose-key"><code>compose</code><span>Preview</span></div><div class="compose-block-body"><div class="compose-preview-toolbar"><strong>docker-compose.yml</strong><span class="compose-install-badge info">generated</span></div><pre class="compose-preview mono" id="app-compose-content" aria-label="Generated docker-compose.yml" tabindex="0"></pre></div></div>
         </div>
-        <div class="compose-install-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="app-install-go">${esc(uiText('Install'))}</button></div>
+        <div class="compose-install-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="app-compose-go">${esc(uiText(options.primaryLabel||'Save'))}</button></div>
       </div>`;
-    $('#form-overlay').classList.add('open');
-    if(!advancedTemplate)appInstallRenderVolumes();
-    appInstallRefresh();
-    translateRenderedText($('#form-body'));
-    $('#app-install-go').onclick=()=>appInstallStart(_appInstallDraft);
-    requestAnimationFrame(()=>$('#app-compose-service')?.focus());
+  $('#form-overlay').classList.add('open');
+  if(!advancedTemplate)appInstallRenderVolumes();
+  appInstallRefresh();
+  translateRenderedText($('#form-body'));
+  $('#app-compose-go').onclick=()=>options.onSubmit(_appInstallDraft);
+  requestAnimationFrame(()=>$('#app-compose-service')?.focus());
+}
+async function appComposeDraft(appId,contentOverride){
+  const [a,diskData]=await Promise.all([
+    api('/apps/get?app_id='+encodeURIComponent(appId)),
+    api('/system/disks').catch(()=>[])
+  ]);
+  const draft=appInstallParseCompose(contentOverride??(a.compose||''));
+  draft.app=a;
+  draft.mounts=appInstallMounts(diskData);
+  draft.volumes.forEach(v=>{if(v.managed)v.mountpoint=appInstallBestMount(draft.mounts,appInstallVolumeRole(v));});
+  _appInstallDraft=draft;
+  return draft;
+}
+window.appInstallForm=async id=>{
+  try{
+    const draft=await appComposeDraft(id);
+    appComposeFormOpen(draft,{
+      title:uiText('Install')+': '+draft.app.name,
+      icon:'🧩',
+      primaryLabel:'Install',
+      onSubmit:appInstallStart,
+    });
   }catch(e){toast('Error: '+e.message,'error');}
 };
 window.appUninstall=(id,name)=>typedConfirm('Uninstall app',`"${name}" will be stopped and removed. Data in /opt/runvard/data/apps/${id}/ stays on disk.`,name,async()=>{
