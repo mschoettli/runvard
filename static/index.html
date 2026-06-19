@@ -6730,17 +6730,17 @@ async function renderTrash(body){
     <div class="files-sidebar">
       ${QUICKLINKS.map(q=>`<div class="files-quicklink${currentPath===q.path?' active':''}" onclick="navTo('${esc(q.path)}')">${q.label}</div>`).join('')}
     </div>
-    <div>
-      <div class="toolbar">
+    <div class="files-main">
+      ${items.length?`<div class="toolbar">
         <button class="btn danger sm" onclick="emptyTrash()">🗑 ${esc(uiText('Empty trash'))}</button>
-      </div>
+      </div>`:''}
       <table><thead><tr><th>Name</th><th>Original-Pfad</th><th>Deleted</th><th></th></tr></thead><tbody>
       ${items.length?items.map(i=>`<tr>
         <td><span style="display:inline-flex;align-items:center;gap:8px"><span class="fi ${i.is_dir?'fi-folder':'fi-doc'}" style="width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px">${i.is_dir?'📁':'📄'}</span> ${esc(i.name)}</span></td>
         <td class="mono" style="font-size:11px;color:var(--text3)">${esc(i.original)}</td>
         <td style="color:var(--text3)">${new Date(i.deleted*1000).toLocaleDateString('de-DE')}</td>
         <td><button class="btn sm ghost" onclick="restoreTrash('${i.id}','${esc(i.name)}')">↩ ${esc(uiText('Restore'))}</button></td>
-      </tr>`).join(''):'<tr><td colspan="4" class="loading">Trash is empty</td></tr>'}
+      </tr>`).join(''):`<tr><td colspan="4" class="loading">${esc(uiText('Trash is empty'))}</td></tr>`}
       </tbody></table>
     </div>
   </div>`;
