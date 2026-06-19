@@ -491,9 +491,9 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .dash-add-btn{width:28px;height:28px;border-radius:8px;background:rgba(122,74,255,.12);border:.5px solid rgba(122,74,255,.3);display:flex;align-items:center;justify-content:center;font-size:16px;color:#9d7aff;cursor:pointer;transition:all .15s}
 .dash-add-btn:hover{background:rgba(122,74,255,.25)}
 .dash-grid{display:grid;grid-template-columns:repeat(9,1fr);gap:10px}
-.dash-tile{background:var(--bg3);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:var(--radius);overflow:visible;cursor:pointer;transition:all .15s;user-select:none;-webkit-user-select:none;position:relative}
-.dash-tile:hover{border-color:var(--border-accent);transform:translateY(-2px)}
-.dash-tile-body{padding:14px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;position:relative}
+.dash-tile{--tile-accent:var(--accent);background:var(--bg3);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:var(--radius);overflow:visible;cursor:pointer;transition:all .15s;user-select:none;-webkit-user-select:none;position:relative}
+.dash-tile:hover{border-color:color-mix(in srgb,var(--tile-accent) 48%,transparent);transform:translateY(-2px)}
+.dash-tile-body{padding:14px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;position:relative;min-height:88px}
 .dash-tile-body.has-url{padding-bottom:0}
 .dash-tile .dash-status{position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%}
 .dash-status.run{background:var(--green);box-shadow:0 0 6px rgba(34,197,94,.4)}
@@ -503,21 +503,42 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .dash-tile .dash-dots{position:absolute;top:7px;left:7px;width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,.35);cursor:pointer;letter-spacing:-1px;transition:all .15s;opacity:0}
 .dash-tile:hover .dash-dots{opacity:1}
 .dash-dots:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.6)}
-.dash-tile-icon{width:34px;height:34px;border-radius:9px;background:rgba(255,255,255,.05);border:.5px solid var(--border);display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden}
+.dash-tile-icon{width:34px;height:34px;border-radius:9px;background:color-mix(in srgb,var(--tile-accent) 16%,rgba(255,255,255,.05));border:.5px solid color-mix(in srgb,var(--tile-accent) 38%,var(--border));display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden}
 .dash-tile-icon img{width:22px;height:22px;object-fit:contain}
 .dash-tile-name{font-size:12px;font-weight:600;color:var(--text);text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.dash-tile-note{font-size:9px;color:var(--text3);line-height:1.25;max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .dash-tile-footer{display:flex;align-items:center;padding:5px 10px;border-top:.5px solid rgba(255,255,255,.05);background:rgba(0,0,0,.15)}
 .dash-tile-url{font-size:8px;color:var(--text3);font-family:'JetBrains Mono',monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.dash-ctx{position:fixed;background:rgba(15,12,26,.97);border:.5px solid var(--border-accent);border-radius:12px;padding:6px;z-index:999;min-width:170px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
-.dash-ctx-item{padding:8px 12px;border-radius:8px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:10px;color:var(--text2);justify-content:space-between}
-.dash-ctx-item:hover{background:var(--glass-hover);color:var(--text)}
-.dash-ctx-item.danger{color:#f87171}
-.dash-ctx-item.danger:hover{background:rgba(239,68,68,.1)}
-.dash-ctx-sep{height:.5px;background:var(--border);margin:4px 6px}
-.dash-toggle{width:28px;height:14px;border-radius:7px;background:rgba(255,255,255,.12);position:relative;flex-shrink:0;transition:background .2s}
-.dash-toggle.on{background:rgba(122,74,255,.5)}
-.dash-toggle::after{content:'';position:absolute;top:2px;left:2px;width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,.6);transition:transform .2s}
-.dash-toggle.on::after{transform:translateX(14px)}
+.dash-ctx{position:fixed;background:rgba(13,14,26,.98);border:.5px solid rgba(122,74,255,.28);border-radius:14px;padding:6px;z-index:999;min-width:210px;box-shadow:0 18px 48px rgba(0,0,0,.62)}
+.dash-ctx-item{width:100%;border:0;background:transparent;padding:9px 10px;border-radius:9px;cursor:pointer;font-family:inherit;font-size:12px;display:flex;align-items:center;gap:10px;color:rgba(240,240,255,.78);text-align:left;transition:background .15s,color .15s}
+.dash-ctx-item:hover,.dash-ctx-item:focus{background:var(--glass-hover);color:var(--text);outline:none}
+.dash-ctx-icon{width:18px;display:inline-flex;align-items:center;justify-content:center;color:rgba(186,168,255,.92);font-size:13px;flex-shrink:0}
+.dash-ctx-label{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.dash-ctx-item.danger{color:#ff8a8a}
+.dash-ctx-item.danger .dash-ctx-icon{color:#ff8a8a}
+.dash-ctx-item.danger:hover{background:rgba(239,68,68,.12);color:#ffb4b4}
+.dash-ctx-sep{height:.5px;background:rgba(255,255,255,.08);margin:5px 8px}
+.tile-edit-card{width:min(560px,95vw)}
+.tile-edit-preview-wrap{display:flex;justify-content:center;margin-bottom:18px;padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.035)}
+.tile-edit-preview{--tile-accent:var(--accent);width:150px;background:var(--bg3);border:1px solid color-mix(in srgb,var(--tile-accent) 38%,var(--border));border-radius:14px;overflow:hidden;text-align:center;box-shadow:0 10px 28px rgba(0,0,0,.28)}
+.tile-edit-preview-body{min-height:100px;padding:16px 10px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;position:relative}
+.tile-edit-preview-dot{position:absolute;top:9px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--green)}
+.tile-edit-preview-icon{width:38px;height:38px;border-radius:10px;background:color-mix(in srgb,var(--tile-accent) 16%,rgba(255,255,255,.05));border:.5px solid color-mix(in srgb,var(--tile-accent) 38%,var(--border));display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden}
+.tile-edit-preview-icon img{width:24px;height:24px;object-fit:contain}
+.tile-edit-preview-name{max-width:126px;color:var(--text);font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile-edit-preview-note{max-width:126px;color:var(--text3);font-size:9px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile-edit-preview-url{padding:5px 9px;border-top:.5px solid rgba(255,255,255,.06);background:rgba(0,0,0,.16);font:8px 'JetBrains Mono',monospace;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tile-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+.tile-edit-grid .form-field{margin-bottom:0}
+.tile-edit-wide{grid-column:1/-1}
+.tile-edit-options{display:grid;gap:10px;margin-top:16px}
+.tile-edit-option{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px;background:rgba(255,255,255,.035)}
+.tile-edit-option strong{display:block;font-size:12px;color:var(--text);margin-bottom:3px}
+.tile-edit-option span{display:block;font-size:11px;color:var(--text3);line-height:1.35}
+.tile-edit-option input{width:auto}
+.tile-edit-actions{display:flex;justify-content:space-between;gap:10px;margin-top:20px}
+.tile-edit-actions-main{display:flex;gap:10px}
+@media (max-width: 640px){.tile-edit-grid{grid-template-columns:1fr}.tile-edit-actions{flex-direction:column}.tile-edit-actions-main{justify-content:flex-end}}
 .sortable-ghost{opacity:.3}
 .sortable-chosen{transform:scale(1.05)}
 
@@ -5343,7 +5364,7 @@ function failTopProgress(label){
 let formSubmitFn=null;
 function openForm(title,icon,fields,onSubmit){
   const formCard=document.querySelector('#form-overlay .form-card');
-  if(formCard)formCard.classList.remove('compose-install-card');
+  if(formCard)formCard.classList.remove('compose-install-card','tile-edit-card');
   $('#form-head').innerHTML=`<span>${icon}</span> ${esc(uiText(title))}`;
   const body=$('#form-body');
   body.innerHTML=fields.map(f=>{
@@ -5373,7 +5394,7 @@ function openForm(title,icon,fields,onSubmit){
   $('#form-go').onclick=formSubmitFn;
   $('#form-overlay').classList.add('open');
 }
-function closeForm(){const formCard=document.querySelector('#form-overlay .form-card');if(formCard)formCard.classList.remove('compose-install-card');$('#form-overlay').classList.remove('open');}
+function closeForm(){const formCard=document.querySelector('#form-overlay .form-card');if(formCard)formCard.classList.remove('compose-install-card','tile-edit-card');$('#form-overlay').classList.remove('open');}
 $('#form-overlay').onclick=e=>{if(e.target.id==='form-overlay')closeForm();};
 
 // ═══ Bestätigungs-Modal (Punkt 4) ═══
@@ -8891,42 +8912,39 @@ function dashTileUrl(t){
 }
 
 // Kontextmenü
+function dashCtxButton(icon,label,action,extra=''){
+  return `<button type="button" class="dash-ctx-item${extra?' '+extra:''}" onclick="${action}"><span class="dash-ctx-icon">${icon}</span><span class="dash-ctx-label">${esc(uiText(label))}</span></button>`;
+}
 window.dashCtx=(e,id)=>{
   e.preventDefault();e.stopPropagation();
   const t=dashTiles.find(x=>x.id===id);
   if(!t)return;
   const old=document.querySelector('.dash-ctx');
   if(old)old.remove();
-  const isApp=t.type==='app';
+  const isCompose=t.type==='compose';
+  const canRun=t.type==='app'||isCompose;
+  const pending=dashPendingActions.get(id);
   const menu=document.createElement('div');
   menu.className='dash-ctx';
-  menu.style.top=Math.min(e.clientY,window.innerHeight-280)+'px';
-  menu.style.left=Math.min(e.clientX,window.innerWidth-180)+'px';
-  const urlLabel=uiText(t.show_url?'Hide IP':'Show IP');
-  const isCompose=t.type==='compose';
-  const canRun=isApp||isCompose;
+  menu.style.top=Math.min(e.clientY,window.innerHeight-260)+'px';
+  menu.style.left=Math.min(e.clientX,window.innerWidth-220)+'px';
+  const statusAction=canRun&&!pending
+    ? (t.running
+      ? dashCtxButton('⏸','Pause',`dashAppAction('${esc(id)}','stop')`)
+      : dashCtxButton('▶','Start',`dashAppAction('${esc(id)}','start')`))
+    : '';
   menu.innerHTML=`
-    <div class="dash-ctx-item" onclick="dashOpen('${esc(id)}')"><span>↗ ${esc(uiText('Open'))}</span></div>
-    ${canRun&&t.running?`
-    <div class="dash-ctx-item" onclick="dashAppAction('${esc(id)}','restart')"><span>↻ ${esc(uiText('Restart'))}</span></div>
-    <div class="dash-ctx-item" onclick="dashAppAction('${esc(id)}','stop')"><span>⏸ ${esc(uiText('Pause'))}</span></div>`:''}
-    ${canRun&&!t.running?`
-    <div class="dash-ctx-item" onclick="dashAppAction('${esc(id)}','start')"><span>▶ ${esc(uiText('Start'))}</span></div>`:''}
+    ${dashCtxButton('↗','Open',`dashOpen('${esc(id)}')`)}
+    ${canRun?statusAction:''}
+    ${canRun&&!pending?dashCtxButton('↻','Restart',`dashAppAction('${esc(id)}','restart')`):''}
+    ${canRun?dashCtxButton('≡','Logs',`dashLogs('${esc(id)}')`):''}
     <div class="dash-ctx-sep"></div>
-    ${canRun?`
-    <div class="dash-ctx-item" onclick="dashCompose('${esc(id)}')"><span>${esc(uiText('✎ Edit compose'))}</span></div>
-    <div class="dash-ctx-item" onclick="dashFiles('${esc(id)}')"><span>${esc(uiText('📂 Show files'))}</span></div>
-    <div class="dash-ctx-item" onclick="dashEditHost('${esc(id)}')"><span>${esc(uiText('IP anpassen'))}</span></div>`:`
-    <div class="dash-ctx-item" onclick="dashEditCustom('${esc(id)}')"><span>✎ ${esc(uiText('Edit'))}</span></div>`}
+    ${dashCtxButton('✎','Edit tile',`dashEditTile('${esc(id)}')`)}
     <div class="dash-ctx-sep"></div>
-    <div class="dash-ctx-item" onclick="dashToggleUrl('${esc(id)}',${!t.show_url})">
-      <span>${urlLabel}</span>
-      <div class="dash-toggle${t.show_url?' on':''}"></div>
-    </div>
-    <div class="dash-ctx-sep"></div>
-    <div class="dash-ctx-item danger" onclick="dashRemove('${esc(id)}','${esc(t.name)}')"><span>🗑 ${esc(uiText('Remove'))}</span></div>`;
+    ${dashCtxButton('🗑','Remove',`dashRemove('${esc(id)}','${esc(t.name)}')`,'danger')}`;
   document.body.appendChild(menu);
-  setTimeout(()=>document.addEventListener('click',()=>{menu.remove();},{once:true}),10);
+  const close=ev=>{if(!menu.contains(ev.target))menu.remove();};
+  setTimeout(()=>document.addEventListener('click',close,{once:true}),10);
 };
 
 window.dashOpen=id=>{
@@ -8959,6 +8977,24 @@ window.dashAppAction=async(id,action)=>{
     dashPendingActions.delete(id);
     loadDashboard();
   }
+};
+window.dashLogs=async id=>{
+  document.querySelector('.dash-ctx')?.remove();
+  const t=dashTiles.find(x=>x.id===id);
+  if(!t)return;
+  openModal({id:'docker',name:'Docker',icon:'🐳',color:'#60a5fa',desc:'Container · Compose'});
+  const body=$('#modal-body');
+  if(t.type==='compose'){
+    await renderDocker(body,'Compose');
+    toast(uiText('Open the project actions for logs and diagnostics'));
+    return;
+  }
+  try{
+    const c=await api('/docker/containers');
+    const match=(c||[]).find(x=>x.name===t.id||x.name===t.name||String(x.name||'').includes(t.id)||String(x.id||'')===t.id);
+    if(match)await dockerLogs(match.id,match.name);
+    else{await renderDocker(body,'Container');toast(uiText('Container logs are available in Docker'), 'error');}
+  }catch(e){toast('Error: '+e.message,'error');}
 };
 window.dashCompose=async id=>{
   document.querySelector('.dash-ctx')?.remove();
@@ -8993,16 +9029,90 @@ window.dashToggleUrl=async(id,show)=>{
   if(t)t.show_url=show;
   renderDashboard();
 };
-window.dashEditHost=id=>{
+function dashTileIconHtml(icon,name){
+  const value=String(icon||'').trim();
+  if(value&&value.length<=2)return esc(value);
+  if(value)return `<img src="${esc(value)}" onerror="this.parentElement.textContent='${esc((name||'?')[0])}'">`;
+  return esc((name||'?')[0]);
+}
+function dashUpdateEditPreview(){
+  const card=$('#tile-edit-preview');if(!card)return;
+  const name=$('#tile-edit-name')?.value||'Tile';
+  const icon=$('#tile-edit-icon')?.value||'';
+  const note=$('#tile-edit-note')?.value||'';
+  const accent=$('#tile-edit-accent')?.value||'#7a4aff';
+  const showUrl=!!$('#tile-edit-show-url')?.checked;
+  const address=$('#tile-edit-address')?.dataset.address||'';
+  card.style.setProperty('--tile-accent',accent);
+  $('#tile-edit-preview-icon').innerHTML=dashTileIconHtml(icon,name);
+  $('#tile-edit-preview-name').textContent=name;
+  const noteEl=$('#tile-edit-preview-note');
+  noteEl.textContent=note;
+  noteEl.style.display=note?'block':'none';
+  const urlEl=$('#tile-edit-preview-url');
+  urlEl.textContent=address;
+  urlEl.style.display=showUrl&&address?'block':'none';
+}
+window.dashCopyTileAddress=async()=>{
+  const value=$('#tile-edit-address')?.dataset.address||'';
+  if(!value)return;
+  try{await navigator.clipboard.writeText(value);toast(uiText('Copied'));}
+  catch(e){toast(value);}
+};
+window.dashEditTile=id=>{
   document.querySelector('.dash-ctx')?.remove();
   const t=dashTiles.find(x=>x.id===id);
   if(!t)return;
-  openForm('IP anpassen','↗',[
-    {name:'host',label:'IP / Host',value:t.host||'',placeholder:location.hostname,hint:'Leer lassen nutzt die aktuelle runvard-Adresse.'},
-  ],async d=>{
-    await post('/dashboard/update',{tile_id:id,host:d.host||''});
-    closeForm();toast(uiText('Saved'));loadDashboard();
-  });
+  const isService=t.type==='app'||t.type==='compose';
+  const address=isService?dashTileAddress(t):String(t.url||'').replace(/^https?:\/\//,'');
+  const accent=t.accent||'#7a4aff';
+  const formCard=document.querySelector('#form-overlay .form-card');
+  if(formCard){formCard.classList.remove('compose-install-card');formCard.classList.add('tile-edit-card');}
+  $('#form-head').innerHTML=`<span>✎</span> ${esc(uiText('Edit tile'))}`;
+  $('#form-body').innerHTML=`
+    <div class="tile-edit-preview-wrap">
+      <div class="tile-edit-preview" id="tile-edit-preview" style="--tile-accent:${esc(accent)}">
+        <div class="tile-edit-preview-body">
+          <div class="tile-edit-preview-dot" style="background:${isService?(t.running?'var(--green)':'var(--red)'):'rgba(96,165,250,.75)'}"></div>
+          <div class="tile-edit-preview-icon" id="tile-edit-preview-icon">${dashTileIconHtml(t.icon,t.name)}</div>
+          <div class="tile-edit-preview-name" id="tile-edit-preview-name">${esc(t.name)}</div>
+          <div class="tile-edit-preview-note" id="tile-edit-preview-note" style="${t.note?'':'display:none'}">${esc(t.note||'')}</div>
+        </div>
+        <div class="tile-edit-preview-url" id="tile-edit-preview-url" style="${t.show_url&&address?'':'display:none'}">${esc(address)}</div>
+      </div>
+    </div>
+    <div class="tile-edit-grid">
+      <div class="form-field"><label>${esc(uiText('Display name'))}</label><input id="tile-edit-name" value="${esc(t.name||'')}" placeholder="${esc(uiText('Name'))}"></div>
+      <div class="form-field"><label>${esc(uiText('Icon'))}</label><input id="tile-edit-icon" value="${esc(t.icon||'')}" placeholder="🏠 or https://..."></div>
+      <div class="form-field"><label>${esc(uiText('Accent color'))}</label><input id="tile-edit-accent" type="color" value="${esc(accent)}" style="height:38px;padding:4px"></div>
+      <div class="form-field"><label>${esc(uiText('Visible address'))}</label><input id="tile-edit-address" data-address="${esc(address)}" value="${esc(address)}" readonly></div>
+      <div class="form-field tile-edit-wide"><label>${esc(uiText('Note'))}</label><input id="tile-edit-note" value="${esc(t.note||'')}" placeholder="${esc(uiText('Optional short note'))}"></div>
+      ${t.type==='custom'?`<div class="form-field tile-edit-wide"><label>URL</label><input id="tile-edit-url" value="${esc(t.url||'')}" placeholder="http://192.168.1.50:8123"></div>`:''}
+    </div>
+    <div class="tile-edit-options">
+      <label class="tile-edit-option"><span><strong>${esc(uiText('Show IP'))}</strong><span>${esc(uiText('Show the address under this dashboard tile.'))}</span></span><input id="tile-edit-show-url" type="checkbox" ${t.show_url?'checked':''}></label>
+    </div>
+    <div class="tile-edit-actions">
+      <button class="btn ghost" onclick="dashCopyTileAddress()">${esc(uiText('Copy address'))}</button>
+      <div class="tile-edit-actions-main"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="tile-edit-save">${esc(tr('save'))}</button></div>
+    </div>`;
+  ['tile-edit-name','tile-edit-icon','tile-edit-note','tile-edit-accent','tile-edit-show-url'].forEach(sel=>$('#'+sel)?.addEventListener(sel==='tile-edit-show-url'?'change':'input',dashUpdateEditPreview));
+  $('#tile-edit-save').onclick=async()=>{
+    const payload={
+      tile_id:id,
+      name:$('#tile-edit-name').value.trim()||t.name,
+      icon:$('#tile-edit-icon').value.trim(),
+      show_url:$('#tile-edit-show-url').checked,
+      accent:$('#tile-edit-accent').value,
+      note:$('#tile-edit-note').value.trim()
+    };
+    if(t.type==='custom')payload.url=$('#tile-edit-url').value.trim();
+    try{
+      await post('/dashboard/update',payload);
+      closeForm();toast(uiText('Saved'));loadDashboard();
+    }catch(e){toast('Error: '+e.message,'error');}
+  };
+  $('#form-overlay').classList.add('open');
 };
 window.dashRemove=(id,name)=>{
   document.querySelector('.dash-ctx')?.remove();
@@ -9012,19 +9122,7 @@ window.dashRemove=(id,name)=>{
     toast(uiText('Removed from dashboard'));
   });
 };
-window.dashEditCustom=id=>{
-  document.querySelector('.dash-ctx')?.remove();
-  const t=dashTiles.find(x=>x.id===id);
-  if(!t)return;
-  openForm('Link bearbeiten','✎',[
-    {name:'name',label:'Name',value:t.name},
-    {name:'url',label:'URL',value:t.url||'',placeholder:'http://192.168.1.50:8123'},
-    {name:'icon',label:'Icon (Emoji)',value:t.icon||'',placeholder:'🏠'},
-  ],async d=>{
-    await post('/dashboard/update',{tile_id:id,name:d.name,url:d.url,icon:d.icon});
-    closeForm();toast('Gespeichert');loadDashboard();
-  });
-};
+window.dashEditCustom=id=>dashEditTile(id);
 
 // Custom-Link hinzufügen
 window.dashAddForm=()=>{
@@ -9807,8 +9905,8 @@ function renderDashboard(){
   section.style.display='block';
   if(!dashTiles.length){grid.innerHTML=`<div class="nx-view-intro" style="grid-column:1/-1"><div><h3>Ready for apps</h3><p>Install apps or add custom shortcuts.</p></div><button class="btn" onclick="openTileById('apps')">Open apps</button></div>`;return;}
   grid.innerHTML=dashTiles.map(t=>{
-    const isService=t.type==='app'||t.type==='compose';const pending=dashPendingActions.get(t.id);const statusCls=isService?(pending?'pending':t.running?'run':'stop'):'ext';const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
-    return `<div class="dash-tile" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')"><div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${statusCls}" title="${pending?esc(appPendingLabel(pending)):''}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div></div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
+    const isService=t.type==='app'||t.type==='compose';const pending=dashPendingActions.get(t.id);const statusCls=isService?(pending?'pending':t.running?'run':'stop'):'ext';const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=dashTileIconHtml(t.icon,t.name);const accent=t.accent||'#7a4aff';
+    return `<div class="dash-tile" style="--tile-accent:${esc(accent)}" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')"><div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${statusCls}" title="${pending?esc(appPendingLabel(pending)):''}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div>${t.note?`<div class="dash-tile-note">${esc(t.note)}</div>`:''}</div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
   }).join('');
   if(typeof Sortable!=='undefined'){Sortable.create(grid,{animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:()=>{const order=[...grid.querySelectorAll('.dash-tile')].map(el=>el.dataset.id);post('/dashboard/order',{order:JSON.stringify(order)});}});}
 }

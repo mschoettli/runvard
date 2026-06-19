@@ -8,9 +8,10 @@ import subprocess
 
 from modules.compose_utils import best_web_port_from_compose
 
-DASH_FILE = "/opt/runvard/data/dashboard.json"
-APPS_DIR = "/opt/runvard/data/apps"
-COMPOSE_DIR = "/opt/runvard/data/compose"
+DATA_DIR = os.getenv("RUNVARD_DATA_DIR", "/opt/runvard/data")
+DASH_FILE = os.path.join(DATA_DIR, "dashboard.json")
+APPS_DIR = os.path.join(DATA_DIR, "apps")
+COMPOSE_DIR = os.path.join(DATA_DIR, "compose")
 
 
 def _load():
@@ -168,8 +169,20 @@ def _normalize_host(host):
     return value
 
 
-def update_tile(tile_id, name=None, url=None, icon=None, host=None):
-    """Aktualisiert eine Custom-Kachel."""
+def _normalize_accent(accent):
+    value = str(accent or "").strip()
+    if len(value) == 7 and value.startswith("#"):
+        try:
+            int(value[1:], 16)
+            return value
+        except ValueError:
+            return ""
+    return ""
+
+
+def update_tile(tile_id, name=None, url=None, icon=None, host=None,
+                show_url=None, accent=None, note=None):
+    """Aktualisiert Dashboard-Metadaten einer Kachel."""
     data = _load()
     for t in data["tiles"]:
         if t["id"] == tile_id:
@@ -179,6 +192,20 @@ def update_tile(tile_id, name=None, url=None, icon=None, host=None):
                 t["url"] = url
             if icon is not None:
                 t["icon"] = icon
+            if show_url is not None:
+                t["show_url"] = bool(show_url)
+            if accent is not None:
+                clean_accent = _normalize_accent(accent)
+                if clean_accent:
+                    t["accent"] = clean_accent
+                else:
+                    t.pop("accent", None)
+            if note is not None:
+                clean_note = str(note or "").strip()[:80]
+                if clean_note:
+                    t["note"] = clean_note
+                else:
+                    t.pop("note", None)
             if host is not None:
                 clean_host = _normalize_host(host)
                 if clean_host:
