@@ -8928,15 +8928,13 @@ function renderDashboard(){
   section.style.display='block';
   if(!dashTiles.length){grid.innerHTML='';return;}
   grid.innerHTML=dashTiles.map(t=>{
-    const isService=t.type==='app'||t.type==='compose';
-    const statusCls=isService?(t.running?'run':'stop'):'ext';
-    const port=t.port||0;
-    const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');
+    const status=dashTileStatus(t);
+    const url=(t.type==='app'||t.type==='compose')?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');
     const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
     return `<div class="dash-tile" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')">
       <div class="dash-tile-body${t.show_url?' has-url':''}">
         <div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div>
-        <div class="dash-status ${statusCls}"></div>
+        <div class="dash-status ${status.cls}" title="${esc(status.title)}"></div>
         <div class="dash-tile-icon">${iconHtml}</div>
         <div class="dash-tile-name">${esc(t.name)}</div>
       </div>
@@ -8977,6 +8975,22 @@ function dashTileAddress(t){
 
 function dashTileUrl(t){
   return `http://${dashTileAddress(t)}`;
+}
+
+function dashTileStatus(t){
+  const pending=dashPendingActions.get(t?.id);
+  if(pending)return {cls:'pending',title:appPendingLabel(pending)};
+  if(t?.type==='app'||t?.type==='compose'){
+    return t.running?{cls:'run',title:uiText('Running')}:{cls:'stop',title:uiText('Stopped')};
+  }
+  if(t?.type==='custom'){
+    const health=t.health||{};
+    const cls=health.state==='run'?'run':health.state==='stop'?'stop':'pending';
+    const label=health.label||'Unknown';
+    const detail=health.detail&&health.detail!==label?` · ${health.detail}`:'';
+    return {cls,title:label+detail};
+  }
+  return {cls:'pending',title:'Unknown'};
 }
 
 // Kontextmenü
@@ -9222,6 +9236,7 @@ window.dashEditTile=id=>{
   const isService=t.type==='app'||t.type==='compose';
   const address=isService?dashTileAddress(t):String(t.url||'').replace(/^https?:\/\//,'');
   const accent=t.accent||DASH_DEFAULT_ACCENT;
+  const previewStatus=dashTileStatus(t);
   const formCard=document.querySelector('#form-overlay .form-card');
   if(formCard){formCard.classList.remove('compose-install-card');formCard.classList.add('tile-edit-card');}
   $('#form-head').innerHTML=`<span>✎</span> ${esc(uiText('Edit tile'))}`;
@@ -9229,7 +9244,7 @@ window.dashEditTile=id=>{
     <div class="tile-edit-preview-wrap">
       <div class="tile-edit-preview" id="tile-edit-preview" style="--tile-accent:${esc(accent)}">
         <div class="tile-edit-preview-body">
-          <div class="tile-edit-preview-dot" style="background:${isService?(t.running?'var(--green)':'var(--red)'):'rgba(96,165,250,.75)'}"></div>
+          <div class="tile-edit-preview-dot dash-status ${previewStatus.cls}" title="${esc(previewStatus.title)}" style="position:static"></div>
           <div class="tile-edit-preview-icon" id="tile-edit-preview-icon">${dashTileIconHtml(t.icon,t.name)}</div>
           <div class="tile-edit-preview-name" id="tile-edit-preview-name">${esc(t.name)}</div>
           <div class="tile-edit-preview-note" id="tile-edit-preview-note" style="${t.note?'':'display:none'}">${esc(t.note||'')}</div>
@@ -10062,8 +10077,8 @@ function renderDashboard(){
   section.style.display='block';
   if(!dashTiles.length){grid.innerHTML=`<div class="nx-view-intro" style="grid-column:1/-1"><div><h3>Ready for apps</h3><p>Install apps or add custom shortcuts.</p></div><button class="btn" onclick="openTileById('apps')">Open apps</button></div>`;return;}
   grid.innerHTML=dashTiles.map(t=>{
-    const isService=t.type==='app'||t.type==='compose';const pending=dashPendingActions.get(t.id);const statusCls=isService?(pending?'pending':t.running?'run':'stop'):'ext';const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=dashTileIconHtml(t.icon,t.name);const accent=t.accent||'#7a4aff';
-    return `<div class="dash-tile" style="--tile-accent:${esc(accent)}" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')"><div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${statusCls}" title="${pending?esc(appPendingLabel(pending)):''}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div>${t.note?`<div class="dash-tile-note">${esc(t.note)}</div>`:''}</div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
+    const isService=t.type==='app'||t.type==='compose';const status=dashTileStatus(t);const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=dashTileIconHtml(t.icon,t.name);const accent=t.accent||'#7a4aff';
+    return `<div class="dash-tile" style="--tile-accent:${esc(accent)}" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')"><div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${status.cls}" title="${esc(status.title)}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div>${t.note?`<div class="dash-tile-note">${esc(t.note)}</div>`:''}</div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
   }).join('');
   if(typeof Sortable!=='undefined'){Sortable.create(grid,{animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:()=>{const order=[...grid.querySelectorAll('.dash-tile')].map(el=>el.dataset.id);post('/dashboard/order',{order:JSON.stringify(order)});}});}
 }
