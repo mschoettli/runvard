@@ -498,6 +498,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .dash-tile .dash-status{position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%}
 .dash-status.run{background:var(--green);box-shadow:0 0 6px rgba(34,197,94,.4)}
 .dash-status.stop{background:var(--red);box-shadow:0 0 6px rgba(239,68,68,.4)}
+.dash-status.pending{background:#93c5fd;box-shadow:0 0 6px rgba(96,165,250,.45)}
 .dash-status.ext{background:rgba(96,165,250,.6);box-shadow:0 0 6px rgba(96,165,250,.3)}
 .dash-tile .dash-dots{position:absolute;top:7px;left:7px;width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,.35);cursor:pointer;letter-spacing:-1px;transition:all .15s;opacity:0}
 .dash-tile:hover .dash-dots{opacity:1}
@@ -696,6 +697,7 @@ const post=(p,d)=>{const fd=new FormData();for(const k in d)fd.append(k,d[k]);re
 const fmtBytes=b=>{if(!b)return'0 B';const u=['B','KB','MB','GB','TB'],i=Math.floor(Math.log(b)/Math.log(1024));return(b/Math.pow(1024,i)).toFixed(1)+' '+u[i];};
 const fmtUptime=s=>{const d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60);return`${d}d ${h}h ${m}m`;};
 const esc=s=>(s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const dockerPendingActions=new Map(),composePendingActions=new Map(),dashPendingActions=new Map();
 const LANGUAGE_KEY='runvard_language';
 const LANGUAGES=[
   {code:'de',name:'Deutsch'},
@@ -6956,38 +6958,38 @@ async function renderDocker(body,tab){
    const c=await api('/docker/containers');
    body.innerHTML=`<div class="sec-hdr" style="margin-bottom:14px"><h3>Container</h3><button class="btn" onclick="dockerCreateForm()">+ Container</button></div>
    <table style="table-layout:fixed;width:100%"><thead><tr><th style="width:20%">Name</th><th>Image</th><th style="width:85px">Status</th><th style="width:120px">Ports</th><th style="width:240px;text-align:right;padding-right:16px">Aktionen</th></tr></thead><tbody>
-   ${c.map(x=>`<tr>
+   ${c.map(x=>{const pending=dockerPendingActions.get(x.id);return `<tr>
      <td style="font-weight:500;overflow:hidden;text-overflow:ellipsis">${esc(x.name)}</td>
      <td style="color:var(--text2);font-size:11px;font-family:'JetBrains Mono',monospace;overflow:hidden;text-overflow:ellipsis">${esc(x.image)}</td>
-     <td><span class="status-pill ${x.state==='running'?'run':'stop'}" style="font-size:10px">${x.state}</span></td>
+     <td>${pending?statusBadge(appPendingLabel(pending),'warn'):`<span class="status-pill ${x.state==='running'?'run':'stop'}" style="font-size:10px">${x.state}</span>`}</td>
      <td style="font-size:11px;color:var(--text3)">${x.ports.join(', ')||'—'}</td>
      <td style="text-align:right;padding-right:16px">
        <div style="display:inline-flex;gap:4px">
-         <button class="btn icon play" title="${x.state==='running'?'Restart':'Start'}" onclick="dockerAct('${x.id}','${x.state==='running'?'restart':'start'}')" style="width:26px;height:26px;font-size:12px">${x.state==='running'?'↻':'▶'}</button>
-         <button class="btn icon stop" title="Stop" onclick="dockerAct('${x.id}','stop')" ${x.state!=='running'?'disabled style="opacity:.3;width:26px;height:26px;font-size:12px"':'style="width:26px;height:26px;font-size:12px"'}>⏹</button>
+         <button class="btn icon play" title="${x.state==='running'?'Restart':'Start'}" onclick="dockerAct('${x.id}','${x.state==='running'?'restart':'start'}')" ${pending?'disabled ':''}style="width:26px;height:26px;font-size:12px">${x.state==='running'?'↻':'▶'}</button>
+         <button class="btn icon stop" title="Stop" onclick="dockerAct('${x.id}','stop')" ${pending||x.state!=='running'?'disabled style="opacity:.3;width:26px;height:26px;font-size:12px"':'style="width:26px;height:26px;font-size:12px"'}>⏹</button>
          <button class="btn icon" title="Statistik" onclick="dockerStats('${x.id}','${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">📊</button>
          <button class="btn icon play" title="Shell (exec)" onclick="dockerExec('${x.id}','${esc(x.name)}')" ${x.state!=='running'?'disabled style="opacity:.3;width:26px;height:26px;font-size:12px"':'style="width:26px;height:26px;font-size:12px"'}>⌨</button>
          <button class="btn icon" title="CPU-/RAM-Limits" onclick="dockerLimitsForm('${x.id}','${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">⚖</button>
          <button class="btn icon" title="Logs" onclick="dockerLogs('${x.id}','${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">≡</button>
          <button class="btn icon danger" title="Delete" onclick="dockerDel('${x.id}','${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">✕</button>
        </div>
-     </td></tr>`).join('')||'<tr><td colspan="5"><div class="empty-state">No containers</div></td></tr>'}</tbody></table>`;}
+     </td></tr>`}).join('')||'<tr><td colspan="5"><div class="empty-state">No containers</div></td></tr>'}</tbody></table>`;}
  else if(tab==='Compose'){
    const p=await api('/docker/compose');
    body.innerHTML=`<div class="sec-hdr" style="margin-bottom:14px"><h3>Compose projects</h3><button class="btn" onclick="composeForm()">+ Project</button></div>
    <table style="table-layout:fixed;width:100%"><thead><tr><th>Project</th><th style="width:100px">Status</th><th style="width:140px;text-align:right;padding-right:12px">Aktionen</th></tr></thead><tbody>
-   ${p.map(x=>`<tr>
+   ${p.map(x=>{const pending=composePendingActions.get(x.name);return `<tr>
      <td style="font-weight:500">${esc(x.name)}</td>
-     <td><span class="status-pill ${x.running?'run':'stop'}" style="font-size:10px">${x.running?'running':'stopped'}</span></td>
+     <td>${pending?statusBadge(appPendingLabel(pending),'warn'):`<span class="status-pill ${x.running?'run':'stop'}" style="font-size:10px">${x.running?'running':'stopped'}</span>`}</td>
      <td style="text-align:right;padding-right:12px">
        <div style="display:inline-flex;gap:4px">
-         <button class="btn icon play" title="Start" onclick="composeAct('${esc(x.name)}','up')" style="width:26px;height:26px;font-size:12px">▶</button>
-         <button class="btn icon stop" title="Stoppen" onclick="composeAct('${esc(x.name)}','down')" style="width:26px;height:26px;font-size:12px">⏹</button>
+         <button class="btn icon play" title="Start" onclick="composeAct('${esc(x.name)}','up')" ${pending?'disabled ':''}style="width:26px;height:26px;font-size:12px">▶</button>
+         <button class="btn icon stop" title="Stoppen" onclick="composeAct('${esc(x.name)}','stop')" ${pending?'disabled ':''}style="width:26px;height:26px;font-size:12px">⏹</button>
          <button class="btn icon" title="Bearbeiten" onclick="composeEdit('${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">✎</button>
          <button class="btn icon" title="Dashboard" onclick="composeAddToDashboard('${esc(x.name)}',${Number(x.port||0)})" style="width:26px;height:26px;font-size:12px">▣</button>
          <button class="btn icon" title="Open app" onclick="composeOpen('${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">↗</button>
        </div>
-     </td></tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">No projects</div></td></tr>'}</tbody></table>`;}
+     </td></tr>`}).join('')||'<tr><td colspan="3"><div class="empty-state">No projects</div></td></tr>'}</tbody></table>`;}
  else if(tab==='Images'){
    const im=await api('/docker/images');
    body.innerHTML=`<div class="sec-hdr"><h3>Images</h3><div style="display:flex;gap:8px"><button class="btn ghost" onclick="dockerSearchForm()">🔍 Registry search</button><button class="btn" onclick="pullForm()">+ Pull image</button></div></div>
@@ -7005,7 +7007,20 @@ async function renderDocker(body,tab){
 }
 
 // Punkt 2: Icon-Buttons + Punkt 4: Bestätigung
-window.dockerAct=async(id,action)=>{try{await post('/docker/action',{container_id:id,action});const msgs={start:'Container started',stop:'Container stopped',restart:'Container restarted',remove:'Container entfernt'};toast(msgs[action]||'OK');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}};
+window.dockerAct=async(id,action)=>{
+  dockerPendingActions.set(id,action);
+  renderDocker($('#modal-body'),'Container');
+  try{
+    await post('/docker/action',{container_id:id,action});
+    const msgs={start:'Container started',stop:'Container stopped',restart:'Container restarted',remove:'Container entfernt'};
+    toast(msgs[action]||'OK');
+  }catch(e){
+    toast('Error: '+e.message,'error');
+  }finally{
+    dockerPendingActions.delete(id);
+    renderDocker($('#modal-body'),'Container');
+  }
+};
 window.dockerDel=(id,name)=>confirmDelete('Delete container',`Really delete "${name}"? The container will be permanently removed.`,async()=>{try{await post('/docker/action',{container_id:id,action:'remove'});toast('Container deleted');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}});
 window.imageDel=(id,name)=>confirmDelete('Delete image',`Really delete "${name}"?`,async()=>{try{await post('/docker/images/remove',{image_id:id});toast('Image deleted');renderDocker($('#modal-body'),'Images');}catch(e){toast('Error: '+e.message,'error');}});
 window.volumeDel=name=>confirmDelete('Delete volume',`Really delete "${name}"? All data in this volume will be lost.`,async()=>{try{await post('/docker/volumes/remove',{name});toast('Volume deleted');renderDocker($('#modal-body'),'Volumes');}catch(e){toast('Error: '+e.message,'error');}});
@@ -7094,7 +7109,21 @@ const composeEnvFields=(data={})=>[
 ];
 window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Project name',placeholder:'meine-app'},{name:'content',label:'docker-compose.yml',type:'textarea',rows:12,value:'services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"'},...composeEnvFields()],async d=>{await post('/docker/compose/save',{name:d.name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''});await composeAddToDashboard(d.name,composeFirstPort(d.content),false);closeForm();toast('Project saved');renderDocker($('#modal-body'),'Compose');});
 window.composeEdit=async name=>{const c=await api('/docker/compose/get?name='+encodeURIComponent(name));openForm('Compose bearbeiten: '+name,'🐳',[{name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:c.content},...composeEnvFields(c)],async d=>{await post('/docker/compose/save',{name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''});closeForm();toast('Gespeichert');});};
-window.composeAct=async(name,action)=>{toast(action==='up'?'Starte '+name+'…':'Stoppe '+name+'…');try{const r=await post('/docker/compose/action',{name,action});const msgs={up:'Project started: '+name,down:'Project stopped: '+name,restart:'Project restarted: '+name};toast(r.ok?(msgs[action]||'OK'):'Error',r.ok?'success':'error');renderDocker($('#modal-body'),'Compose');}catch(e){toast('Error: '+e.message,'error');}};
+window.composeAct=async(name,action)=>{
+  composePendingActions.set(name,action);
+  toast(action==='up'?'Starte '+name+'…':'Stoppe '+name+'…');
+  renderDocker($('#modal-body'),'Compose');
+  try{
+    const r=await post('/docker/compose/action',{name,action});
+    const msgs={up:'Project started: '+name,down:'Project stopped: '+name,stop:'Project stopped: '+name,restart:'Project restarted: '+name};
+    toast(r.ok?(msgs[action]||'OK'):'Error',r.ok?'success':'error');
+  }catch(e){
+    toast('Error: '+e.message,'error');
+  }finally{
+    composePendingActions.delete(name);
+    renderDocker($('#modal-body'),'Compose');
+  }
+};
 window.composeDelete=name=>typedConfirm('Delete Compose project',`Compose project "${name}" will be stopped and removed.`,name,async()=>{try{const r=await post('/docker/compose/remove',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Compose project deleted');renderDocker($('#modal-body'),'Compose');}catch(e){toast('Error: '+e.message,'error');}});
 function composeFirstPort(content){return composeBestWebPort(content)||0;}
 window.composeAddToDashboard=async(name,port=0,announce=true)=>{
@@ -8517,7 +8546,7 @@ function appById(id){
   return appsCatalog.find(a=>a.id===id);
 }
 function appPendingLabel(action){
-  return appUi(({start:'starting',stop:'stopping',restart:'restarting',update:'updating',down:'stopping'})[action]||'starting');
+  return appUi(({up:'starting',start:'starting',stop:'stopping',down:'stopping',restart:'restarting',update:'updating'})[action]||'starting');
 }
 function appMatchesSearch(app,q){
   if(!q)return true;
@@ -8887,6 +8916,8 @@ window.dashAppAction=async(id,action)=>{
   const msgs={start:'App started',stop:'App stopped',restart:'App restarted'};
   const pending={start:'Starting…',stop:'Stopping…',restart:'Restarting…'};
   toast(uiText(pending[action]||'…'));
+  dashPendingActions.set(id,action);
+  renderDashboard();
   try{
     if(isCompose){
       const composeAction={start:'up',stop:'stop',restart:'restart'}[action]||action;
@@ -8894,9 +8925,13 @@ window.dashAppAction=async(id,action)=>{
     }else{
       await post('/apps/action',{app_id:id,action});
     }
-    toast(uiText(msgs[action]||'OK'));loadDashboard();
+    toast(uiText(msgs[action]||'OK'));
   }
   catch(e){toast('Error: '+e.message,'error');}
+  finally{
+    dashPendingActions.delete(id);
+    loadDashboard();
+  }
 };
 window.dashCompose=async id=>{
   document.querySelector('.dash-ctx')?.remove();
@@ -9212,7 +9247,7 @@ async function renderDocker(body,tab){
     const c=await api('/docker/containers');
     body.innerHTML=viewIntro('Container services','Start, stop and inspect services running in Docker. Advanced image and volume tools are in the other tabs.',`<button class="btn" onclick="dockerCreateForm()">Create container</button>`)
       +`<div class="nx-summary-grid">${summaryCard('Containers',c.length,'Total')}${summaryCard('Running',c.filter(x=>x.state==='running').length,'Active now')}</div>
-      <div class="nx-card-grid">${c.map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${statusBadge(x.state,x.state==='running'?'good':'warn')}</div><div class="nx-action-sub mono">${esc(x.image)}</div><div class="nx-chip-list">${(x.ports||[]).slice(0,3).map(p=>`<span class="nx-chip">${esc(p)}</span>`).join('')||'<span class="nx-chip">No public ports</span>'}</div><div class="nx-action-row" style="margin-top:12px"><button class="btn sm ${x.state==='running'?'ghost':'play'}" onclick="dockerAct('${x.id}','${x.state==='running'?'restart':'start'}')">${x.state==='running'?'Restart':'Start'}</button><button class="btn ghost sm" onclick="dockerLogs('${x.id}','${esc(x.name)}')">Logs</button><button class="btn ghost sm" onclick="dockerStats('${x.id}','${esc(x.name)}')">Stats</button><button class="btn danger sm" onclick="dockerDel('${x.id}','${esc(x.name)}')">Delete</button></div></div>`).join('')||emptyState('No containers')}</div>`;
+      <div class="nx-card-grid">${c.map(x=>{const pending=dockerPendingActions.get(x.id);return `<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${pending?statusBadge(appPendingLabel(pending),'warn'):statusBadge(x.state,x.state==='running'?'good':'warn')}</div><div class="nx-action-sub mono">${esc(x.image)}</div><div class="nx-chip-list">${(x.ports||[]).slice(0,3).map(p=>`<span class="nx-chip">${esc(p)}</span>`).join('')||'<span class="nx-chip">No public ports</span>'}</div><div class="nx-action-row" style="margin-top:12px"><button class="btn sm ${x.state==='running'?'ghost':'play'}" onclick="dockerAct('${x.id}','${x.state==='running'?'restart':'start'}')" ${pending?'disabled':''}>${pending?esc(appPendingLabel(pending)):x.state==='running'?'Restart':'Start'}</button>${x.state==='running'?`<button class="btn ghost sm" onclick="dockerAct('${x.id}','stop')" ${pending?'disabled':''}>${esc(uiText('Stop'))}</button>`:''}<button class="btn ghost sm" onclick="dockerLogs('${x.id}','${esc(x.name)}')">Logs</button><button class="btn ghost sm" onclick="dockerStats('${x.id}','${esc(x.name)}')">Stats</button><button class="btn danger sm" onclick="dockerDel('${x.id}','${esc(x.name)}')">Delete</button></div></div>`}).join('')||emptyState('No containers')}</div>`;
     return;
   }
   return renderDockerAdvanced(body,tab);
@@ -9223,7 +9258,7 @@ async function renderDockerAdvanced(body,tab){
   if(oldTab==='Compose'){
     const p=await api('/docker/compose');
     body.innerHTML=viewIntro('Compose projects','Advanced multi-container projects. Editing Compose files can break services.',`<button class="btn" onclick="composeForm()">Create project</button>`)
-      +simpleTable(['Project','Status','Actions'],p.map(x=>`<tr><td>${esc(x.name)}</td><td>${statusBadge(x.running?'Running':'Stopped',x.running?'good':'warn')}</td><td><button class="btn sm" onclick="composeAct('${esc(x.name)}','up')">Start</button> <button class="btn ghost sm" onclick="composeAct('${esc(x.name)}','down')">Stop</button> <button class="btn ghost sm" onclick="composeEdit('${esc(x.name)}')">Edit</button> <button class="btn ghost sm" onclick="composeAddToDashboard('${esc(x.name)}',${Number(x.port||0)})">Dashboard</button> <button class="btn danger sm" onclick="composeDelete('${esc(x.name)}')">Delete</button></td></tr>`).join(''));
+      +simpleTable(['Project','Status','Actions'],p.map(x=>{const pending=composePendingActions.get(x.name);return `<tr><td>${esc(x.name)}</td><td>${pending?statusBadge(appPendingLabel(pending),'warn'):statusBadge(x.running?'Running':'Stopped',x.running?'good':'warn')}</td><td><button class="btn sm" onclick="composeAct('${esc(x.name)}','up')" ${pending?'disabled':''}>${pending?esc(appPendingLabel(pending)):esc(uiText('Start'))}</button> <button class="btn ghost sm" onclick="composeAct('${esc(x.name)}','stop')" ${pending?'disabled':''}>${esc(uiText('Stop'))}</button> <button class="btn ghost sm" onclick="composeEdit('${esc(x.name)}')">Edit</button> <button class="btn ghost sm" onclick="composeAddToDashboard('${esc(x.name)}',${Number(x.port||0)})">Dashboard</button> <button class="btn danger sm" onclick="composeDelete('${esc(x.name)}')">Delete</button></td></tr>`}).join(''));
   } else if(oldTab==='Images'){
     const im=await api('/docker/images');
     body.innerHTML=viewIntro('Images','Images are templates used to create containers.',`<button class="btn" onclick="pullForm()">Pull image</button>`)
@@ -9745,8 +9780,8 @@ function renderDashboard(){
   section.style.display='block';
   if(!dashTiles.length){grid.innerHTML=`<div class="nx-view-intro" style="grid-column:1/-1"><div><h3>Ready for apps</h3><p>Install apps or add custom shortcuts.</p></div><button class="btn" onclick="openTileById('apps')">Open apps</button></div>`;return;}
   grid.innerHTML=dashTiles.map(t=>{
-    const isService=t.type==='app'||t.type==='compose';const statusCls=isService?(t.running?'run':'stop'):'ext';const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
-    return `<div class="dash-tile" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')"><div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${statusCls}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div></div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
+    const isService=t.type==='app'||t.type==='compose';const pending=dashPendingActions.get(t.id);const statusCls=isService?(pending?'pending':t.running?'run':'stop'):'ext';const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
+    return `<div class="dash-tile" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')"><div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${statusCls}" title="${pending?esc(appPendingLabel(pending)):''}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div></div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
   }).join('');
   if(typeof Sortable!=='undefined'){Sortable.create(grid,{animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:()=>{const order=[...grid.querySelectorAll('.dash-tile')].map(el=>el.dataset.id);post('/dashboard/order',{order:JSON.stringify(order)});}});}
 }
