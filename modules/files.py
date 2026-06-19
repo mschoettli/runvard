@@ -8,6 +8,7 @@ TRASH    = "/opt/runvard/data/trash"
 TRASHMETA= "/opt/runvard/data/trash/.meta.json"
 SHAREDB  = "/opt/runvard/data/shares.json"
 JOBDB    = "/opt/runvard/data/file_jobs.json"
+MANAGED_DIRS = {"/opt/runvard/data/apps", "/opt/runvard/data/compose"}
 MAX_EDIT = 2 * 1024 * 1024
 _job_lock = threading.Lock()
 _active_jobs = set()
@@ -35,6 +36,8 @@ def _unique_dst(dst):
 def list_dir(path):
     path = _r(path or "/")
     if _bl(path): raise PermissionError("Gesperrt")
+    if path in MANAGED_DIRS:
+        os.makedirs(path, exist_ok=True)
     if not os.path.isdir(path): raise NotADirectoryError(path)
     entries = []
     with os.scandir(path) as it:
