@@ -36,6 +36,37 @@ def available():
 
 # --- Container ---
 
+def _container_labels(container):
+    attrs = getattr(container, "attrs", {}) or {}
+    config = attrs.get("Config", {}) or {}
+    labels = config.get("Labels") or getattr(container, "labels", None) or {}
+    return labels if isinstance(labels, dict) else {}
+
+
+def _container_app_group(container):
+    labels = _container_labels(container)
+    compose_project = labels.get("com.docker.compose.project", "")
+    compose_service = labels.get("com.docker.compose.service", "")
+    if compose_project:
+        name = compose_project
+        if compose_service:
+            name = f"{compose_project} ({compose_service})"
+        return {
+            "type": "compose",
+            "id": f"compose:{compose_project}",
+            "name": name,
+            "project": compose_project,
+            "service": compose_service,
+        }
+    return {
+        "type": "container",
+        "id": f"container:{container.name}",
+        "name": container.name,
+        "project": "",
+        "service": "",
+    }
+
+
 def list_containers():
     client = _get_client()
     result = []
@@ -55,6 +86,7 @@ def list_containers():
             "ports": ports,
             "nano_cpus": (c.attrs.get("HostConfig", {}) or {}).get("NanoCpus", 0) or 0,
             "mem_limit": (c.attrs.get("HostConfig", {}) or {}).get("Memory", 0) or 0,
+            "app_group": _container_app_group(c),
         })
     return result
 

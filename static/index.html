@@ -5485,6 +5485,19 @@ function summaryCard(label,value,sub){
   const valueClass=String(value).includes('status-pill')?'v has-pill':'v';
   return `<div class="nx-summary-card"><div class="k">${esc(uiText(label))}</div><div class="${valueClass}">${value}</div>${sub?`<div class="s">${esc(uiText(sub))}</div>`:''}</div>`;
 }
+function dockerAppGroupKey(container){
+  const group=container&&container.app_group;
+  if(group&&group.id)return group.id;
+  return 'container:'+(container?.name||container?.id||'unknown');
+}
+function dockerAppGroupCount(containers,onlyRunning=false){
+  const groups=new Set();
+  (containers||[]).forEach(container=>{
+    if(onlyRunning&&container.state!=='running')return;
+    groups.add(dockerAppGroupKey(container));
+  });
+  return groups.size;
+}
 function usageBar(percent){
   const p=Math.max(0,Math.min(100,Number(percent)||0));
   const color=p>90?'var(--red)':p>75?'var(--yellow)':'linear-gradient(90deg,var(--accent),#06b6d4)';
@@ -5669,7 +5682,7 @@ async function refreshSystemUpdateBadge(){
 async function loadTileBadges(){
   try{
     const dc=await api('/docker/containers');
-    const running=dc.filter(x=>x.state==='running').length;
+    const running=dockerAppGroupCount(dc,true);
     const el=$('#badge-docker');
     if(el){
       el.textContent=running;
@@ -9543,7 +9556,7 @@ async function renderDocker(body,tab){
   if(tab==='Container'||!tab){
     const c=await api('/docker/containers');
     body.innerHTML=viewIntro('Container services','Start, stop and inspect services running in Docker. Advanced image and volume tools are in the other tabs.',`<button class="btn" onclick="dockerCreateForm()">Create container</button>`)
-      +`<div class="nx-summary-grid">${summaryCard('Containers',c.length,'Total')}${summaryCard('Running',c.filter(x=>x.state==='running').length,'Active now')}</div>
+      +`<div class="nx-summary-grid">${summaryCard('Apps',dockerAppGroupCount(c),'Total')}${summaryCard('Running',dockerAppGroupCount(c,true),'Active now')}</div>
       <div class="nx-card-grid">${c.map(x=>{const pending=dockerPendingActions.get(x.id);return `<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${pending?statusBadge(appPendingLabel(pending),'warn'):statusBadge(x.state,x.state==='running'?'good':'warn')}</div><div class="nx-action-sub mono">${esc(x.image)}</div><div class="nx-chip-list">${(x.ports||[]).slice(0,3).map(p=>`<span class="nx-chip">${esc(p)}</span>`).join('')||'<span class="nx-chip">No public ports</span>'}</div><div class="nx-action-row" style="margin-top:12px"><button class="btn sm ${x.state==='running'?'ghost':'play'}" onclick="dockerAct('${x.id}','${x.state==='running'?'restart':'start'}')" ${pending?'disabled':''}>${pending?esc(appPendingLabel(pending)):x.state==='running'?'Restart':'Start'}</button>${x.state==='running'?`<button class="btn ghost sm" onclick="dockerAct('${x.id}','stop')" ${pending?'disabled':''}>${esc(uiText('Stop'))}</button>`:''}<button class="btn ghost sm" onclick="dockerLogs('${x.id}','${esc(x.name)}')">Logs</button><button class="btn ghost sm" onclick="dockerStats('${x.id}','${esc(x.name)}')">Stats</button><button class="btn danger sm" onclick="dockerDel('${x.id}','${esc(x.name)}')">Delete</button></div></div>`}).join('')||emptyState('No containers')}</div>`;
     return;
   }
