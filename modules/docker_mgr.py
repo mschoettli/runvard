@@ -1,9 +1,10 @@
 """Docker: Container, Images, Volumes, Compose - volle Verwaltung."""
 import os
 import shutil
+import socket
 import subprocess
 
-from modules.compose_utils import best_web_port_from_compose
+from modules.compose_utils import best_web_port_from_compose, published_ports_from_compose
 
 try:
     import docker
@@ -358,6 +359,66 @@ def get_compose(name):
     except OSError:
         pass
     return data
+
+
+def _port_is_available(port):
+    try:
+        port = int(port)
+    except (TypeError, ValueError):
+        return False
+    if port <= 0 or port > 65535:
+        return False
+    try:
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            sock.bind(("0.0.0.0", port))
+        return True
+    except OSError:
+        return False
+
+
+def _compose_owned_ports(name):
+    ports = set()
+    if not HAS_DOCKER:
+        return ports
+    try:
+        client = _get_client()
+        containers = client.containers.list(
+            all=True,
+            filters={"label": f"com.docker.compose.project={name}"},
+        )
+    except Exception:
+        return ports
+    for container in containers:
+        network = (getattr(container, "attrs", {}) or {}).get("NetworkSettings", {})
+        mappings = network.get("Ports", {}) or {}
+        for bindings in mappings.values():
+            for binding in bindings or []:
+                try:
+                    ports.add(int(binding.get("HostPort")))
+                except (TypeError, ValueError):
+                    continue
+    return ports
+
+
+def check_compose_ports(name, content):
+    entries = published_ports_from_compose(content)
+    owned = _compose_owned_ports(name)
+    counts = {}
+    for entry in entries:
+        counts[entry["port"]] = counts.get(entry["port"], 0) + 1
+
+    conflicts = []
+    for entry in entries:
+        port = entry["port"]
+        if counts.get(port, 0) > 1:
+            conflicts.append({**entry, "reason": "duplicate"})
+        elif port in owned:
+            continue
+        elif not _port_is_available(port):
+            conflicts.append({**entry, "reason": "in_use"})
+
+    return {"ok": not conflicts, "ports": entries, "conflicts": conflicts}
 
 
 def compose_action(name, action):

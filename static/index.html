@@ -462,6 +462,11 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .compose-raw-note.warn{color:#fbbf24}
 .compose-env-toggle{display:flex;align-items:flex-start;gap:9px;color:var(--text);font-size:13px;line-height:1.4;cursor:pointer}
 .compose-env-toggle input{width:auto;min-height:0;margin-top:2px}
+.compose-port-conflict input,.compose-raw-editor.conflict{border-color:rgba(248,113,113,.75)!important;box-shadow:0 0 0 1px rgba(248,113,113,.25)}
+.form-field.conflict textarea{border-color:rgba(248,113,113,.75)!important;box-shadow:0 0 0 1px rgba(248,113,113,.25)}
+.compose-port-alert{display:none;border:1px solid rgba(248,113,113,.28);background:rgba(248,113,113,.09);color:#fecaca;border-radius:10px;padding:10px 12px;font-size:12px;line-height:1.45}
+.compose-port-alert.open{display:block}
+.compose-port-alert strong{display:block;color:#fca5a5;margin-bottom:4px}
 .compose-install-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:2px}
 @media (min-width: 768px){
   .compose-field-grid,.compose-env-row,.compose-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -731,8 +736,160 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 <script>
 // ═══ Helpers ═══
 const $=s=>document.querySelector(s);
-const api=async(p,o)=>{const r=await fetch('/api'+p,o);if(!r.ok)throw new Error((await r.text()).slice(0,300));return r.json();};
-const post=(p,d)=>{const fd=new FormData();for(const k in d)fd.append(k,d[k]);return api(p,{method:'POST',body:fd});};
+class ApiError extends Error{constructor(message,status,body){super(message);this.name='ApiError';this.status=status;this.body=body;}}
+const api=async(p,o)=>{
+  const r=await fetch('/api'+p,o);
+  const text=await r.text();
+  let body=null;
+  try{body=text?JSON.parse(text):null;}catch(e){}
+  if(!r.ok){
+    const msg=(body&&(body.detail||body.error||body.message))||text.slice(0,300)||('HTTP '+r.status);
+    throw new ApiError(msg,r.status,body||text);
+  }
+  return body===null&&text?JSON.parse(text):body;
+};
+function formDataFromObject(d){const fd=new FormData();for(const k in (d||{}))fd.append(k,d[k]);return fd;}
+const postRaw=(p,d)=>api(p,{method:'POST',body:formDataFromObject(d)});
+async function post(p,d={}){
+  try{return await postRaw(p,d);}
+  catch(e){
+    const needsConfirm=e.status===403&&/confirmation token|bestätigung|confirm/i.test(e.message||'')&&!('confirm_token' in d);
+    const meta=needsConfirm?dangerConfirmMeta(p,d):null;
+    if(!meta)throw e;
+    const token=await requestDangerConfirm(meta);
+    return postRaw(p,Object.assign({},d,{confirm_token:token}));
+  }
+}
+function valueOf(d,...names){
+  for(const n of names){if(d&&d[n]!==undefined&&d[n]!==null&&String(d[n])!=='')return String(d[n]);}
+  return '';
+}
+function boolish(v){return v===true||v===1||['1','true','on','yes'].includes(String(v).toLowerCase());}
+function dangerConfirmMeta(p,d){
+  const simple={
+    '/auth/toggle':['auth:disable','login'],
+    '/accounts/add':['accounts:add','username'],
+    '/accounts/password':['accounts:password','username'],
+    '/accounts/role':['accounts:role','username'],
+    '/accounts/delete':['accounts:delete','username'],
+    '/files/trash/restore':['files:trash-restore','item_id'],
+    '/files/trash/empty':['files:trash-empty','trash'],
+    '/files/share':['files:share','path'],
+    '/files/samba-share':['shares:samba-add','path'],
+    '/files/mount-smb':['files:mount-smb','mountpoint'],
+    '/files/mount-nfs':['files:mount-nfs','mountpoint'],
+    '/storage/partition-table':['storage:partition-table','device'],
+    '/storage/partition':['storage:partition','device'],
+    '/storage/format':['storage:format','partition'],
+    '/storage/unmount':['storage:unmount','mountpoint'],
+    '/storage/swap/create':['storage:swap-create','path'],
+    '/storage/swap/action':['storage:swap-action','target'],
+    '/storage/raid/create':['storage:raid-create','name'],
+    '/storage/lvm/vg-create':['storage:lvm-vg-create','name'],
+    '/storage/lvm/lv-create':['storage:lvm-lv-create','name'],
+    '/storage/lvm/lv-extend':['storage:lvm-lv-extend','lv_path'],
+    '/storage/lvm/lv-remove':['storage:lvm-lv-remove','lv_path'],
+    '/storage/luks/format':['storage:luks-format','device'],
+    '/storage/luks/open':['storage:luks-open','device'],
+    '/storage/luks/close':['storage:luks-close','name'],
+    '/storage/fs-grow':['storage:fs-grow','device','mountpoint'],
+    '/storage/zfs/create':['storage:zfs-create','name'],
+    '/storage/zfs/destroy':['storage:zfs-destroy','name'],
+    '/storage/zfs/scrub':['storage:zfs-scrub','name'],
+    '/storage/btrfs/create':['storage:btrfs-create','label'],
+    '/storage/btrfs/scrub':['storage:btrfs-scrub','mountpoint'],
+    '/storage/iscsi/discover':['storage:iscsi-discover','portal'],
+    '/storage/iscsi/login':['storage:iscsi-login','target'],
+    '/storage/iscsi/logout':['storage:iscsi-logout','target'],
+    '/docker/images/remove':['docker:remove-image','image_id'],
+    '/docker/volumes/remove':['docker:remove-volume','name'],
+    '/docker/compose/save':['docker:compose-save','name'],
+    '/docker/compose/remove':['docker:compose-remove','name'],
+    '/services/action':['services:action','name'],
+    '/vms/action':['vms:action','name'],
+    '/vms/disk/attach':['vms:disk-attach','name'],
+    '/vms/disk/detach':['vms:disk-detach','name'],
+    '/vms/nic/attach':['vms:nic-attach','name'],
+    '/vms/nic/detach':['vms:nic-detach','name'],
+    '/vms/pool/create':['vms:pool-create','name'],
+    '/vms/pool/action':['vms:pool-action','name'],
+    '/vms/pool/vol-create':['vms:volume-create','name'],
+    '/vms/pool/vol-delete':['vms:volume-delete','vol'],
+    '/vms/clone':['vms:clone','name'],
+    '/vms/cdrom':['vms:cdrom','name'],
+    '/vms/create':['vms:create','name'],
+    '/vms/snapshot':['vms:snapshot','name'],
+    '/vms/snapshot/action':['vms:snapshot-action','name'],
+    '/shares/samba/add':['shares:samba-add','path'],
+    '/shares/nfs/add':['shares:nfs-add','path'],
+    '/network/bond/create':['network:bond-create','name'],
+    '/network/bond/delete':['network:bond-delete','name'],
+    '/network/firewall/add':['network:firewall-add','port'],
+    '/network/firewall/remove':['network:firewall-remove','num'],
+    '/network/configure-ip':['network:configure-ip','iface'],
+    '/network/bridge/create':['network:bridge-create','name'],
+    '/network/vlan/create':['network:vlan-create','parent'],
+    '/network/link/delete':['network:link-delete','name'],
+    '/security/users/add':['security:user-add','name'],
+    '/security/users/smb-password':['security:smb-password','name'],
+    '/security/users/password':['security:password','name'],
+    '/security/users/ssh-keys/add':['security:ssh-key-add','name'],
+    '/security/users/ssh-keys/remove':['security:ssh-key-remove','name'],
+    '/security/users/sudo':['security:sudo','name'],
+    '/security/users/aging':['security:aging','name'],
+    '/security/users/expire':['security:expire','name'],
+    '/security/groups/add':['security:group-add','name'],
+    '/security/groups/delete':['security:group-delete','name'],
+    '/security/groups/add-member':['security:group-add-member','group'],
+    '/security/groups/remove-member':['security:group-remove-member','group'],
+    '/security/certs/generate':['security:cert-generate','common_name'],
+    '/sysmgr/runvard-update/apply':['sysmgr:runvard-update','runvard'],
+    '/sysmgr/updates/apply':['sysmgr:update','apt'],
+    '/sysmgr/cron/add':['sysmgr:cron-add','command'],
+    '/sysmgr/power/profiles/set':['sysmgr:power-profile','profile'],
+    '/sysmgr/power/logind/set':['sysmgr:logind-power','logind'],
+    '/sysmgr/hostname':['sysmgr:hostname','name'],
+    '/sysmgr/apparmor/set':['sysmgr:apparmor','profile'],
+    '/sysmgr/packages/install':['sysmgr:package-install','name'],
+    '/sysmgr/packages/remove':['sysmgr:package-remove','name'],
+    '/sysmgr/unattended/set':['sysmgr:unattended','unattended-upgrades'],
+    '/sysmgr/tuned/set':['sysmgr:tuned','profile'],
+    '/sysmgr/kdump/action':['sysmgr:kdump','action'],
+    '/apps/install':['apps:install','app_id'],
+    '/apps/save-compose':['apps:save-compose','app_id'],
+    '/apps/action':['apps:action','app_id'],
+  };
+  if(p==='/auth/toggle'&&String(d.enabled)==='1')return null;
+  if(p==='/storage/mount'&&!boolish(d.persist))return null;
+  if(p==='/storage/mount')return {action:'storage:mount-persist',target:valueOf(d,'partition')};
+  if(p==='/docker/action'&&d.action!=='remove')return null;
+  if(p==='/docker/action')return {action:'docker:remove-container',target:valueOf(d,'container_id')};
+  if(p==='/docker/create'&&!String(d.volumes||'').trim())return null;
+  if(p==='/docker/create')return {action:'docker:create-with-host-volumes',target:valueOf(d,'name','image')};
+  if(p==='/docker/compose/action'&&d.action!=='down')return null;
+  if(p==='/docker/compose/action')return {action:'docker:compose-down',target:valueOf(d,'name')};
+  if(p==='/sysmgr/power'&&d.action==='cancel')return null;
+  if(p==='/sysmgr/power')return {action:'power:'+valueOf(d,'action'),target:valueOf(d,'action')};
+  const spec=simple[p];
+  if(!spec)return null;
+  return {action:spec[0],target:valueOf(d,...spec.slice(1))};
+}
+function dangerTitle(action){return uiText('System change requires confirmation');}
+function dangerMessage(meta){
+  return `${uiText('This action changes system-relevant settings or data. Please confirm the exact target before runvard continues.')}\n${meta.action}: ${meta.target}`;
+}
+function requestDangerConfirm(meta){
+  return new Promise((resolve,reject)=>{
+    const phrase=meta.target||meta.action;
+    typedConfirm(dangerTitle(meta.action),dangerMessage(meta),phrase,async()=>{
+      try{
+        const r=await postRaw('/confirm-token',{action:meta.action,target:meta.target});
+        if(!r.token)throw new Error('No confirmation token returned');
+        resolve(r.token);
+      }catch(e){toast('Error: '+e.message,'error');reject(e);}
+    });
+  });
+}
 const fmtBytes=b=>{if(!b)return'0 B';const u=['B','KB','MB','GB','TB'],i=Math.floor(Math.log(b)/Math.log(1024));return(b/Math.pow(1024,i)).toFixed(1)+' '+u[i];};
 const fmtUptime=s=>{const d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60);return`${d}d ${h}h ${m}m`;};
 const esc=s=>(s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -936,7 +1093,9 @@ const UI_PHRASES={
     "Compose project":"Compose-Projekt",
     "Compose project deleted":"Compose-Projekt gelöscht",
     "Compose projects":"Compose-Projekte",
+    "Choose free host ports before saving":"Freie Host-Ports wählen, bevor gespeichert wird",
     "Compose service setup":"Compose-Service einrichten",
+    "Could not save Compose project":"Compose-Projekt konnte nicht gespeichert werden",
     "Docker ready":"Docker bereit",
     "Edit docker-compose.yml and optional .env values for this project.":"docker-compose.yml und optionale .env-Werte für dieses Projekt bearbeiten.",
     "Edit mode":"Bearbeitungsmodus",
@@ -950,6 +1109,8 @@ const UI_PHRASES={
     "Changes in Raw YAML are mirrored into Form when this stays a simple one-service Compose file.":"Änderungen in Raw-YAML werden ins Formular übernommen, solange es eine einfache Ein-Service-Compose-Datei bleibt.",
     "This Compose file is complex. Raw YAML remains the source, and Form mode is disabled to avoid losing data.":"Diese Compose-Datei ist komplex. Raw-YAML bleibt die Quelle und der Formularmodus ist deaktiviert, damit keine Daten verloren gehen.",
     "Preview":"Vorschau",
+    "Port is already in use on this host":"Port ist auf diesem Host bereits belegt",
+    "Port is used more than once in this Compose file":"Port wird in dieser Compose-Datei mehrfach verwendet",
     "Runtime":"Laufzeit",
     "Settings":"Einstellungen",
     "generated":"generiert",
@@ -1904,7 +2065,9 @@ const UI_PHRASES={
     "Compose project":"Projet Compose",
     "Compose project deleted":"Projet Compose supprimé",
     "Compose projects":"Projets Compose",
+    "Choose free host ports before saving":"Choisissez des ports hôte libres avant d’enregistrer",
     "Compose service setup":"Configuration du service Compose",
+    "Could not save Compose project":"Impossible d’enregistrer le projet Compose",
     "Docker ready":"Docker prêt",
     "Edit docker-compose.yml and optional .env values for this project.":"Modifier docker-compose.yml et les valeurs .env optionnelles pour ce projet.",
     "Edit mode":"Mode d’édition",
@@ -1918,6 +2081,8 @@ const UI_PHRASES={
     "Changes in Raw YAML are mirrored into Form when this stays a simple one-service Compose file.":"Les changements dans le YAML brut sont reportés dans le formulaire si le fichier reste un Compose simple à un seul service.",
     "This Compose file is complex. Raw YAML remains the source, and Form mode is disabled to avoid losing data.":"Ce fichier Compose est complexe. Le YAML brut reste la source et le mode formulaire est désactivé pour éviter toute perte de données.",
     "Preview":"Aperçu",
+    "Port is already in use on this host":"Le port est déjà utilisé sur cet hôte",
+    "Port is used more than once in this Compose file":"Le port est utilisé plusieurs fois dans ce fichier Compose",
     "Runtime":"Exécution",
     "Settings":"Paramètres",
     "generated":"généré",
@@ -2833,7 +2998,9 @@ const UI_PHRASES={
     "Compose project":"Progetto Compose",
     "Compose project deleted":"Progetto Compose eliminato",
     "Compose projects":"Progetti Compose",
+    "Choose free host ports before saving":"Scegli porte host libere prima di salvare",
     "Compose service setup":"Configurazione servizio Compose",
+    "Could not save Compose project":"Impossibile salvare il progetto Compose",
     "Docker ready":"Docker pronto",
     "Edit docker-compose.yml and optional .env values for this project.":"Modifica docker-compose.yml e i valori .env opzionali per questo progetto.",
     "Edit mode":"Modalità di modifica",
@@ -2847,6 +3014,8 @@ const UI_PHRASES={
     "Changes in Raw YAML are mirrored into Form when this stays a simple one-service Compose file.":"Le modifiche in YAML raw vengono riportate nel modulo finché resta un semplice file Compose con un solo servizio.",
     "This Compose file is complex. Raw YAML remains the source, and Form mode is disabled to avoid losing data.":"Questo file Compose è complesso. YAML raw resta la fonte e la modalità modulo è disattivata per evitare perdite di dati.",
     "Preview":"Anteprima",
+    "Port is already in use on this host":"La porta è già in uso su questo host",
+    "Port is used more than once in this Compose file":"La porta è usata più di una volta in questo file Compose",
     "Runtime":"Runtime",
     "Settings":"Impostazioni",
     "generated":"generato",
@@ -3762,7 +3931,9 @@ const UI_PHRASES={
     "Compose project":"Proyecto Compose",
     "Compose project deleted":"Proyecto Compose eliminado",
     "Compose projects":"Proyectos Compose",
+    "Choose free host ports before saving":"Elige puertos de host libres antes de guardar",
     "Compose service setup":"Configuración del servicio Compose",
+    "Could not save Compose project":"No se pudo guardar el proyecto Compose",
     "Docker ready":"Docker listo",
     "Edit docker-compose.yml and optional .env values for this project.":"Editar docker-compose.yml y valores .env opcionales para este proyecto.",
     "Edit mode":"Modo de edición",
@@ -3776,6 +3947,8 @@ const UI_PHRASES={
     "Changes in Raw YAML are mirrored into Form when this stays a simple one-service Compose file.":"Los cambios en YAML raw se reflejan en el formulario mientras siga siendo un archivo Compose sencillo de un solo servicio.",
     "This Compose file is complex. Raw YAML remains the source, and Form mode is disabled to avoid losing data.":"Este archivo Compose es complejo. YAML raw sigue siendo la fuente y el modo formulario se desactiva para evitar pérdida de datos.",
     "Preview":"Vista previa",
+    "Port is already in use on this host":"El puerto ya está en uso en este host",
+    "Port is used more than once in this Compose file":"El puerto se usa más de una vez en este archivo Compose",
     "Runtime":"Ejecución",
     "Settings":"Ajustes",
     "generated":"generado",
@@ -4695,7 +4868,9 @@ const UI_PHRASES={
     "Compose project":"Projeto Compose",
     "Compose project deleted":"Projeto Compose eliminado",
     "Compose projects":"Projetos Compose",
+    "Choose free host ports before saving":"Escolha portas de anfitrião livres antes de guardar",
     "Compose service setup":"Configuração do serviço Compose",
+    "Could not save Compose project":"Não foi possível guardar o projeto Compose",
     "Docker ready":"Docker pronto",
     "Edit docker-compose.yml and optional .env values for this project.":"Edite docker-compose.yml e valores .env opcionais para este projeto.",
     "Edit mode":"Modo de edição",
@@ -4709,6 +4884,8 @@ const UI_PHRASES={
     "Changes in Raw YAML are mirrored into Form when this stays a simple one-service Compose file.":"As alterações em YAML raw são refletidas no formulário enquanto continuar a ser um ficheiro Compose simples com um único serviço.",
     "This Compose file is complex. Raw YAML remains the source, and Form mode is disabled to avoid losing data.":"Este ficheiro Compose é complexo. YAML raw continua a ser a fonte e o modo formulário é desativado para evitar perda de dados.",
     "Preview":"Pré-visualização",
+    "Port is already in use on this host":"A porta já está em utilização neste anfitrião",
+    "Port is used more than once in this Compose file":"A porta é utilizada mais do que uma vez neste ficheiro Compose",
     "Runtime":"Execução",
     "Settings":"Definições",
     "generated":"gerado",
@@ -7681,7 +7858,20 @@ const composeEnvFields=(data={})=>[
   {name:'env_enabled',label:'Use .env file',type:'checkbox',value:!!data.env_enabled,hint:'Stores a .env file next to docker-compose.yml.'},
   {name:'env_content',label:'.env',type:'textarea',rows:6,value:data.env_content||'',placeholder:'KEY=value\nANOTHER_KEY=value',showWhen:'env_enabled'}
 ];
-window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Project name',placeholder:'meine-app'},{name:'content',label:'docker-compose.yml',type:'textarea',rows:12,value:'services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"'},...composeEnvFields()],async d=>{await post('/docker/compose/save',{name:d.name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''});await composeAddToDashboard(d.name,composeFirstPort(d.content),false);closeForm();toast('Project saved');renderDocker($('#modal-body'),'Compose');});
+window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Project name',placeholder:'meine-app'},{name:'content',label:'docker-compose.yml',type:'textarea',rows:12,value:'services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"'},...composeEnvFields()],async d=>{
+  const field=$('#field_content');
+  field?.classList.remove('conflict');
+  const check=await post('/docker/compose/check-ports',{name:d.name,content:d.content});
+  if(check&&check.ok===false){
+    field?.classList.add('conflict');
+    const ports=(check.conflicts||[]).map(x=>x.port).join(', ');
+    toast(uiText('Choose free host ports before saving')+(ports?': '+ports:''),'error');
+    return;
+  }
+  const r=await post('/docker/compose/save',{name:d.name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''});
+  requireOk(r,'Could not save Compose project');
+  await composeAddToDashboard(d.name,composeFirstPort(d.content),false);closeForm();toast('Project saved');renderDocker($('#modal-body'),'Compose');
+});
 window.composeEdit=async name=>{
   try{
     const c=await api('/docker/compose/get?name='+encodeURIComponent(name));
@@ -10201,6 +10391,8 @@ window.vmManage=name=>{const body=$('#modal-body');body.innerHTML=`<div class="t
 window.vmDeleteConfirm=name=>typedConfirm('Delete virtual machine',`VM "${name}" and its disk will be removed permanently.`,name,async()=>{try{await post('/vms/action',{name,action:'delete'});toast('VM deleted');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
 
 let _appInstallDraft=null;
+let _appComposePortCheckTimer=null;
+let _appComposePortCheckSeq=0;
 function appInstallSlug(value,fallback){
   const clean=String(value||'').trim().replace(/^[./]+/,'').replace(/[^A-Za-z0-9_.-]+/g,'-').replace(/^-+|-+$/g,'');
   return clean||fallback||'data';
@@ -10258,9 +10450,76 @@ function appInstallParsePort(raw){
   }
   return {raw:item,host:'',container:base,proto};
 }
+function appComposeVisibleContent(){
+  if(!_appInstallDraft)return '';
+  appInstallRefresh({
+    source:_appInstallDraft.composeMode==='raw'?'raw':'form',
+    syncRawToForm:false,
+    checkPorts:false,
+  });
+  return appInstallCompose(_appInstallDraft);
+}
+function appComposeClearPortConflicts(){
+  document.querySelectorAll('.compose-port-conflict').forEach(el=>el.classList.remove('compose-port-conflict'));
+  $('#app-compose-raw')?.classList.remove('conflict');
+  const alert=$('#app-compose-port-alert');
+  if(alert){alert.classList.remove('open');alert.innerHTML='';}
+}
+function appComposeApplyPortConflicts(conflicts){
+  appComposeClearPortConflicts();
+  const list=conflicts||[];
+  if(!list.length)return;
+  const ports=new Set(list.map(x=>String(x.port)));
+  _appInstallDraft.portConflicts=list;
+  _appInstallDraft.ports.forEach((p,i)=>{
+    if(ports.has(String(p.host))){
+      $(`#app-port-host-${i}`)?.closest('.compose-field')?.classList.add('compose-port-conflict');
+    }
+  });
+  if(_appInstallDraft.composeMode==='raw')$('#app-compose-raw')?.classList.add('conflict');
+  const alert=$('#app-compose-port-alert');
+  if(alert){
+    const rows=list.map(x=>{
+      const reason=x.reason==='duplicate'?uiText('Port is used more than once in this Compose file'):uiText('Port is already in use on this host');
+      return `${uiText('Port')} ${esc(x.port)}${x.service?` (${esc(x.service)})`:''}: ${esc(reason)}`;
+    });
+    alert.innerHTML=`<strong>${esc(uiText('Choose free host ports before saving'))}</strong>${rows.map(r=>`<div>${r}</div>`).join('')}`;
+    alert.classList.add('open');
+  }
+}
+async function appComposeCheckPortsNow(){
+  const d=_appInstallDraft;
+  if(!d||!d.portCheckName)return {ok:true,conflicts:[]};
+  const seq=++_appComposePortCheckSeq;
+  const content=appComposeVisibleContent();
+  try{
+    const res=await post('/docker/compose/check-ports',{name:d.portCheckName,content});
+    if(seq!==_appComposePortCheckSeq)return res;
+    d.portConflicts=res.conflicts||[];
+    appComposeApplyPortConflicts(d.portConflicts);
+    return res;
+  }catch(e){
+    return {ok:false,conflicts:[],stderr:e.message};
+  }
+}
+function appComposeSchedulePortCheck(){
+  if(!_appInstallDraft?.portCheckName)return;
+  clearTimeout(_appComposePortCheckTimer);
+  _appComposePortCheckTimer=setTimeout(()=>appComposeCheckPortsNow(),350);
+}
+async function appComposeRequireFreePorts(){
+  const d=_appInstallDraft;
+  if(!d?.portCheckName)return;
+  const res=await appComposeCheckPortsNow();
+  if(res&&res.ok===false){
+    const ports=(res.conflicts||[]).map(x=>x.port).join(', ');
+    const msg=uiText('Choose free host ports before saving')+(ports?': '+ports:'');
+    throw new Error(msg);
+  }
+}
 function appInstallParseCompose(content){
   const lines=String(content||'').replace(/\r\n/g,'\n').split('\n');
-  const draft={service:'app',image:'',restart:'unless-stopped',container:'',ports:[],volumes:[],env:[],extra:[],rawContent:String(content||''),composeMode:'form',envFileEnabled:false,envFileContent:''};
+  const draft={service:'app',image:'',restart:'unless-stopped',container:'',ports:[],volumes:[],env:[],extra:[],rawContent:String(content||''),composeMode:'form',envFileEnabled:false,envFileContent:'',portConflicts:[],portCheckName:''};
   let section='';
   let inServices=false;
   let serviceCount=0;
@@ -10372,7 +10631,10 @@ function appComposeSyncEnv(){
 }
 function appComposeSetMode(mode){
   const d=_appInstallDraft;if(!d)return;
-  appInstallRefresh({syncRawToForm:false});
+  appInstallRefresh({
+    source:d.composeMode==='raw'?'raw':'form',
+    syncRawToForm:false,
+  });
   if(d.lockedCompose&&mode==='form')mode='raw';
   d.composeMode=mode;
   document.querySelectorAll('.compose-mode-tab').forEach(btn=>{
@@ -10426,6 +10688,7 @@ function appInstallRefresh(options={}){
   const d=_appInstallDraft;if(!d)return;
   const source=options.source||'form';
   const syncRawToForm=options.syncRawToForm!==false;
+  const checkPorts=options.checkPorts!==false;
   appComposeSyncEnv();
   const service=$('#app-compose-service'),container=$('#app-compose-container'),image=$('#app-compose-image'),restart=$('#app-compose-restart');
   const raw=$('#app-compose-raw');
@@ -10473,6 +10736,7 @@ function appInstallRefresh(options={}){
   const formTab=document.querySelector('.compose-mode-tab[data-mode="form"]');
   if(formTab){formTab.disabled=!!d.lockedCompose;formTab.title=d.lockedCompose?uiText('Raw YAML is required for complex Compose files'):'';}
   const project=$('#app-compose-project');if(project)project.textContent=d.service;
+  if(checkPorts)appComposeSchedulePortCheck();
 }
 window.appInstallSetVolumeMount=(index,mountpoint)=>{
   if(!_appInstallDraft||!_appInstallDraft.volumes[index])return;
@@ -10554,6 +10818,7 @@ function appComposeFormOpen(draft,options){
             <button type="button" class="compose-mode-tab ${initialMode==='raw'?'active':''}" data-mode="raw" role="tab" aria-selected="${initialMode==='raw'?'true':'false'}" onclick="appComposeSetMode('raw')">${esc(uiText('Raw YAML'))}</button>
           </div>
         </div>
+        <div class="compose-port-alert" id="app-compose-port-alert" role="alert"></div>
         <div class="compose-mode-panel" id="app-compose-form-panel"${formHidden}>
         <div class="compose-form-stack">
           ${advancedTemplate?`
@@ -10585,9 +10850,9 @@ function appComposeFormOpen(draft,options){
   $('#app-compose-go').onclick=async()=>{
     const btn=$('#app-compose-go');
     if(btn?.disabled)return;
-    appInstallRefresh();
+    appInstallRefresh({source:_appInstallDraft?.composeMode==='raw'?'raw':'form'});
     if(btn){btn.disabled=true;btn.textContent=uiText('Saving…');}
-    try{await options.onSubmit(_appInstallDraft);}
+    try{await appComposeRequireFreePorts();await options.onSubmit(_appInstallDraft);}
     catch(e){if(btn){btn.disabled=false;btn.textContent=uiText(options.primaryLabel||'Save');}toast('Error: '+e.message,'error');}
   };
   requestAnimationFrame(()=>initialMode==='raw'?$('#app-compose-raw')?.focus():$('#app-compose-service')?.focus());
@@ -10595,6 +10860,7 @@ function appComposeFormOpen(draft,options){
 function appComposeProjectDraft(name,composeData={}){
   const draft=appInstallParseCompose(composeData.content||'');
   draft.app={id:'compose:'+name,name,icon:'🐳',desc:'Custom Docker Compose project'};
+  draft.portCheckName=name;
   draft.mounts=appInstallMounts([]);
   draft.envFileEnabled=!!composeData.env_enabled;
   draft.envFileContent=composeData.env_content||'';

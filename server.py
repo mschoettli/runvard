@@ -183,6 +183,157 @@ def require_admin(request: Request):
     return parsed[0]
 
 
+def _form_value(form, *names, default=""):
+    for name in names:
+        value = form.get(name)
+        if value not in (None, ""):
+            return str(value)
+    return default
+
+
+def _danger_confirm_meta(path, form):
+    simple = {
+        "/api/accounts/add": ("accounts:add", "username"),
+        "/api/accounts/password": ("accounts:password", "username"),
+        "/api/accounts/role": ("accounts:role", "username"),
+        "/api/accounts/delete": ("accounts:delete", "username"),
+        "/api/files/trash/restore": ("files:trash-restore", "item_id"),
+        "/api/files/trash/empty": ("files:trash-empty", "trash"),
+        "/api/files/share": ("files:share", "path"),
+        "/api/files/samba-share": ("shares:samba-add", "path"),
+        "/api/files/mount-smb": ("files:mount-smb", "mountpoint"),
+        "/api/files/mount-nfs": ("files:mount-nfs", "mountpoint"),
+        "/api/storage/partition-table": ("storage:partition-table", "device"),
+        "/api/storage/partition": ("storage:partition", "device"),
+        "/api/storage/format": ("storage:format", "partition"),
+        "/api/storage/unmount": ("storage:unmount", "mountpoint"),
+        "/api/storage/swap/create": ("storage:swap-create", "path"),
+        "/api/storage/swap/action": ("storage:swap-action", "target"),
+        "/api/storage/raid/create": ("storage:raid-create", "name"),
+        "/api/storage/lvm/vg-create": ("storage:lvm-vg-create", "name"),
+        "/api/storage/lvm/lv-create": ("storage:lvm-lv-create", "name"),
+        "/api/storage/lvm/lv-extend": ("storage:lvm-lv-extend", "lv_path"),
+        "/api/storage/lvm/lv-remove": ("storage:lvm-lv-remove", "lv_path"),
+        "/api/storage/luks/format": ("storage:luks-format", "device"),
+        "/api/storage/luks/open": ("storage:luks-open", "device"),
+        "/api/storage/luks/close": ("storage:luks-close", "name"),
+        "/api/storage/fs-grow": ("storage:fs-grow", "device", "mountpoint"),
+        "/api/storage/zfs/create": ("storage:zfs-create", "name"),
+        "/api/storage/zfs/destroy": ("storage:zfs-destroy", "name"),
+        "/api/storage/zfs/scrub": ("storage:zfs-scrub", "name"),
+        "/api/storage/btrfs/create": ("storage:btrfs-create", "label"),
+        "/api/storage/btrfs/scrub": ("storage:btrfs-scrub", "mountpoint"),
+        "/api/storage/iscsi/discover": ("storage:iscsi-discover", "portal"),
+        "/api/storage/iscsi/login": ("storage:iscsi-login", "target"),
+        "/api/storage/iscsi/logout": ("storage:iscsi-logout", "target"),
+        "/api/docker/images/remove": ("docker:remove-image", "image_id"),
+        "/api/docker/volumes/remove": ("docker:remove-volume", "name"),
+        "/api/docker/compose/save": ("docker:compose-save", "name"),
+        "/api/docker/compose/remove": ("docker:compose-remove", "name"),
+        "/api/services/action": ("services:action", "name"),
+        "/api/vms/action": ("vms:action", "name"),
+        "/api/vms/disk/attach": ("vms:disk-attach", "name"),
+        "/api/vms/disk/detach": ("vms:disk-detach", "name"),
+        "/api/vms/nic/attach": ("vms:nic-attach", "name"),
+        "/api/vms/nic/detach": ("vms:nic-detach", "name"),
+        "/api/vms/pool/create": ("vms:pool-create", "name"),
+        "/api/vms/pool/action": ("vms:pool-action", "name"),
+        "/api/vms/pool/vol-create": ("vms:volume-create", "name"),
+        "/api/vms/pool/vol-delete": ("vms:volume-delete", "vol"),
+        "/api/vms/clone": ("vms:clone", "name"),
+        "/api/vms/cdrom": ("vms:cdrom", "name"),
+        "/api/vms/create": ("vms:create", "name"),
+        "/api/vms/snapshot": ("vms:snapshot", "name"),
+        "/api/vms/snapshot/action": ("vms:snapshot-action", "name"),
+        "/api/shares/samba/add": ("shares:samba-add", "path"),
+        "/api/shares/nfs/add": ("shares:nfs-add", "path"),
+        "/api/network/bond/create": ("network:bond-create", "name"),
+        "/api/network/bond/delete": ("network:bond-delete", "name"),
+        "/api/network/firewall/add": ("network:firewall-add", "port"),
+        "/api/network/firewall/remove": ("network:firewall-remove", "num"),
+        "/api/network/configure-ip": ("network:configure-ip", "iface"),
+        "/api/network/bridge/create": ("network:bridge-create", "name"),
+        "/api/network/vlan/create": ("network:vlan-create", "parent"),
+        "/api/network/link/delete": ("network:link-delete", "name"),
+        "/api/security/users/add": ("security:user-add", "name"),
+        "/api/security/users/smb-password": ("security:smb-password", "name"),
+        "/api/security/users/password": ("security:password", "name"),
+        "/api/security/users/ssh-keys/add": ("security:ssh-key-add", "name"),
+        "/api/security/users/ssh-keys/remove": ("security:ssh-key-remove", "name"),
+        "/api/security/users/sudo": ("security:sudo", "name"),
+        "/api/security/users/aging": ("security:aging", "name"),
+        "/api/security/users/expire": ("security:expire", "name"),
+        "/api/security/groups/add": ("security:group-add", "name"),
+        "/api/security/groups/delete": ("security:group-delete", "name"),
+        "/api/security/groups/add-member": ("security:group-add-member", "group"),
+        "/api/security/groups/remove-member": ("security:group-remove-member", "group"),
+        "/api/security/certs/generate": ("security:cert-generate", "common_name"),
+        "/api/sysmgr/runvard-update/apply": ("sysmgr:runvard-update", "runvard"),
+        "/api/sysmgr/updates/apply": ("sysmgr:update", "apt"),
+        "/api/sysmgr/cron/add": ("sysmgr:cron-add", "command"),
+        "/api/sysmgr/power/profiles/set": ("sysmgr:power-profile", "profile"),
+        "/api/sysmgr/power/logind/set": ("sysmgr:logind-power", "logind"),
+        "/api/sysmgr/hostname": ("sysmgr:hostname", "name"),
+        "/api/sysmgr/apparmor/set": ("sysmgr:apparmor", "profile"),
+        "/api/sysmgr/packages/install": ("sysmgr:package-install", "name"),
+        "/api/sysmgr/packages/remove": ("sysmgr:package-remove", "name"),
+        "/api/sysmgr/unattended/set": ("sysmgr:unattended", "unattended-upgrades"),
+        "/api/sysmgr/tuned/set": ("sysmgr:tuned", "profile"),
+        "/api/sysmgr/kdump/action": ("sysmgr:kdump", "action"),
+        "/api/apps/install": ("apps:install", "app_id"),
+        "/api/apps/save-compose": ("apps:save-compose", "app_id"),
+        "/api/apps/action": ("apps:action", "app_id"),
+    }
+    if path == "/api/auth/toggle":
+        if str(form.get("enabled", "")) == "1":
+            return None
+        return ("auth:disable", "login")
+    if path == "/api/storage/mount":
+        if str(form.get("persist", "")).lower() in ("1", "true", "on", "yes"):
+            return ("storage:mount-persist", _form_value(form, "partition"))
+        return None
+    if path == "/api/docker/action":
+        action = _form_value(form, "action")
+        if action == "remove":
+            return ("docker:remove-container", _form_value(form, "container_id"))
+        return None
+    if path == "/api/docker/create":
+        if str(form.get("volumes", "")).strip():
+            return ("docker:create-with-host-volumes", _form_value(form, "name", "image"))
+        return None
+    if path == "/api/docker/compose/action":
+        action = _form_value(form, "action")
+        if action == "down":
+            return ("docker:compose-down", _form_value(form, "name"))
+        return None
+    if path == "/api/sysmgr/power":
+        action = _form_value(form, "action")
+        if action and action != "cancel":
+            return (f"power:{action}", action)
+        return None
+    if path in simple:
+        spec = simple[path]
+        return (spec[0], _form_value(form, *spec[1:]))
+    return None
+
+
+def require_danger_confirm(user, action, target, token):
+    try:
+        security_tokens.require_confirm_token(user, action, target, token)
+    except PermissionError as e:
+        raise HTTPException(status_code=403, detail=str(e))
+
+
+async def confirmed_admin(request: Request):
+    user = require_admin(request)
+    form = await request.form()
+    meta = _danger_confirm_meta(request.url.path, form)
+    if meta:
+        action, target = meta
+        require_danger_confirm(user, action, target, str(form.get("confirm_token", "")))
+    return user
+
+
 # ============ Frontend ============
 
 @app.get("/", response_class=HTMLResponse)
@@ -240,12 +391,12 @@ def api_auth_status(request: Request):
 
 @app.post("/api/confirm-token")
 def api_confirm_token(action: str = Form(...), target: str = Form(...),
-                      user: str = Depends(auth)):
+                      user: str = Depends(require_admin)):
     return security_tokens.issue_confirm_token(user, action, target)
 
 
 @app.post("/api/auth/toggle")
-def api_auth_toggle(enabled: str = Form(...), user: str = Depends(auth)):
+def api_auth_toggle(enabled: str = Form(...), user: str = Depends(confirmed_admin)):
     set_login_enabled(enabled == "1")
     return {"ok": True, "login_enabled": login_enabled()}
 
@@ -259,24 +410,24 @@ def accounts_list(user: str = Depends(require_admin)):
 
 @app.post("/api/accounts/add")
 def accounts_add(username: str = Form(...), password: str = Form(...),
-                 role: str = Form("readonly"), user: str = Depends(require_admin)):
+                 role: str = Form("readonly"), user: str = Depends(confirmed_admin)):
     return accounts.add_user(username, password, role)
 
 
 @app.post("/api/accounts/password")
 def accounts_password(username: str = Form(...), password: str = Form(...),
-                      user: str = Depends(require_admin)):
+                      user: str = Depends(confirmed_admin)):
     return accounts.set_password(username, password)
 
 
 @app.post("/api/accounts/role")
 def accounts_role(username: str = Form(...), role: str = Form(...),
-                  user: str = Depends(require_admin)):
+                  user: str = Depends(confirmed_admin)):
     return accounts.set_role(username, role)
 
 
 @app.post("/api/accounts/delete")
-def accounts_delete(username: str = Form(...), user: str = Depends(require_admin)):
+def accounts_delete(username: str = Form(...), user: str = Depends(confirmed_admin)):
     return accounts.delete_user(username)
 
 
@@ -498,16 +649,16 @@ def files_trash_list(user: str = Depends(auth)):
     return {"items": files.list_trash()}
 
 @app.post("/api/files/trash/restore")
-def files_trash_restore(item_id: str = Form(...), user: str = Depends(auth)):
+def files_trash_restore(item_id: str = Form(...), user: str = Depends(confirmed_admin)):
     try: return files.restore_trash(item_id)
     except Exception as e: raise HTTPException(400, str(e))
 
 @app.post("/api/files/trash/empty")
-def files_trash_empty(user: str = Depends(auth)):
+def files_trash_empty(user: str = Depends(confirmed_admin)):
     return files.empty_trash()
 
 @app.post("/api/files/share")
-def files_share(path: str = Form(...), user: str = Depends(auth)):
+def files_share(path: str = Form(...), user: str = Depends(confirmed_admin)):
     try: return files.create_share_link(path)
     except Exception as e: raise HTTPException(400, str(e))
 
@@ -531,20 +682,20 @@ def files_public_download(token: str):
 
 @app.post("/api/files/samba-share")
 def files_samba_share(path: str = Form(...), name: str = Form(...),
-                      writable: bool = Form(True), user: str = Depends(auth)):
+                      writable: bool = Form(True), user: str = Depends(confirmed_admin)):
     from modules import shares as sh
     return sh.add_samba_share(name, path, writable)
 
 @app.post("/api/files/mount-smb")
 def files_mount_smb(server: str = Form(...), share_name: str = Form(...),
                     mountpoint: str = Form(...), username: str = Form("guest"),
-                    password: str = Form(""), user: str = Depends(auth)):
+                    password: str = Form(""), user: str = Depends(confirmed_admin)):
     return files.mount_smb(server, share_name, mountpoint, username, password)
 
 @app.post("/api/files/mount-nfs")
 def files_mount_nfs(server: str = Form(...), export: str = Form(...),
                     mountpoint: str = Form(...), options: str = Form(""),
-                    user: str = Depends(auth)):
+                    user: str = Depends(confirmed_admin)):
     return files.mount_nfs(server, export, mountpoint, options)
 
 # ============ Speicher (Disks/RAID/SMART) ============
@@ -563,29 +714,29 @@ def storage_smart(device: str, user: str = Depends(auth)):
 
 @app.post("/api/storage/partition-table")
 def storage_ptable(device: str = Form(...), label: str = Form("gpt"),
-                   user: str = Depends(auth)):
+                   user: str = Depends(confirmed_admin)):
     return storage.create_partition_table(device, label)
 
 
 @app.post("/api/storage/partition")
-def storage_partition(device: str = Form(...), user: str = Depends(auth)):
+def storage_partition(device: str = Form(...), user: str = Depends(confirmed_admin)):
     return storage.create_partition(device)
 
 
 @app.post("/api/storage/format")
 def storage_format(partition: str = Form(...), fstype: str = Form("ext4"),
-                   user: str = Depends(auth)):
+                   user: str = Depends(confirmed_admin)):
     return storage.format_partition(partition, fstype)
 
 
 @app.post("/api/storage/mount")
 def storage_mount(partition: str = Form(...), mountpoint: str = Form(...),
-                  persist: bool = Form(False), user: str = Depends(auth)):
+                  persist: bool = Form(False), user: str = Depends(confirmed_admin)):
     return storage.mount_device(partition, mountpoint, persist)
 
 
 @app.post("/api/storage/unmount")
-def storage_unmount(mountpoint: str = Form(...), user: str = Depends(auth)):
+def storage_unmount(mountpoint: str = Form(...), user: str = Depends(confirmed_admin)):
     return storage.unmount_device(mountpoint)
 
 
@@ -596,13 +747,13 @@ def storage_swap(user: str = Depends(auth)):
 
 @app.post("/api/storage/swap/create")
 def storage_swap_create(path: str = Form(...), size_mb: int = Form(...),
-                        persist: bool = Form(False), user: str = Depends(auth)):
+                        persist: bool = Form(False), user: str = Depends(confirmed_admin)):
     return storage.create_swapfile(path, size_mb, persist)
 
 
 @app.post("/api/storage/swap/action")
 def storage_swap_action(target: str = Form(...), action: str = Form(...),
-                        user: str = Depends(auth)):
+                        user: str = Depends(confirmed_admin)):
     return storage.swap_action(target, action)
 
 
@@ -613,7 +764,7 @@ def storage_raid(user: str = Depends(auth)):
 
 @app.post("/api/storage/raid/create")
 def storage_raid_create(name: str = Form(...), level: int = Form(...),
-                        devices: str = Form(...), user: str = Depends(auth)):
+                        devices: str = Form(...), user: str = Depends(confirmed_admin)):
     return storage.create_raid(name, level, devices.split(","))
 
 
@@ -624,24 +775,24 @@ def storage_lvm(user: str = Depends(auth)):
 
 @app.post("/api/storage/lvm/vg-create")
 def storage_lvm_vg(name: str = Form(...), devices: str = Form(...),
-                   user: str = Depends(auth)):
+                   user: str = Depends(confirmed_admin)):
     return storage.vg_create(name, devices.split(","))
 
 
 @app.post("/api/storage/lvm/lv-create")
 def storage_lvm_lv(vg: str = Form(...), name: str = Form(...),
-                   size: str = Form(...), user: str = Depends(auth)):
+                   size: str = Form(...), user: str = Depends(confirmed_admin)):
     return storage.lv_create(vg, name, size)
 
 
 @app.post("/api/storage/lvm/lv-extend")
 def storage_lvm_extend(lv_path: str = Form(...), size: str = Form(...),
-                       user: str = Depends(auth)):
+                       user: str = Depends(confirmed_admin)):
     return storage.lv_extend(lv_path, size)
 
 
 @app.post("/api/storage/lvm/lv-remove")
-def storage_lvm_remove(lv_path: str = Form(...), user: str = Depends(auth)):
+def storage_lvm_remove(lv_path: str = Form(...), user: str = Depends(confirmed_admin)):
     return storage.lv_remove(lv_path)
 
 
@@ -654,7 +805,7 @@ def storage_luks(user: str = Depends(auth)):
 
 @app.post("/api/storage/luks/format")
 def storage_luks_format(device: str = Form(...), passphrase: str = Form(...),
-                        user: str = Depends(auth)):
+                        user: str = Depends(confirmed_admin)):
     try:
         return storage.luks_format(device, passphrase)
     except Exception as e:
@@ -663,7 +814,7 @@ def storage_luks_format(device: str = Form(...), passphrase: str = Form(...),
 
 @app.post("/api/storage/luks/open")
 def storage_luks_open(device: str = Form(...), name: str = Form(...),
-                      passphrase: str = Form(...), user: str = Depends(auth)):
+                      passphrase: str = Form(...), user: str = Depends(confirmed_admin)):
     try:
         return storage.luks_open(device, name, passphrase)
     except Exception as e:
@@ -671,7 +822,7 @@ def storage_luks_open(device: str = Form(...), name: str = Form(...),
 
 
 @app.post("/api/storage/luks/close")
-def storage_luks_close(name: str = Form(...), user: str = Depends(auth)):
+def storage_luks_close(name: str = Form(...), user: str = Depends(confirmed_admin)):
     return storage.luks_close(name)
 
 
@@ -679,7 +830,7 @@ def storage_luks_close(name: str = Form(...), user: str = Depends(auth)):
 
 @app.post("/api/storage/fs-grow")
 def storage_fs_grow(device: str = Form(""), mountpoint: str = Form(""),
-                    size: str = Form("max"), user: str = Depends(auth)):
+                    size: str = Form("max"), user: str = Depends(confirmed_admin)):
     try:
         return storage.fs_grow(device, mountpoint, size)
     except Exception as e:
@@ -695,7 +846,7 @@ def storage_zfs(user: str = Depends(auth)):
 
 @app.post("/api/storage/zfs/create")
 def storage_zfs_create(name: str = Form(...), raid: str = Form("stripe"),
-                       devices: str = Form(...), user: str = Depends(auth)):
+                       devices: str = Form(...), user: str = Depends(confirmed_admin)):
     try:
         devs = [d.strip() for d in devices.split(",") if d.strip()]
         return storage.zpool_create(name, raid, devs)
@@ -704,12 +855,12 @@ def storage_zfs_create(name: str = Form(...), raid: str = Form("stripe"),
 
 
 @app.post("/api/storage/zfs/destroy")
-def storage_zfs_destroy(name: str = Form(...), user: str = Depends(auth)):
+def storage_zfs_destroy(name: str = Form(...), user: str = Depends(confirmed_admin)):
     return storage.zpool_destroy(name)
 
 
 @app.post("/api/storage/zfs/scrub")
-def storage_zfs_scrub(name: str = Form(...), user: str = Depends(auth)):
+def storage_zfs_scrub(name: str = Form(...), user: str = Depends(confirmed_admin)):
     return storage.zpool_scrub(name)
 
 
@@ -722,7 +873,7 @@ def storage_btrfs(user: str = Depends(auth)):
 
 @app.post("/api/storage/btrfs/create")
 def storage_btrfs_create(label: str = Form(""), profile: str = Form("single"),
-                         devices: str = Form(...), user: str = Depends(auth)):
+                         devices: str = Form(...), user: str = Depends(confirmed_admin)):
     try:
         devs = [d.strip() for d in devices.split(",") if d.strip()]
         return storage.btrfs_create(label, profile, devs)
@@ -731,7 +882,7 @@ def storage_btrfs_create(label: str = Form(""), profile: str = Form("single"),
 
 
 @app.post("/api/storage/btrfs/scrub")
-def storage_btrfs_scrub(mountpoint: str = Form(...), user: str = Depends(auth)):
+def storage_btrfs_scrub(mountpoint: str = Form(...), user: str = Depends(confirmed_admin)):
     return storage.btrfs_scrub(mountpoint)
 
 
@@ -743,19 +894,19 @@ def storage_iscsi(user: str = Depends(auth)):
 
 
 @app.post("/api/storage/iscsi/discover")
-def storage_iscsi_discover(portal: str = Form(...), user: str = Depends(auth)):
+def storage_iscsi_discover(portal: str = Form(...), user: str = Depends(confirmed_admin)):
     return storage.iscsi_discover(portal)
 
 
 @app.post("/api/storage/iscsi/login")
 def storage_iscsi_login(portal: str = Form(...), target: str = Form(...),
-                        user: str = Depends(auth)):
+                        user: str = Depends(confirmed_admin)):
     return storage.iscsi_login(portal, target)
 
 
 @app.post("/api/storage/iscsi/logout")
 def storage_iscsi_logout(portal: str = Form(...), target: str = Form(...),
-                         user: str = Depends(auth)):
+                         user: str = Depends(confirmed_admin)):
     return storage.iscsi_logout(portal, target)
 
 
@@ -773,7 +924,7 @@ def docker_containers(user: str = Depends(auth)):
 
 @app.post("/api/docker/action")
 def docker_action(container_id: str = Form(...), action: str = Form(...),
-                  user: str = Depends(auth)):
+                  user: str = Depends(confirmed_admin)):
     return docker_mgr.container_action(container_id, action)
 
 
@@ -792,7 +943,7 @@ def docker_create(image: str = Form(...), name: str = Form(""),
                   ports: str = Form(""), volumes: str = Form(""),
                   env: str = Form(""), restart: str = Form("no"),
                   cpus: str = Form(""), memory: str = Form(""),
-                  user: str = Depends(auth)):
+                  user: str = Depends(confirmed_admin)):
     return docker_mgr.create_container(image, name, ports, volumes, env,
                                        restart, cpus, memory)
 
@@ -825,7 +976,7 @@ def docker_pull(name: str = Form(...), user: str = Depends(auth)):
 
 
 @app.post("/api/docker/images/remove")
-def docker_image_remove(image_id: str = Form(...), user: str = Depends(auth)):
+def docker_image_remove(image_id: str = Form(...), user: str = Depends(confirmed_admin)):
     return docker_mgr.remove_image(image_id)
 
 
@@ -835,7 +986,7 @@ def docker_volumes(user: str = Depends(auth)):
 
 
 @app.post("/api/docker/volumes/remove")
-def docker_volume_remove(name: str = Form(...), user: str = Depends(auth)):
+def docker_volume_remove(name: str = Form(...), user: str = Depends(confirmed_admin)):
     try:
         return docker_mgr.remove_volume(name)
     except Exception as e:
@@ -852,22 +1003,34 @@ def docker_compose_get(name: str, user: str = Depends(auth)):
     return docker_mgr.get_compose(name)
 
 
+@app.post("/api/docker/compose/check-ports")
+def docker_compose_check_ports(name: str = Form(...), content: str = Form(...),
+                               user: str = Depends(confirmed_admin)):
+    return docker_mgr.check_compose_ports(name, content)
+
+
 @app.post("/api/docker/compose/save")
 def docker_compose_save(name: str = Form(...), content: str = Form(...),
                         env_enabled: bool = Form(False),
                         env_content: str = Form(""),
-                        user: str = Depends(auth)):
+                        user: str = Depends(confirmed_admin)):
+    port_check = docker_mgr.check_compose_ports(name, content)
+    if not port_check["ok"]:
+        return {
+            **port_check,
+            "stderr": "One or more Compose ports are already in use.",
+        }
     return docker_mgr.save_compose(name, content, env_enabled, env_content)
 
 
 @app.post("/api/docker/compose/action")
 def docker_compose_action(name: str = Form(...), action: str = Form(...),
-                          user: str = Depends(auth)):
+                          user: str = Depends(confirmed_admin)):
     return docker_mgr.compose_action(name, action)
 
 
 @app.post("/api/docker/compose/remove")
-def docker_compose_remove(name: str = Form(...), user: str = Depends(auth)):
+def docker_compose_remove(name: str = Form(...), user: str = Depends(confirmed_admin)):
     try:
         return docker_mgr.remove_compose_project(name)
     except Exception as e:
@@ -883,7 +1046,7 @@ def services_list(user: str = Depends(auth)):
 
 @app.post("/api/services/action")
 def services_action(name: str = Form(...), action: str = Form(...),
-                    user: str = Depends(auth)):
+                    user: str = Depends(confirmed_admin)):
     return services.service_action(name, action)
 
 
@@ -909,7 +1072,7 @@ def vms_list(user: str = Depends(auth)):
 
 @app.post("/api/vms/action")
 def vms_action(name: str = Form(...), action: str = Form(...),
-               user: str = Depends(auth)):
+               user: str = Depends(confirmed_admin)):
     return vms.vm_action(name, action)
 
 
@@ -936,37 +1099,37 @@ def vms_hardware(name: str, user: str = Depends(auth)):
 @app.post("/api/vms/disk/attach")
 def vms_disk_attach(name: str = Form(...), source: str = Form(...),
                     target: str = Form(...), bus: str = Form("virtio"),
-                    user: str = Depends(auth)):
+                    user: str = Depends(confirmed_admin)):
     return vms.attach_disk(name, source, target, bus)
 
 
 @app.post("/api/vms/disk/detach")
 def vms_disk_detach(name: str = Form(...), target: str = Form(...),
-                    user: str = Depends(auth)):
+                    user: str = Depends(confirmed_admin)):
     return vms.detach_disk(name, target)
 
 
 @app.post("/api/vms/nic/attach")
 def vms_nic_attach(name: str = Form(...), network: str = Form(...),
-                   model: str = Form("virtio"), user: str = Depends(auth)):
+                   model: str = Form("virtio"), user: str = Depends(confirmed_admin)):
     return vms.attach_nic(name, network, model)
 
 
 @app.post("/api/vms/nic/detach")
 def vms_nic_detach(name: str = Form(...), type: str = Form(...),
-                   mac: str = Form(...), user: str = Depends(auth)):
+                   mac: str = Form(...), user: str = Depends(confirmed_admin)):
     return vms.detach_nic(name, type, mac)
 
 
 @app.post("/api/vms/pool/create")
 def vms_pool_create(name: str = Form(...), ptype: str = Form("dir"),
-                    target: str = Form(...), user: str = Depends(auth)):
+                    target: str = Form(...), user: str = Depends(confirmed_admin)):
     return vms.pool_create(name, ptype, target)
 
 
 @app.post("/api/vms/pool/action")
 def vms_pool_action(name: str = Form(...), action: str = Form(...),
-                    user: str = Depends(auth)):
+                    user: str = Depends(confirmed_admin)):
     return vms.pool_action(name, action)
 
 
@@ -978,25 +1141,25 @@ def vms_pool_volumes(pool: str, user: str = Depends(auth)):
 @app.post("/api/vms/pool/vol-create")
 def vms_vol_create(pool: str = Form(...), name: str = Form(...),
                    size_gb: int = Form(...), format: str = Form("qcow2"),
-                   user: str = Depends(auth)):
+                   user: str = Depends(confirmed_admin)):
     return vms.vol_create(pool, name, size_gb, format)
 
 
 @app.post("/api/vms/pool/vol-delete")
 def vms_vol_delete(pool: str = Form(...), vol: str = Form(...),
-                   user: str = Depends(auth)):
+                   user: str = Depends(confirmed_admin)):
     return vms.vol_delete(pool, vol)
 
 
 @app.post("/api/vms/clone")
 def vms_clone(name: str = Form(...), newname: str = Form(...),
-              user: str = Depends(auth)):
+              user: str = Depends(confirmed_admin)):
     return vms.clone_vm(name, newname)
 
 
 @app.post("/api/vms/cdrom")
 def vms_cdrom(name: str = Form(...), iso: str = Form(""),
-              user: str = Depends(auth)):
+              user: str = Depends(confirmed_admin)):
     return vms.change_cdrom(name, iso)
 
 
@@ -1004,7 +1167,7 @@ def vms_cdrom(name: str = Form(...), iso: str = Form(""),
 def vms_create(name: str = Form(...), memory_mb: int = Form(...),
                vcpus: int = Form(...), disk_gb: int = Form(...),
                iso: str = Form(""), network: str = Form("default"),
-               user: str = Depends(auth)):
+               user: str = Depends(confirmed_admin)):
     return vms.create_vm(name, memory_mb, vcpus, disk_gb, iso, network)
 
 
@@ -1015,13 +1178,13 @@ def vms_snapshots(name: str, user: str = Depends(auth)):
 
 @app.post("/api/vms/snapshot")
 def vms_snapshot(name: str = Form(...), snap_name: str = Form(...),
-                 user: str = Depends(auth)):
+                 user: str = Depends(confirmed_admin)):
     return vms.create_snapshot(name, snap_name)
 
 
 @app.post("/api/vms/snapshot/action")
 def vms_snapshot_action(name: str = Form(...), snap_name: str = Form(...),
-                        action: str = Form(...), user: str = Depends(auth)):
+                        action: str = Form(...), user: str = Depends(confirmed_admin)):
     return vms.snapshot_action(name, snap_name, action)
 
 
@@ -1058,7 +1221,7 @@ def shares_samba(user: str = Depends(auth)):
 
 @app.post("/api/shares/samba/add")
 def shares_samba_add(name: str = Form(...), path: str = Form(...),
-                     writable: bool = Form(True), user: str = Depends(auth)):
+                     writable: bool = Form(True), user: str = Depends(confirmed_admin)):
     return shares.add_samba_share(name, path, writable)
 
 
@@ -1069,7 +1232,7 @@ def shares_nfs(user: str = Depends(auth)):
 
 @app.post("/api/shares/nfs/add")
 def shares_nfs_add(path: str = Form(...), clients: str = Form("*"),
-                   user: str = Depends(auth)):
+                   user: str = Depends(confirmed_admin)):
     return shares.add_nfs_export(path, clients)
 
 
@@ -1091,12 +1254,12 @@ def network_interfaces(user: str = Depends(auth)):
 
 @app.post("/api/network/bond/create")
 def network_bond_create(name: str = Form(...), members: str = Form(...),
-                        mode: str = Form("802.3ad"), user: str = Depends(auth)):
+                        mode: str = Form("802.3ad"), user: str = Depends(confirmed_admin)):
     return network.create_bond(name, members.split(","), mode)
 
 
 @app.post("/api/network/bond/delete")
-def network_bond_delete(name: str = Form(...), user: str = Depends(auth)):
+def network_bond_delete(name: str = Form(...), user: str = Depends(confirmed_admin)):
     return network.delete_bond(name)
 
 
@@ -1112,12 +1275,12 @@ def network_firewall_rules(user: str = Depends(auth)):
 
 @app.post("/api/network/firewall/add")
 def network_firewall_add(port: int = Form(...), proto: str = Form("tcp"),
-                         action: str = Form("allow"), user: str = Depends(auth)):
+                         action: str = Form("allow"), user: str = Depends(confirmed_admin)):
     return network.firewall_add_rule(port, proto, action)
 
 
 @app.post("/api/network/firewall/remove")
-def network_firewall_remove(num: int = Form(...), user: str = Depends(auth)):
+def network_firewall_remove(num: int = Form(...), user: str = Depends(confirmed_admin)):
     return network.firewall_remove_rule(num)
 
 
@@ -1125,24 +1288,24 @@ def network_firewall_remove(num: int = Form(...), user: str = Depends(auth)):
 def network_configure_ip(iface: str = Form(...), mode: str = Form("static"),
                          ip: str = Form(""), netmask: str = Form("24"),
                          gateway: str = Form(""), dns: str = Form(""),
-                         persist: bool = Form(False), user: str = Depends(auth)):
+                         persist: bool = Form(False), user: str = Depends(confirmed_admin)):
     return network.configure_ip(iface, mode, ip, netmask, gateway, dns, persist)
 
 
 @app.post("/api/network/bridge/create")
 def network_bridge_create(name: str = Form(...), members: str = Form(""),
-                          user: str = Depends(auth)):
+                          user: str = Depends(confirmed_admin)):
     return network.create_bridge(name, [m for m in members.split(",") if m])
 
 
 @app.post("/api/network/vlan/create")
 def network_vlan_create(parent: str = Form(...), vlan_id: int = Form(...),
-                        name: str = Form(""), user: str = Depends(auth)):
+                        name: str = Form(""), user: str = Depends(confirmed_admin)):
     return network.create_vlan(parent, vlan_id, name)
 
 
 @app.post("/api/network/link/delete")
-def network_link_delete(name: str = Form(...), user: str = Depends(auth)):
+def network_link_delete(name: str = Form(...), user: str = Depends(confirmed_admin)):
     return network.delete_link(name)
 
 
@@ -1154,13 +1317,13 @@ def security_users(user: str = Depends(auth)):
 
 
 @app.post("/api/security/users/add")
-def security_users_add(name: str = Form(...), user: str = Depends(auth)):
+def security_users_add(name: str = Form(...), user: str = Depends(confirmed_admin)):
     return security.add_user(name)
 
 
 @app.post("/api/security/users/smb-password")
 def security_smb_password(name: str = Form(...), password: str = Form(...),
-                          user: str = Depends(auth)):
+                          user: str = Depends(confirmed_admin)):
     return security.set_smb_password(name, password)
 
 
@@ -1171,7 +1334,7 @@ def security_smb_users(user: str = Depends(auth)):
 
 @app.post("/api/security/users/password")
 def security_password(name: str = Form(...), password: str = Form(...),
-                      user: str = Depends(auth)):
+                      user: str = Depends(confirmed_admin)):
     return security.set_password(name, password)
 
 
@@ -1182,13 +1345,13 @@ def security_ssh_keys(name: str, user: str = Depends(auth)):
 
 @app.post("/api/security/users/ssh-keys/add")
 def security_ssh_keys_add(name: str = Form(...), key: str = Form(...),
-                          user: str = Depends(auth)):
+                          user: str = Depends(confirmed_admin)):
     return security.add_ssh_key(name, key)
 
 
 @app.post("/api/security/users/ssh-keys/remove")
 def security_ssh_keys_remove(name: str = Form(...), key: str = Form(...),
-                             user: str = Depends(auth)):
+                             user: str = Depends(confirmed_admin)):
     return security.remove_ssh_key(name, key)
 
 
@@ -1199,41 +1362,41 @@ def security_user_secinfo(name: str, user: str = Depends(auth)):
 
 @app.post("/api/security/users/sudo")
 def security_user_sudo(name: str = Form(...), enable: bool = Form(...),
-                       nopasswd: bool = Form(False), user: str = Depends(auth)):
+                       nopasswd: bool = Form(False), user: str = Depends(confirmed_admin)):
     return security.set_sudo(name, enable, nopasswd)
 
 
 @app.post("/api/security/users/aging")
 def security_user_aging(name: str = Form(...), max_days: str = Form(""),
                         min_days: str = Form(""), warn_days: str = Form(""),
-                        expire: str = Form(""), user: str = Depends(auth)):
+                        expire: str = Form(""), user: str = Depends(confirmed_admin)):
     return security.set_password_aging(name, max_days, min_days, warn_days, expire)
 
 
 @app.post("/api/security/users/expire")
-def security_user_expire(name: str = Form(...), user: str = Depends(auth)):
+def security_user_expire(name: str = Form(...), user: str = Depends(confirmed_admin)):
     return security.expire_password_now(name)
 
 
 @app.post("/api/security/groups/add")
-def security_group_add(name: str = Form(...), user: str = Depends(auth)):
+def security_group_add(name: str = Form(...), user: str = Depends(confirmed_admin)):
     return security.add_group(name)
 
 
 @app.post("/api/security/groups/delete")
-def security_group_delete(name: str = Form(...), user: str = Depends(auth)):
+def security_group_delete(name: str = Form(...), user: str = Depends(confirmed_admin)):
     return security.delete_group(name)
 
 
 @app.post("/api/security/groups/add-member")
 def security_group_add_member(group: str = Form(...), member: str = Form(...),
-                              user: str = Depends(auth)):
+                              user: str = Depends(confirmed_admin)):
     return security.add_to_group(member, group)
 
 
 @app.post("/api/security/groups/remove-member")
 def security_group_remove_member(group: str = Form(...), member: str = Form(...),
-                                 user: str = Depends(auth)):
+                                 user: str = Depends(confirmed_admin)):
     return security.remove_from_group(member, group)
 
 
@@ -1248,7 +1411,7 @@ def security_certs(user: str = Depends(auth)):
 
 
 @app.post("/api/security/certs/generate")
-def security_cert_gen(common_name: str = Form(...), user: str = Depends(auth)):
+def security_cert_gen(common_name: str = Form(...), user: str = Depends(confirmed_admin)):
     return security.generate_self_signed(common_name)
 
 
@@ -1313,7 +1476,7 @@ def sysmgr_runvard_release(user: str = Depends(auth)):
 
 
 @app.post("/api/sysmgr/runvard-update/apply")
-def sysmgr_runvard_update_apply(user: str = Depends(auth)):
+def sysmgr_runvard_update_apply(user: str = Depends(confirmed_admin)):
     return system_mgr.start_runvard_update()
 
 
@@ -1323,7 +1486,7 @@ def sysmgr_runvard_update_log(user: str = Depends(auth)):
 
 
 @app.post("/api/sysmgr/updates/apply")
-def sysmgr_updates_apply(user: str = Depends(auth)):
+def sysmgr_updates_apply(user: str = Depends(confirmed_admin)):
     from modules import jobs
     return jobs.start_job("apt-upgrade", system_mgr.apply_updates)
 
@@ -1344,21 +1507,14 @@ def sysmgr_cron(user: str = Depends(auth)):
 
 @app.post("/api/sysmgr/cron/add")
 def sysmgr_cron_add(schedule: str = Form(...), command: str = Form(...),
-                    user: str = Depends(auth)):
+                    user: str = Depends(confirmed_admin)):
     return system_mgr.add_cron_job(schedule, command)
 
 
 @app.post("/api/sysmgr/power")
 def sysmgr_power(action: str = Form(...), delay: int = Form(0),
                  confirm_token: str = Form(""),
-                 user: str = Depends(auth)):
-    if action != "cancel":
-        try:
-            security_tokens.require_confirm_token(
-                user, f"power:{action}", action, confirm_token
-            )
-        except PermissionError as e:
-            raise HTTPException(status_code=403, detail=str(e))
+                 user: str = Depends(confirmed_admin)):
     return system_mgr.power_action(action, delay)
 
 
@@ -1374,7 +1530,7 @@ def sysmgr_power_profiles(user: str = Depends(auth)):
 
 @app.post("/api/sysmgr/power/profiles/set")
 def sysmgr_power_profiles_set(profile: str = Form(...),
-                              user: str = Depends(auth)):
+                              user: str = Depends(confirmed_admin)):
     return system_mgr.power_profiles_set(profile)
 
 
@@ -1391,7 +1547,7 @@ def sysmgr_power_logind_set(
     HandleLidSwitch: str = Form("suspend"),
     HandleLidSwitchDocked: str = Form("ignore"),
     HandleLidSwitchExternalPower: str = Form("suspend"),
-    user: str = Depends(auth),
+    user: str = Depends(confirmed_admin),
 ):
     return system_mgr.logind_power_set({
         "IdleAction": IdleAction,
@@ -1414,7 +1570,7 @@ def sysmgr_power_tools(user: str = Depends(auth)):
 
 
 @app.post("/api/sysmgr/hostname")
-def sysmgr_hostname(name: str = Form(...), user: str = Depends(auth)):
+def sysmgr_hostname(name: str = Form(...), user: str = Depends(confirmed_admin)):
     return system_mgr.set_hostname(name)
 
 
@@ -1430,7 +1586,7 @@ def sysmgr_apparmor(user: str = Depends(auth)):
 
 @app.post("/api/sysmgr/apparmor/set")
 def sysmgr_apparmor_set(profile: str = Form(...), mode: str = Form(...),
-                        user: str = Depends(auth)):
+                        user: str = Depends(confirmed_admin)):
     return system_mgr.apparmor_set(profile, mode)
 
 
@@ -1440,13 +1596,13 @@ def sysmgr_pkg_search(q: str, user: str = Depends(auth)):
 
 
 @app.post("/api/sysmgr/packages/install")
-def sysmgr_pkg_install(name: str = Form(...), user: str = Depends(auth)):
+def sysmgr_pkg_install(name: str = Form(...), user: str = Depends(confirmed_admin)):
     from modules import jobs
     return jobs.start_job("apt-install", system_mgr.pkg_install, name)
 
 
 @app.post("/api/sysmgr/packages/remove")
-def sysmgr_pkg_remove(name: str = Form(...), user: str = Depends(auth)):
+def sysmgr_pkg_remove(name: str = Form(...), user: str = Depends(confirmed_admin)):
     from modules import jobs
     return jobs.start_job("apt-remove", system_mgr.pkg_remove, name)
 
@@ -1471,7 +1627,7 @@ def sysmgr_unattended(user: str = Depends(auth)):
 def sysmgr_unattended_set(enable: bool = Form(...),
                           auto_reboot: bool = Form(False),
                           reboot_time: str = Form("02:00"),
-                          user: str = Depends(auth)):
+                          user: str = Depends(confirmed_admin)):
     return system_mgr.unattended_set(enable, auto_reboot, reboot_time)
 
 
@@ -1481,7 +1637,7 @@ def sysmgr_tuned(user: str = Depends(auth)):
 
 
 @app.post("/api/sysmgr/tuned/set")
-def sysmgr_tuned_set(profile: str = Form(...), user: str = Depends(auth)):
+def sysmgr_tuned_set(profile: str = Form(...), user: str = Depends(confirmed_admin)):
     return system_mgr.tuned_set(profile)
 
 
@@ -1491,7 +1647,7 @@ def sysmgr_kdump(user: str = Depends(auth)):
 
 
 @app.post("/api/sysmgr/kdump/action")
-def sysmgr_kdump_action(action: str = Form(...), user: str = Depends(auth)):
+def sysmgr_kdump_action(action: str = Form(...), user: str = Depends(confirmed_admin)):
     return system_mgr.kdump_action(action)
 
 
@@ -1523,7 +1679,7 @@ def apps_get(app_id: str, user: str = Depends(auth)):
 
 @app.post("/api/apps/install")
 def apps_install(app_id: str = Form(...), content: str = Form(...),
-                 user: str = Depends(auth)):
+                 user: str = Depends(confirmed_admin)):
     try:
         return apps.install(app_id, content)
     except Exception as e:
@@ -1532,8 +1688,16 @@ def apps_install(app_id: str = Form(...), content: str = Form(...),
 
 @app.post("/api/apps/save-compose")
 def apps_save_compose(app_id: str = Form(...), content: str = Form(...),
-                      user: str = Depends(auth)):
+                      user: str = Depends(confirmed_admin)):
     try:
+        if app_id.startswith("compose:"):
+            name = app_id.split(":", 1)[1]
+            port_check = docker_mgr.check_compose_ports(name, content)
+            if not port_check["ok"]:
+                return {
+                    **port_check,
+                    "stderr": "One or more Compose ports are already in use.",
+                }
         return apps.save_compose(app_id, content)
     except Exception as e:
         raise HTTPException(400, str(e))
@@ -1546,7 +1710,7 @@ def apps_install_status(job_id: str, user: str = Depends(auth)):
 
 @app.post("/api/apps/action")
 def apps_action(app_id: str = Form(...), action: str = Form(...),
-                user: str = Depends(auth)):
+                user: str = Depends(confirmed_admin)):
     try:
         return apps.action(app_id, action)
     except Exception as e:

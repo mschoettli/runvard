@@ -118,3 +118,17 @@ def best_web_port_from_compose(content, fallback=0):
         return fallback
     candidates.sort(reverse=True)
     return candidates[0][1] if candidates[0][0] >= 0 else fallback
+
+
+def published_ports_from_compose(content):
+    """Return published host ports from a Docker Compose file."""
+    ports = []
+    for service_name, entry in _compose_port_entries(content):
+        published, target = _published_and_target(entry)
+        if published:
+            ports.append({
+                "service": service_name or "",
+                "port": published,
+                "target": target,
+            })
+    return ports
