@@ -1265,8 +1265,11 @@ const UI_PHRASES={
     "Errors out":"Fehler OUT",
     "Everything":"Alles",
     "Expert Mode":"Expertenmodus",
+    "Enable Expert Mode":"Expertenmodus aktivieren",
+    "Expert Mode reveals advanced system areas and actions that can change disks, services, users, packages, networking and diagnostics. Continue only if you know what you are changing.":"Der Expertenmodus zeigt erweiterte Systembereiche und Aktionen, die Laufwerke, Dienste, Benutzer, Pakete, Netzwerk und Diagnose verändern können. Fahre nur fort, wenn du genau weißt, was du änderst.",
     "Expert mode disabled":"Expertenmodus deaktiviert",
     "Expert mode enabled":"Expertenmodus aktiviert",
+    "Expert mode required":"Expertenmodus erforderlich",
     "Expires:":"Läuft ab:",
     "Export created":"Export erstellt",
     "Extra memory buffer":"Zusätzlicher Speicherpuffer",
@@ -2231,8 +2234,11 @@ const UI_PHRASES={
     "Errors out":"Erreurs sortie",
     "Everything":"Tout",
     "Expert Mode":"Mode expert",
+    "Enable Expert Mode":"Activer le mode expert",
+    "Expert Mode reveals advanced system areas and actions that can change disks, services, users, packages, networking and diagnostics. Continue only if you know what you are changing.":"Le mode expert affiche des zones système avancées et des actions pouvant modifier les disques, les services, les utilisateurs, les paquets, le réseau et les diagnostics. Continuez uniquement si vous savez exactement ce que vous modifiez.",
     "Expert mode disabled":"Mode expert désactivé",
     "Expert mode enabled":"Mode expert activé",
+    "Expert mode required":"Mode expert requis",
     "Expires:":"Expire :",
     "Export created":"Export créé",
     "Extra memory buffer":"Tampon mémoire supplémentaire",
@@ -3165,8 +3171,11 @@ const UI_PHRASES={
     "Errors out":"Errori out",
     "Everything":"Tutto",
     "Expert Mode":"Modalità esperto",
+    "Enable Expert Mode":"Abilita modalità esperto",
+    "Expert Mode reveals advanced system areas and actions that can change disks, services, users, packages, networking and diagnostics. Continue only if you know what you are changing.":"La modalità esperto mostra aree di sistema avanzate e azioni che possono modificare dischi, servizi, utenti, pacchetti, rete e diagnostica. Continua solo se sai esattamente cosa stai modificando.",
     "Expert mode disabled":"Modalità esperto disabilitata",
     "Expert mode enabled":"Modalità esperto abilitata",
+    "Expert mode required":"Modalità esperto richiesta",
     "Expires:":"Scade:",
     "Export created":"Export creato",
     "Extra memory buffer":"Buffer di memoria aggiuntivo",
@@ -4096,8 +4105,11 @@ const UI_PHRASES={
     "Errors out":"Errores salida",
     "Everything":"Todo",
     "Expert Mode":"Modo experto",
+    "Enable Expert Mode":"Activar modo experto",
+    "Expert Mode reveals advanced system areas and actions that can change disks, services, users, packages, networking and diagnostics. Continue only if you know what you are changing.":"El modo experto muestra áreas avanzadas del sistema y acciones que pueden modificar discos, servicios, usuarios, paquetes, red y diagnósticos. Continúa solo si sabes exactamente qué estás cambiando.",
     "Expert mode disabled":"Modo experto desactivado",
     "Expert mode enabled":"Modo experto activado",
+    "Expert mode required":"Modo experto requerido",
     "Expires:":"Caduca:",
     "Export created":"Exportación creada",
     "Extra memory buffer":"Búfer de memoria adicional",
@@ -5037,8 +5049,11 @@ const UI_PHRASES={
     "Errors out":"Erros saída",
     "Everything":"Tudo",
     "Expert Mode":"Modo avançado",
+    "Enable Expert Mode":"Ativar modo avançado",
+    "Expert Mode reveals advanced system areas and actions that can change disks, services, users, packages, networking and diagnostics. Continue only if you know what you are changing.":"O modo avançado mostra áreas avançadas do sistema e ações que podem alterar discos, serviços, utilizadores, pacotes, rede e diagnósticos. Continue apenas se souber exatamente o que está a alterar.",
     "Expert mode disabled":"Modo avançado desativado",
     "Expert mode enabled":"Modo avançado ativado",
+    "Expert mode required":"Modo avançado necessário",
     "Expires:":"Expira:",
     "Export created":"Exportação criada",
     "Extra memory buffer":"Buffer de memória adicional",
@@ -6432,7 +6447,7 @@ function closeModal(){$('#overlay').classList.remove('open');if(termWs){termWs.c
 $('#overlay').onclick=e=>{if(e.target.id==='overlay')closeModal();};
 
 async function renderTab(id,tab){const body=$('#modal-body');body.style.padding='';body.style.overflow='';body.style.display='';body.style.flexDirection='';body.innerHTML=`<div class="loading">${esc(tr('loading'))}</div>`;try{
- if(tab&&isExpertOnlyTab(id,tab)&&!isExpertMode())throw new Error('Expert mode required');
+ if(tab&&isExpertOnlyTab(id,tab)&&!isExpertMode())throw new Error(uiText('Expert mode required'));
  if(id==='terminal')await renderTerminal(body);
  else if(id==='files')await renderFiles(body);
  else if(id==='storage')await renderStorage(body,tab);
