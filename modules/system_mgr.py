@@ -2,8 +2,10 @@
 import json
 import os
 import re
+import shutil
 import tempfile
 import subprocess
+import time
 import urllib.error
 import urllib.request
 
@@ -262,14 +264,228 @@ def add_cron_job(schedule: str, command: str, user="root"):
 
 # --- Power ---
 
+_POWER_ACTIONS = {
+    "shutdown": ["shutdown", "-h"],
+    "reboot": ["shutdown", "-r"],
+    "suspend": ["systemctl", "suspend"],
+    "hibernate": ["systemctl", "hibernate"],
+    "hybrid-sleep": ["systemctl", "hybrid-sleep"],
+    "suspend-then-hibernate": ["systemctl", "suspend-then-hibernate"],
+}
+_SCHEDULED_SHUTDOWN_FILE = "/run/systemd/shutdown/scheduled"
+_POWER_PROFILE_RE = re.compile(r"^(power-saver|balanced|performance)$")
+_LOGIND_DROPIN = "/etc/systemd/logind.conf.d/90-runvard-power.conf"
+_LOGIND_KEYS = {
+    "IdleAction",
+    "IdleActionSec",
+    "HandlePowerKey",
+    "HandleLidSwitch",
+    "HandleLidSwitchDocked",
+    "HandleLidSwitchExternalPower",
+}
+_LOGIND_ACTIONS = {
+    "ignore",
+    "poweroff",
+    "reboot",
+    "halt",
+    "kexec",
+    "suspend",
+    "hibernate",
+    "hybrid-sleep",
+    "suspend-then-hibernate",
+    "lock",
+}
+_LOGIND_SECS_RE = re.compile(r"^\d+(us|ms|s|min|h|d|w|month|y)?$")
+
+
+def _pkg_installed(name: str) -> bool:
+    r = _run(["dpkg-query", "-W", "-f=${Status}", name])
+    return r["ok"] and "install ok installed" in r["stdout"]
+
+
+def _command_available(name: str) -> bool:
+    return shutil.which(name) is not None
+
+
 def power_action(action: str, delay_min: int = 0):
-    if action == "shutdown":
-        return _run(["shutdown", "-h", f"+{delay_min}"])
-    elif action == "reboot":
-        return _run(["shutdown", "-r", f"+{delay_min}"])
-    elif action == "cancel":
+    try:
+        delay_min = max(0, int(delay_min))
+    except (TypeError, ValueError):
+        return {"ok": False, "stderr": "Delay must be a non-negative number"}
+    if action == "cancel":
         return _run(["shutdown", "-c"])
-    raise ValueError("Unbekannte Aktion")
+    if action not in _POWER_ACTIONS:
+        return {"ok": False, "stderr": "Unbekannte Aktion"}
+    cmd = list(_POWER_ACTIONS[action])
+    if action in ("shutdown", "reboot"):
+        cmd.append(f"+{delay_min}")
+    elif delay_min:
+        return {"ok": False, "stderr": "Delay is only supported for shutdown and reboot"}
+    return _run(cmd)
+
+
+def power_status():
+    scheduled = None
+    try:
+        with open(_SCHEDULED_SHUTDOWN_FILE) as f:
+            data = dict(
+                line.strip().split("=", 1)
+                for line in f
+                if "=" in line and line.strip()
+            )
+        usec = int(data.get("USEC", "0") or "0")
+        when = int(usec / 1_000_000) if usec else 0
+        if when:
+            scheduled = {
+                "action": data.get("MODE", "scheduled"),
+                "timestamp": when,
+                "in_seconds": max(0, when - int(time.time())),
+            }
+    except (OSError, ValueError):
+        scheduled = None
+    return {
+        "scheduled": scheduled,
+        "actions": ["shutdown", "reboot", "suspend", "hibernate",
+                    "hybrid-sleep", "suspend-then-hibernate", "cancel"],
+    }
+
+
+def parse_powerprofiles_list(text: str):
+    profiles = []
+    active = ""
+    for line in (text or "").splitlines():
+        m = re.match(r"\s*(\*)?\s*([A-Za-z0-9_-]+):\s*$", line)
+        if not m:
+            continue
+        name = m.group(2)
+        if _POWER_PROFILE_RE.fullmatch(name):
+            profiles.append(name)
+            if m.group(1):
+                active = name
+    return profiles, active
+
+
+def power_profiles_status():
+    get = _run(["powerprofilesctl", "get"])
+    if not get["ok"]:
+        return {
+            "available": False,
+            "active": "",
+            "profiles": [],
+            "installed": _pkg_installed("power-profiles-daemon"),
+        }
+    active = get["stdout"].strip()
+    lst = _run(["powerprofilesctl", "list"])
+    profiles, listed_active = parse_powerprofiles_list(lst["stdout"])
+    if not profiles:
+        profiles = ["power-saver", "balanced", "performance"]
+    return {
+        "available": True,
+        "active": active or listed_active,
+        "profiles": profiles,
+        "installed": True,
+    }
+
+
+def power_profiles_set(profile: str):
+    if not _POWER_PROFILE_RE.fullmatch(profile or ""):
+        return {"ok": False, "stderr": "Ungueltiges Energieprofil"}
+    return _run(["powerprofilesctl", "set", profile])
+
+
+def parse_logind_config(text: str):
+    values = {}
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if not line or line.startswith("#") or "=" not in line:
+            continue
+        key, value = line.split("=", 1)
+        key = key.strip()
+        if key in _LOGIND_KEYS:
+            values[key] = value.strip()
+    return values
+
+
+def logind_power_status():
+    values = {
+        "IdleAction": "ignore",
+        "IdleActionSec": "30min",
+        "HandlePowerKey": "poweroff",
+        "HandleLidSwitch": "suspend",
+        "HandleLidSwitchDocked": "ignore",
+        "HandleLidSwitchExternalPower": "suspend",
+    }
+    managed = {}
+    for path in ("/etc/systemd/logind.conf", _LOGIND_DROPIN):
+        try:
+            with open(path) as f:
+                parsed = parse_logind_config(f.read())
+        except OSError:
+            parsed = {}
+        values.update(parsed)
+        if path == _LOGIND_DROPIN:
+            managed = parsed
+    return {"values": values, "managed": managed, "dropin": _LOGIND_DROPIN}
+
+
+def logind_power_set(settings: dict):
+    clean = {}
+    for key in _LOGIND_KEYS:
+        value = str(settings.get(key, "")).strip()
+        if not value:
+            continue
+        if key == "IdleActionSec":
+            if not _LOGIND_SECS_RE.fullmatch(value):
+                return {"ok": False, "stderr": "IdleActionSec has an invalid duration"}
+        elif value not in _LOGIND_ACTIONS:
+            return {"ok": False, "stderr": f"Invalid value for {key}"}
+        clean[key] = value
+    try:
+        os.makedirs(os.path.dirname(_LOGIND_DROPIN), exist_ok=True)
+        with open(_LOGIND_DROPIN, "w") as f:
+            f.write("[Login]\n")
+            for key in sorted(clean):
+                f.write(f"{key}={clean[key]}\n")
+    except OSError as e:
+        return {"ok": False, "stderr": str(e)}
+    reload_result = _run(["systemctl", "restart", "systemd-logind"], timeout=30)
+    return {"ok": reload_result["ok"], "stderr": reload_result["stderr"], "stdout": reload_result["stdout"]}
+
+
+def parse_systemd_inhibitors(text: str):
+    inhibitors = []
+    for raw in (text or "").splitlines():
+        line = raw.strip()
+        if not line or line.lower().startswith(("who ", "who\t")) or " inhibitors listed" in line:
+            continue
+        parts = line.split(None, 6)
+        if len(parts) >= 7 and parts[1].isdigit() and parts[3].isdigit():
+            inhibitors.append({
+                "who": parts[0],
+                "uid": parts[1],
+                "user": parts[2],
+                "pid": parts[3],
+                "what": parts[5],
+                "why": parts[6],
+            })
+            continue
+        parts = re.split(r"\s{2,}", line, maxsplit=5)
+        if len(parts) >= 3:
+            inhibitors.append({"who": parts[0], "what": parts[-2], "why": parts[-1]})
+    return inhibitors
+
+
+def power_inhibitors():
+    r = _run(["systemd-inhibit", "--list"], timeout=15)
+    return {"available": r["ok"], "raw": r["stdout"] or r["stderr"], "inhibitors": parse_systemd_inhibitors(r["stdout"])}
+
+
+def power_tools_status():
+    return {
+        "powertop": {"installed": _pkg_installed("powertop"), "available": _command_available("powertop")},
+        "tlp": {"installed": _pkg_installed("tlp"), "available": _command_available("tlp")},
+        "acpid": {"installed": _pkg_installed("acpid"), "available": _command_available("acpid")},
+    }
 
 
 def set_hostname(name: str):

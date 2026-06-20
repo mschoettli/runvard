@@ -8100,7 +8100,125 @@ function sosPoll(id){
 }
 
 window.cronForm=()=>openForm('Cron-Job','⏱',[{name:'schedule',label:'Schedule',placeholder:'0 3 * * *',hint:'Min Hour Day Month Weekday (e.g. daily 3:00)'},{name:'command',label:'Command',placeholder:'/usr/bin/backup.sh'}],async d=>{await post('/sysmgr/cron/add',d);closeForm();toast('Cron job created');renderSystem($('#modal-body'),'Cron');});
-window.powerForm=action=>openForm(action==='shutdown'?'Shut down':'Restart','⏻',[{name:'delay',label:'Delay (minutes)',value:0}],async d=>{closeForm();await post('/sysmgr/power',{action,delay:d.delay});toast('Running…');});
+const POWER_LABELS={
+  shutdown:'Shut down',
+  reboot:'Restart',
+  suspend:'Suspend',
+  hibernate:'Hibernate',
+  'hybrid-sleep':'Hybrid sleep',
+  'suspend-then-hibernate':'Suspend then hibernate',
+};
+const LOGIND_ACTIONS=['ignore','poweroff','reboot','suspend','hibernate','hybrid-sleep','suspend-then-hibernate','lock'];
+const powerOption=(value,current)=>`<option value="${esc(value)}" ${String(value)===String(current)?'selected':''}>${esc(uiText(value))}</option>`;
+const powerToolCard=(name,tool,pkg,copy)=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(name)}</div>${statusBadge(tool?.available?'Installed':'Unavailable',tool?.available?'good':'warn')}</div><p class="nx-action-sub">${esc(uiText(copy))}</p><div class="nx-action-row">${!tool?.available?`<button class="btn ghost sm" onclick="powerInstallPackage('${esc(pkg)}')">Install package</button>`:''}</div></div>`;
+function powerScheduledText(s){
+  if(!s)return 'None';
+  const mins=Math.max(0,Math.ceil((s.in_seconds||0)/60));
+  return `${esc(s.action||'scheduled')} in ${mins} min`;
+}
+async function renderPower(body){
+  body.innerHTML='<div class="loading">Loading power settings…</div>';
+  const [status,profiles,tuned,logind,inhibitors,tools]=await Promise.all([
+    api('/sysmgr/power/status').catch(()=>({scheduled:null})),
+    api('/sysmgr/power/profiles').catch(()=>({available:false,profiles:[],active:''})),
+    api('/sysmgr/tuned').catch(()=>({available:false,profiles:[],active:''})),
+    api('/sysmgr/power/logind').catch(()=>({values:{}})),
+    api('/sysmgr/power/inhibitors').catch(()=>({available:false,inhibitors:[],raw:''})),
+    api('/sysmgr/power/tools').catch(()=>({})),
+  ]);
+  const l=logind.values||{};
+  const ppActive=profiles.available?profiles.active:'Unavailable';
+  const tunedActive=tuned.available?(tuned.active||'None'):'Unavailable';
+  const activeProfile=profiles.available?ppActive:tunedActive;
+  const inhibitorRows=(inhibitors.inhibitors||[]).map(x=>`<tr><td>${esc(x.who||'-')}</td><td class="mono">${esc(x.what||'-')}</td><td>${esc(x.why||'-')}</td><td class="mono">${esc(x.pid||'-')}</td></tr>`).join('');
+  body.innerHTML=viewIntro('Power','Control Debian/systemd power actions, profiles and idle behavior.', '')
+    +`<div class="nx-summary-grid">
+      ${summaryCard('Current state','Online','Server is running')}
+      ${summaryCard('Scheduled power action',powerScheduledText(status.scheduled),status.scheduled?'Can be canceled':'No shutdown queued')}
+      ${summaryCard('Active energy profile',esc(activeProfile),profiles.available?'power-profiles-daemon':'tuned or unavailable')}
+    </div>
+    <div class="nx-card-grid actions-grid">
+      <div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">Restart</div>${statusBadge('systemd','good')}</div><p class="nx-action-sub">Reboot now or after a delay.</p><div class="nx-action-row"><button class="btn ghost" onclick="powerForm('reboot')">Restart</button></div></div>
+      <div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">Shut down</div>${statusBadge('systemd','good')}</div><p class="nx-action-sub">Power off now or after a delay.</p><div class="nx-action-row"><button class="btn danger" onclick="powerForm('shutdown')">Shut down</button></div></div>
+      <div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">Suspend</div>${statusBadge('optional','warn')}</div><p class="nx-action-sub">Put the server into sleep. Use only when remote wake-up is available.</p><div class="nx-action-row"><button class="btn ghost" onclick="powerForm('suspend')">Suspend</button></div></div>
+      <div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">Hibernate</div>${statusBadge('optional','warn')}</div><p class="nx-action-sub">Save memory to disk and power down if hibernation is configured.</p><div class="nx-action-row"><button class="btn ghost" onclick="powerForm('hibernate')">Hibernate</button></div></div>
+      <div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">Scheduled action</div>${status.scheduled?statusBadge('Queued','warn'):statusBadge('Clear','good')}</div><p class="nx-action-sub">${esc(powerScheduledText(status.scheduled))}</p><div class="nx-action-row"><button class="btn ghost" onclick="powerCancel()" ${status.scheduled?'':'disabled'}>Cancel scheduled</button></div></div>
+    </div>
+    <div class="section-label">Energy profiles</div>
+    <div class="nx-card-grid">
+      <div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">power-profiles-daemon</div>${statusBadge(profiles.available?'Available':'Unavailable',profiles.available?'good':'warn')}</div>
+        <p class="nx-action-sub">Simple Debian profile control for power saver, balanced and performance modes.</p>
+        <div class="nx-action-row">
+          <select id="pprof-sel" style="min-width:180px" ${profiles.available?'':'disabled'}>${(profiles.profiles&&profiles.profiles.length?profiles.profiles:['power-saver','balanced','performance']).map(p=>powerOption(p,profiles.active)).join('')}</select>
+          <button class="btn sm" onclick="powerProfileSet()" ${profiles.available?'':'disabled'}>Apply</button>
+          ${!profiles.available?`<button class="btn ghost sm" onclick="powerInstallPackage('power-profiles-daemon')">Install package</button>`:''}
+        </div>
+      </div>
+      <div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">tuned</div>${statusBadge(tuned.available?'Available':'Unavailable',tuned.available?'good':'warn')}</div>
+        <p class="nx-action-sub">Server-oriented profiles. Avoid combining aggressive tuned and TLP policies.</p>
+        <div class="nx-action-row">
+          <select id="power-tuned-sel" style="min-width:200px" ${tuned.available?'':'disabled'}>${(tuned.profiles||[]).map(p=>powerOption(p,tuned.active)).join('')}</select>
+          <button class="btn sm" onclick="powerTunedSet()" ${tuned.available?'':'disabled'}>Apply</button>
+          ${!tuned.available?`<button class="btn ghost sm" onclick="powerInstallPackage('tuned')">Install package</button>`:''}
+        </div>
+      </div>
+    </div>
+    <div class="section-label">Advanced idle behavior</div>
+    <div class="nx-action-card">
+      <div class="nx-action-head"><div class="nx-action-title">systemd-logind policy</div>${statusBadge('Drop-in','warn')}</div>
+      <div class="nx-kv">
+        ${cardMetric('Idle action',esc(l.IdleAction||'ignore'))}
+        ${cardMetric('Idle after',esc(l.IdleActionSec||'30min'))}
+        ${cardMetric('Power key',esc(l.HandlePowerKey||'poweroff'))}
+        ${cardMetric('Lid switch',esc(l.HandleLidSwitch||'suspend'))}
+      </div>
+      <div class="nx-action-row" style="margin-top:12px"><button class="btn ghost sm" onclick="powerLogindForm()">Edit idle rules</button></div>
+    </div>
+    ${advancedDetails('Inhibitors',inhibitors.available?simpleTable(['Who','What','Why','PID'],inhibitorRows):`<pre class="logbox">${esc(inhibitors.raw||'systemd-inhibit unavailable')}</pre>`,false)}
+    <div class="section-label">Diagnostics and optional packages</div>
+    <div class="nx-card-grid">
+      ${powerToolCard('powertop',tools.powertop,'powertop','Power diagnostics and tuning hints. Auto-tune is intentionally not run from here.')}
+      ${powerToolCard('TLP',tools.tlp,'tlp','Laptop-focused power management. Keep optional on server systems.')}
+      ${powerToolCard('acpid',tools.acpid,'acpid','Legacy ACPI event handling for special hardware buttons.')}
+    </div>`;
+}
+async function powerConfirmToken(action){
+  const r=await post('/confirm-token',{action:'power:'+action,target:action});
+  return r.token;
+}
+window.powerForm=action=>{
+  const label=POWER_LABELS[action]||action;
+  const submit=async(delay=0)=>{
+    try{
+      const token=await powerConfirmToken(action);
+      const r=await post('/sysmgr/power',{action,delay,confirm_token:token});
+      if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}
+      toast('Running…');
+      renderSystem($('#modal-body'),'Power');
+    }catch(e){toast('Error: '+e.message,'error');}
+  };
+  if(action==='shutdown'||action==='reboot'){
+    openForm(label,'⏻',[{name:'delay',label:'Delay (minutes)',value:0,type:'number',hint:'0 runs immediately'}],async d=>{closeForm();submit(d.delay||0);});
+    return;
+  }
+  typedConfirm(label,`${label} can disconnect this server until it wakes again.`,action,()=>submit(0));
+};
+window.powerCancel=async()=>{try{const r=await post('/sysmgr/power',{action:'cancel',delay:0});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Canceled');renderSystem($('#modal-body'),'Power');}catch(e){toast('Error: '+e.message,'error');}};
+window.powerProfileSet=async()=>{try{const profile=$('#pprof-sel').value;const r=await post('/sysmgr/power/profiles/set',{profile});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Profile active: '+profile);renderSystem($('#modal-body'),'Power');}catch(e){toast('Error: '+e.message,'error');}};
+window.powerTunedSet=async()=>{try{const profile=$('#power-tuned-sel').value;const r=await post('/sysmgr/tuned/set',{profile});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Profile active: '+profile);renderSystem($('#modal-body'),'Power');}catch(e){toast('Error: '+e.message,'error');}};
+window.powerLogindForm=async()=>{
+  const d=await api('/sysmgr/power/logind').catch(()=>({values:{}}));
+  const v=d.values||{};
+  openForm('systemd-logind power policy','⚙',[
+    {name:'IdleAction',label:'Idle action',type:'select',value:v.IdleAction||'ignore',options:LOGIND_ACTIONS},
+    {name:'IdleActionSec',label:'Idle after',value:v.IdleActionSec||'30min',hint:'Examples: 15min, 1h, 300s'},
+    {name:'HandlePowerKey',label:'Power key',type:'select',value:v.HandlePowerKey||'poweroff',options:LOGIND_ACTIONS},
+    {name:'HandleLidSwitch',label:'Lid switch',type:'select',value:v.HandleLidSwitch||'suspend',options:LOGIND_ACTIONS},
+    {name:'HandleLidSwitchDocked',label:'Lid switch docked',type:'select',value:v.HandleLidSwitchDocked||'ignore',options:LOGIND_ACTIONS},
+    {name:'HandleLidSwitchExternalPower',label:'Lid switch on AC',type:'select',value:v.HandleLidSwitchExternalPower||'suspend',options:LOGIND_ACTIONS},
+  ],async form=>{try{const r=await post('/sysmgr/power/logind/set',form);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}closeForm();toast('Saved');renderSystem($('#modal-body'),'Power');}catch(e){toast('Error: '+e.message,'error');}});
+};
+window.powerInstallPackage=async name=>{try{toast('Installation started…');const r=await post('/sysmgr/packages/install',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Installing – wait a moment, then reopen the tab');}catch(e){toast('Error: '+e.message,'error');}};
 
 // Updates installieren (Hintergrund-Job + Polling)
 window.updatesInstall=async()=>{
@@ -8126,7 +8244,13 @@ function pollUpdateJob(id,reboot){
       if(out)out.textContent=(res.stdout||'')+(res.stderr?('\n'+res.stderr):'')||'(no output)';
       toast(res.ok===false?'Mit Fehlern beendet':'Updates installed',res.ok===false?'error':'success');
       if(btn){btn.disabled=false;btn.textContent='✓ Fertig';}
-      if(reboot){toast('Reboot starting…');post('/sysmgr/power',{action:'reboot',delay:0});}
+      if(reboot){
+        toast('Reboot starting…');
+        try{
+          const token=await powerConfirmToken('reboot');
+          post('/sysmgr/power',{action:'reboot',delay:0,confirm_token:token});
+        }catch(e){toast('Reboot confirmation failed: '+e.message,'error');}
+      }
     } else {
       if(out)out.textContent='Error: '+(j.error||'unbekannt');
       toast('Update fehlgeschlagen','error');
@@ -10112,9 +10236,8 @@ const renderSystemOriginalFallback=async(body,tab)=>{
     applySystemUpdateBadge();
   } else if(tab==='Shares'||tab==='Shares')return renderSharesAll(body);
   else if(tab==='Wartung'||tab==='Maintenance')return renderMaintenance(body);
-  else if(tab==='Power'){
-    body.innerHTML=viewIntro('Power','Restart or shut down the server.', '')+`<div class="nx-card-grid actions-grid"><div class="nx-action-card"><div class="nx-action-title">Restart</div><p class="nx-action-sub">Reboot the server now or after a delay.</p><div class="nx-action-row"><button class="btn ghost" onclick="powerForm('reboot')">Restart</button></div></div><div class="nx-action-card"><div class="nx-action-title">Shut down</div><p class="nx-action-sub">Power off the server.</p><div class="nx-action-row"><button class="btn danger" onclick="powerForm('shutdown')">Shut down</button></div></div></div>`;
-  } else body.innerHTML=viewIntro(tab||'System','This advanced section is still available.','')+emptyState('Open another tab to continue');
+  else if(tab==='Power')return renderPower(body);
+  else body.innerHTML=viewIntro(tab||'System','This advanced section is still available.','')+emptyState('Open another tab to continue');
 };
 function renderDashboard(){
   const grid=$('#dash-grid');const section=$('#dash-section');if(!grid||!section)return;

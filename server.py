@@ -21,6 +21,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from modules import (system, terminal, files, storage, docker_mgr, services,
                      vms, backup, shares, network, security, monitoring,
                      system_mgr, apps, dashboard, metrics, accounts, audit)
+from modules import security_tokens
 
 app = FastAPI(title="runvard", docs_url=None, redoc_url=None)
 http_basic = HTTPBasic()
@@ -235,6 +236,12 @@ def api_auth_status(request: Request):
     return {"login_enabled": True,
             "user": parsed[0] if parsed else None,
             "role": parsed[1] if parsed else None}
+
+
+@app.post("/api/confirm-token")
+def api_confirm_token(action: str = Form(...), target: str = Form(...),
+                      user: str = Depends(auth)):
+    return security_tokens.issue_confirm_token(user, action, target)
 
 
 @app.post("/api/auth/toggle")
@@ -1343,8 +1350,67 @@ def sysmgr_cron_add(schedule: str = Form(...), command: str = Form(...),
 
 @app.post("/api/sysmgr/power")
 def sysmgr_power(action: str = Form(...), delay: int = Form(0),
+                 confirm_token: str = Form(""),
                  user: str = Depends(auth)):
+    if action != "cancel":
+        try:
+            security_tokens.require_confirm_token(
+                user, f"power:{action}", action, confirm_token
+            )
+        except PermissionError as e:
+            raise HTTPException(status_code=403, detail=str(e))
     return system_mgr.power_action(action, delay)
+
+
+@app.get("/api/sysmgr/power/status")
+def sysmgr_power_status(user: str = Depends(auth)):
+    return system_mgr.power_status()
+
+
+@app.get("/api/sysmgr/power/profiles")
+def sysmgr_power_profiles(user: str = Depends(auth)):
+    return system_mgr.power_profiles_status()
+
+
+@app.post("/api/sysmgr/power/profiles/set")
+def sysmgr_power_profiles_set(profile: str = Form(...),
+                              user: str = Depends(auth)):
+    return system_mgr.power_profiles_set(profile)
+
+
+@app.get("/api/sysmgr/power/logind")
+def sysmgr_power_logind(user: str = Depends(auth)):
+    return system_mgr.logind_power_status()
+
+
+@app.post("/api/sysmgr/power/logind/set")
+def sysmgr_power_logind_set(
+    IdleAction: str = Form("ignore"),
+    IdleActionSec: str = Form("30min"),
+    HandlePowerKey: str = Form("poweroff"),
+    HandleLidSwitch: str = Form("suspend"),
+    HandleLidSwitchDocked: str = Form("ignore"),
+    HandleLidSwitchExternalPower: str = Form("suspend"),
+    user: str = Depends(auth),
+):
+    return system_mgr.logind_power_set({
+        "IdleAction": IdleAction,
+        "IdleActionSec": IdleActionSec,
+        "HandlePowerKey": HandlePowerKey,
+        "HandleLidSwitch": HandleLidSwitch,
+        "HandleLidSwitchDocked": HandleLidSwitchDocked,
+        "HandleLidSwitchExternalPower": HandleLidSwitchExternalPower,
+    })
+
+
+@app.get("/api/sysmgr/power/inhibitors")
+def sysmgr_power_inhibitors(user: str = Depends(auth)):
+    return system_mgr.power_inhibitors()
+
+
+@app.get("/api/sysmgr/power/tools")
+def sysmgr_power_tools(user: str = Depends(auth)):
+    return system_mgr.power_tools_status()
 
 
 @app.post("/api/sysmgr/hostname")
