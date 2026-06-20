@@ -5978,8 +5978,9 @@ function openLanguageModal(){
   if(select)select.value=currentLanguage();
 }
 const EXPERT_MODE_KEY='runvard_expert_mode';
+let expertModeActive=false;
 function isExpertMode(){
-  try{return localStorage.getItem(EXPERT_MODE_KEY)==='1';}catch(e){return false;}
+  return !!expertModeActive;
 }
 function syncExpertToggle(){
   const t=$('#um-expert-toggle');
@@ -5987,17 +5988,28 @@ function syncExpertToggle(){
 }
 function rerenderCurrentModal(){
   const overlay=$('#overlay');
-  if(currentTile&&overlay&&overlay.classList.contains('open'))renderTab(currentTile.id,currentTab);
+  if(currentTile&&overlay&&overlay.classList.contains('open'))openModal(currentTile);
 }
 function applyExpertMode(){
   document.body.classList.toggle('expert-mode',isExpertMode());
   syncExpertToggle();
 }
-function setExpertMode(enabled){
-  try{localStorage.setItem(EXPERT_MODE_KEY,enabled?'1':'0');}catch(e){}
-  applyExpertMode();
-  rerenderCurrentModal();
-  toast(enabled?tr('expertOn'):tr('expertOff'));
+async function setExpertMode(enabled){
+  const t=$('#um-expert-toggle');
+  if(t)t.disabled=true;
+  try{
+    const r=await post('/expert-mode',{enabled:enabled?'1':'0'});
+    expertModeActive=!!r.expert;
+    try{localStorage.setItem(EXPERT_MODE_KEY,expertModeActive?'1':'0');}catch(e){}
+    applyExpertMode();
+    rerenderCurrentModal();
+    toast(expertModeActive?tr('expertOn'):tr('expertOff'));
+  }catch(e){
+    toast('Error: '+e.message,'error');
+    applyExpertMode();
+  }finally{
+    if(t)t.disabled=false;
+  }
 }
 applyExpertMode();
 
@@ -6183,6 +6195,12 @@ async function loadAuthStatus(){
     const h=$('#um-head'); if(h) h.innerHTML=s.user?`${esc(tr('signedInAs'))} <strong>${esc(s.user)}</strong>`:tr('loginDisabledHead');
     const t=$('#um-login-toggle'); if(t) t.checked=!!s.login_enabled;
     const acc=$('#um-accounts'); if(acc) acc.style.display=(s.role==='admin')?'block':'none';
+    expertModeActive=!!s.expert;
+    const ex=$('#um-expert-toggle');
+    if(ex){ex.checked=expertModeActive;ex.disabled=s.role!=='admin';}
+    const exRow=ex?.closest('.um-row');
+    if(exRow)exRow.style.display=(s.role==='admin')?'flex':'none';
+    applyExpertMode();
   }catch(e){}
 }
 async function doLogout(){
@@ -6253,6 +6271,18 @@ const TILES=[
  {id:'system',nameKey:'tileSystem',icon:'🔧',color:'#9ca3af',badge:'system',descKey:'descSystem',tabs:['Overview','Updates','Users','Network','Services','Shares','Maintenance','Advanced','Power'],tabKeys:['tabOverview','tabUpdates','tabUsers','tabNetwork','tabServices','tabShares','tabMaintenance','tabAdvanced','tabPower']},
  {id:'apps',nameKey:'tileApps',icon:'🧩',color:'#f472b6',badge:'apps',descKey:''},
 ];
+const EXPERT_ONLY_TABS={
+  storage:new Set(['LUKS','ZFS/Btrfs','iSCSI','Swap','LVM']),
+  vms:new Set(['Storage pools']),
+  monitoring:new Set(['Alerts']),
+  system:new Set(['Maintenance','Advanced'])
+};
+function isExpertOnlyTab(tileId,tab){
+  return !!(EXPERT_ONLY_TABS[tileId]&&EXPERT_ONLY_TABS[tileId].has(tab));
+}
+function visibleTabs(tile){
+  return (tile.tabs||[]).map((tab,index)=>({tab,index})).filter(x=>isExpertMode()||!isExpertOnlyTab(tile.id,x.tab));
+}
 function tileName(tile){return tr(tile.nameKey);}
 function tileDesc(tile){return tile.descKey?tr(tile.descKey):'';}
 function tabLabel(tile,tab,index){return tile.tabKeys&&tile.tabKeys[index]?tr(tile.tabKeys[index]):tab;}
@@ -6352,12 +6382,13 @@ let currentTile=null,currentTab=null,termWs=null;
 applyLanguage();
 loadTileBadges();
 function openModal(tile){
-  currentTile=tile;currentTab=tile.tabs?tile.tabs[0]:null;resetSearch();
+  const tabs=visibleTabs(tile);
+  currentTile=tile;currentTab=tabs.length?tabs[0].tab:null;resetSearch();
   $('#modal-title').innerHTML=`<span>${tile.icon}</span> ${esc(tileName(tile))}`;
   const tabsEl=$('#modal-tabs');tabsEl.innerHTML='';
   const hasSearch=['services','docker','vms','system'].includes(tile.id);
   $('#search-btn').style.display=hasSearch?'flex':'none';
-  if(tile.tabs){tile.tabs.forEach((tab,i)=>{const tb=document.createElement('div');tb.className='modal-tab'+(i===0?' active':'');tb.dataset.tab=tab;tb.textContent=tabLabel(tile,tab,i);tb.onclick=()=>{currentTab=tab;document.querySelectorAll('.modal-tab').forEach(x=>x.classList.remove('active'));tb.classList.add('active');resetSearch();renderTab(tile.id,tab);};tabsEl.appendChild(tb);});applySystemUpdateTabBadge();renderTab(tile.id,currentTab);}
+  if(tile.tabs){tabs.forEach(({tab,index},i)=>{const tb=document.createElement('div');tb.className='modal-tab'+(i===0?' active':'');tb.dataset.tab=tab;tb.textContent=tabLabel(tile,tab,index);tb.onclick=()=>{currentTab=tab;document.querySelectorAll('.modal-tab').forEach(x=>x.classList.remove('active'));tb.classList.add('active');resetSearch();renderTab(tile.id,tab);};tabsEl.appendChild(tb);});applySystemUpdateTabBadge();renderTab(tile.id,currentTab);}
   else renderTab(tile.id,null);
   if(tile.id==='docker'){
     const link=document.createElement('button');
@@ -6387,6 +6418,7 @@ function closeModal(){$('#overlay').classList.remove('open');if(termWs){termWs.c
 $('#overlay').onclick=e=>{if(e.target.id==='overlay')closeModal();};
 
 async function renderTab(id,tab){const body=$('#modal-body');body.style.padding='';body.style.overflow='';body.style.display='';body.style.flexDirection='';body.innerHTML=`<div class="loading">${esc(tr('loading'))}</div>`;try{
+ if(tab&&isExpertOnlyTab(id,tab)&&!isExpertMode())throw new Error('Expert mode required');
  if(id==='terminal')await renderTerminal(body);
  else if(id==='files')await renderFiles(body);
  else if(id==='storage')await renderStorage(body,tab);
@@ -7935,8 +7967,8 @@ async function renderServices(body){
     <td><span class="status-pill ${x.active==='active'?'run':'stop'}" style="font-size:10px;padding:2px 8px">${x.active}</span></td>
     <td style="text-align:right">
       <div style="display:inline-flex;gap:4px">
-        <button class="btn icon play" title="${x.active==='active'?'Restart':'Start'}" onclick="svcAct('${esc(x.name)}','${x.active==='active'?'restart':'start'}')" style="width:26px;height:26px;font-size:12px">${x.active==='active'?'↻':'▶'}</button>
-        <button class="btn icon stop" title="Stop" onclick="svcAct('${esc(x.name)}','stop')" ${x.active!=='active'?'disabled style="opacity:.3;width:26px;height:26px;font-size:12px"':'style="width:26px;height:26px;font-size:12px"'}>⏹</button>
+        ${isExpertMode()?`<button class="btn icon play" title="${x.active==='active'?'Restart':'Start'}" onclick="svcAct('${esc(x.name)}','${x.active==='active'?'restart':'start'}')" style="width:26px;height:26px;font-size:12px">${x.active==='active'?'↻':'▶'}</button>
+        <button class="btn icon stop" title="Stop" onclick="svcAct('${esc(x.name)}','stop')" ${x.active!=='active'?'disabled style="opacity:.3;width:26px;height:26px;font-size:12px"':'style="width:26px;height:26px;font-size:12px"'}>⏹</button>`:''}
         <button class="btn icon" title="Logs" onclick="svcLogs('${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">≡</button>
       </div>
     </td></tr>`).join('')}</tbody></table>`;}
@@ -8371,7 +8403,7 @@ async function renderSecurity(body,tab){
          <button class="btn icon${smbSet.has(x.name)?' success':''}" title="${smbSet.has(x.name)?'Change Samba password':'Enable Samba'}" onclick="smbPassForm('${esc(x.name)}')" style="width:26px;height:26px;font-size:11px;font-weight:600">${smbSet.has(x.name)?'●':'○'}</button>
          <button class="btn icon" title="Manage groups" onclick="manageGroups('${esc(x.name)}')" style="width:26px;height:26px;font-size:13px">⊕</button>
          <button class="btn icon" title="SSH-Keys verwalten" onclick="sshKeysForm('${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">🔑</button>
-         <button class="btn icon" title="sudo & password expiry" onclick="userSecForm('${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">🛡</button>
+         ${isExpertMode()?`<button class="btn icon" title="sudo & password expiry" onclick="userSecForm('${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">🛡</button>`:''}
        </div>
      </td>
    </tr>`).join('')}</tbody></table>`;}
@@ -8815,17 +8847,17 @@ async function renderPower(body){
   const [status,profiles,tuned,logind,inhibitors,tools]=await Promise.all([
     api('/sysmgr/power/status').catch(()=>({scheduled:null})),
     api('/sysmgr/power/profiles').catch(()=>({available:false,profiles:[],active:''})),
-    api('/sysmgr/tuned').catch(()=>({available:false,profiles:[],active:''})),
+    isExpertMode()?api('/sysmgr/tuned').catch(()=>({available:false,profiles:[],active:''})):Promise.resolve({available:false,profiles:[],active:''}),
     api('/sysmgr/power/logind').catch(()=>({values:{}})),
     api('/sysmgr/power/inhibitors').catch(()=>({available:false,inhibitors:[],raw:''})),
-    api('/sysmgr/power/tools').catch(()=>({})),
+    isExpertMode()?api('/sysmgr/power/tools').catch(()=>({})):Promise.resolve({}),
   ]);
   const l=logind.values||{};
   const ppActive=profiles.available?profiles.active:'Unavailable';
   const tunedActive=tuned.available?(tuned.active||'None'):'Unavailable';
   const activeProfile=profiles.available?ppActive:tunedActive;
   const inhibitorRows=(inhibitors.inhibitors||[]).map(x=>`<tr><td>${esc(x.who||'-')}</td><td class="mono">${esc(x.what||'-')}</td><td>${esc(x.why||'-')}</td><td class="mono">${esc(x.pid||'-')}</td></tr>`).join('');
-  body.innerHTML=viewIntro('Power','Control Debian/systemd power actions, profiles and idle behavior.', `<a class="btn" href="/static/energy-info.html" target="_blank" rel="noopener">Energy info</a>`)
+  body.innerHTML=viewIntro('Power','Control Debian/systemd power actions, profiles and idle behavior.', `<button class="btn" onclick="location.href='/static/energy-info.html'">Energy info</button>`)
     +`<div class="nx-summary-grid">
       ${summaryCard('Current state','Online','Server is running')}
       ${summaryCard('Scheduled power action',powerScheduledText(status.scheduled),status.scheduled?'Can be canceled':'No shutdown queued')}
@@ -8845,9 +8877,10 @@ async function renderPower(body){
         <div class="nx-action-row">
           <select id="pprof-sel" style="min-width:180px" ${profiles.available?'':'disabled'}>${(profiles.profiles&&profiles.profiles.length?profiles.profiles:['power-saver','balanced','performance']).map(p=>powerOption(p,profiles.active)).join('')}</select>
           <button class="btn sm" onclick="powerProfileSet()" ${profiles.available?'':'disabled'}>Apply</button>
-          ${!profiles.available?`<button class="btn ghost sm" onclick="powerInstallPackage('power-profiles-daemon')">Install package</button>`:''}
+          ${isExpertMode()&&!profiles.available?`<button class="btn ghost sm" onclick="powerInstallPackage('power-profiles-daemon')">Install package</button>`:''}
         </div>
       </div>
+      ${isExpertMode()?`
       <div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">tuned</div>${statusBadge(tuned.available?'Available':'Unavailable',tuned.available?'good':'warn')}</div>
         <p class="nx-action-sub">Server-oriented profiles. Avoid combining aggressive tuned and TLP policies.</p>
         <div class="nx-action-row">
@@ -8855,7 +8888,7 @@ async function renderPower(body){
           <button class="btn sm" onclick="powerTunedSet()" ${tuned.available?'':'disabled'}>Apply</button>
           ${!tuned.available?`<button class="btn ghost sm" onclick="powerInstallPackage('tuned')">Install package</button>`:''}
         </div>
-      </div>
+      </div>`:''}
     </div>
     <div class="section-label">Advanced idle behavior</div>
     <div class="nx-action-card">
@@ -8869,12 +8902,12 @@ async function renderPower(body){
       <div class="nx-action-row" style="margin-top:12px"><button class="btn ghost sm" onclick="powerLogindForm()">Edit idle rules</button></div>
     </div>
     ${advancedDetails('Inhibitors',inhibitors.available?simpleTable(['Who','What','Why','PID'],inhibitorRows):`<pre class="logbox">${esc(inhibitors.raw||'systemd-inhibit unavailable')}</pre>`,false)}
-    <div class="section-label">Diagnostics and optional packages</div>
+    ${isExpertMode()?`<div class="section-label">Diagnostics and optional packages</div>
     <div class="nx-card-grid">
       ${powerToolCard('powertop',tools.powertop,'powertop','Power diagnostics and tuning hints. Auto-tune is intentionally not run from here.')}
       ${powerToolCard('TLP',tools.tlp,'tlp','Laptop-focused power management. Keep optional on server systems.')}
       ${powerToolCard('acpid',tools.acpid,'acpid','Legacy ACPI event handling for special hardware buttons.')}
-    </div>`;
+    </div>`:''}`;
 }
 async function powerConfirmToken(action){
   const r=await post('/confirm-token',{action:'power:'+action,target:action});
@@ -11037,15 +11070,15 @@ async function renderSecurity(body,tab){
   }
   const u=await api('/security/users');let smbSet=new Set();try{const smb=await api('/security/smb-users');smbSet=new Set(smb.users||[]);}catch(e){}
   body.innerHTML=viewIntro('Users','Manage Linux users, passwords, file sharing access and admin rights.',`<button class="btn" onclick="userForm()">Create user</button>`)
-    +`<div class="nx-card-grid">${u.map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${statusBadge(x.uid<1000?'System':'User',x.uid<1000?'warn':'good')}</div><div class="nx-kv">${cardMetric('Home',esc(x.home))}${cardMetric('Groups',esc((x.groups||[]).slice(0,3).join(', ')||'-'))}${cardMetric('Samba',smbSet.has(x.name)?'Enabled':'Off')}${cardMetric('UID',x.uid)}</div><div class="nx-action-row"><button class="btn ghost sm" onclick="passForm('${esc(x.name)}')">Password</button><button class="btn ghost sm" onclick="smbPassForm('${esc(x.name)}')">File sharing</button><button class="btn ghost sm" onclick="userSecForm('${esc(x.name)}')">Admin rights</button><button class="btn ghost sm" onclick="sshKeysForm('${esc(x.name)}')">SSH keys</button></div></div>`).join('')}</div>`;
+    +`<div class="nx-card-grid">${u.map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${statusBadge(x.uid<1000?'System':'User',x.uid<1000?'warn':'good')}</div><div class="nx-kv">${cardMetric('Home',esc(x.home))}${cardMetric('Groups',esc((x.groups||[]).slice(0,3).join(', ')||'-'))}${cardMetric('Samba',smbSet.has(x.name)?'Enabled':'Off')}${cardMetric('UID',x.uid)}</div><div class="nx-action-row"><button class="btn ghost sm" onclick="passForm('${esc(x.name)}')">Password</button><button class="btn ghost sm" onclick="smbPassForm('${esc(x.name)}')">File sharing</button>${isExpertMode()?`<button class="btn ghost sm" onclick="userSecForm('${esc(x.name)}')">Admin rights</button>`:''}<button class="btn ghost sm" onclick="sshKeysForm('${esc(x.name)}')">SSH keys</button></div></div>`).join('')}</div>`;
 }
 
 async function renderSystem(body,tab){
   if(tab==='Info'||tab==='Overview'||!tab){
-    const [i,u,alerts]=await Promise.all([api('/system/info'),api('/sysmgr/updates').catch(()=>({updates:0})),api('/monitoring/alerts/history').catch(()=>[])]);
+    const [i,u,alerts]=await Promise.all([api('/system/info'),api('/sysmgr/updates').catch(()=>({updates:0})),isExpertMode()?api('/monitoring/alerts/history').catch(()=>[]):Promise.resolve([])]);
     const activeAlerts=(alerts||[]).filter(x=>!x.resolved).length;
     body.innerHTML=viewIntro('System overview','This is the safe place to check health before changing settings.','')
-      +`<div class="nx-summary-grid">${summaryCard('Server',esc(i.hostname),esc(i.os))}${summaryCard('Updates',u.updates||0,(u.updates||0)?'Attention needed':'System current')}${summaryCard('Alerts',activeAlerts,activeAlerts?'Review monitoring':'No active alerts')}${summaryCard('Uptime',fmtUptime(i.uptime_seconds),'Running time')}</div>
+      +`<div class="nx-summary-grid">${summaryCard('Server',esc(i.hostname),esc(i.os))}${summaryCard('Updates',u.updates||0,(u.updates||0)?'Attention needed':'System current')}${isExpertMode()?summaryCard('Alerts',activeAlerts,activeAlerts?'Review monitoring':'No active alerts'):''}${summaryCard('Uptime',fmtUptime(i.uptime_seconds),'Running time')}</div>
       <div class="nx-card-grid"><div class="nx-action-card"><div class="nx-action-title">Hardware</div><div class="nx-kv">${cardMetric('CPU',esc(i.cpu_model))}${cardMetric('Kernel',esc(i.kernel))}${cardMetric('Architecture',esc(i.arch))}${cardMetric('OS',esc(i.os))}</div></div></div>`;
     return;
   }
@@ -11080,7 +11113,7 @@ async function renderSystem(body,tab){
 async function renderServicesSimple(body){
   const s=await api('/services/list');
   body.innerHTML=viewIntro('Services','Start, stop or inspect system services. Changing core services can disconnect runvard.', '')
-    +`<div class="nx-card-grid">${s.slice(0,80).map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="service-title mono">${esc(x.name)}</div>${statusBadge(x.active,x.active==='active'?'good':'warn')}</div><div class="nx-action-row"><button class="btn ghost sm" onclick="svcAct('${esc(x.name)}','${x.active==='active'?'restart':'start'}')">${x.active==='active'?'Restart':'Start'}</button><button class="btn ghost sm" onclick="svcLogs('${esc(x.name)}')">Logs</button></div></div>`).join('')}</div>`;
+    +`<div class="nx-card-grid">${s.slice(0,80).map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="service-title mono">${esc(x.name)}</div>${statusBadge(x.active,x.active==='active'?'good':'warn')}</div><div class="nx-action-row">${isExpertMode()?`<button class="btn ghost sm" onclick="svcAct('${esc(x.name)}','${x.active==='active'?'restart':'start'}')">${x.active==='active'?'Restart':'Start'}</button>`:''}<button class="btn ghost sm" onclick="svcLogs('${esc(x.name)}')">Logs</button></div></div>`).join('')}</div>`;
 }
 const renderSystemOriginalFallback=async(body,tab)=>{
   if(tab==='Updates'){

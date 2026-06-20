@@ -92,3 +92,34 @@ def test_non_dangerous_docker_action_does_not_require_confirm_token(monkeypatch)
 
     assert response.status_code == 200
     assert response.json()["action"] == "restart"
+
+
+def test_standard_admin_cannot_call_expert_only_endpoint(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+
+    response = _client().get("/api/storage/luks")
+
+    assert response.status_code == 403
+    assert response.json()["detail"] == "Expert mode required"
+
+
+def test_admin_can_enable_expert_mode_for_session(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    monkeypatch.setattr(server.storage, "luks_list", lambda: {"devices": []})
+    client = _client()
+
+    enabled = client.post("/api/expert-mode", data={"enabled": "1"})
+    response = client.get("/api/storage/luks")
+
+    assert enabled.status_code == 200
+    assert enabled.json()["expert"] is True
+    assert response.status_code == 200
+    assert response.json() == {"devices": []}
+
+
+def test_readonly_user_cannot_enable_expert_mode(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+
+    response = _client("readonly").post("/api/expert-mode", data={"enabled": "1"})
+
+    assert response.status_code == 403

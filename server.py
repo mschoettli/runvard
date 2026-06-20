@@ -70,6 +70,58 @@ COOKIE_NAME = "runvard_session"
 SESSION_TTL = 8 * 3600              # 8 Stunden
 SESSION_TTL_REMEMBER = 30 * 86400   # 30 Tage
 
+EXPERT_ONLY_PATHS = {
+    "/api/monitoring/alerts",
+    "/api/monitoring/alerts/add",
+    "/api/monitoring/alerts/history",
+    "/api/security/users/sudo",
+    "/api/services/action",
+    "/api/storage/btrfs",
+    "/api/storage/btrfs/create",
+    "/api/storage/btrfs/scrub",
+    "/api/storage/iscsi",
+    "/api/storage/iscsi/discover",
+    "/api/storage/iscsi/login",
+    "/api/storage/iscsi/logout",
+    "/api/storage/luks",
+    "/api/storage/luks/close",
+    "/api/storage/luks/format",
+    "/api/storage/luks/open",
+    "/api/storage/lvm",
+    "/api/storage/lvm/lv-create",
+    "/api/storage/lvm/lv-extend",
+    "/api/storage/lvm/lv-remove",
+    "/api/storage/lvm/vg-create",
+    "/api/storage/swap",
+    "/api/storage/swap/action",
+    "/api/storage/swap/create",
+    "/api/storage/zfs",
+    "/api/storage/zfs/create",
+    "/api/storage/zfs/destroy",
+    "/api/storage/zfs/scrub",
+    "/api/sysmgr/apparmor",
+    "/api/sysmgr/apparmor/set",
+    "/api/sysmgr/cron",
+    "/api/sysmgr/cron/add",
+    "/api/sysmgr/kdump",
+    "/api/sysmgr/kdump/action",
+    "/api/sysmgr/packages/install",
+    "/api/sysmgr/packages/remove",
+    "/api/sysmgr/packages/search",
+    "/api/sysmgr/sosreport",
+    "/api/sysmgr/sosreport/run",
+    "/api/sysmgr/tuned",
+    "/api/sysmgr/tuned/set",
+    "/api/sysmgr/unattended",
+    "/api/sysmgr/unattended/set",
+    "/api/vms/pool/action",
+    "/api/vms/pool/create",
+    "/api/vms/pool/vol-create",
+    "/api/vms/pool/vol-delete",
+    "/api/vms/pool/volumes",
+    "/api/vms/pools",
+}
+
 
 def _secret():
     try:
@@ -107,14 +159,15 @@ def _b64d(s):
     return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
 
 
-def make_token(username, ttl, role="admin"):
-    payload = f"{username}|{role}|{int(time.time()) + ttl}".encode()
+def make_token(username, ttl, role="admin", expert=False):
+    expert_flag = "1" if expert else "0"
+    payload = f"{username}|{role}|{expert_flag}|{int(time.time()) + ttl}".encode()
     sig = hmac.new(_secret(), payload, hashlib.sha256).digest()
     return _b64e(payload) + "." + _b64e(sig)
 
 
 def _parse_token(token):
-    """Gibt (username, role) zurück oder None. Akzeptiert auch Alt-Tokens (username|exp = admin)."""
+    """Gibt (username, role, expert) zurück oder None. Akzeptiert Alt-Tokens."""
     if not token or "." not in token:
         return None
     try:
@@ -124,16 +177,20 @@ def _parse_token(token):
         if not hmac.compare_digest(_b64d(s_b64), expected):
             return None
         parts = payload.decode().split("|")
-        if len(parts) == 3:
+        if len(parts) == 4:
+            username, role, expert, exp = parts
+        elif len(parts) == 3:
             username, role, exp = parts
+            expert = "0"
         elif len(parts) == 2:
             username, exp = parts
             role = "admin"
+            expert = "0"
         else:
             return None
         if int(exp) < int(time.time()):
             return None
-        return (username, role)
+        return (username, role, expert == "1")
     except Exception:
         return None
 
@@ -165,7 +222,7 @@ def auth(request: Request):
     parsed = _parse_token(request.cookies.get(COOKIE_NAME))
     if not parsed:
         raise HTTPException(status_code=401, detail="Unauthorized")
-    username, role = parsed
+    username, role = parsed[0], parsed[1]
     if role == "readonly" and request.method not in ("GET", "HEAD", "OPTIONS"):
         raise HTTPException(status_code=403, detail="Nur-Lese-Zugriff")
     return username
@@ -181,6 +238,27 @@ def require_admin(request: Request):
     if parsed[1] != "admin":
         raise HTTPException(status_code=403, detail="Admin erforderlich")
     return parsed[0]
+
+
+def is_expert_request(request: Request):
+    if not login_enabled():
+        return True
+    parsed = _parse_token(request.cookies.get(COOKIE_NAME))
+    return bool(parsed and parsed[1] == "admin" and parsed[2])
+
+
+def require_expert(request: Request):
+    user = require_admin(request)
+    if not is_expert_request(request):
+        raise HTTPException(status_code=403, detail="Expert mode required")
+    return user
+
+
+@app.middleware("http")
+async def _expert_only_mw(request: Request, call_next):
+    if request.url.path in EXPERT_ONLY_PATHS and not is_expert_request(request):
+        return JSONResponse({"detail": "Expert mode required"}, status_code=403)
+    return await call_next(request)
 
 
 def _form_value(form, *names, default=""):
@@ -382,17 +460,33 @@ def api_logout():
 @app.get("/api/auth/status")
 def api_auth_status(request: Request):
     if not login_enabled():
-        return {"login_enabled": False, "user": None, "role": "admin"}
+        return {"login_enabled": False, "user": None, "role": "admin", "expert": True}
     parsed = _parse_token(request.cookies.get(COOKIE_NAME))
     return {"login_enabled": True,
             "user": parsed[0] if parsed else None,
-            "role": parsed[1] if parsed else None}
+            "role": parsed[1] if parsed else None,
+            "expert": bool(parsed[2]) if parsed else False}
 
 
 @app.post("/api/confirm-token")
 def api_confirm_token(action: str = Form(...), target: str = Form(...),
                       user: str = Depends(require_admin)):
     return security_tokens.issue_confirm_token(user, action, target)
+
+
+@app.post("/api/expert-mode")
+def api_expert_mode(request: Request, enabled: str = Form(...),
+                    user: str = Depends(require_admin)):
+    on = str(enabled).lower() in ("1", "true", "on", "yes")
+    resp = JSONResponse({"ok": True, "expert": on})
+    if login_enabled():
+        parsed = _parse_token(request.cookies.get(COOKIE_NAME))
+        role = parsed[1] if parsed else "admin"
+        resp.set_cookie(COOKIE_NAME, make_token(user, SESSION_TTL, role, on),
+                        max_age=SESSION_TTL, httponly=True, samesite="strict",
+                        secure=(request.url.scheme == "https"),
+                        path="/")
+    return resp
 
 
 @app.post("/api/auth/toggle")
