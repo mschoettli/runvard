@@ -53,6 +53,40 @@ def apply_updates():
     return _run(["apt-get", "upgrade", "-y"], timeout=1800)
 
 
+def _start_detached_update_script(script_path):
+    try:
+        subprocess.Popen(
+            ["/bin/bash", script_path],
+            stdin=subprocess.DEVNULL,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            close_fds=True,
+            start_new_session=True,
+        )
+    except Exception as e:
+        raise RuntimeError(f"detached update start failed: {e}") from e
+    return {"stdout": "", "method": "detached"}
+
+
+def _start_systemd_update_script(script_path):
+    result = subprocess.run(
+        [
+            "systemd-run",
+            "--unit=runvard-self-update",
+            "--collect",
+            "/bin/bash",
+            script_path,
+        ],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        detail = result.stderr.strip() or result.stdout.strip() or "systemd-run failed"
+        raise RuntimeError(detail)
+    return {"stdout": result.stdout, "method": "systemd"}
+
+
 def start_runvard_update():
     """
     Start a detached runvard self-update.
@@ -106,25 +140,24 @@ echo "runvard update finished: $(date -Is)"
         tmp.write(script)
         script_path = tmp.name
     os.chmod(script_path, 0o700)
-    result = subprocess.run(
-        [
-            "systemd-run",
-            "--unit=runvard-self-update",
-            "--collect",
-            "/bin/bash",
-            script_path,
-        ],
-        capture_output=True,
-        text=True,
-        timeout=30,
-    )
-    if result.returncode != 0:
-        raise RuntimeError(result.stderr.strip() or result.stdout.strip() or "systemd-run failed")
+    systemd_error = ""
+    try:
+        start_result = _start_systemd_update_script(script_path)
+    except Exception as e:
+        systemd_error = str(e)
+        try:
+            start_result = _start_detached_update_script(script_path)
+        except Exception as fallback_error:
+            raise RuntimeError(
+                f"systemd-run failed: {systemd_error}; {fallback_error}"
+            ) from fallback_error
     return {
         "ok": True,
         "message": "runvard update started. The service will restart when the update finishes.",
         "log": RUNVARD_UPDATE_LOG,
-        "stdout": result.stdout,
+        "stdout": start_result["stdout"],
+        "method": start_result["method"],
+        "warning": systemd_error,
     }
 
 
