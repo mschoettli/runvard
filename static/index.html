@@ -8305,7 +8305,41 @@ window.toggleBondCard=el=>{
   el.querySelector('div').style.color=selected?'var(--text)':'#9d7aff';
 };
 window.createBond=async()=>{const name=$('#bond-name').value;const members=[...document.querySelectorAll('.bond-iface-card')].filter(el=>el.style.borderColor==='rgba(122, 74, 255, 0.5)').map(el=>el.dataset.iface).join(',');const mode=$('#bond-mode').value;if(!members){toast('Select at least one interface','error');return;}try{await post('/network/bond/create',{name,members,mode});toast('Bond created');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}};
-window.bondForm=async()=>{const ifs=await api('/network/interfaces');const phys=ifs.filter(i=>!i.is_bond&&!/^(bond|br|docker|veth)/.test(i.name)&&!/\.\d+$/.test(i.name)).map(i=>i.name);openForm('Create bond','⬡',[{name:'name',label:'Bond-Name',value:'bond0'},{name:'mode',label:'Modus',type:'select',options:[{value:'802.3ad',label:'LACP (802.3ad)'},{value:'active-backup',label:'Active-Backup'},{value:'balance-rr',label:'Round-Robin'}]},{name:'members',label:'Interfaces (comma-separated)',value:phys.slice(0,2).join(','),hint:'Available: '+(phys.join(', ')||'none')}],async d=>{closeForm();if(!d.members){toast('Select at least one interface','error');return;}try{const r=await post('/network/bond/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Bond created');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});};
+window.bondForm=async()=>{
+  const ifs=await api('/network/interfaces');
+  const phys=ifs.filter(i=>i.is_physical);
+  const formCard=document.querySelector('#form-overlay .form-card');
+  if(formCard)formCard.classList.remove('compose-install-card','tile-edit-card');
+  $('#form-head').innerHTML=`<span>⬡</span> ${esc(uiText('Create bond'))}`;
+  $('#form-body').innerHTML=`
+    <div class="form-field"><label>${esc(uiText('Bond-Name'))}</label><input id="bond-form-name" value="bond0"></div>
+    <div class="form-field"><label>${esc(uiText('Modus'))}</label><select id="bond-form-mode"><option value="802.3ad">LACP (802.3ad)</option><option value="active-backup">Active-Backup</option><option value="balance-rr">Round-Robin</option></select></div>
+    <div class="form-field">
+      <label>${esc(uiText('LAN ports'))}</label>
+      <div style="display:grid;grid-template-columns:1fr;gap:8px">
+        ${phys.map((i,idx)=>`<label style="display:flex;align-items:center;gap:10px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 12px;cursor:pointer">
+          <input type="checkbox" class="bond-member-check" data-iface="${esc(i.name)}" id="bond-member-${idx}">
+          <span style="display:flex;flex-direction:column;gap:2px;min-width:0">
+            <strong style="font-size:13px;color:var(--text)">${esc(i.name)}</strong>
+            <span style="font-size:11px;color:var(--text3)">${esc(i.ipv4||'No IP')} · ${i.speed?esc(i.speed+' Mbit'):'Unknown speed'} · ${i.up?'Connected':'Down'}</span>
+          </span>
+        </label>`).join('')||`<div class="empty-state" style="padding:14px">${esc(uiText('No physical ports detected'))}</div>`}
+      </div>
+      <div class="hint">${esc(uiText('Select the physical LAN ports that should become bond members.'))}</div>
+    </div>
+    <div class="form-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="form-go">${esc(tr('save'))}</button></div>`;
+  formSubmitFn=async()=>{
+    const name=$('#bond-form-name').value.trim();
+    const mode=$('#bond-form-mode').value;
+    const members=[...document.querySelectorAll('.bond-member-check:checked')].map(el=>el.dataset.iface).join(',');
+    if(!name){toast('Bond name required','error');return;}
+    if(!members){toast('Select at least one LAN port','error');return;}
+    closeForm();
+    try{const r=await post('/network/bond/create',{name,members,mode});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Bond created');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}
+  };
+  $('#form-go').onclick=formSubmitFn;
+  $('#form-overlay').classList.add('open');
+};
 window.ipConfigForm=(iface,cur)=>openForm('IP konfigurieren: '+iface,'⚙',[
   {name:'mode',label:'Modus',type:'select',options:[{value:'static',label:'Statisch'},{value:'dhcp',label:'DHCP'}]},
   {name:'ip',label:'IP-Adresse',value:cur,placeholder:'192.168.1.50'},
@@ -8314,7 +8348,7 @@ window.ipConfigForm=(iface,cur)=>openForm('IP konfigurieren: '+iface,'⚙',[
   {name:'dns',label:'DNS (optional)',placeholder:'1.1.1.1'},
   {name:'persist',label:'Dauerhaft speichern (/etc/network/interfaces.d)',type:'checkbox',value:false},
 ],async d=>{closeForm();toast('Setze IP…');try{const r=await post('/network/configure-ip',Object.assign({iface},d));if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('IP konfiguriert');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});
-window.bridgeForm=async()=>{const ifs=await api('/network/interfaces');const phys=ifs.filter(i=>!i.is_bond).map(i=>i.name);openForm('Create bridge','🌉',[{name:'name',label:'Bridge-Name',value:'br0'},{name:'members',label:'Members (comma-separated)',placeholder:phys.slice(0,2).join(','),hint:'Available: '+phys.join(', ')}],async d=>{closeForm();try{const r=await post('/network/bridge/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Bridge created');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});};
+window.bridgeForm=async()=>{const ifs=await api('/network/interfaces');const phys=ifs.filter(i=>i.is_physical||i.is_bond).map(i=>i.name);openForm('Create bridge','🌉',[{name:'name',label:'Bridge-Name',value:'br0'},{name:'members',label:'Members (comma-separated)',placeholder:phys.slice(0,2).join(','),hint:'Physical ports or bonds: '+phys.join(', ')}],async d=>{closeForm();try{const r=await post('/network/bridge/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Bridge created');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});};
 window.vlanForm=async()=>{const ifs=await api('/network/interfaces');openForm('Create VLAN','🔖',[{name:'parent',label:'Parent-Interface',type:'select',options:ifs.map(i=>i.name)},{name:'vlan_id',label:'VLAN-ID',type:'number',placeholder:'10'},{name:'name',label:'Name (optional)',placeholder:'leer = parent.id'}],async d=>{closeForm();try{const r=await post('/network/vlan/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('VLAN created');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});};
 window.linkDelete=name=>confirmDelete('Interface entfernen',`"${name}" entfernen?`,async()=>{try{const r=await post('/network/link/delete',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Entfernt');renderNetwork($('#modal-body'),'Interfaces');}catch(e){toast('Error: '+e.message,'error');}});
 
@@ -10977,8 +11011,16 @@ async function renderNetwork(body,tab){
     return;
   }
   const ifs=await api('/network/interfaces');
-  body.innerHTML=tabs+viewIntro('Network interfaces','Most servers only need one connected interface with an IP address. Advanced networking is below.',`<button class="btn ghost" onclick="bondForm()">Bond</button><button class="btn ghost" onclick="bridgeForm()">Advanced: bridge</button><button class="btn ghost" onclick="vlanForm()">VLAN</button>`)
-    +`<div class="nx-card-grid">${ifs.map(i=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(i.name)}</div>${statusBadge(i.up?'Connected':'Down',i.up?'good':'bad')}</div><div class="nx-kv">${cardMetric('IP',esc(i.ipv4||'No IP'))}${cardMetric('Speed',i.speed?i.speed+' Mbit':'Unknown')}${cardMetric('MAC',esc(i.mac||'-'))}${cardMetric('Type',i.is_bond?'Bond':'Interface')}</div><button class="btn ghost sm" onclick="ipConfigForm('${esc(i.name)}','${i.ipv4||''}')">Configure IP</button></div>`).join('')}</div>`;
+  const physical=ifs.filter(i=>i.is_physical);
+  const virtual=ifs.filter(i=>!i.is_physical);
+  const activePorts=physical.filter(i=>i.up);
+  const ifaceCard=i=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(i.name)}</div>${statusBadge(i.up?'Connected':'Down',i.up?'good':'bad')}</div><div class="nx-kv">${cardMetric('IP',esc(i.ipv4||'No IP'))}${cardMetric('Speed',i.speed?i.speed+' Mbit':'Unknown')}${cardMetric('MAC',esc(i.mac||'-'))}${cardMetric('Type',esc(i.type_label||i.interface_type||'Interface'))}</div><button class="btn ghost sm" onclick="ipConfigForm('${esc(i.name)}','${i.ipv4||''}')">Configure IP</button></div>`;
+  body.innerHTML=tabs+viewIntro('Network interfaces','Physical ports are the real server NICs. Virtual and logical interfaces are shown separately for Docker, bridges, VLANs, bonds and tunnels.',`<button class="btn ghost" onclick="bondForm()">Bond</button><button class="btn ghost" onclick="bridgeForm()">Advanced: bridge</button><button class="btn ghost" onclick="vlanForm()">VLAN</button>`)
+    +`<div class="nx-summary-grid">${summaryCard('Active ports',activePorts.length,activePorts.map(i=>i.name).join(', ')||'No physical port connected')}${summaryCard('Physical ports',physical.length,'Real NIC ports')}${summaryCard('Virtual interfaces',virtual.length,'Docker, bridge, VLAN, bond or tunnel')}</div>
+      <div class="sec-hdr"><h3>Physical ports</h3></div>
+      <div class="nx-card-grid">${physical.map(ifaceCard).join('')||emptyState('No physical ports detected')}</div>
+      <div class="sec-hdr" style="margin-top:18px"><h3>Virtual and logical interfaces</h3></div>
+      <div class="nx-card-grid">${virtual.map(ifaceCard).join('')||emptyState('No virtual interfaces')}</div>`;
 }
 window.fwDelete=num=>typedConfirm('Delete firewall rule',`Firewall rule ${num} will be removed.`,String(num),async()=>{try{await post('/network/firewall/remove',{num});toast('Rule removed');renderNetwork($('#modal-body'),'Firewall');}catch(e){toast('Error: '+e.message,'error');}});
 

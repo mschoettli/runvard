@@ -6,6 +6,18 @@ import subprocess
 import psutil
 
 
+VIRTUAL_INTERFACE_PREFIXES = (
+    "bond",
+    "br",
+    "docker",
+    "veth",
+    "virbr",
+    "tap",
+    "tun",
+    "wg",
+)
+
+
 def _run(cmd, timeout=30):
     try:
         r = subprocess.run(cmd, capture_output=True, text=True, timeout=timeout)
@@ -14,8 +26,26 @@ def _run(cmd, timeout=30):
         return {"ok": False, "stdout": "", "stderr": str(e)}
 
 
+def _classify_interface(name):
+    if name.startswith("bond"):
+        return "bond", "Bond"
+    if name.startswith(("br", "docker", "virbr")):
+        return "bridge", "Bridge"
+    if "." in name and name.rsplit(".", 1)[-1].isdigit():
+        return "vlan", "VLAN"
+    if name.startswith("veth"):
+        return "container", "Container"
+    if name.startswith(("tap", "tun", "wg")):
+        return "tunnel", "Tunnel"
+    if os.path.exists(f"/sys/class/net/{name}/device"):
+        return "physical", "Port"
+    if name.startswith(VIRTUAL_INTERFACE_PREFIXES):
+        return "virtual", "Virtual"
+    return "logical", "Logical"
+
+
 def list_interfaces():
-    """Alle Netzwerk-Interfaces mit IP, Status, Speed."""
+    """Alle Netzwerk-Interfaces mit IP, Status, Speed und Typ."""
     addrs = psutil.net_if_addrs()
     stats = psutil.net_if_stats()
     counters = psutil.net_io_counters(pernic=True)
@@ -30,6 +60,8 @@ def list_interfaces():
                     if a.family.name == "AF_PACKET"), None)
         st = stats.get(name)
         ctr = counters.get(name)
+        interface_type, type_label = _classify_interface(name)
+        is_physical = interface_type == "physical"
         interfaces.append({
             "name": name,
             "ipv4": ipv4,
@@ -38,10 +70,18 @@ def list_interfaces():
             "speed": st.speed if st else 0,
             "mtu": st.mtu if st else 0,
             "is_bond": name.startswith("bond"),
+            "is_physical": is_physical,
+            "is_virtual": not is_physical,
+            "interface_type": interface_type,
+            "type_label": type_label,
             "bytes_sent": ctr.bytes_sent if ctr else 0,
             "bytes_recv": ctr.bytes_recv if ctr else 0,
         })
-    return interfaces
+    return sorted(interfaces, key=lambda i: (
+        0 if i["is_physical"] else 1,
+        0 if i["up"] else 1,
+        i["name"],
+    ))
 
 
 def bond_members(bond_name: str):
