@@ -451,6 +451,17 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .compose-preview-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .compose-preview-toolbar strong{font-size:13px;color:var(--text)}
 .compose-preview{margin:0;max-height:280px;overflow:auto;background:#0a0810;border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:12px;color:#dbeafe;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.55;white-space:pre-wrap}
+.compose-mode-tabs{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:3px}
+.compose-mode-tab{min-height:30px;border:0;background:transparent;color:var(--text2);border-radius:7px;padding:0 10px;font:600 12px/1 inherit;cursor:pointer}
+.compose-mode-tab.active{background:rgba(122,74,255,.18);color:var(--accent-light)}
+.compose-mode-tab:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.compose-mode-panel[hidden],.compose-env-content[hidden]{display:none}
+.compose-raw-editor,.compose-env-textarea{width:100%;min-height:260px;resize:vertical;background:#0a0810;border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:12px;color:#dbeafe;font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.55}
+.compose-env-textarea{min-height:120px}
+.compose-raw-note{font-size:11px;color:var(--text3);line-height:1.45;margin-top:8px}
+.compose-raw-note.warn{color:#fbbf24}
+.compose-env-toggle{display:flex;align-items:flex-start;gap:9px;color:var(--text);font-size:13px;line-height:1.4;cursor:pointer}
+.compose-env-toggle input{width:auto;min-height:0;margin-top:2px}
 .compose-install-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:2px}
 @media (min-width: 768px){
   .compose-field-grid,.compose-env-row,.compose-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -7569,15 +7580,40 @@ const composeEnvFields=(data={})=>[
   {name:'env_content',label:'.env',type:'textarea',rows:6,value:data.env_content||'',placeholder:'KEY=value\nANOTHER_KEY=value',showWhen:'env_enabled'}
 ];
 window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Project name',placeholder:'meine-app'},{name:'content',label:'docker-compose.yml',type:'textarea',rows:12,value:'services:\n  web:\n    image: nginx:latest\n    ports:\n      - "8080:80"'},...composeEnvFields()],async d=>{await post('/docker/compose/save',{name:d.name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''});await composeAddToDashboard(d.name,composeFirstPort(d.content),false);closeForm();toast('Project saved');renderDocker($('#modal-body'),'Compose');});
-window.composeEdit=async name=>{const c=await api('/docker/compose/get?name='+encodeURIComponent(name));openForm('Compose bearbeiten: '+name,'🐳',[{name:'content',label:'docker-compose.yml',type:'textarea',rows:14,value:c.content},...composeEnvFields(c)],async d=>{await post('/docker/compose/save',{name,content:d.content,env_enabled:d.env_enabled?'1':'0',env_content:d.env_content||''});closeForm();toast('Gespeichert');});};
+window.composeEdit=async name=>{
+  try{
+    const c=await api('/docker/compose/get?name='+encodeURIComponent(name));
+    const draft=appComposeProjectDraft(name,c);
+    appComposeFormOpen(draft,{
+      title:'Compose: '+name,
+      icon:'🐳',
+      description:'Edit docker-compose.yml and optional .env values for this project.',
+      primaryLabel:'Save',
+      onSubmit:async currentDraft=>{
+        const content=appInstallCompose(currentDraft);
+        const r=await post('/docker/compose/save',{
+          name,
+          content,
+          env_enabled:currentDraft.envFileEnabled?'1':'0',
+          env_content:currentDraft.envFileContent||''
+        });
+        requireOk(r,'Could not save Compose project');
+        closeForm();toast(uiText('Saved'));
+        renderDocker($('#modal-body'),'Compose');
+        loadDashboard();
+      },
+    });
+  }catch(e){toast('Error: '+e.message,'error');}
+};
 window.composeAct=async(name,action)=>{
   composePendingActions.set(name,action);
   toast(action==='up'?'Starte '+name+'…':'Stoppe '+name+'…');
   renderDocker($('#modal-body'),'Compose');
   try{
     const r=await post('/docker/compose/action',{name,action});
+    requireOk(r,(r&&r.output)||'Compose action failed');
     const msgs={up:'Project started: '+name,down:'Project stopped: '+name,stop:'Project stopped: '+name,restart:'Project restarted: '+name};
-    toast(r.ok?(msgs[action]||'OK'):'Error',r.ok?'success':'error');
+    toast(msgs[action]||'OK','success');
   }catch(e){
     toast('Error: '+e.message,'error');
   }finally{
@@ -9556,16 +9592,19 @@ window.dashCompose=async id=>{
     const appId=isCompose?'compose:'+project:id;
     const a=isCompose?await api('/apps/get?app_id='+encodeURIComponent(appId)):await api('/apps/get?app_id='+encodeURIComponent(id));
     const c=isCompose?await api('/docker/compose/get?name='+encodeURIComponent(project)):{content:a.compose||''};
-    const draft=await appComposeDraft(appId,c.content||a.compose||'');
+    const draft=await appComposeDraft(appId,c.content||a.compose||'',c);
     appComposeFormOpen(draft,{
       title:'Compose: '+(a.name||project),
       icon:'✎',
       description:localizedAppDesc(a)||a.desc||'Docker Compose',
       primaryLabel:'Save',
+      env:isCompose,
       onSubmit:async currentDraft=>{
         const content=appInstallCompose(currentDraft);
-        if(isCompose)await post('/docker/compose/save',{name:project,content});
-        else await post('/apps/save-compose',{app_id:id,content});
+        const r=isCompose
+          ? await post('/docker/compose/save',{name:project,content,env_enabled:currentDraft.envFileEnabled?'1':'0',env_content:currentDraft.envFileContent||''})
+          : await post('/apps/save-compose',{app_id:id,content});
+        requireOk(r,'Could not save Compose file');
         closeForm();toast(uiText('Saved'));
         const body=$('#modal-body');if(body&&currentTile?.id==='apps')renderApps(body);
         loadDashboard();
@@ -9891,7 +9930,7 @@ function devicePath(name){return name.startsWith('/dev/')?name:'/dev/'+name;}
 function partitionName(name,num=1){const base=name.startsWith('/dev/')?name.slice(5):name;return base+(/\d$/.test(base)?'p':'')+num;}
 function defaultMountPoint(name){const base=(name.startsWith('/dev/')?name.slice(5):name).replace(/[^A-Za-z0-9_.-]/g,'-');return '/mnt/'+base;}
 function normalizeMountPoint(value,name){const v=(value||'').trim();if(!v)return defaultMountPoint(name);return v.startsWith('/')?v:'/mnt/'+v.replace(/^\/+/,'');}
-function requireOk(res,fallback){if(res&&res.ok===false)throw new Error(res.stderr||fallback||'Storage operation failed');return res;}
+function requireOk(res,fallback){if(res&&res.ok===false)throw new Error(res.stderr||res.output||res.error||fallback||'Operation failed');return res;}
 function isMountableVolume(volume,parent){
   if(!volume||volume.protected||parent?.protected||volume.mountpoint)return false;
   if(!/^(ext[234]|xfs|btrfs)$/.test(volume.fstype||''))return false;
@@ -10119,7 +10158,7 @@ function appInstallParsePort(raw){
 }
 function appInstallParseCompose(content){
   const lines=String(content||'').replace(/\r\n/g,'\n').split('\n');
-  const draft={service:'app',image:'',restart:'unless-stopped',container:'',ports:[],volumes:[],env:[],extra:[],rawContent:String(content||'')};
+  const draft={service:'app',image:'',restart:'unless-stopped',container:'',ports:[],volumes:[],env:[],extra:[],rawContent:String(content||''),composeMode:'form',envFileEnabled:false,envFileContent:''};
   let section='';
   let inServices=false;
   let serviceCount=0;
@@ -10152,6 +10191,7 @@ function appInstallParseCompose(content){
     }else if(section==='extra')draft.extra.push(line);
   });
   draft.lockedCompose=serviceCount>1||hasTopLevelExtra;
+  if(draft.lockedCompose)draft.composeMode='raw';
   if(!draft.container)draft.container=draft.service;
   return draft;
 }
@@ -10185,7 +10225,7 @@ function appInstallVolumeSpec(draft,volume){
   return `${appInstallVolumeSource(draft,volume)}:${volume.target}${mode}`;
 }
 function appInstallCompose(draft){
-  if(draft.lockedCompose)return draft.rawContent.replace(/\r\n/g,'\n').replace(/\s*$/,'')+'\n';
+  if(draft.lockedCompose||draft.composeMode==='raw')return String(draft.rawContent||'').replace(/\r\n/g,'\n').replace(/\s*$/,'')+'\n';
   const lines=['services:',`  ${draft.service}:`];
   if(draft.image)lines.push(`    image: ${draft.image}`);
   if(draft.restart)lines.push(`    restart: ${draft.restart}`);
@@ -10208,6 +10248,44 @@ function appInstallCompose(draft){
   draft.extra.forEach(line=>lines.push(line));
   return lines.join('\n')+'\n';
 }
+function appComposeGeneratedContent(draft){
+  const mode=draft.composeMode;
+  draft.composeMode='form';
+  const content=appInstallCompose(draft);
+  draft.composeMode=mode;
+  return content;
+}
+function appComposeCopyParsedState(target,parsed){
+  const keep={app:target.app,mounts:target.mounts,envFileEnabled:target.envFileEnabled,envFileContent:target.envFileContent,composeMode:target.composeMode};
+  Object.assign(target,parsed,keep);
+  target.lockedCompose=false;
+  target.volumes.forEach(v=>{if(v.managed)v.mountpoint=appInstallBestMount(target.mounts,appInstallVolumeRole(v));});
+}
+function appComposeSyncEnv(){
+  const d=_appInstallDraft;if(!d)return;
+  const enabled=$('#app-compose-env-enabled'),content=$('#app-compose-env-content'),panel=$('#app-compose-env-content-wrap');
+  if(enabled)d.envFileEnabled=enabled.checked;
+  if(content)d.envFileContent=content.value;
+  if(panel)panel.hidden=!d.envFileEnabled;
+}
+function appComposeSetMode(mode){
+  const d=_appInstallDraft;if(!d)return;
+  appInstallRefresh({syncRawToForm:false});
+  if(d.lockedCompose&&mode==='form')mode='raw';
+  d.composeMode=mode;
+  document.querySelectorAll('.compose-mode-tab').forEach(btn=>{
+    const active=btn.dataset.mode===mode;
+    btn.classList.toggle('active',active);
+    btn.setAttribute('aria-selected',active?'true':'false');
+  });
+  const formPanel=$('#app-compose-form-panel'),rawPanel=$('#app-compose-raw-panel');
+  if(formPanel)formPanel.hidden=mode!=='form';
+  if(rawPanel)rawPanel.hidden=mode!=='raw';
+  appInstallRefresh();
+  requestAnimationFrame(()=>mode==='raw'?$('#app-compose-raw')?.focus():$('#app-compose-service')?.focus());
+}
+window.appComposeSetMode=appComposeSetMode;
+window.appComposeRefresh=()=>appInstallRefresh({source:'raw'});
 function appInstallRenderVolumes(){
   const d=_appInstallDraft;if(!d)return;
   const el=$('#app-compose-volumes');if(!el)return;
@@ -10242,27 +10320,56 @@ function appInstallRenderReadonlyVolumes(draft){
     </div>
   </div>`).join('')||'<div class="empty-state" style="padding:16px">No volumes in this template</div>';
 }
-function appInstallRefresh(){
+function appInstallRefresh(options={}){
   const d=_appInstallDraft;if(!d)return;
+  const source=options.source||'form';
+  const syncRawToForm=options.syncRawToForm!==false;
+  appComposeSyncEnv();
   const service=$('#app-compose-service'),container=$('#app-compose-container'),image=$('#app-compose-image'),restart=$('#app-compose-restart');
-  if(service)d.service=service.value.trim();
-  if(container)d.container=container.value.trim();
-  if(image)d.image=image.value.trim();
-  if(restart)d.restart=restart.value;
-  d.ports.forEach((p,i)=>{
-    const host=$(`#app-port-host-${i}`),target=$(`#app-port-container-${i}`);
-    if(host)p.host=host.value.trim();
-    if(target)p.container=target.value.trim();
-  });
-  d.volumes.forEach((v,i)=>{
-    const source=$(`#app-volume-source-${i}`),target=$(`#app-volume-target-${i}`),mode=$(`#app-volume-mode-${i}`);
-    if(source)v.sourceOverride=source.value.trim();
-    if(target)v.target=target.value.trim();
-    if(mode)v.mode=mode.value.trim();
-  });
-  d.env.forEach((e,i)=>{e.value=$(`#app-env-value-${i}`)?.value??e.value;});
+  const raw=$('#app-compose-raw');
+  if(raw&&source==='raw'){
+    const rawValue=raw.value;
+    d.rawContent=rawValue;
+    if(syncRawToForm){
+      const parsed=appInstallParseCompose(rawValue);
+      if(parsed.lockedCompose){
+        d.lockedCompose=true;
+      }else{
+        appComposeCopyParsedState(d,parsed);
+      }
+    }
+  }else{
+    if(service)d.service=service.value.trim();
+    if(container)d.container=container.value.trim();
+    if(image)d.image=image.value.trim();
+    if(restart)d.restart=restart.value;
+    d.ports.forEach((p,i)=>{
+      const host=$(`#app-port-host-${i}`),target=$(`#app-port-container-${i}`);
+      if(host)p.host=host.value.trim();
+      if(target)p.container=target.value.trim();
+    });
+    d.volumes.forEach((v,i)=>{
+      const sourceEl=$(`#app-volume-source-${i}`),target=$(`#app-volume-target-${i}`),mode=$(`#app-volume-mode-${i}`);
+      if(sourceEl)v.sourceOverride=sourceEl.value.trim();
+      if(target)v.target=target.value.trim();
+      if(mode)v.mode=mode.value.trim();
+    });
+    d.env.forEach((e,i)=>{e.value=$(`#app-env-value-${i}`)?.value??e.value;});
+    d.lockedCompose=false;
+    d.rawContent=appComposeGeneratedContent(d);
+  }
   const content=appInstallCompose(d);
   const preview=$('#app-compose-content');if(preview)preview.textContent=content;
+  if(raw&&source!=='raw')raw.value=content;
+  const rawBadge=$('#app-compose-preview-badge');if(rawBadge)rawBadge.textContent='generated';
+  const previewCard=$('#app-compose-preview-card');if(previewCard)previewCard.hidden=d.composeMode==='raw';
+  const rawNote=$('#app-compose-raw-note');
+  if(rawNote){
+    rawNote.classList.toggle('warn',!!d.lockedCompose);
+    rawNote.textContent=uiText(d.lockedCompose?'This Compose file is complex. Raw YAML remains the source, and Form mode is disabled to avoid losing data.':'Changes in Raw YAML are mirrored into Form when this stays a simple one-service Compose file.');
+  }
+  const formTab=document.querySelector('.compose-mode-tab[data-mode="form"]');
+  if(formTab){formTab.disabled=!!d.lockedCompose;formTab.title=d.lockedCompose?'Raw YAML is required for complex Compose files':'';}
   const project=$('#app-compose-project');if(project)project.textContent=d.service;
 }
 window.appInstallSetVolumeMount=(index,mountpoint)=>{
@@ -10322,6 +10429,11 @@ function appComposeFormOpen(draft,options){
   if(formCard)formCard.classList.add('compose-install-card');
   $('#form-head').innerHTML=`<span>${esc(options.icon||'🧩')}</span> ${esc(options.title)}`;
   const advancedTemplate=draft.lockedCompose;
+  const initialMode=advancedTemplate?'raw':(draft.composeMode||'form');
+  const showEnv=options.env!==false;
+  draft.composeMode=initialMode;
+  const formHidden=initialMode==='form'?'':' hidden';
+  const rawHidden=initialMode==='raw'?'':' hidden';
   $('#form-body').innerHTML=`
       <div class="compose-install-shell">
         <div class="compose-install-head">
@@ -10333,6 +10445,14 @@ function appComposeFormOpen(draft,options){
           <div class="compose-summary-title"><strong>${esc(uiText(advancedTemplate?'Advanced Compose template':'Compose service setup'))}</strong><span class="compose-install-badge info">${esc(uiText(advancedTemplate?'kept unchanged':'live preview'))}</span></div>
           <div class="compose-summary-grid"><div class="compose-summary-cell"><span>${esc(uiText('Project'))}</span><strong id="app-compose-project">${esc(draft.service)}</strong></div><div class="compose-summary-cell"><span>${esc(uiText('Storage'))}</span><strong>${draft.volumes.length} volume${draft.volumes.length===1?'':'s'}</strong></div></div>
         </div>
+        <div class="compose-summary-title">
+          <strong>${esc(uiText('Edit mode'))}</strong>
+          <div class="compose-mode-tabs" role="tablist" aria-label="Compose edit mode">
+            <button type="button" class="compose-mode-tab ${initialMode==='form'?'active':''}" data-mode="form" role="tab" aria-selected="${initialMode==='form'?'true':'false'}" onclick="appComposeSetMode('form')" ${advancedTemplate?'disabled title="Raw YAML is required for multi-service Compose files"':''}>${esc(uiText('Form'))}</button>
+            <button type="button" class="compose-mode-tab ${initialMode==='raw'?'active':''}" data-mode="raw" role="tab" aria-selected="${initialMode==='raw'?'true':'false'}" onclick="appComposeSetMode('raw')">${esc(uiText('Raw YAML'))}</button>
+          </div>
+        </div>
+        <div class="compose-mode-panel" id="app-compose-form-panel"${formHidden}>
         <div class="compose-form-stack">
           ${advancedTemplate?`
           <div class="compose-block"><div class="compose-key"><code>services:</code><span>Service</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><span class="compose-label">Service name</span><input value="${esc(draft.service)}" readonly></div><div class="compose-field"><span class="compose-label">Container name</span><input value="${esc(draft.container)}" readonly></div></div></div></div>
@@ -10347,18 +10467,40 @@ function appComposeFormOpen(draft,options){
           <div class="compose-block"><div class="compose-key"><code>volumes:</code><span>Storage</span></div><div class="compose-block-body"><div class="compose-volume-list" id="app-compose-volumes"></div></div></div>
           <div class="compose-block"><div class="compose-key"><code>environment:</code><span>Settings</span></div><div class="compose-block-body">${draft.env.map((e,i)=>`<div class="compose-env-row"><div class="compose-field"><span class="compose-label">Variable</span><div class="compose-env-key" id="app-env-key-${i}">${esc(e.key)}</div></div><div class="compose-field"><label for="app-env-value-${i}">Value</label><input id="app-env-value-${i}" value="${esc(e.value)}" oninput="appInstallRefresh()"></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No environment variables</div>'}</div></div>
           `}
-          <div class="compose-block compose-preview-card"><div class="compose-key"><code>compose</code><span>Preview</span></div><div class="compose-block-body"><div class="compose-preview-toolbar"><strong>docker-compose.yml</strong><span class="compose-install-badge info">generated</span></div><pre class="compose-preview mono" id="app-compose-content" aria-label="Generated docker-compose.yml" tabindex="0"></pre></div></div>
         </div>
+        </div>
+        <div class="compose-mode-panel" id="app-compose-raw-panel"${rawHidden}>
+          <div class="compose-block"><div class="compose-key"><code>yaml</code><span>Raw editor</span></div><div class="compose-block-body"><textarea class="compose-raw-editor" id="app-compose-raw" spellcheck="false" oninput="appComposeRefresh()" aria-label="docker-compose.yml raw YAML">${esc(draft.rawContent||appComposeGeneratedContent(draft))}</textarea><div class="compose-raw-note${advancedTemplate?' warn':''}" id="app-compose-raw-note">${esc(uiText(advancedTemplate?'This Compose file is complex. Raw YAML remains the source, and Form mode is disabled to avoid losing data.':'Changes in Raw YAML are mirrored into Form when this stays a simple one-service Compose file.'))}</div></div></div>
+        </div>
+        ${showEnv?`<div class="compose-block"><div class="compose-key"><code>.env</code><span>Environment file</span></div><div class="compose-block-body"><label class="compose-env-toggle"><input type="checkbox" id="app-compose-env-enabled" ${draft.envFileEnabled?'checked':''} onchange="appComposeRefresh()"> <span>${esc(uiText('Store a .env file next to docker-compose.yml'))}</span></label><div class="compose-env-content" id="app-compose-env-content-wrap" ${draft.envFileEnabled?'':'hidden'}><textarea class="compose-env-textarea" id="app-compose-env-content" spellcheck="false" oninput="appComposeRefresh()" placeholder="KEY=value&#10;ANOTHER_KEY=value">${esc(draft.envFileContent||'')}</textarea></div></div></div>`:''}
+        <div class="compose-block compose-preview-card" id="app-compose-preview-card" ${initialMode==='raw'?'hidden':''}><div class="compose-key"><code>compose</code><span>Preview</span></div><div class="compose-block-body"><div class="compose-preview-toolbar"><strong>docker-compose.yml</strong><span class="compose-install-badge info" id="app-compose-preview-badge">generated</span></div><pre class="compose-preview mono" id="app-compose-content" aria-label="Generated docker-compose.yml" tabindex="0"></pre></div></div>
         <div class="compose-install-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="app-compose-go">${esc(uiText(options.primaryLabel||'Save'))}</button></div>
       </div>`;
   $('#form-overlay').classList.add('open');
   if(!advancedTemplate)appInstallRenderVolumes();
   appInstallRefresh();
   translateRenderedText($('#form-body'));
-  $('#app-compose-go').onclick=()=>options.onSubmit(_appInstallDraft);
-  requestAnimationFrame(()=>$('#app-compose-service')?.focus());
+  $('#app-compose-go').onclick=async()=>{
+    const btn=$('#app-compose-go');
+    if(btn?.disabled)return;
+    appInstallRefresh();
+    if(btn){btn.disabled=true;btn.textContent=uiText('Saving…');}
+    try{await options.onSubmit(_appInstallDraft);}
+    catch(e){if(btn){btn.disabled=false;btn.textContent=uiText(options.primaryLabel||'Save');}toast('Error: '+e.message,'error');}
+  };
+  requestAnimationFrame(()=>initialMode==='raw'?$('#app-compose-raw')?.focus():$('#app-compose-service')?.focus());
 }
-async function appComposeDraft(appId,contentOverride){
+function appComposeProjectDraft(name,composeData={}){
+  const draft=appInstallParseCompose(composeData.content||'');
+  draft.app={id:'compose:'+name,name,icon:'🐳',desc:'Custom Docker Compose project'};
+  draft.mounts=appInstallMounts([]);
+  draft.envFileEnabled=!!composeData.env_enabled;
+  draft.envFileContent=composeData.env_content||'';
+  draft.volumes.forEach(v=>{if(v.managed)v.mountpoint=appInstallBestMount(draft.mounts,appInstallVolumeRole(v));});
+  _appInstallDraft=draft;
+  return draft;
+}
+async function appComposeDraft(appId,contentOverride,composeData={}){
   const [a,diskData]=await Promise.all([
     api('/apps/get?app_id='+encodeURIComponent(appId)),
     api('/system/disks').catch(()=>[])
@@ -10366,6 +10508,8 @@ async function appComposeDraft(appId,contentOverride){
   const draft=appInstallParseCompose(contentOverride??(a.compose||''));
   draft.app=a;
   draft.mounts=appInstallMounts(diskData);
+  draft.envFileEnabled=!!composeData.env_enabled;
+  draft.envFileContent=composeData.env_content||'';
   draft.volumes.forEach(v=>{if(v.managed)v.mountpoint=appInstallBestMount(draft.mounts,appInstallVolumeRole(v));});
   _appInstallDraft=draft;
   return draft;
@@ -10377,6 +10521,7 @@ window.appInstallForm=async id=>{
       title:uiText('Install')+': '+draft.app.name,
       icon:'🧩',
       primaryLabel:'Install',
+      env:false,
       onSubmit:appInstallStart,
     });
   }catch(e){toast('Error: '+e.message,'error');}

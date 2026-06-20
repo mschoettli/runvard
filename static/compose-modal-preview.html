@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Compose Modal Preview</title>
+<style>
+:root{--bg:#080812;--bg2:#0d0e1a;--bg3:#121423;--text:#f8fafc;--text2:#b8bfd2;--text3:#7f879c;--accent:#7a4aff;--accent-light:#a78bfa;--border:rgba(255,255,255,.09);--border-accent:rgba(122,74,255,.28);--green:#4ade80}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:#080812;color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;padding:24px;display:grid;place-items:center}
+button,input,select,textarea{font:inherit}
+.preview-shell{width:min(960px,100%);max-height:calc(100vh - 48px);overflow:auto;background:var(--bg2);border:1px solid var(--border-accent);border-radius:16px;box-shadow:0 18px 60px rgba(0,0,0,.45);padding:20px}
+.compose-install-shell{display:grid;gap:14px}
+.compose-install-head{display:flex;align-items:flex-start;gap:12px;background:rgba(34,211,238,.055);border:1px solid rgba(34,211,238,.18);border-radius:12px;padding:14px}
+.compose-install-icon{width:46px;height:46px;border-radius:11px;background:rgba(122,74,255,.16);border:1px solid rgba(122,74,255,.28);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.compose-install-title{min-width:0;flex:1}
+.compose-install-title h1{font-size:16px;line-height:1.25;margin:0 0 4px}
+.compose-install-title p{font-size:12px;color:var(--text2);line-height:1.45;margin:0}
+.compose-install-badges{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.compose-install-badge{display:inline-flex;align-items:center;min-height:22px;padding:3px 9px;border-radius:999px;border:1px solid rgba(34,197,94,.22);background:rgba(34,197,94,.09);color:var(--green);font-size:11px;font-weight:600;white-space:nowrap}
+.compose-install-badge.info{border-color:rgba(34,211,238,.22);background:rgba(34,211,238,.08);color:#67e8f9}
+.service-summary{display:grid;gap:8px;background:rgba(34,211,238,.055);border:1px solid rgba(34,211,238,.18);border-radius:11px;padding:12px}
+.compose-summary-title{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.compose-summary-title strong{font-size:13px}
+.compose-summary-grid{display:grid;grid-template-columns:1fr;gap:8px}
+.compose-summary-cell{background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.075);border-radius:8px;padding:9px;min-width:0}
+.compose-summary-cell span{display:block;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:3px}
+.compose-summary-cell strong{display:block;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.compose-mode-tabs{display:inline-flex;align-items:center;gap:4px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:3px}
+.compose-mode-tab{min-height:30px;border:0;background:transparent;color:var(--text2);border-radius:7px;padding:0 10px;font-weight:600;font-size:12px;cursor:pointer}
+.compose-mode-tab.active{background:rgba(122,74,255,.18);color:var(--accent-light)}
+.compose-mode-panel[hidden],.compose-env-content[hidden]{display:none}
+.compose-form-stack{display:grid;gap:10px}
+.compose-block{display:grid;border:1px solid var(--border);border-radius:11px;background:var(--bg3);overflow:hidden}
+.compose-key{display:flex;align-items:center;justify-content:space-between;gap:8px;background:rgba(0,0,0,.16);border-bottom:1px solid var(--border);padding:10px 12px}
+.compose-key code{display:inline-flex;min-height:28px;align-items:center;border:1px solid rgba(122,74,255,.24);background:rgba(122,74,255,.08);border-radius:7px;padding:0 8px;color:var(--accent-light);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px}
+.compose-key span{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.compose-block-body{display:grid;gap:10px;padding:12px}
+.compose-field-grid,.compose-port-row,.compose-env-row,.compose-volume-fields{display:grid;grid-template-columns:1fr;gap:10px}
+.compose-field{display:grid;gap:5px;min-width:0}
+.compose-field label,.compose-label{font-size:12px;color:var(--text2)}
+.compose-field input,.compose-field select{min-height:40px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:0 11px;min-width:0}
+.compose-port-row,.compose-env-row,.compose-volume-row{background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.075);border-radius:9px;padding:10px}
+.compose-volume-row{display:grid;gap:10px}
+.compose-volume-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.compose-volume-label{display:grid;gap:3px;min-width:0}
+.compose-volume-label strong{font-size:13px;overflow-wrap:anywhere}
+.compose-volume-label span{font-size:11px;color:var(--text3);line-height:1.35;overflow-wrap:anywhere}
+.compose-volume-badge{display:inline-flex;align-items:center;min-height:22px;max-width:100%;padding:3px 8px;border-radius:999px;border:1px solid rgba(122,74,255,.24);background:rgba(122,74,255,.08);color:var(--accent-light);font-size:10px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.compose-env-key{display:flex;align-items:center;min-height:40px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:8px;padding:0 11px;color:#dbeafe;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.compose-arrow{display:none;color:var(--text3);font-family:"JetBrains Mono",ui-monospace,monospace;font-size:11px;text-align:center;align-self:center}
+.compose-raw-editor,.compose-env-textarea{width:100%;min-height:260px;resize:vertical;background:#0a0810;border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:12px;color:#dbeafe;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;line-height:1.55}
+.compose-env-textarea{min-height:120px}
+.compose-raw-note{font-size:11px;color:var(--text3);line-height:1.45;margin-top:8px}
+.compose-raw-note.warn{color:#fbbf24}
+.compose-env-toggle{display:flex;align-items:flex-start;gap:9px;color:var(--text);font-size:13px;line-height:1.4;cursor:pointer}
+.compose-env-toggle input{width:auto;margin-top:2px}
+.compose-preview-card{border-color:rgba(34,211,238,.22);background:rgba(34,211,238,.045)}
+.compose-preview-toolbar{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.compose-preview-toolbar strong{font-size:13px}
+.compose-preview{margin:0;max-height:260px;overflow:auto;background:#0a0810;border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:12px;color:#dbeafe;font-family:"JetBrains Mono",ui-monospace,monospace;font-size:12px;line-height:1.55;white-space:pre-wrap}
+.compose-install-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.btn{border:0;border-radius:8px;background:var(--accent);color:white;min-height:38px;padding:0 14px;font-weight:700;cursor:pointer}
+.btn.ghost{background:rgba(255,255,255,.06);color:var(--text2);border:1px solid var(--border)}
+@media (min-width:768px){.compose-field-grid,.compose-env-row,.compose-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.compose-port-row{grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr)}.compose-volume-fields{grid-template-columns:minmax(160px,.8fr) minmax(260px,1.4fr)}.compose-arrow{display:block}}
+@media (min-width:1024px){.compose-volume-fields{grid-template-columns:minmax(160px,.8fr) minmax(340px,1.8fr) minmax(180px,.9fr) minmax(90px,.45fr);align-items:end}}
+</style>
+</head>
+<body>
+<main class="preview-shell">
+  <section class="compose-install-shell">
+    <header class="compose-install-head">
+      <div class="compose-install-icon">DC</div>
+      <div class="compose-install-title">
+        <h1>Compose: media-stack-production-long-project-name</h1>
+        <p>Edit docker-compose.yml and optional .env values for this project.</p>
+      </div>
+      <div class="compose-install-badges"><span class="compose-install-badge">Docker ready</span><span class="compose-install-badge info">Compose</span></div>
+    </header>
+    <div class="service-summary">
+      <div class="compose-summary-title"><strong>Compose service setup</strong><span class="compose-install-badge info" id="mode-pill">live preview</span></div>
+      <div class="compose-summary-grid">
+        <div class="compose-summary-cell"><span>Project</span><strong>media-web-frontend-with-a-very-long-name</strong></div>
+        <div class="compose-summary-cell"><span>Storage</span><strong>2 volumes</strong></div>
+      </div>
+    </div>
+    <div class="compose-summary-title">
+      <strong>Edit mode</strong>
+      <div class="compose-mode-tabs" role="tablist" aria-label="Compose edit mode">
+        <button class="compose-mode-tab active" id="form-tab" type="button" onclick="setMode('form')">Form</button>
+        <button class="compose-mode-tab" id="raw-tab" type="button" onclick="setMode('raw')">Raw YAML</button>
+      </div>
+    </div>
+    <div class="compose-mode-panel" id="form-panel">
+      <div class="compose-form-stack">
+        <div class="compose-block"><div class="compose-key"><code>services:</code><span>Service</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label>Service name</label><input id="service" value="web" oninput="syncFromForm()"></div><div class="compose-field"><label>Container name</label><input id="container" value="media-web-production" oninput="syncFromForm()"></div></div></div></div>
+        <div class="compose-block"><div class="compose-key"><code>image:</code><span>Runtime</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label>Image</label><input id="image" value="ghcr.io/example/media-dashboard:latest" oninput="syncFromForm()"></div><div class="compose-field"><label>Restart</label><select id="restart" onchange="syncFromForm()"><option>unless-stopped</option><option>always</option><option>on-failure</option><option>no</option></select></div></div></div></div>
+        <div class="compose-block"><div class="compose-key"><code>ports:</code><span>Network</span></div><div class="compose-block-body"><div class="compose-port-row"><div class="compose-field"><label>Host port</label><input id="host-port" value="8088" oninput="syncFromForm()"></div><div class="compose-arrow">to</div><div class="compose-field"><label>Container port</label><input id="container-port" value="80" oninput="syncFromForm()"></div></div></div></div>
+        <div class="compose-block"><div class="compose-key"><code>volumes:</code><span>Storage</span></div><div class="compose-block-body"><div class="compose-volume-row"><div class="compose-volume-heading"><div class="compose-volume-label"><strong>Extremely Long Media Library Volume Name</strong><span>/mnt/large-array/runvard/apps/media-stack-production-long-project-name/library:/library</span></div><span class="compose-volume-badge">Large data</span></div><div class="compose-volume-fields"><div class="compose-field"><label>Drive</label><input value="/mnt/large-array"></div><div class="compose-field"><label>Host source</label><input value="/mnt/large-array/runvard/apps/media-stack-production-long-project-name/library"></div><div class="compose-field"><label>Container target</label><input value="/library"></div><div class="compose-field"><label>Mode</label><input value="rw"></div></div></div></div></div>
+        <div class="compose-block"><div class="compose-key"><code>environment:</code><span>Settings</span></div><div class="compose-block-body"><div class="compose-env-row"><div class="compose-field"><span class="compose-label">Variable</span><div class="compose-env-key">VERY_LONG_APPLICATION_SETTING_NAME</div></div><div class="compose-field"><label>Value</label><input value="enabled"></div></div></div></div>
+      </div>
+    </div>
+    <div class="compose-mode-panel" id="raw-panel" hidden>
+      <div class="compose-block"><div class="compose-key"><code>yaml</code><span>Raw editor</span></div><div class="compose-block-body"><textarea class="compose-raw-editor" id="raw-editor" spellcheck="false">services:
+  web:
+    image: ghcr.io/example/media-dashboard:latest
+    restart: unless-stopped
+    container_name: media-web-production
+    ports:
+      - "8088:80"
+    volumes:
+      - /mnt/large-array/runvard/apps/media-stack-production-long-project-name/library:/library
+    environment:
+      - VERY_LONG_APPLICATION_SETTING_NAME=enabled</textarea><div class="compose-raw-note">Raw YAML saves exactly what is shown in this editor.</div></div></div>
+    </div>
+    <div class="compose-block"><div class="compose-key"><code>.env</code><span>Environment file</span></div><div class="compose-block-body"><label class="compose-env-toggle"><input type="checkbox" id="env-enabled" checked onchange="toggleEnv()"> <span>Store a .env file next to docker-compose.yml</span></label><div class="compose-env-content" id="env-wrap"><textarea class="compose-env-textarea" spellcheck="false">PUID=1000
+PGID=1000
+TZ=Europe/Zurich</textarea></div></div></div>
+    <div class="compose-block compose-preview-card" id="preview-card"><div class="compose-key"><code>compose</code><span>Preview</span></div><div class="compose-block-body"><div class="compose-preview-toolbar"><strong>docker-compose.yml</strong><span class="compose-install-badge info" id="preview-badge">generated</span></div><pre class="compose-preview" id="preview"></pre></div></div>
+    <div class="compose-install-actions"><button class="btn ghost" type="button">Cancel</button><button class="btn" id="save" type="button" onclick="fakeSave()">Save</button></div>
+  </section>
+</main>
+<script>
+function setMode(mode){
+  document.getElementById('form-panel').hidden=mode!=='form';
+  document.getElementById('raw-panel').hidden=mode!=='raw';
+  document.getElementById('preview-card').hidden=mode==='raw';
+  document.getElementById('form-tab').classList.toggle('active',mode==='form');
+  document.getElementById('raw-tab').classList.toggle('active',mode==='raw');
+  document.getElementById('preview-badge').textContent='generated';
+  document.getElementById('mode-pill').textContent=mode==='raw'?'raw editor':'live preview';
+  if(mode==='form')syncFromRaw(false);else syncFromForm(false);
+}
+function toggleEnv(){document.getElementById('env-wrap').hidden=!document.getElementById('env-enabled').checked}
+function composeFromForm(){
+  return `services:
+  ${document.getElementById('service').value || 'web'}:
+    image: ${document.getElementById('image').value}
+    restart: ${document.getElementById('restart').value}
+    container_name: ${document.getElementById('container').value}
+    ports:
+      - "${document.getElementById('host-port').value}:${document.getElementById('container-port').value}"
+    volumes:
+      - /mnt/large-array/runvard/apps/media-stack-production-long-project-name/library:/library
+    environment:
+      - VERY_LONG_APPLICATION_SETTING_NAME=enabled
+`;
+}
+function syncFromForm(updateRaw=true){const yaml=composeFromForm();if(updateRaw)document.getElementById('raw-editor').value=yaml;document.getElementById('preview').textContent=yaml}
+function readYamlValue(pattern,text){const m=text.match(pattern);return m?m[1].trim():''}
+function syncFromRaw(updatePreview=true){
+  const yaml=document.getElementById('raw-editor').value;
+  const service=(yaml.match(/services:\s*\n\s{2}([A-Za-z0-9_.-]+):/)||[])[1];
+  const simple=!!service && !/\n[A-Za-z0-9_.-]+:\s*\n/.test(yaml.replace(/^services:\s*\n/,''));
+  document.getElementById('form-tab').disabled=!simple;
+  const note=document.querySelector('.compose-raw-note');
+  note.classList.toggle('warn',!simple);
+  note.textContent=simple?'Raw YAML changes are mirrored into Form.':'This YAML is complex, so Raw stays the source and Form is disabled.';
+  if(simple){
+    document.getElementById('service').value=service;
+    document.getElementById('image').value=readYamlValue(/image:\s*([^\n]+)/,yaml)||document.getElementById('image').value;
+    document.getElementById('container').value=readYamlValue(/container_name:\s*([^\n]+)/,yaml)||document.getElementById('container').value;
+    const port=readYamlValue(/-\s*"?([0-9]+:[0-9]+)"?/,yaml).split(':');
+    if(port.length===2){document.getElementById('host-port').value=port[0];document.getElementById('container-port').value=port[1]}
+  }
+  if(updatePreview)document.getElementById('preview').textContent=yaml;
+}
+function fakeSave(){const b=document.getElementById('save');b.disabled=true;b.textContent='Saved';setTimeout(()=>{b.disabled=false;b.textContent='Save'},1200)}
+document.getElementById('raw-editor').addEventListener('input',()=>syncFromRaw());
+syncFromForm();
+</script>
+</body>
+</html>
