@@ -5715,6 +5715,377 @@ const UI_PHRASES={
     "🗑 Trash":"🗑 Lixo"},
 };
 
+const STORAGE_PHRASES={
+  de:{
+    "No disks detected":"Keine Laufwerke erkannt",
+    "No volumes yet":"Noch keine Volumes",
+    "Mounted":"Eingehängt",
+    "Volume":"Volume",
+    "volume":"Volume",
+    "volumes":"Volumes",
+    "Filesystem":"Dateisystem",
+    "Mounted at":"Eingehängt unter",
+    "Not mounted":"Nicht eingehängt",
+    "Technical details":"Technische Details",
+    "No RAID groups configured":"Keine RAID-Gruppen konfiguriert",
+    "Checking":"Prüfe",
+    "No disks found":"Keine Laufwerke gefunden",
+    "Healthy":"Gesund",
+    "Attention":"Achtung",
+    "Unavailable":"Nicht verfügbar",
+    "Temperature":"Temperatur",
+    "Power-on hours":"Betriebsstunden",
+    "Model":"Modell",
+    "Deactivate":"Deaktivieren",
+    "LVM is unavailable":"LVM ist nicht verfügbar",
+    "Pool":"Pool",
+    "Free":"Frei",
+    "No storage pools yet":"Noch keine Speicherpools",
+    "Volumes and physical disks":"Volumes und physische Laufwerke",
+    "No encrypted disks found":"Keine verschlüsselten Laufwerke gefunden",
+    "Capacity":"Kapazität",
+    "Setting up disk…":"Laufwerk wird eingerichtet…",
+    "Could not create partition table":"Partitionstabelle konnte nicht erstellt werden",
+    "Could not create partition":"Partition konnte nicht erstellt werden",
+    "Could not format partition":"Partition konnte nicht formatiert werden",
+    "Could not mount partition":"Partition konnte nicht eingehängt werden",
+    "Disk ready":"Laufwerk bereit",
+    "Mount point":"Einhängepunkt",
+    "Mount automatically after reboot":"Nach Neustart automatisch einhängen",
+    "No device details":"Keine Gerätedetails",
+    "Configured now":"Aktuell konfiguriert",
+    "Extra memory buffer":"Zusätzlicher Speicherpuffer",
+    "Create swap file":"Swapfile erstellen",
+    "Disable swap":"Swap deaktivieren",
+    "Disabled":"Deaktiviert",
+    "Creating swapfile…":"Swapfile wird erstellt…",
+    "Creating volume group…":"Volume Group wird erstellt…",
+    "Creating RAID…":"RAID wird erstellt…",
+    "Creating pool…":"Pool wird erstellt…",
+    "Creating Btrfs pool…":"Btrfs-Pool wird erstellt…",
+    "Searching targets…":"Targets werden gesucht…",
+    "Signing in…":"Anmeldung läuft…",
+    "Signed in":"Angemeldet",
+    "Signed out":"Abgemeldet",
+    "Disconnect target":"Target trennen",
+    "Find iSCSI target":"iSCSI-Target suchen",
+    "Targets found on":"Gefundene Targets auf",
+    "LV extended":"LV erweitert",
+    "Extend LV":"LV erweitern",
+    "Logical volume created":"Logical Volume erstellt",
+    "Logical volume deleted":"Logical Volume gelöscht",
+    "Mount path of the Btrfs filesystem":"Mountpfad des Btrfs-Dateisystems",
+    "Label (optional)":"Label (optional)",
+    "Layout":"Layout",
+    "Mirror":"Mirror",
+    "Pool-Name":"Pool-Name",
+    "VG-Name":"VG-Name",
+    "Array-Name":"Array-Name",
+    "Mapper-Name":"Mapper-Name",
+    "Passphrase":"Passphrase",
+    "Single (1 Device)":"Single (1 Gerät)",
+    "RAID 0 (Stripe)":"RAID 0 (Stripe)",
+    "RAID 1 (Mirror)":"RAID 1 (Mirror)",
+    "RAID0 (Stripe)":"RAID0 (Stripe)",
+    "RAID1 (Mirror)":"RAID1 (Mirror)"
+  },
+  fr:{
+    "No disks detected":"Aucun disque détecté",
+    "No volumes yet":"Aucun volume pour l’instant",
+    "Mounted":"Monté",
+    "Volume":"Volume",
+    "volume":"volume",
+    "volumes":"volumes",
+    "Filesystem":"Système de fichiers",
+    "Mounted at":"Monté sur",
+    "Not mounted":"Non monté",
+    "Technical details":"Détails techniques",
+    "No RAID groups configured":"Aucun groupe RAID configuré",
+    "Checking":"Vérification",
+    "No disks found":"Aucun disque trouvé",
+    "Healthy":"Sain",
+    "Attention":"Attention",
+    "Unavailable":"Indisponible",
+    "Temperature":"Température",
+    "Power-on hours":"Heures de fonctionnement",
+    "Model":"Modèle",
+    "Deactivate":"Désactiver",
+    "LVM is unavailable":"LVM est indisponible",
+    "Pool":"Pool",
+    "Free":"Libre",
+    "No storage pools yet":"Aucun pool de stockage pour l’instant",
+    "Volumes and physical disks":"Volumes et disques physiques",
+    "No encrypted disks found":"Aucun disque chiffré trouvé",
+    "Capacity":"Capacité",
+    "Setting up disk…":"Configuration du disque…",
+    "Could not create partition table":"Impossible de créer la table de partition",
+    "Could not create partition":"Impossible de créer la partition",
+    "Could not format partition":"Impossible de formater la partition",
+    "Could not mount partition":"Impossible de monter la partition",
+    "Disk ready":"Disque prêt",
+    "Mount point":"Point de montage",
+    "Mount automatically after reboot":"Monter automatiquement après redémarrage",
+    "No device details":"Aucun détail de périphérique",
+    "Configured now":"Configuré maintenant",
+    "Extra memory buffer":"Tampon mémoire supplémentaire",
+    "Create swap file":"Créer un fichier swap",
+    "Disable swap":"Désactiver le swap",
+    "Disabled":"Désactivé",
+    "Creating swapfile…":"Création du fichier swap…",
+    "Creating volume group…":"Création du groupe de volumes…",
+    "Creating RAID…":"Création du RAID…",
+    "Creating pool…":"Création du pool…",
+    "Creating Btrfs pool…":"Création du pool Btrfs…",
+    "Searching targets…":"Recherche des cibles…",
+    "Signing in…":"Connexion…",
+    "Signed in":"Connecté",
+    "Signed out":"Déconnecté",
+    "Disconnect target":"Déconnecter la cible",
+    "Find iSCSI target":"Rechercher une cible iSCSI",
+    "Targets found on":"Cibles trouvées sur",
+    "LV extended":"LV étendu",
+    "Extend LV":"Étendre le LV",
+    "Logical volume created":"Volume logique créé",
+    "Logical volume deleted":"Volume logique supprimé",
+    "Mount path of the Btrfs filesystem":"Chemin de montage du système de fichiers Btrfs",
+    "Label (optional)":"Libellé (facultatif)",
+    "Layout":"Disposition",
+    "Mirror":"Miroir",
+    "Pool-Name":"Nom du pool",
+    "VG-Name":"Nom du VG",
+    "Array-Name":"Nom de l’ensemble",
+    "Mapper-Name":"Nom du mappage",
+    "Passphrase":"Phrase secrète",
+    "Single (1 Device)":"Single (1 périphérique)",
+    "RAID 0 (Stripe)":"RAID 0 (Stripe)",
+    "RAID 1 (Mirror)":"RAID 1 (Mirror)",
+    "RAID0 (Stripe)":"RAID0 (Stripe)",
+    "RAID1 (Mirror)":"RAID1 (Mirror)"
+  },
+  it:{
+    "No disks detected":"Nessun disco rilevato",
+    "No volumes yet":"Ancora nessun volume",
+    "Mounted":"Montato",
+    "Volume":"Volume",
+    "volume":"volume",
+    "volumes":"volumi",
+    "Filesystem":"Filesystem",
+    "Mounted at":"Montato in",
+    "Not mounted":"Non montato",
+    "Technical details":"Dettagli tecnici",
+    "No RAID groups configured":"Nessun gruppo RAID configurato",
+    "Checking":"Controllo",
+    "No disks found":"Nessun disco trovato",
+    "Healthy":"Integro",
+    "Attention":"Attenzione",
+    "Unavailable":"Non disponibile",
+    "Temperature":"Temperatura",
+    "Power-on hours":"Ore di accensione",
+    "Model":"Modello",
+    "Deactivate":"Disattiva",
+    "LVM is unavailable":"LVM non è disponibile",
+    "Pool":"Pool",
+    "Free":"Libero",
+    "No storage pools yet":"Ancora nessun pool di archiviazione",
+    "Volumes and physical disks":"Volumi e dischi fisici",
+    "No encrypted disks found":"Nessun disco cifrato trovato",
+    "Capacity":"Capacità",
+    "Setting up disk…":"Configurazione disco…",
+    "Could not create partition table":"Impossibile creare la tabella delle partizioni",
+    "Could not create partition":"Impossibile creare la partizione",
+    "Could not format partition":"Impossibile formattare la partizione",
+    "Could not mount partition":"Impossibile montare la partizione",
+    "Disk ready":"Disco pronto",
+    "Mount point":"Punto di mount",
+    "Mount automatically after reboot":"Monta automaticamente dopo il riavvio",
+    "No device details":"Nessun dettaglio dispositivo",
+    "Configured now":"Configurato ora",
+    "Extra memory buffer":"Buffer di memoria aggiuntivo",
+    "Create swap file":"Crea file di swap",
+    "Disable swap":"Disattiva swap",
+    "Disabled":"Disattivato",
+    "Creating swapfile…":"Creazione file di swap…",
+    "Creating volume group…":"Creazione gruppo di volumi…",
+    "Creating RAID…":"Creazione RAID…",
+    "Creating pool…":"Creazione pool…",
+    "Creating Btrfs pool…":"Creazione pool Btrfs…",
+    "Searching targets…":"Ricerca target…",
+    "Signing in…":"Accesso…",
+    "Signed in":"Accesso effettuato",
+    "Signed out":"Disconnesso",
+    "Disconnect target":"Disconnetti target",
+    "Find iSCSI target":"Trova target iSCSI",
+    "Targets found on":"Target trovati su",
+    "LV extended":"LV esteso",
+    "Extend LV":"Estendi LV",
+    "Logical volume created":"Volume logico creato",
+    "Logical volume deleted":"Volume logico eliminato",
+    "Mount path of the Btrfs filesystem":"Percorso di mount del filesystem Btrfs",
+    "Label (optional)":"Etichetta (opzionale)",
+    "Layout":"Layout",
+    "Mirror":"Mirror",
+    "Pool-Name":"Nome pool",
+    "VG-Name":"Nome VG",
+    "Array-Name":"Nome array",
+    "Mapper-Name":"Nome mapper",
+    "Passphrase":"Passphrase",
+    "Single (1 Device)":"Single (1 dispositivo)",
+    "RAID 0 (Stripe)":"RAID 0 (Stripe)",
+    "RAID 1 (Mirror)":"RAID 1 (Mirror)",
+    "RAID0 (Stripe)":"RAID0 (Stripe)",
+    "RAID1 (Mirror)":"RAID1 (Mirror)"
+  },
+  es:{
+    "No disks detected":"No se detectaron discos",
+    "No volumes yet":"Aún no hay volúmenes",
+    "Mounted":"Montado",
+    "Volume":"Volumen",
+    "volume":"volumen",
+    "volumes":"volúmenes",
+    "Filesystem":"Sistema de archivos",
+    "Mounted at":"Montado en",
+    "Not mounted":"No montado",
+    "Technical details":"Detalles técnicos",
+    "No RAID groups configured":"No hay grupos RAID configurados",
+    "Checking":"Comprobando",
+    "No disks found":"No se encontraron discos",
+    "Healthy":"Correcto",
+    "Attention":"Atención",
+    "Unavailable":"No disponible",
+    "Temperature":"Temperatura",
+    "Power-on hours":"Horas encendido",
+    "Model":"Modelo",
+    "Deactivate":"Desactivar",
+    "LVM is unavailable":"LVM no está disponible",
+    "Pool":"Pool",
+    "Free":"Libre",
+    "No storage pools yet":"Aún no hay pools de almacenamiento",
+    "Volumes and physical disks":"Volúmenes y discos físicos",
+    "No encrypted disks found":"No se encontraron discos cifrados",
+    "Capacity":"Capacidad",
+    "Setting up disk…":"Configurando disco…",
+    "Could not create partition table":"No se pudo crear la tabla de particiones",
+    "Could not create partition":"No se pudo crear la partición",
+    "Could not format partition":"No se pudo formatear la partición",
+    "Could not mount partition":"No se pudo montar la partición",
+    "Disk ready":"Disco listo",
+    "Mount point":"Punto de montaje",
+    "Mount automatically after reboot":"Montar automáticamente tras reiniciar",
+    "No device details":"Sin detalles del dispositivo",
+    "Configured now":"Configurado ahora",
+    "Extra memory buffer":"Búfer de memoria adicional",
+    "Create swap file":"Crear archivo de intercambio",
+    "Disable swap":"Desactivar swap",
+    "Disabled":"Desactivado",
+    "Creating swapfile…":"Creando archivo de intercambio…",
+    "Creating volume group…":"Creando grupo de volúmenes…",
+    "Creating RAID…":"Creando RAID…",
+    "Creating pool…":"Creando pool…",
+    "Creating Btrfs pool…":"Creando pool Btrfs…",
+    "Searching targets…":"Buscando destinos…",
+    "Signing in…":"Iniciando sesión…",
+    "Signed in":"Sesión iniciada",
+    "Signed out":"Sesión cerrada",
+    "Disconnect target":"Desconectar destino",
+    "Find iSCSI target":"Buscar destino iSCSI",
+    "Targets found on":"Destinos encontrados en",
+    "LV extended":"LV ampliado",
+    "Extend LV":"Ampliar LV",
+    "Logical volume created":"Volumen lógico creado",
+    "Logical volume deleted":"Volumen lógico eliminado",
+    "Mount path of the Btrfs filesystem":"Ruta de montaje del sistema de archivos Btrfs",
+    "Label (optional)":"Etiqueta (opcional)",
+    "Layout":"Diseño",
+    "Mirror":"Espejo",
+    "Pool-Name":"Nombre del pool",
+    "VG-Name":"Nombre del VG",
+    "Array-Name":"Nombre del arreglo",
+    "Mapper-Name":"Nombre del mapeo",
+    "Passphrase":"Frase de contraseña",
+    "Single (1 Device)":"Single (1 dispositivo)",
+    "RAID 0 (Stripe)":"RAID 0 (Stripe)",
+    "RAID 1 (Mirror)":"RAID 1 (Mirror)",
+    "RAID0 (Stripe)":"RAID0 (Stripe)",
+    "RAID1 (Mirror)":"RAID1 (Mirror)"
+  },
+  pt:{
+    "No disks detected":"Nenhum disco detetado",
+    "No volumes yet":"Ainda sem volumes",
+    "Mounted":"Montado",
+    "Volume":"Volume",
+    "volume":"volume",
+    "volumes":"volumes",
+    "Filesystem":"Sistema de ficheiros",
+    "Mounted at":"Montado em",
+    "Not mounted":"Não montado",
+    "Technical details":"Detalhes técnicos",
+    "No RAID groups configured":"Sem grupos RAID configurados",
+    "Checking":"A verificar",
+    "No disks found":"Nenhum disco encontrado",
+    "Healthy":"Saudável",
+    "Attention":"Atenção",
+    "Unavailable":"Indisponível",
+    "Temperature":"Temperatura",
+    "Power-on hours":"Horas ligado",
+    "Model":"Modelo",
+    "Deactivate":"Desativar",
+    "LVM is unavailable":"LVM indisponível",
+    "Pool":"Pool",
+    "Free":"Livre",
+    "No storage pools yet":"Ainda sem pools de armazenamento",
+    "Volumes and physical disks":"Volumes e discos físicos",
+    "No encrypted disks found":"Nenhum disco cifrado encontrado",
+    "Capacity":"Capacidade",
+    "Setting up disk…":"A configurar disco…",
+    "Could not create partition table":"Não foi possível criar a tabela de partições",
+    "Could not create partition":"Não foi possível criar a partição",
+    "Could not format partition":"Não foi possível formatar a partição",
+    "Could not mount partition":"Não foi possível montar a partição",
+    "Disk ready":"Disco pronto",
+    "Mount point":"Ponto de montagem",
+    "Mount automatically after reboot":"Montar automaticamente após reinício",
+    "No device details":"Sem detalhes do dispositivo",
+    "Configured now":"Configurado agora",
+    "Extra memory buffer":"Buffer de memória extra",
+    "Create swap file":"Criar ficheiro de swap",
+    "Disable swap":"Desativar swap",
+    "Disabled":"Desativado",
+    "Creating swapfile…":"A criar ficheiro de swap…",
+    "Creating volume group…":"A criar grupo de volumes…",
+    "Creating RAID…":"A criar RAID…",
+    "Creating pool…":"A criar pool…",
+    "Creating Btrfs pool…":"A criar pool Btrfs…",
+    "Searching targets…":"A procurar alvos…",
+    "Signing in…":"A iniciar sessão…",
+    "Signed in":"Sessão iniciada",
+    "Signed out":"Sessão terminada",
+    "Disconnect target":"Desligar alvo",
+    "Find iSCSI target":"Procurar alvo iSCSI",
+    "Targets found on":"Alvos encontrados em",
+    "LV extended":"LV aumentado",
+    "Extend LV":"Aumentar LV",
+    "Logical volume created":"Volume lógico criado",
+    "Logical volume deleted":"Volume lógico eliminado",
+    "Mount path of the Btrfs filesystem":"Caminho de montagem do sistema de ficheiros Btrfs",
+    "Label (optional)":"Etiqueta (opcional)",
+    "Layout":"Layout",
+    "Mirror":"Espelho",
+    "Pool-Name":"Nome do pool",
+    "VG-Name":"Nome do VG",
+    "Array-Name":"Nome do array",
+    "Mapper-Name":"Nome do mapeamento",
+    "Passphrase":"Frase-passe",
+    "Single (1 Device)":"Single (1 dispositivo)",
+    "RAID 0 (Stripe)":"RAID 0 (Stripe)",
+    "RAID 1 (Mirror)":"RAID 1 (Mirror)",
+    "RAID0 (Stripe)":"RAID0 (Stripe)",
+    "RAID1 (Mirror)":"RAID1 (Mirror)"
+  }
+};
+for(const lang of Object.keys(STORAGE_PHRASES)){
+  UI_PHRASES[lang]=Object.assign(UI_PHRASES[lang]||{},STORAGE_PHRASES[lang]);
+}
+
 const PHRASE_PATTERNS=[
   {re:new RegExp("^Really delete \"(.+)\"\\?$"),t:{"de": "\"$1\" wirklich löschen?", "fr": "Vraiment supprimer « $1 » ?", "it": "Eliminare davvero \"$1\"?", "es": "¿Eliminar realmente «$1»?", "pt": "Eliminar mesmo \"$1\"?"}},
   {re:new RegExp("^Move \"(.+)\" to trash\\?$"),t:{"de": "\"$1\" in den Papierkorb verschieben?", "fr": "Déplacer « $1 » vers la corbeille ?", "it": "Spostare \"$1\" nel cestino?", "es": "¿Mover «$1» a la papelera?", "pt": "Mover \"$1\" para o lixo?"}},
@@ -5756,7 +6127,15 @@ const PHRASE_PATTERNS=[
   {re:new RegExp("^(\\d+) files$"),t:{"de": "$1 Dateien", "fr": "$1 fichiers", "it": "$1 file", "es": "$1 archivos", "pt": "$1 ficheiros"}},
   {re:new RegExp("^Results for \"(.+)\"$"),t:{"de": "Ergebnisse für „$1\"", "fr": "Résultats pour « $1 »", "it": "Risultati per \"$1\"", "es": "Resultados para «$1»", "pt": "Resultados para \"$1\""}}
 ];
-const PHRASE_PREFIX=[["Error: ", 7, {"de": "Fehler: ", "fr": "Erreur : ", "it": "Errore: ", "es": "Error: ", "pt": "Erro: "}], ["Latest: ", 8, {"de": "Neueste Version: ", "fr": "Dernière : ", "it": "Ultima: ", "es": "Última: ", "pt": "Mais recente: "}], ["Mount volume: ", 14, {"de": "Volume einhängen: ", "fr": "Monter le volume : ", "it": "Monta volume: ", "es": "Montar volumen: ", "pt": "Montar volume: "}]];
+const PHRASE_PREFIX=[
+  ["Error: ", 7, {"de": "Fehler: ", "fr": "Erreur : ", "it": "Errore: ", "es": "Error: ", "pt": "Erro: "}],
+  ["Latest: ", 8, {"de": "Neueste Version: ", "fr": "Dernière : ", "it": "Ultima: ", "es": "Última: ", "pt": "Mais recente: "}],
+  ["Mount volume: ", 14, {"de": "Volume einhängen: ", "fr": "Monter le volume : ", "it": "Monta volume: ", "es": "Montar volumen: ", "pt": "Montar volume: "}],
+  ["Set up disk: ", 13, {"de": "Laufwerk einrichten: ", "fr": "Configurer le disque : ", "it": "Configura disco: ", "es": "Configurar disco: ", "pt": "Configurar disco: "}],
+  ["Logical Volume in ", 18, {"de": "Logical Volume in ", "fr": "Volume logique dans ", "it": "Volume logico in ", "es": "Volumen lógico en ", "pt": "Volume lógico em "}],
+  ["Grow filesystem: ", 17, {"de": "Dateisystem vergrößern: ", "fr": "Agrandir le système de fichiers : ", "it": "Espandi filesystem: ", "es": "Ampliar sistema de archivos: ", "pt": "Aumentar sistema de ficheiros: "}],
+  ["Format & mount: ", 16, {"de": "Formatieren & einhängen: ", "fr": "Formater et monter : ", "it": "Formatta e monta: ", "es": "Formatear y montar: ", "pt": "Formatar e montar: "}]
+];
 const PHRASE_SUFFIX=[[" installed", 10, {"de": " installiert", "fr": " installé", "it": " installato", "es": " instalado", "pt": " instalado"}], [" uninstalled", 12, {"de": " deinstalliert", "fr": " désinstallé", "it": " disinstallato", "es": " desinstalado", "pt": " desinstalado"}]];
 const PHRASE_INSTALLING={"de": "Installiere ", "fr": "Installation de ", "it": "Installazione di ", "es": "Instalando ", "pt": "A instalar "};
 const TOAST_ALIASES={
@@ -7510,10 +7889,10 @@ async function renderSwap(body){
   </tbody></table>`;
 }
 window.swapForm=()=>openForm('Create swap file','💾',[
-  {name:'path',label:'Pfad',value:'/swapfile',placeholder:'/swapfile'},
+  {name:'path',label:'Path',value:'/swapfile',placeholder:'/swapfile'},
   {name:'size_mb',label:'Size (MB)',type:'number',value:2048},
   {name:'persist',label:'Add to /etc/fstab (permanent)',type:'checkbox',value:true},
-],async d=>{closeForm();toast('Erstelle Swapfile…');try{const r=await post('/storage/swap/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Swap file active');renderStorage($('#modal-body'),'Swap');}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();toast('Creating swapfile…');try{const r=await post('/storage/swap/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Swap file active');renderStorage($('#modal-body'),'Swap');}catch(e){toast('Error: '+e.message,'error');}});
 window.swapOff=target=>confirmDelete('Disable swap',`Disable swap area "${target}"?`,async()=>{try{await post('/storage/swap/action',{target,action:'off'});toast('Disabled');renderStorage($('#modal-body'),'Swap');}catch(e){toast('Error: '+e.message,'error');}});
 
 async function renderLvm(body){
@@ -7552,15 +7931,15 @@ window.vgForm=async()=>{
   openForm('Create volume group','💾',[
     {name:'name',label:'VG-Name',value:'vg0'},
     {name:'devices',label:'Disks (comma-separated)',value:free.join(','),hint:'Available: '+(free.join(', ')||'none') + ' · Warning: PVs will be initialized'},
-  ],async d=>{closeForm();toast('Erstelle VG…');try{const r=await post('/storage/lvm/vg-create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Volume group created');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
+  ],async d=>{closeForm();toast('Creating volume group…');try{const r=await post('/storage/lvm/vg-create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Volume group created');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
 };
 window.lvForm=vg=>openForm('Logical Volume in '+vg,'💾',[
   {name:'name',label:'LV-Name',placeholder:'data'},
   {name:'size',label:'Size',placeholder:'10G',hint:'e.g. 10G (absolute) or 100%FREE (rest of the VG)'},
 ],async d=>{closeForm();try{const r=await post('/storage/lvm/lv-create',{vg,name:d.name,size:d.size});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Logical volume created');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
-window.lvExtendForm=lvpath=>openForm('LV erweitern','💾',[
+window.lvExtendForm=lvpath=>openForm('Extend LV','💾',[
   {name:'size',label:'Size',placeholder:'+5G',hint:'e.g. +5G (additional) or 20G (absolute) · filesystem grows along'},
-],async d=>{closeForm();try{const r=await post('/storage/lvm/lv-extend',{lv_path:lvpath,size:d.size});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('LV erweitert');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();try{const r=await post('/storage/lvm/lv-extend',{lv_path:lvpath,size:d.size});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('LV extended');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
 window.lvRemove=lvpath=>confirmDelete('Delete logical volume',`Delete logical volume "${lvpath}" permanently? All data on it will be lost.`,async()=>{try{const r=await post('/storage/lvm/lv-remove',{lv_path:lvpath});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Logical volume deleted');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
 function renderBlockDevices(devs,depth=0){return devs.map(d=>{
   const canResize=!d.protected&&/^(ext[234]|xfs|btrfs)$/.test(d.fstype||'');
@@ -7587,8 +7966,8 @@ window.loadSmart=async()=>{
     <div class="nx-card-inner"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Modell</div><span style="font-size:12px;color:var(--text2)">${esc(s.model)||'—'}</span></div>
   </div>`;
 };
-window.diskWizard=dev=>openForm('Set up disk: '+dev,'💿',[{name:'fstype',label:'Filesystem',type:'select',options:['ext4','xfs','btrfs']},{name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/data'},{name:'persist',label:'Add to /etc/fstab (permanent)',type:'checkbox',value:true}],async d=>{closeForm();toast('Partitioniere & formatiere…');try{await post('/storage/partition-table',{device:dev,label:'gpt'});await post('/storage/partition',{device:dev});await post('/storage/format',{partition:dev+'1',fstype:d.fstype});await post('/storage/mount',{partition:dev+'1',mountpoint:d.mountpoint,persist:d.persist});toast('Disk eingerichtet');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}});
-window.raidForm=async()=>{const d=await api('/storage/devices');const disks=d.devices.filter(x=>x.type==='disk'&&!x.protected).map(x=>x.name);openForm('Create RAID','🗄',[{name:'name',label:'Array-Name',value:'md0'},{name:'level',label:'RAID-Level',type:'select',options:[{value:0,label:'RAID 0 (Stripe)'},{value:1,label:'RAID 1 (Mirror)'},{value:5,label:'RAID 5'},{value:6,label:'RAID 6'},{value:10,label:'RAID 10'}]},{name:'devices',label:'Disks (comma-separated)',value:disks.join(','),hint:'Available: '+(disks.join(', ')||'none')}],async f=>{closeForm();toast('Erstelle RAID…');try{await post('/storage/raid/create',f);toast('RAID created');renderStorage($('#modal-body'),'RAID');}catch(e){toast('Error: '+e.message,'error');}});};
+window.diskWizard=dev=>openForm('Set up disk: '+dev,'💿',[{name:'fstype',label:'Filesystem',type:'select',options:['ext4','xfs','btrfs']},{name:'mountpoint',label:'Mount point',placeholder:'/mnt/data'},{name:'persist',label:'Add to /etc/fstab (permanent)',type:'checkbox',value:true}],async d=>{closeForm();toast('Setting up disk…');try{await post('/storage/partition-table',{device:dev,label:'gpt'});await post('/storage/partition',{device:dev});await post('/storage/format',{partition:dev+'1',fstype:d.fstype});await post('/storage/mount',{partition:dev+'1',mountpoint:d.mountpoint,persist:d.persist});toast('Disk ready');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}});
+window.raidForm=async()=>{const d=await api('/storage/devices');const disks=d.devices.filter(x=>x.type==='disk'&&!x.protected).map(x=>x.name);openForm('Create RAID','🗄',[{name:'name',label:'Array-Name',value:'md0'},{name:'level',label:'RAID-Level',type:'select',options:[{value:0,label:'RAID 0 (Stripe)'},{value:1,label:'RAID 1 (Mirror)'},{value:5,label:'RAID 5'},{value:6,label:'RAID 6'},{value:10,label:'RAID 10'}]},{name:'devices',label:'Disks (comma-separated)',value:disks.join(','),hint:'Available: '+(disks.join(', ')||'none')}],async f=>{closeForm();toast('Creating RAID…');try{await post('/storage/raid/create',f);toast('RAID created');renderStorage($('#modal-body'),'RAID');}catch(e){toast('Error: '+e.message,'error');}});};
 
 // ═══ Phase 5: LUKS / ZFS·Btrfs / iSCSI ═══
 function flattenDevs(devs,out=[]){(devs||[]).forEach(d=>{out.push(d);if(d.children)flattenDevs(d.children,out);});return out;}
@@ -7692,7 +8071,7 @@ window.zpoolForm=async()=>{
     {name:'name',label:'Pool-Name',value:'tank'},
     {name:'raid',label:'Layout',type:'select',options:[{value:'stripe',label:'Stripe (no protection)'},{value:'mirror',label:'Mirror'},{value:'raidz',label:'RAIDZ1'},{value:'raidz2',label:'RAIDZ2'},{value:'raidz3',label:'RAIDZ3'}]},
     {name:'devices',label:'Devices (comma-separated)',value:disks.join(','),hint:'Available: '+(disks.join(', ')||'none')+' · Warning: devices will be overwritten'},
-  ],async d=>{closeForm();toast('Erstelle Pool…');try{const r=await post('/storage/zfs/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool created');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
+  ],async d=>{closeForm();toast('Creating pool…');try{const r=await post('/storage/zfs/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool created');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
 };
 window.zpoolScrub=name=>{toast('Scrub started…');post('/storage/zfs/scrub',{name}).then(r=>{if(r&&r.ok===false)toast(r.stderr||'Error','error');else toast('Scrub running');}).catch(e=>toast('Error: '+e.message,'error'));};
 window.zpoolDestroy=name=>confirmDelete('Destroy pool',`Destroy ZFS pool "${name}"? All data will be irreversibly lost.`,async()=>{try{const r=await post('/storage/zfs/destroy',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool destroyed');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
@@ -7703,7 +8082,7 @@ window.btrfsForm=async()=>{
     {name:'label',label:'Label (optional)',placeholder:'daten'},
     {name:'profile',label:'Profile',type:'select',options:[{value:'single',label:'Single (1 Device)'},{value:'raid0',label:'RAID0 (Stripe)'},{value:'raid1',label:'RAID1 (Mirror)'},{value:'raid10',label:'RAID10'}]},
     {name:'devices',label:'Devices (comma-separated)',value:disks.join(','),hint:'Available: '+(disks.join(', ')||'none')+' · Warning: devices will be overwritten'},
-  ],async d=>{closeForm();toast('Erstelle Btrfs-Pool…');try{const r=await post('/storage/btrfs/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Btrfs pool created');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
+  ],async d=>{closeForm();toast('Creating Btrfs pool…');try{const r=await post('/storage/btrfs/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Btrfs pool created');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
 };
 window.btrfsScrubForm=()=>openForm('Btrfs-Scrub','🧹',[
   {name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/daten',hint:'Mount path of the Btrfs filesystem'},
@@ -7722,11 +8101,11 @@ async function renderIscsi(body){
   </tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">📡 No active sessions</div></td></tr>'}
   </tbody></table>`;
 }
-window.iscsiDiscoverForm=()=>openForm('iSCSI-Target suchen','📡',[
+window.iscsiDiscoverForm=()=>openForm('Find iSCSI target','📡',[
   {name:'portal',label:'Portal',placeholder:'192.168.1.10:3260',hint:'IP or hostname, optional :port'},
-],async d=>{closeForm();toast('Suche Targets…');try{const r=await post('/storage/iscsi/discover',{portal:d.portal});if(r&&r.ok===false){toast(r.stderr||'No targets found','error');return;}renderIscsiTargets($('#modal-body'),d.portal,r.targets||[]);}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();toast('Searching targets…');try{const r=await post('/storage/iscsi/discover',{portal:d.portal});if(r&&r.ok===false){toast(r.stderr||'No targets found','error');return;}renderIscsiTargets($('#modal-body'),d.portal,r.targets||[]);}catch(e){toast('Error: '+e.message,'error');}});
 function renderIscsiTargets(body,portal,targets){
-  body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderStorage($('#modal-body'),'iSCSI')">← Back</button><span style="padding:6px;color:var(--text2)">Gefundene Targets auf ${esc(portal)}</span></div>
+  body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderStorage($('#modal-body'),'iSCSI')">← Back</button><span style="padding:6px;color:var(--text2)">${esc(uiText('Targets found on'))} ${esc(portal)}</span></div>
   <table style="table-layout:fixed;width:100%"><thead><tr><th style="width:150px">Portal</th><th>Target (IQN)</th><th style="width:80px;text-align:right"></th></tr></thead><tbody>
   ${targets.map(t=>`<tr>
     <td class="mono" style="font-size:12px">${esc(t.portal)}</td>
@@ -7734,9 +8113,10 @@ function renderIscsiTargets(body,portal,targets){
     <td style="text-align:right"><button class="btn icon play" title="Sign in" onclick="iscsiLogin('${esc(t.portal)}','${esc(t.target)}')" style="width:26px;height:26px;font-size:12px">▶</button></td>
   </tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">No targets found</div></td></tr>'}
   </tbody></table>`;
+  translateRenderedText(body);
 }
-window.iscsiLogin=(portal,target)=>{toast('Melde an…');post('/storage/iscsi/login',{portal,target}).then(r=>{if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Angemeldet');renderStorage($('#modal-body'),'iSCSI');}).catch(e=>toast('Error: '+e.message,'error'));};
-window.iscsiLogout=(portal,target)=>confirmDelete('Target abmelden',`Disconnect session to "${target}"?`,async()=>{try{const r=await post('/storage/iscsi/logout',{portal,target});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Abgemeldet');renderStorage($('#modal-body'),'iSCSI');}catch(e){toast('Error: '+e.message,'error');}});
+window.iscsiLogin=(portal,target)=>{toast('Signing in…');post('/storage/iscsi/login',{portal,target}).then(r=>{if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Signed in');renderStorage($('#modal-body'),'iSCSI');}).catch(e=>toast('Error: '+e.message,'error'));};
+window.iscsiLogout=(portal,target)=>confirmDelete('Disconnect target',`Disconnect session to "${target}"?`,async()=>{try{const r=await post('/storage/iscsi/logout',{portal,target});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Signed out');renderStorage($('#modal-body'),'iSCSI');}catch(e){toast('Error: '+e.message,'error');}});
 
 // ═══ Docker – Punkte 1 & 2 ═══
 const NON_WEB_PORTS=new Set([21,22,25,53,110,139,143,389,445,587,636,993,995,1883,2049,2181,3306,33060,4222,5432,5671,5672,6379,8883,9092,9300,11211,27017,27018]);
@@ -10363,7 +10743,7 @@ function renderDeviceCards(devs){
   return `<div class="nx-card-grid">${(devs||[]).map(d=>{
     const volume=primaryVolume(d);
     const hasVolumes=!!(d.children&&d.children.length);
-    const used=d.children&&d.children.length?`${d.children.length} volume${d.children.length===1?'':'s'}`:'No volumes yet';
+    const used=d.children&&d.children.length?`${d.children.length} ${uiText(d.children.length===1?'volume':'volumes')}`:uiText('No volumes yet');
     const status=d.protected?statusBadge('System disk','warn'):volume.mountpoint?statusBadge('Mounted','good'):hasVolumes?statusBadge('Volume','warn'):statusBadge('Available','good');
     return `<div class="nx-action-card">
       <div class="nx-action-head"><div class="nx-action-title">${deviceTitle(d)}</div>${status}</div>
@@ -10392,12 +10772,14 @@ async function renderStorage(body,tab){
         ${summaryCard('Mounted volumes',mounted.length,'Usable filesystems')}
         ${summaryCard('System disk',root?root.percent+'% used':'Unknown',root?`${fmtBytes(root.used)} / ${fmtBytes(root.total)}`:'No mount data')}
       </div>${renderDeviceCards(d.devices)}`;
+    translateRenderedText(body);
     return;
   }
   if(tab==='RAID'){
     const d=await api('/storage/raid');
     body.innerHTML=viewIntro('Protection groups','RAID combines multiple disks for speed or protection. Use Mirror for the easiest safe setup.',`<button class="btn" onclick="raidForm()">Create RAID</button>`)
       +`<div class="nx-card-grid">${(d.arrays||[]).map(a=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(a.name)}</div>${statusBadge('Active','good')}</div><div class="nx-action-sub">This array is available to the system.</div>${advancedDetails('Technical details',`<pre class="logbox">${esc(a.detail)}</pre>`,false)}</div>`).join('')||emptyState('No RAID groups configured')}</div>`;
+    translateRenderedText(body);
     return;
   }
   if(tab==='SMART'){
@@ -10405,6 +10787,7 @@ async function renderStorage(body,tab){
     const disks=(d.devices||[]).filter(x=>x.type==='disk');
     body.innerHTML=viewIntro('Disk health','SMART helps spot failing drives early. Some virtual or USB disks may not report health data.','')
       +`<div class="nx-card-grid" id="smart-cards">${disks.map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${statusBadge('Checking','warn')}</div><div class="nx-action-sub">${fmtBytes(x.size)} · ${esc(x.model||'Disk')}</div></div>`).join('')||emptyState('No disks found')}</div>`;
+    translateRenderedText(body);
     Promise.all(disks.map(async x=>({disk:x,smart:await api('/storage/smart?device='+encodeURIComponent(x.name)).catch(e=>({available:false,error:e.message}))}))).then(rows=>{
       const el=$('#smart-cards');if(!el)return;
       el.innerHTML=rows.map(({disk,smart})=>`<div class="nx-action-card">
@@ -10416,6 +10799,7 @@ async function renderStorage(body,tab){
           ${cardMetric('Model',esc(smart.model||disk.model||'Disk'))}
         </div>
       </div>`).join('');
+      translateRenderedText(el);
     });
     return;
   }
@@ -10431,19 +10815,22 @@ async function renderSwapSimple(body){
   body.innerHTML=viewIntro('Memory safety buffer','Swap gives the server breathing room when RAM is full. A 2 GB swapfile is a safe default for small systems.',`<button class="btn" onclick="swapForm()">Create swapfile</button>`)
     +`<div class="nx-summary-grid">${summaryCard('Active swap areas',(d.swaps||[]).length,'Configured now')}${summaryCard('Total swap',fmtBytes(total),'Extra memory buffer')}</div>
     <div class="nx-card-grid">${(d.swaps||[]).map(s=>{const used=s.size_kb?Math.round(s.used_kb/s.size_kb*100):0;return `<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(s.name)}</div>${statusBadge('Active','good')}</div>${usageBar(used)}<div class="nx-kv">${cardMetric('Size',fmtBytes(s.size_kb*1024))}${cardMetric('Used',used+'%')}</div><button class="btn ghost sm" onclick="swapOff('${esc(s.name)}')">Deactivate</button></div>`}).join('')||emptyState('No swap active')}</div>`;
+  translateRenderedText(body);
 }
 async function renderLvmSimple(body){
   const d=await api('/storage/lvm');
-  if(!d.available){body.innerHTML=viewIntro('Storage pools','LVM is not installed on this server.','')+emptyState('LVM is unavailable');return;}
+  if(!d.available){body.innerHTML=viewIntro('Storage pools','LVM is not installed on this server.','')+emptyState('LVM is unavailable');translateRenderedText(body);return;}
   body.innerHTML=viewIntro('Storage pools','LVM groups disks into pools, then creates volumes from those pools.',`<button class="btn" onclick="vgForm()">Create pool</button>`)
     +`<div class="nx-card-grid">${(d.vgs||[]).map(v=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(v.vg_name)}</div>${statusBadge('Pool','good')}</div><div class="nx-kv">${cardMetric('Size',esc(v.vg_size))}${cardMetric('Free',esc(v.vg_free))}${cardMetric('Disks',esc(v.pv_count))}${cardMetric('Volumes',esc(v.lv_count))}</div><button class="btn sm" onclick="lvForm('${esc(v.vg_name)}')">Create volume</button></div>`).join('')||emptyState('No storage pools yet')}</div>`
     +advancedDetails('Volumes and physical disks',simpleTable(['Volume','Pool','Size','Path',''],(d.lvs||[]).map(l=>`<tr><td>${esc(l.lv_name)}</td><td>${esc(l.vg_name)}</td><td>${esc(l.lv_size)}</td><td class="mono">${esc(l.lv_path)}</td><td><button class="btn danger sm" onclick="lvRemove('${esc(l.lv_path)}')">Delete</button></td></tr>`).join('')),false);
+  translateRenderedText(body);
 }
 async function renderLuksSimple(body){
   const d=await api('/storage/luks');
-  if(!d.available){body.innerHTML=viewIntro('Encrypted disks','Encryption tools are not installed on this server.','')+emptyState('LUKS is unavailable');return;}
+  if(!d.available){body.innerHTML=viewIntro('Encrypted disks','Encryption tools are not installed on this server.','')+emptyState('LUKS is unavailable');translateRenderedText(body);return;}
   body.innerHTML=viewIntro('Encrypted disks','Use this when a disk should require a passphrase before it can be mounted.',`<button class="btn" onclick="luksFormatForm()">Encrypt disk</button>`)
     +`<div class="nx-card-grid">${(d.containers||[]).map(c=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(c.device)}</div>${statusBadge(c.open?'Unlocked':'Locked',c.open?'good':'warn')}</div><div class="nx-kv">${cardMetric('Size',fmtBytes(c.size))}${cardMetric('Mount',esc(c.mountpoint||'Not mounted'))}</div><div class="nx-action-row">${c.open?`${!c.mountpoint?`<button class="btn sm" onclick="luksSetupForm('${esc(c.mapper)}')">Format and mount</button>`:''}<button class="btn ghost sm" onclick="luksClose('${esc(c.mapper)}')">Lock</button>`:`<button class="btn sm" onclick="luksOpenForm('${esc(c.device)}')">Unlock</button>`}</div></div>`).join('')||emptyState('No encrypted disks found')}</div>`;
+  translateRenderedText(body);
 }
 async function renderZfsBtrfsSimple(body){
   const [zfs,btrfs]=await Promise.all([api('/storage/zfs'),api('/storage/btrfs')]);
@@ -10452,12 +10839,14 @@ async function renderZfsBtrfsSimple(body){
   body.innerHTML=viewIntro('Advanced filesystems','ZFS and Btrfs are for storage pools, snapshots, scrubs and multi-disk layouts.',`<button class="btn" onclick="zpoolForm()">Create ZFS pool</button><button class="btn ghost" onclick="btrfsForm()">Create Btrfs</button>`)
     +`<div class="section-label">ZFS pools</div><div class="nx-card-grid">${pools.map(p=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(p.name)}</div>${statusBadge(esc(p.health),p.health==='ONLINE'?'good':'bad')}</div><div class="nx-kv">${cardMetric('Size',esc(p.size))}${cardMetric('Used',esc(p.alloc))}${cardMetric('Free',esc(p.free))}${cardMetric('Capacity',esc(p.cap))}</div><div class="nx-action-row"><button class="btn ghost sm" onclick="zpoolScrub('${esc(p.name)}')">Scrub</button><button class="btn danger sm" onclick="zpoolDestroy('${esc(p.name)}')">Destroy</button></div></div>`).join('')||emptyState('No ZFS pools')}</div>
     <div class="section-label">Btrfs filesystems</div><div class="nx-card-grid">${bfs.map(b=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(b.label||b.uuid)}</div>${statusBadge('Mounted','good')}</div><div class="nx-action-sub">${esc((b.devices||[]).join(', ')||'No device details')}</div><button class="btn ghost sm" onclick="btrfsScrubForm()">Run scrub</button></div>`).join('')||emptyState('No Btrfs filesystems')}</div>`;
+  translateRenderedText(body);
 }
 async function renderIscsiSimple(body){
   const d=await api('/storage/iscsi');
-  if(!d.available){body.innerHTML=viewIntro('Remote disks','iSCSI tools are not installed on this server.','')+emptyState('iSCSI is unavailable');return;}
+  if(!d.available){body.innerHTML=viewIntro('Remote disks','iSCSI tools are not installed on this server.','')+emptyState('iSCSI is unavailable');translateRenderedText(body);return;}
   body.innerHTML=viewIntro('Remote disks','Connect storage from another server. After login, the remote disk appears like a local disk.',`<button class="btn" onclick="iscsiDiscoverForm()">Find target</button>`)
     +`<div class="nx-card-grid">${(d.sessions||[]).map(s=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(s.portal)}</div>${statusBadge('Connected','good')}</div><div class="nx-action-sub mono">${esc(s.target)}</div><button class="btn ghost sm" onclick="iscsiLogout('${esc(s.portal)}','${esc(s.target)}')">Disconnect</button></div>`).join('')||emptyState('No remote disks connected')}</div>`;
+  translateRenderedText(body);
 }
 window.diskWizard=dev=>typedConfirm('Erase and set up disk',`This will create a new partition table, format ${devicePath(dev)}, and mount it. Existing data on this disk will be lost.`,dev,()=>openForm('Set up disk: '+dev,'💿',[
   {name:'fstype',label:'Filesystem',type:'select',options:['ext4','xfs','btrfs']},
