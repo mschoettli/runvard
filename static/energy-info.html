@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>runvard · Energie-Info</title>
+<link rel="icon" type="image/png" href="/static/runvard-icon.png">
+<link rel="apple-touch-icon" href="/static/runvard-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0a0b14;--bg2:rgba(13,14,26,.86);--bg3:rgba(17,18,33,.68);--glass:rgba(255,255,255,.04);--glass-hover:rgba(122,74,255,.08);--border:rgba(255,255,255,.08);--border-accent:rgba(122,74,255,.3);--text:#f0f0ff;--text2:rgba(240,240,255,.62);--text3:rgba(240,240,255,.36);--accent:#7a4aff;--accent-light:#9d7aff;--green:#22c55e;--yellow:#eab308;--red:#ef4444;--radius:12px;--blur:blur(16px)}
+*{margin:0;padding:0;box-sizing:border-box}
+html{background:#0f0c1a}
+body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellipse at 20% 50%,#6d28d9,transparent 55%),radial-gradient(ellipse at 80% 20%,#0891b2,transparent 50%),radial-gradient(ellipse at 60% 80%,#1e1b4b,transparent 50%),#050714;background-attachment:fixed;color:var(--text);min-height:100vh}
+.mono{font-family:'JetBrains Mono',monospace}
+.topbar{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:8px 24px;background:var(--bg2);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10}
+.brand{display:flex;align-items:center;gap:42px;min-width:0}
+.brand-name{font-size:15px;font-weight:700;letter-spacing:.04em;color:#fff;text-transform:uppercase}
+.brand-sep{color:rgba(240,240,255,.32);font-size:14px;line-height:1}
+.brand-system{color:rgba(240,240,255,.45);font-size:13px;font-weight:500;letter-spacing:0}
+.top-actions{display:flex;align-items:center;justify-content:flex-end;justify-self:stretch}
+.lang-switch{display:flex;align-items:center;gap:4px;padding:3px;background:rgba(255,255,255,.035);border:1px solid var(--border);border-radius:10px}
+.lang-switch button{min-width:34px;height:26px;border:0;border-radius:7px;background:transparent;color:var(--text3);font:600 11px 'Plus Jakarta Sans',sans-serif;cursor:pointer;transition:background .15s,color .15s}
+.lang-switch button:hover{background:var(--glass-hover);color:var(--accent-light)}
+.lang-switch button.active{background:rgba(122,74,255,.18);color:var(--text);box-shadow:inset 0 0 0 1px rgba(122,74,255,.32)}
+.container{max-width:1120px;margin:0 auto;padding:28px}
+.nx-view-intro{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:16px;align-items:center;background:linear-gradient(135deg,rgba(122,74,255,.12),rgba(6,182,212,.06));border:1px solid var(--border-accent);border-radius:14px;padding:18px 20px;margin-bottom:16px}
+.nx-view-intro h1{font-size:20px;font-weight:700;margin-bottom:6px;color:var(--text);letter-spacing:0}
+.nx-view-intro p{font-size:13px;color:var(--text2);line-height:1.55;max-width:760px}
+.status-pill{display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:4px 9px;font-size:10px;font-weight:600;background:rgba(234,179,8,.1);color:#facc15;border:1px solid rgba(234,179,8,.18);white-space:nowrap}
+.status-pill.run{background:rgba(34,197,94,.1);color:#4ade80;border-color:rgba(34,197,94,.2)}
+.status-pill.stop{background:rgba(239,68,68,.1);color:#f87171;border-color:rgba(239,68,68,.18)}
+.section-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em;margin:22px 0 12px}
+.nx-summary-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin-bottom:16px}
+.nx-summary-card{background:var(--bg3);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:10px;padding:13px;min-width:0}
+.nx-summary-card .k{font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:6px}
+.nx-summary-card .v{font-size:20px;font-weight:700;color:var(--text);line-height:1.15}
+.nx-summary-card .s{font-size:11px;color:var(--text3);margin-top:5px;line-height:1.35}
+.nx-card-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:12px;margin-bottom:16px}
+.nx-action-card{background:var(--bg3);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:12px;padding:18px;min-width:0;transition:border-color .15s,transform .15s}
+.nx-action-card:hover{border-color:var(--border-accent);transform:translateY(-1px)}
+.nx-action-head{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:10px}
+.nx-action-title{font-size:14px;font-weight:700;color:var(--text);line-height:1.3}
+.nx-action-sub{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px}
+.nx-kv{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+.nx-kv div{background:rgba(255,255,255,.03);border-radius:8px;padding:8px;min-width:0}
+.nx-kv span{display:block;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:3px}
+.nx-kv strong{display:block;font-size:12px;color:var(--text);line-height:1.35}
+.nx-chip-list{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.nx-chip{display:inline-flex;align-items:center;gap:5px;background:rgba(255,255,255,.04);border:1px solid var(--border);border-radius:999px;padding:4px 9px;font-size:11px;color:var(--text2)}
+.nx-chip.good{border-color:rgba(34,197,94,.24);color:#4ade80;background:rgba(34,197,94,.08)}
+.nx-chip.warn{border-color:rgba(234,179,8,.24);color:#facc15;background:rgba(234,179,8,.08)}
+.nx-chip.bad{border-color:rgba(239,68,68,.24);color:#f87171;background:rgba(239,68,68,.08)}
+.info-band{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:12px;padding:16px 18px;margin-bottom:16px}
+.info-band h2{font-size:14px;margin-bottom:8px}
+.info-band p{font-size:12px;color:var(--text2);line-height:1.6}
+.flow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin-bottom:16px}
+.flow-step{background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:10px;padding:12px}
+.flow-step .num{width:24px;height:24px;border-radius:8px;background:rgba(122,74,255,.16);border:1px solid var(--border-accent);display:flex;align-items:center;justify-content:center;font-size:11px;color:var(--accent-light);margin-bottom:9px}
+.flow-step strong{display:block;font-size:12px;margin-bottom:5px}
+.flow-step span{display:block;font-size:11px;color:var(--text3);line-height:1.45}
+.footer-note{font-size:11px;color:var(--text3);line-height:1.5;margin:24px 0 8px}
+@media(max-width:760px){
+  .topbar{grid-template-columns:1fr;padding:10px 16px;gap:6px}
+  .top-actions{justify-self:stretch;justify-content:flex-end}
+  .lang-switch{max-width:100%;overflow-x:auto}
+  .container{padding:18px 16px}
+  .nx-view-intro{grid-template-columns:1fr}
+  .flow{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand" aria-label="RUNVARD debian">
+    <div class="brand-name">RUNVARD</div>
+    <div class="brand-sep">·</div>
+    <div class="brand-system">debian</div>
+  </div>
+  <div></div>
+  <div class="top-actions">
+    <div class="lang-switch" id="lang-switch" aria-label="Language"></div>
+  </div>
+</header>
+
+<main class="container" id="page"></main>
+<script>
+const LANGUAGES=[
+  {code:'de',name:'Deutsch'},
+  {code:'en',name:'English'},
+  {code:'fr',name:'Français'},
+  {code:'it',name:'Italiano'},
+  {code:'es',name:'Español'},
+  {code:'pt',name:'Português'},
+];
+const DATA={
+de:{
+  htmlLang:'de',title:'runvard · Energie-Info',kicker:'Energie-Info',
+  heroTitle:'Energie-Funktionen verstehen',heroCopy:'Diese Seite erklärt die Optionen im Energie-Tab. Sie verändert keine Einstellung und führt keine Aktion aus. Sie hilft dabei einzuschätzen, welche Funktionen sofort wirken, welche Pakete voraussetzen und welche den Zugriff auf den Server unterbrechen können.',heroBadge:'Nur Information',
+  summaries:[['Bereich','Systemenergie','Neustart, Ausschalten, Schlafzustände'],['Profile','Leistung','Energiesparen, Ausbalanciert, Performance'],['Richtlinien','logind','Tasten, Deckel, Leerlaufverhalten'],['Diagnose','Tools','powertop, TLP, acpid']],
+  warningTitle:'Wichtig vor Energieaktionen',warningCopy:'Schlafmodus, Ruhezustand und manche logind-Regeln können eine laufende SSH-, Web- oder VPN-Verbindung trennen. Für Server ist das nur sinnvoll, wenn ein sicherer Weg zum Aufwecken vorhanden ist, zum Beispiel Zugriff vor Ort, Wake-on-LAN, IPMI oder eine andere Out-of-Band-Verwaltung.',
+  directLabel:'Direkte Aktionen',sleepLabel:'Schlafzustände',profilesLabel:'Energieprofile',idleLabel:'Leerlauf und Hardwaretasten',inhibitorsLabel:'Inhibitoren',toolsLabel:'Diagnose und optionale Pakete',flowLabel:'Sinnvolle Reihenfolge',
+  direct:[
+    {title:'Neu starten',badge:'systemd',tone:'run',copy:'Startet den Server neu. In runvard kann ein Neustart sofort oder mit Verzögerung geplant werden. Laufende Verbindungen brechen während des Neustarts ab und kommen erst zurück, wenn das System wieder online ist.',chips:[['unterbricht Dienste','warn'],['mit Verzögerung möglich','good']]},
+    {title:'Herunterfahren',badge:'systemd',tone:'run',copy:'Schaltet den Server aus. Diese Aktion ist für Wartung, Hardwarewechsel oder bewusstes Abschalten gedacht. Danach ist runvard nicht mehr erreichbar, bis der Server wieder eingeschaltet wird.',chips:[['Zugriff endet','bad'],['planbar','good']]},
+    {title:'Geplante Aktion abbrechen',badge:'Queue',copy:'Hebt ein geplantes Herunterfahren oder einen geplanten Neustart wieder auf. Das ist nur aktiv, wenn systemd bereits eine solche Aktion vorgemerkt hat.',chips:[['rettet Fehlplanung','good']]}
+  ],
+  sleep:[
+    {title:'Schlafmodus',copy:'Versetzt den Server in Suspend. Der Arbeitsspeicher bleibt versorgt, der Stromverbrauch sinkt stark. Der Server muss danach wieder aufgeweckt werden können.',kv:[['systemd Aktion','suspend'],['Risiko','Remote-Zugriff pausiert']]},
+    {title:'Ruhezustand',copy:'Schreibt den Arbeitsspeicher auf die Festplatte und schaltet danach ab. Das funktioniert nur zuverlässig, wenn Hibernation, Swap und Boot-Konfiguration korrekt eingerichtet sind.',kv:[['systemd Aktion','hibernate'],['Voraussetzung','Resume korrekt konfiguriert']]},
+    {title:'Hybrid-Sleep',copy:'Kombiniert Schlafmodus und Ruhezustand: Der Zustand wird gespeichert, das System bleibt aber zunächst im Schlafmodus. Das schützt besser gegen Stromverlust als reiner Suspend.',kv:[['systemd Aktion','hybrid-sleep'],['Ziel','schnell wach, trotzdem gesichert']]},
+    {title:'Suspend, dann Ruhezustand',copy:'Der Server schläft zuerst und geht später in den Ruhezustand. Das ist nützlich für Geräte, die kurz schnell wieder verfügbar sein sollen, aber länger Energie sparen müssen.',kv:[['systemd Aktion','suspend-then-hibernate'],['Typisch','mobile oder stromkritische Systeme']]}
+  ],
+  profiles:[
+    {title:'power-profiles-daemon',badge:'Profil',tone:'run',copy:'Steuert einfache Linux-Energieprofile. Energiesparen reduziert Verbrauch, Ausbalanciert ist der Standard für Alltag, Performance priorisiert Reaktionszeit und Leistung.',chips:[['power-saver',''],['balanced','good'],['performance','warn']]},
+    {title:'tuned',badge:'Server-Profil',copy:'Bietet serverorientierte Profile für Durchsatz, Latenz, Virtualisierung oder Energiesparen. Es kann tiefer ins System eingreifen als power-profiles-daemon.',chips:[['nicht aggressiv kombinieren','warn'],['Paket optional','']]}
+  ],
+  idle:[
+    {title:'systemd-logind Richtlinie',badge:'Drop-in',copy:'Legt fest, was bei Leerlauf, Einschalttaste oder Deckelschalter passieren soll. runvard schreibt diese Werte als systemd-logind Drop-in und startet logind neu, damit sie gelten.',kv:[['Idle action','Aktion bei Leerlauf'],['Idle after','Zeit bis zur Aktion'],['Power key','Einschalttaste'],['Lid switch','Deckelschalter']]},
+    {title:'Mögliche logind-Aktionen',badge:'Auswahl',copy:'Die Auswahl reicht von Ignorieren bis Sperren, Neustart, Ausschalten oder Schlafzuständen. Auf Servern sind Ignorieren, Ausschalten und Neustart meist verständlicher als automatische Schlafzustände.',chips:[['ignore','good'],['poweroff',''],['reboot',''],['suspend','warn'],['hibernate','warn'],['lock','']]}
+  ],
+  inhibitorsTitle:'Warum manche Energieaktionen blockiert werden',inhibitorsCopy:'Inhibitoren sind Sperren von Programmen oder Diensten, die systemd bitten, Schlafen oder Ausschalten kurzzeitig zu verhindern. Typische Gründe sind laufende Updates, Dateisystemoperationen, Netzwerkverwaltung oder aktive Sitzungen. Die Tabelle im Energie-Tab zeigt wer blockiert, was blockiert wird, warum und mit welcher Prozess-ID.',
+  tools:[
+    {title:'powertop',badge:'Diagnose',copy:'Analysiert Stromverbrauch und zeigt Tuning-Hinweise. runvard führt bewusst kein automatisches Auto-Tune aus, damit keine unerwarteten Geräte- oder Treiberänderungen passieren.'},
+    {title:'TLP',badge:'Laptop',copy:'Optimiert viele Laptop-Energieparameter. Auf Servern ist TLP optional und sollte nicht gleichzeitig mit aggressiven tuned-Profilen verwendet werden.'},
+    {title:'acpid',badge:'ACPI',copy:'Verarbeitet ältere ACPI-Ereignisse, etwa spezielle Hardwaretasten. Moderne Systeme kommen oft mit systemd-logind aus, spezielle Hardware kann acpid trotzdem brauchen.'}
+  ],
+  flow:[['Status prüfen','Ist eine Aktion geplant? Sind Inhibitoren aktiv? Welches Profil läuft?'],['Zugriff sichern','Vor Schlafzuständen klären, wie der Server wieder aufgeweckt wird.'],['Profil wählen','Für Server meist balanced oder ein bewusst gewähltes tuned-Profil nutzen.'],['Aktion ausführen','Neustart oder Ausschalten nur dann planen, wenn Dienste kurz weg sein dürfen.']],
+  footer:'Diese Seite ist bewusst statisch. Sie ruft keine API auf, installiert keine Pakete und speichert keine Einstellung.'
+},
+en:{
+  htmlLang:'en',title:'runvard · Energy info',kicker:'Energy info',
+  heroTitle:'Understanding Energy Functions',heroCopy:'This page explains the options in the Energy tab. It does not change settings or run actions. It helps users judge which functions act immediately, which require packages, and which can interrupt access to the server.',heroBadge:'Information only',
+  summaries:[['Area','System power','Restart, shut down, sleep states'],['Profiles','Performance','Power saver, balanced, performance'],['Policies','logind','Buttons, lid, idle behavior'],['Diagnostics','Tools','powertop, TLP, acpid']],
+  warningTitle:'Important before power actions',warningCopy:'Suspend, hibernate and some logind rules can disconnect active SSH, web or VPN sessions. On servers this only makes sense when there is a safe wake-up path, such as local access, Wake-on-LAN, IPMI or another out-of-band management channel.',
+  directLabel:'Direct actions',sleepLabel:'Sleep states',profilesLabel:'Energy profiles',idleLabel:'Idle behavior and hardware buttons',inhibitorsLabel:'Inhibitors',toolsLabel:'Diagnostics and optional packages',flowLabel:'Recommended order',
+  direct:[
+    {title:'Restart',badge:'systemd',tone:'run',copy:'Restarts the server. In runvard a restart can run immediately or after a delay. Active connections drop during the reboot and return only when the system is online again.',chips:[['interrupts services','warn'],['delay supported','good']]},
+    {title:'Shut down',badge:'systemd',tone:'run',copy:'Powers the server off. Use this for maintenance, hardware work or deliberate shutdown. Afterward runvard is unreachable until the server is powered on again.',chips:[['access ends','bad'],['schedulable','good']]},
+    {title:'Cancel scheduled action',badge:'Queue',copy:'Cancels a queued shutdown or restart. This is only available when systemd already has such an action scheduled.',chips:[['undoes bad timing','good']]}
+  ],
+  sleep:[
+    {title:'Suspend',copy:'Puts the server into suspend. Memory remains powered and power use drops sharply. The server must be wakeable afterward.',kv:[['systemd action','suspend'],['Risk','remote access pauses']]},
+    {title:'Hibernate',copy:'Writes memory to disk and powers down. It is reliable only when hibernation, swap and boot resume configuration are set up correctly.',kv:[['systemd action','hibernate'],['Requirement','resume configured correctly']]},
+    {title:'Hybrid sleep',copy:'Combines suspend and hibernate: the state is saved while the system initially remains suspended. This protects better against power loss than plain suspend.',kv:[['systemd action','hybrid-sleep'],['Goal','wake fast, state saved']]},
+    {title:'Suspend then hibernate',copy:'The server suspends first and later hibernates. This is useful for devices that should wake quickly for a short time but save more power later.',kv:[['systemd action','suspend-then-hibernate'],['Typical for','mobile or power-sensitive systems']]}
+  ],
+  profiles:[
+    {title:'power-profiles-daemon',badge:'Profile',tone:'run',copy:'Controls simple Linux energy profiles. Power saver reduces consumption, balanced is the everyday default, and performance prioritizes response time and throughput.',chips:[['power-saver',''],['balanced','good'],['performance','warn']]},
+    {title:'tuned',badge:'Server profile',copy:'Provides server-oriented profiles for throughput, latency, virtualization or power saving. It can affect the system more deeply than power-profiles-daemon.',chips:[['do not combine aggressively','warn'],['optional package','']]}
+  ],
+  idle:[
+    {title:'systemd-logind policy',badge:'Drop-in',copy:'Defines what happens on idle, power button or lid switch events. runvard writes these values as a systemd-logind drop-in and restarts logind so they apply.',kv:[['Idle action','action while idle'],['Idle after','time before action'],['Power key','power button'],['Lid switch','lid close event']]},
+    {title:'Possible logind actions',badge:'Choice',copy:'Choices range from ignore and lock to restart, power off or sleep states. On servers, ignore, poweroff and reboot are usually easier to reason about than automatic sleep states.',chips:[['ignore','good'],['poweroff',''],['reboot',''],['suspend','warn'],['hibernate','warn'],['lock','']]}
+  ],
+  inhibitorsTitle:'Why some power actions are blocked',inhibitorsCopy:'Inhibitors are locks from programs or services asking systemd to temporarily prevent sleep or shutdown. Common reasons include running updates, filesystem operations, network management or active sessions. The table in the Energy tab shows who blocks, what is blocked, why, and the process ID.',
+  tools:[
+    {title:'powertop',badge:'Diagnostics',copy:'Analyzes power usage and shows tuning hints. runvard intentionally does not run automatic auto-tune to avoid unexpected device or driver changes.'},
+    {title:'TLP',badge:'Laptop',copy:'Optimizes many laptop power settings. On servers TLP is optional and should not be used together with aggressive tuned profiles.'},
+    {title:'acpid',badge:'ACPI',copy:'Handles older ACPI events such as special hardware buttons. Modern systems often work with systemd-logind alone, but special hardware may still need acpid.'}
+  ],
+  flow:[['Check status','Is an action scheduled? Are inhibitors active? Which profile is running?'],['Secure access','Before sleep states, clarify how the server will wake again.'],['Choose profile','For servers, usually use balanced or a deliberately selected tuned profile.'],['Run action','Schedule restart or shutdown only when services may be unavailable briefly.']],
+  footer:'This page is intentionally static. It does not call an API, install packages or save settings.'
+},
+fr:{
+  htmlLang:'fr',title:'runvard · Info énergie',kicker:'Info énergie',
+  heroTitle:'Comprendre les fonctions d’énergie',heroCopy:'Cette page explique les options de l’onglet Énergie. Elle ne modifie aucun réglage et ne lance aucune action. Elle aide à comprendre quelles fonctions agissent immédiatement, lesquelles nécessitent des paquets et lesquelles peuvent interrompre l’accès au serveur.',heroBadge:'Information uniquement',
+  summaries:[['Zone','Alimentation système','Redémarrage, arrêt, états de veille'],['Profils','Performance','Économie, équilibré, performance'],['Règles','logind','Boutons, capot, inactivité'],['Diagnostic','Outils','powertop, TLP, acpid']],
+  warningTitle:'Important avant les actions d’alimentation',warningCopy:'La veille, l’hibernation et certaines règles logind peuvent couper une session SSH, web ou VPN active. Sur un serveur, cela n’a de sens que s’il existe un moyen sûr de le réveiller, par exemple un accès local, Wake-on-LAN, IPMI ou une autre gestion hors bande.',
+  directLabel:'Actions directes',sleepLabel:'États de veille',profilesLabel:'Profils d’énergie',idleLabel:'Inactivité et boutons matériels',inhibitorsLabel:'Inhibiteurs',toolsLabel:'Diagnostic et paquets optionnels',flowLabel:'Ordre recommandé',
+  direct:[
+    {title:'Redémarrer',badge:'systemd',tone:'run',copy:'Redémarre le serveur. Dans runvard, le redémarrage peut être immédiat ou différé. Les connexions actives sont interrompues pendant le redémarrage et reviennent lorsque le système est de nouveau en ligne.',chips:[['interrompt les services','warn'],['délai possible','good']]},
+    {title:'Arrêter',badge:'systemd',tone:'run',copy:'Éteint le serveur. À utiliser pour la maintenance, le matériel ou un arrêt volontaire. runvard reste inaccessible jusqu’à ce que le serveur soit rallumé.',chips:[['accès coupé','bad'],['planifiable','good']]},
+    {title:'Annuler une action planifiée',badge:'Queue',copy:'Annule un arrêt ou un redémarrage déjà planifié. Cette option n’est active que si systemd a déjà une action en attente.',chips:[['corrige une mauvaise planification','good']]}
+  ],
+  sleep:[
+    {title:'Veille',copy:'Place le serveur en veille. La mémoire reste alimentée et la consommation baisse fortement. Le serveur doit pouvoir être réveillé ensuite.',kv:[['action systemd','suspend'],['Risque','accès distant suspendu']]},
+    {title:'Hibernation',copy:'Écrit la mémoire sur disque puis éteint le système. C’est fiable seulement si l’hibernation, le swap et la reprise au démarrage sont correctement configurés.',kv:[['action systemd','hibernate'],['Condition','reprise correctement configurée']]},
+    {title:'Veille hybride',copy:'Combine veille et hibernation : l’état est sauvegardé pendant que le système reste d’abord en veille. Cela protège mieux contre une perte de courant qu’une simple veille.',kv:[['action systemd','hybrid-sleep'],['But','réveil rapide, état sauvegardé']]},
+    {title:'Veille puis hibernation',copy:'Le serveur se met d’abord en veille puis passe plus tard en hibernation. Utile pour les appareils qui doivent se réveiller vite pendant un court moment puis économiser davantage.',kv:[['action systemd','suspend-then-hibernate'],['Typique','systèmes mobiles ou sensibles à l’énergie']]}
+  ],
+  profiles:[
+    {title:'power-profiles-daemon',badge:'Profil',tone:'run',copy:'Contrôle des profils d’énergie Linux simples. Économie réduit la consommation, équilibré convient au quotidien, performance privilégie la réactivité et le débit.',chips:[['power-saver',''],['balanced','good'],['performance','warn']]},
+    {title:'tuned',badge:'Profil serveur',copy:'Fournit des profils orientés serveur pour le débit, la latence, la virtualisation ou l’économie d’énergie. Il peut agir plus profondément sur le système que power-profiles-daemon.',chips:[['ne pas combiner agressivement','warn'],['paquet optionnel','']]}
+  ],
+  idle:[
+    {title:'Règle systemd-logind',badge:'Drop-in',copy:'Définit ce qui se passe en cas d’inactivité, de bouton d’alimentation ou de fermeture du capot. runvard écrit ces valeurs comme drop-in systemd-logind puis redémarre logind pour les appliquer.',kv:[['Idle action','action en inactivité'],['Idle after','délai avant action'],['Power key','bouton d’alimentation'],['Lid switch','fermeture du capot']]},
+    {title:'Actions logind possibles',badge:'Choix',copy:'Les choix vont d’ignorer ou verrouiller à redémarrer, éteindre ou utiliser un état de veille. Sur serveur, ignorer, éteindre et redémarrer sont souvent plus prévisibles que les veilles automatiques.',chips:[['ignore','good'],['poweroff',''],['reboot',''],['suspend','warn'],['hibernate','warn'],['lock','']]}
+  ],
+  inhibitorsTitle:'Pourquoi certaines actions sont bloquées',inhibitorsCopy:'Les inhibiteurs sont des verrous posés par des programmes ou services qui demandent à systemd d’empêcher temporairement la veille ou l’arrêt. Les causes courantes sont les mises à jour, les opérations de système de fichiers, la gestion réseau ou les sessions actives. Le tableau de l’onglet Énergie indique qui bloque, quoi, pourquoi et avec quel PID.',
+  tools:[
+    {title:'powertop',badge:'Diagnostic',copy:'Analyse la consommation et affiche des conseils de réglage. runvard ne lance volontairement pas l’auto-tune automatique afin d’éviter des changements inattendus de périphériques ou de pilotes.'},
+    {title:'TLP',badge:'Portable',copy:'Optimise de nombreux paramètres d’énergie pour ordinateur portable. Sur serveur, TLP est optionnel et ne doit pas être combiné avec des profils tuned agressifs.'},
+    {title:'acpid',badge:'ACPI',copy:'Gère les anciens événements ACPI, par exemple des boutons matériels spéciaux. Les systèmes modernes utilisent souvent systemd-logind seul, mais certains matériels peuvent encore nécessiter acpid.'}
+  ],
+  flow:[['Vérifier l’état','Une action est-elle planifiée ? Des inhibiteurs sont-ils actifs ? Quel profil tourne ?'],['Sécuriser l’accès','Avant les états de veille, savoir comment le serveur sera réveillé.'],['Choisir un profil','Sur serveur, utiliser généralement balanced ou un profil tuned choisi volontairement.'],['Lancer l’action','Planifier un redémarrage ou un arrêt seulement si les services peuvent être indisponibles brièvement.']],
+  footer:'Cette page est volontairement statique. Elle n’appelle aucune API, n’installe aucun paquet et n’enregistre aucun réglage.'
+},
+it:{
+  htmlLang:'it',title:'runvard · Info energia',kicker:'Info energia',
+  heroTitle:'Capire le funzioni di energia',heroCopy:'Questa pagina spiega le opzioni della scheda Energia. Non modifica impostazioni e non esegue azioni. Aiuta a capire quali funzioni hanno effetto immediato, quali richiedono pacchetti e quali possono interrompere l’accesso al server.',heroBadge:'Solo informazione',
+  summaries:[['Area','Energia di sistema','Riavvio, spegnimento, stati di sospensione'],['Profili','Prestazioni','Risparmio, bilanciato, prestazioni'],['Policy','logind','Pulsanti, coperchio, inattività'],['Diagnostica','Strumenti','powertop, TLP, acpid']],
+  warningTitle:'Importante prima delle azioni di alimentazione',warningCopy:'Sospensione, ibernazione e alcune regole logind possono interrompere sessioni SSH, web o VPN attive. Su un server ha senso solo se esiste un modo sicuro per risvegliarlo, ad esempio accesso locale, Wake-on-LAN, IPMI o altra gestione out-of-band.',
+  directLabel:'Azioni dirette',sleepLabel:'Stati di sospensione',profilesLabel:'Profili energetici',idleLabel:'Inattività e pulsanti hardware',inhibitorsLabel:'Inibitori',toolsLabel:'Diagnostica e pacchetti opzionali',flowLabel:'Ordine consigliato',
+  direct:[
+    {title:'Riavvia',badge:'systemd',tone:'run',copy:'Riavvia il server. In runvard il riavvio può essere immediato o ritardato. Le connessioni attive cadono durante il riavvio e tornano solo quando il sistema è di nuovo online.',chips:[['interrompe i servizi','warn'],['ritardo supportato','good']]},
+    {title:'Spegni',badge:'systemd',tone:'run',copy:'Spegne il server. Usalo per manutenzione, interventi hardware o spegnimento intenzionale. Dopo l’azione runvard non è raggiungibile finché il server non viene riacceso.',chips:[['accesso terminato','bad'],['pianificabile','good']]},
+    {title:'Annulla azione pianificata',badge:'Queue',copy:'Annulla uno spegnimento o un riavvio già pianificato. È disponibile solo quando systemd ha già un’azione in coda.',chips:[['corregge la pianificazione','good']]}
+  ],
+  sleep:[
+    {title:'Sospensione',copy:'Mette il server in suspend. La memoria resta alimentata e il consumo cala molto. Il server deve poter essere risvegliato dopo.',kv:[['azione systemd','suspend'],['Rischio','accesso remoto in pausa']]},
+    {title:'Ibernazione',copy:'Scrive la memoria su disco e spegne il sistema. È affidabile solo se ibernazione, swap e configurazione di resume sono impostati correttamente.',kv:[['azione systemd','hibernate'],['Requisito','resume configurato correttamente']]},
+    {title:'Sospensione ibrida',copy:'Combina sospensione e ibernazione: lo stato viene salvato mentre il sistema resta inizialmente sospeso. Protegge meglio da perdita di corrente rispetto alla sola sospensione.',kv:[['azione systemd','hybrid-sleep'],['Obiettivo','risveglio rapido, stato salvato']]},
+    {title:'Sospendi poi iberna',copy:'Il server prima si sospende e poi passa all’ibernazione. Utile per dispositivi che devono risvegliarsi rapidamente per poco tempo ma risparmiare più energia dopo.',kv:[['azione systemd','suspend-then-hibernate'],['Tipico','sistemi mobili o sensibili all’energia']]}
+  ],
+  profiles:[
+    {title:'power-profiles-daemon',badge:'Profilo',tone:'run',copy:'Controlla profili energetici Linux semplici. Risparmio riduce il consumo, bilanciato è il default quotidiano, prestazioni privilegia reattività e throughput.',chips:[['power-saver',''],['balanced','good'],['performance','warn']]},
+    {title:'tuned',badge:'Profilo server',copy:'Fornisce profili orientati ai server per throughput, latenza, virtualizzazione o risparmio energetico. Può agire più in profondità rispetto a power-profiles-daemon.',chips:[['non combinare aggressivamente','warn'],['pacchetto opzionale','']]}
+  ],
+  idle:[
+    {title:'Policy systemd-logind',badge:'Drop-in',copy:'Definisce cosa succede in caso di inattività, pulsante di accensione o chiusura del coperchio. runvard scrive questi valori come drop-in systemd-logind e riavvia logind per applicarli.',kv:[['Idle action','azione in inattività'],['Idle after','tempo prima dell’azione'],['Power key','pulsante accensione'],['Lid switch','chiusura coperchio']]},
+    {title:'Azioni logind possibili',badge:'Scelta',copy:'Le scelte vanno da ignora e blocca a riavvia, spegni o stati di sospensione. Sui server ignore, poweroff e reboot sono di solito più prevedibili degli stati di sospensione automatici.',chips:[['ignore','good'],['poweroff',''],['reboot',''],['suspend','warn'],['hibernate','warn'],['lock','']]}
+  ],
+  inhibitorsTitle:'Perché alcune azioni sono bloccate',inhibitorsCopy:'Gli inibitori sono blocchi di programmi o servizi che chiedono a systemd di impedire temporaneamente sospensione o spegnimento. Motivi comuni sono aggiornamenti in corso, operazioni sul filesystem, gestione rete o sessioni attive. La tabella della scheda Energia mostra chi blocca, cosa blocca, perché e con quale PID.',
+  tools:[
+    {title:'powertop',badge:'Diagnostica',copy:'Analizza il consumo energetico e mostra suggerimenti di tuning. runvard non esegue intenzionalmente l’auto-tune automatico per evitare modifiche inattese a dispositivi o driver.'},
+    {title:'TLP',badge:'Laptop',copy:'Ottimizza molti parametri energetici per laptop. Sui server TLP è opzionale e non dovrebbe essere usato insieme a profili tuned aggressivi.'},
+    {title:'acpid',badge:'ACPI',copy:'Gestisce vecchi eventi ACPI, per esempio pulsanti hardware speciali. I sistemi moderni spesso bastano con systemd-logind, ma hardware specifico può ancora richiedere acpid.'}
+  ],
+  flow:[['Controlla lo stato','C’è un’azione pianificata? Ci sono inibitori attivi? Quale profilo è in uso?'],['Proteggi l’accesso','Prima degli stati di sospensione chiarire come il server verrà risvegliato.'],['Scegli il profilo','Per i server usare di solito balanced o un profilo tuned scelto consapevolmente.'],['Esegui l’azione','Pianifica riavvio o spegnimento solo quando i servizi possono restare non disponibili per poco.']],
+  footer:'Questa pagina è volutamente statica. Non chiama API, non installa pacchetti e non salva impostazioni.'
+},
+es:{
+  htmlLang:'es',title:'runvard · Información de energía',kicker:'Info energía',
+  heroTitle:'Entender las funciones de energía',heroCopy:'Esta página explica las opciones de la pestaña Energía. No cambia ajustes ni ejecuta acciones. Ayuda a valorar qué funciones actúan de inmediato, cuáles requieren paquetes y cuáles pueden interrumpir el acceso al servidor.',heroBadge:'Solo información',
+  summaries:[['Área','Energía del sistema','Reinicio, apagado, estados de suspensión'],['Perfiles','Rendimiento','Ahorro, equilibrado, rendimiento'],['Políticas','logind','Botones, tapa, inactividad'],['Diagnóstico','Herramientas','powertop, TLP, acpid']],
+  warningTitle:'Importante antes de acciones de energía',warningCopy:'La suspensión, la hibernación y algunas reglas de logind pueden cortar sesiones SSH, web o VPN activas. En servidores solo tiene sentido si existe una forma segura de despertarlo, por ejemplo acceso local, Wake-on-LAN, IPMI u otra gestión fuera de banda.',
+  directLabel:'Acciones directas',sleepLabel:'Estados de suspensión',profilesLabel:'Perfiles de energía',idleLabel:'Inactividad y botones de hardware',inhibitorsLabel:'Inhibidores',toolsLabel:'Diagnóstico y paquetes opcionales',flowLabel:'Orden recomendado',
+  direct:[
+    {title:'Reiniciar',badge:'systemd',tone:'run',copy:'Reinicia el servidor. En runvard el reinicio puede ser inmediato o con retraso. Las conexiones activas se cortan durante el reinicio y vuelven cuando el sistema está en línea otra vez.',chips:[['interrumpe servicios','warn'],['retraso disponible','good']]},
+    {title:'Apagar',badge:'systemd',tone:'run',copy:'Apaga el servidor. Úsalo para mantenimiento, cambios de hardware o apagado intencional. Después runvard no estará disponible hasta que el servidor se encienda de nuevo.',chips:[['el acceso termina','bad'],['programable','good']]},
+    {title:'Cancelar acción programada',badge:'Queue',copy:'Cancela un apagado o reinicio ya programado. Solo está activo cuando systemd ya tiene una acción en cola.',chips:[['corrige una mala planificación','good']]}
+  ],
+  sleep:[
+    {title:'Suspensión',copy:'Pone el servidor en suspend. La memoria sigue alimentada y el consumo baja mucho. El servidor debe poder despertarse después.',kv:[['acción systemd','suspend'],['Riesgo','acceso remoto pausado']]},
+    {title:'Hibernación',copy:'Escribe la memoria en disco y apaga. Solo es fiable si la hibernación, swap y la configuración de resume están correctamente preparadas.',kv:[['acción systemd','hibernate'],['Requisito','resume configurado correctamente']]},
+    {title:'Suspensión híbrida',copy:'Combina suspensión e hibernación: el estado se guarda mientras el sistema queda inicialmente suspendido. Protege mejor ante pérdida de energía que la suspensión simple.',kv:[['acción systemd','hybrid-sleep'],['Objetivo','despertar rápido, estado guardado']]},
+    {title:'Suspender y luego hibernar',copy:'El servidor se suspende primero y más tarde hiberna. Es útil para equipos que deben despertar rápido durante poco tiempo pero ahorrar más energía después.',kv:[['acción systemd','suspend-then-hibernate'],['Típico','sistemas móviles o sensibles a energía']]}
+  ],
+  profiles:[
+    {title:'power-profiles-daemon',badge:'Perfil',tone:'run',copy:'Controla perfiles de energía Linux sencillos. Ahorro reduce consumo, equilibrado es el valor diario, rendimiento prioriza respuesta y capacidad.',chips:[['power-saver',''],['balanced','good'],['performance','warn']]},
+    {title:'tuned',badge:'Perfil servidor',copy:'Ofrece perfiles orientados a servidores para rendimiento, latencia, virtualización o ahorro. Puede afectar al sistema con más profundidad que power-profiles-daemon.',chips:[['no combinar agresivamente','warn'],['paquete opcional','']]}
+  ],
+  idle:[
+    {title:'Política systemd-logind',badge:'Drop-in',copy:'Define qué ocurre en inactividad, botón de encendido o cierre de tapa. runvard escribe estos valores como drop-in de systemd-logind y reinicia logind para aplicarlos.',kv:[['Idle action','acción en inactividad'],['Idle after','tiempo hasta la acción'],['Power key','botón de encendido'],['Lid switch','cierre de tapa']]},
+    {title:'Acciones logind posibles',badge:'Selección',copy:'Las opciones van desde ignorar o bloquear hasta reiniciar, apagar o usar estados de suspensión. En servidores, ignore, poweroff y reboot suelen ser más previsibles que suspensiones automáticas.',chips:[['ignore','good'],['poweroff',''],['reboot',''],['suspend','warn'],['hibernate','warn'],['lock','']]}
+  ],
+  inhibitorsTitle:'Por qué algunas acciones se bloquean',inhibitorsCopy:'Los inhibidores son bloqueos de programas o servicios que piden a systemd impedir temporalmente suspensión o apagado. Motivos comunes son actualizaciones, operaciones de sistema de archivos, gestión de red o sesiones activas. La tabla de la pestaña Energía muestra quién bloquea, qué bloquea, por qué y con qué PID.',
+  tools:[
+    {title:'powertop',badge:'Diagnóstico',copy:'Analiza el consumo de energía y muestra sugerencias de ajuste. runvard no ejecuta auto-tune automático para evitar cambios inesperados en dispositivos o controladores.'},
+    {title:'TLP',badge:'Portátil',copy:'Optimiza muchos parámetros de energía para portátiles. En servidores TLP es opcional y no debe usarse junto con perfiles tuned agresivos.'},
+    {title:'acpid',badge:'ACPI',copy:'Gestiona eventos ACPI antiguos, por ejemplo botones de hardware especiales. Los sistemas modernos suelen bastar con systemd-logind, pero cierto hardware puede necesitar acpid.'}
+  ],
+  flow:[['Comprobar estado','¿Hay una acción programada? ¿Hay inhibidores activos? ¿Qué perfil está activo?'],['Asegurar acceso','Antes de estados de suspensión, aclarar cómo despertará el servidor.'],['Elegir perfil','En servidores usar normalmente balanced o un perfil tuned elegido conscientemente.'],['Ejecutar acción','Programar reinicio o apagado solo cuando los servicios puedan estar brevemente no disponibles.']],
+  footer:'Esta página es intencionadamente estática. No llama a ninguna API, no instala paquetes y no guarda ajustes.'
+},
+pt:{
+  htmlLang:'pt',title:'runvard · Informação de energia',kicker:'Info energia',
+  heroTitle:'Compreender as funções de energia',heroCopy:'Esta página explica as opções do separador Energia. Não altera definições nem executa ações. Ajuda a perceber que funções atuam de imediato, quais exigem pacotes e quais podem interromper o acesso ao servidor.',heroBadge:'Apenas informação',
+  summaries:[['Área','Energia do sistema','Reiniciar, desligar, estados de suspensão'],['Perfis','Desempenho','Poupança, equilibrado, desempenho'],['Políticas','logind','Botões, tampa, inatividade'],['Diagnóstico','Ferramentas','powertop, TLP, acpid']],
+  warningTitle:'Importante antes de ações de energia',warningCopy:'Suspensão, hibernação e algumas regras logind podem desligar sessões SSH, web ou VPN ativas. Em servidores isto só faz sentido quando existe uma forma segura de acordar o servidor, como acesso local, Wake-on-LAN, IPMI ou outra gestão fora de banda.',
+  directLabel:'Ações diretas',sleepLabel:'Estados de suspensão',profilesLabel:'Perfis de energia',idleLabel:'Inatividade e botões de hardware',inhibitorsLabel:'Inibidores',toolsLabel:'Diagnóstico e pacotes opcionais',flowLabel:'Ordem recomendada',
+  direct:[
+    {title:'Reiniciar',badge:'systemd',tone:'run',copy:'Reinicia o servidor. No runvard, o reinício pode ser imediato ou após um atraso. As ligações ativas caem durante o reinício e voltam apenas quando o sistema estiver novamente online.',chips:[['interrompe serviços','warn'],['atraso suportado','good']]},
+    {title:'Desligar',badge:'systemd',tone:'run',copy:'Desliga o servidor. Use para manutenção, alterações de hardware ou desligamento intencional. Depois disso, o runvard fica indisponível até o servidor voltar a ser ligado.',chips:[['acesso termina','bad'],['programável','good']]},
+    {title:'Cancelar ação programada',badge:'Queue',copy:'Cancela um desligamento ou reinício já programado. Só está disponível quando o systemd já tem essa ação em fila.',chips:[['corrige mau agendamento','good']]}
+  ],
+  sleep:[
+    {title:'Suspensão',copy:'Coloca o servidor em suspend. A memória continua alimentada e o consumo baixa bastante. O servidor tem de poder ser acordado depois.',kv:[['ação systemd','suspend'],['Risco','acesso remoto em pausa']]},
+    {title:'Hibernação',copy:'Escreve a memória no disco e desliga. Só é fiável quando hibernação, swap e configuração de resume estão corretamente preparadas.',kv:[['ação systemd','hibernate'],['Requisito','resume configurado corretamente']]},
+    {title:'Suspensão híbrida',copy:'Combina suspensão e hibernação: o estado é guardado enquanto o sistema inicialmente fica suspenso. Protege melhor contra perda de energia do que suspensão simples.',kv:[['ação systemd','hybrid-sleep'],['Objetivo','acordar rápido, estado guardado']]},
+    {title:'Suspender e depois hibernar',copy:'O servidor suspende primeiro e hiberna mais tarde. É útil para dispositivos que devem acordar rapidamente por pouco tempo mas poupar mais energia depois.',kv:[['ação systemd','suspend-then-hibernate'],['Típico','sistemas móveis ou sensíveis a energia']]}
+  ],
+  profiles:[
+    {title:'power-profiles-daemon',badge:'Perfil',tone:'run',copy:'Controla perfis simples de energia Linux. Poupança reduz consumo, equilibrado é o padrão diário e desempenho prioriza resposta e rendimento.',chips:[['power-saver',''],['balanced','good'],['performance','warn']]},
+    {title:'tuned',badge:'Perfil servidor',copy:'Fornece perfis orientados para servidores para rendimento, latência, virtualização ou poupança de energia. Pode afetar o sistema mais profundamente do que power-profiles-daemon.',chips:[['não combinar agressivamente','warn'],['pacote opcional','']]}
+  ],
+  idle:[
+    {title:'Política systemd-logind',badge:'Drop-in',copy:'Define o que acontece em inatividade, botão de energia ou fecho da tampa. O runvard escreve estes valores como drop-in do systemd-logind e reinicia o logind para os aplicar.',kv:[['Idle action','ação em inatividade'],['Idle after','tempo até à ação'],['Power key','botão de energia'],['Lid switch','fecho da tampa']]},
+    {title:'Ações logind possíveis',badge:'Escolha',copy:'As escolhas vão de ignorar e bloquear até reiniciar, desligar ou usar estados de suspensão. Em servidores, ignore, poweroff e reboot são normalmente mais previsíveis do que suspensões automáticas.',chips:[['ignore','good'],['poweroff',''],['reboot',''],['suspend','warn'],['hibernate','warn'],['lock','']]}
+  ],
+  inhibitorsTitle:'Porque algumas ações são bloqueadas',inhibitorsCopy:'Inibidores são bloqueios de programas ou serviços que pedem ao systemd para impedir temporariamente suspensão ou desligamento. Razões comuns incluem atualizações, operações de sistema de ficheiros, gestão de rede ou sessões ativas. A tabela no separador Energia mostra quem bloqueia, o que bloqueia, porquê e com que PID.',
+  tools:[
+    {title:'powertop',badge:'Diagnóstico',copy:'Analisa o consumo de energia e mostra sugestões de afinação. O runvard não executa auto-tune automático de propósito, para evitar alterações inesperadas em dispositivos ou controladores.'},
+    {title:'TLP',badge:'Portátil',copy:'Otimiza muitos parâmetros de energia para portáteis. Em servidores, o TLP é opcional e não deve ser usado juntamente com perfis tuned agressivos.'},
+    {title:'acpid',badge:'ACPI',copy:'Processa eventos ACPI antigos, por exemplo botões especiais de hardware. Sistemas modernos muitas vezes funcionam só com systemd-logind, mas hardware específico ainda pode precisar do acpid.'}
+  ],
+  flow:[['Verificar estado','Há uma ação programada? Existem inibidores ativos? Que perfil está ativo?'],['Garantir acesso','Antes de estados de suspensão, esclarecer como o servidor será acordado.'],['Escolher perfil','Em servidores, usar normalmente balanced ou um perfil tuned escolhido conscientemente.'],['Executar ação','Programar reinício ou desligamento só quando os serviços puderem ficar indisponíveis brevemente.']],
+  footer:'Esta página é intencionalmente estática. Não chama API, não instala pacotes e não guarda definições.'
+}
+};
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const chip=([text,tone])=>`<span class="nx-chip ${esc(tone)}">${esc(text)}</span>`;
+const badge=(text,tone='')=>`<span class="status-pill ${esc(tone)}">${esc(text)}</span>`;
+const kv=items=>items?`<div class="nx-kv">${items.map(([k,v])=>`<div><span>${esc(k)}</span><strong class="${['suspend','hibernate','hybrid-sleep','suspend-then-hibernate'].includes(v)?'mono':''}">${esc(v)}</strong></div>`).join('')}</div>`:'';
+const card=item=>`<article class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(item.title)}</div>${item.badge?badge(item.badge,item.tone||''):badge('optional')}</div><p class="nx-action-sub">${esc(item.copy)}</p>${item.kv?kv(item.kv):''}${item.chips?`<div class="nx-chip-list">${item.chips.map(chip).join('')}</div>`:''}</article>`;
+const section=(label,items)=>`<div class="section-label">${esc(label)}</div><section class="nx-card-grid">${items.map(card).join('')}</section>`;
+function bestLang(){
+  try{const stored=localStorage.getItem('runvard_language');if(DATA[stored])return stored;}catch(e){}
+  const nav=(navigator.language||'de').slice(0,2);
+  return DATA[nav]?nav:'de';
+}
+function render(lang){
+  const d=DATA[lang]||DATA.de;
+  document.documentElement.lang=d.htmlLang;
+  document.title=d.title;
+  document.getElementById('page').innerHTML=`
+    <section class="nx-view-intro"><div><h1>${esc(d.heroTitle)}</h1><p>${esc(d.heroCopy)}</p></div>${badge(d.heroBadge,'run')}</section>
+    <div class="nx-summary-grid">${d.summaries.map(([k,v,s])=>`<div class="nx-summary-card"><div class="k">${esc(k)}</div><div class="v">${esc(v)}</div><div class="s">${esc(s)}</div></div>`).join('')}</div>
+    <section class="info-band"><h2>${esc(d.warningTitle)}</h2><p>${esc(d.warningCopy)}</p></section>
+    ${section(d.directLabel,d.direct)}
+    ${section(d.sleepLabel,d.sleep)}
+    ${section(d.profilesLabel,d.profiles)}
+    ${section(d.idleLabel,d.idle)}
+    <div class="section-label">${esc(d.inhibitorsLabel)}</div><section class="info-band"><h2>${esc(d.inhibitorsTitle)}</h2><p>${esc(d.inhibitorsCopy)}</p></section>
+    ${section(d.toolsLabel,d.tools)}
+    <div class="section-label">${esc(d.flowLabel)}</div><section class="flow">${d.flow.map(([title,copy],i)=>`<div class="flow-step"><div class="num">${i+1}</div><strong>${esc(title)}</strong><span>${esc(copy)}</span></div>`).join('')}</section>
+    <p class="footer-note">${esc(d.footer)}</p>`;
+  document.querySelectorAll('#lang-switch button').forEach(b=>b.classList.toggle('active',b.dataset.lang===lang));
+}
+document.getElementById('lang-switch').innerHTML=LANGUAGES.map(l=>`<button type="button" data-lang="${l.code}" title="${esc(l.name)}">${l.code.toUpperCase()}</button>`).join('');
+document.getElementById('lang-switch').addEventListener('click',e=>{
+  const btn=e.target.closest('button[data-lang]');
+  if(!btn)return;
+  try{localStorage.setItem('runvard_language',btn.dataset.lang);}catch(err){}
+  render(btn.dataset.lang);
+});
+render(bestLang());
+</script>
+</body>
+</html>

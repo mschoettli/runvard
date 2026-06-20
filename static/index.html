@@ -1367,6 +1367,7 @@ const UI_PHRASES={
     "Diagnostics and optional packages":"Diagnose und optionale Pakete",
     "Drop-in":"Drop-in",
     "Edit idle rules":"Leerlaufregeln bearbeiten",
+    "Energy info":"Energie-Info",
     "Energy profiles":"Energieprofile",
     "Examples: 15min, 1h, 300s":"Beispiele: 15min, 1h, 300s",
     "Hibernate":"Ruhezustand",
@@ -2333,6 +2334,7 @@ const UI_PHRASES={
     "Diagnostics and optional packages":"Diagnostic et paquets optionnels",
     "Drop-in":"Drop-in",
     "Edit idle rules":"Modifier les règles d’inactivité",
+    "Energy info":"Info énergie",
     "Energy profiles":"Profils d’énergie",
     "Examples: 15min, 1h, 300s":"Exemples : 15min, 1h, 300s",
     "Hibernate":"Hiberner",
@@ -3260,6 +3262,7 @@ const UI_PHRASES={
     "Diagnostics and optional packages":"Diagnostica e pacchetti opzionali",
     "Drop-in":"Drop-in",
     "Edit idle rules":"Modifica regole di inattività",
+    "Energy info":"Info energia",
     "Energy profiles":"Profili energetici",
     "Examples: 15min, 1h, 300s":"Esempi: 15min, 1h, 300s",
     "Hibernate":"Ibernazione",
@@ -4190,6 +4193,7 @@ const UI_PHRASES={
     "Diagnostics and optional packages":"Diagnóstico y paquetes opcionales",
     "Drop-in":"Drop-in",
     "Edit idle rules":"Editar reglas de inactividad",
+    "Energy info":"Info energía",
     "Energy profiles":"Perfiles de energía",
     "Examples: 15min, 1h, 300s":"Ejemplos: 15min, 1h, 300s",
     "Hibernate":"Hibernar",
@@ -5125,6 +5129,7 @@ const UI_PHRASES={
     "Diagnostics and optional packages":"Diagnóstico e pacotes opcionais",
     "Drop-in":"Drop-in",
     "Edit idle rules":"Editar regras de inatividade",
+    "Energy info":"Info energia",
     "Energy profiles":"Perfis de energia",
     "Examples: 15min, 1h, 300s":"Exemplos: 15min, 1h, 300s",
     "Hibernate":"Hibernar",
@@ -8596,7 +8601,7 @@ async function renderPower(body){
   const tunedActive=tuned.available?(tuned.active||'None'):'Unavailable';
   const activeProfile=profiles.available?ppActive:tunedActive;
   const inhibitorRows=(inhibitors.inhibitors||[]).map(x=>`<tr><td>${esc(x.who||'-')}</td><td class="mono">${esc(x.what||'-')}</td><td>${esc(x.why||'-')}</td><td class="mono">${esc(x.pid||'-')}</td></tr>`).join('');
-  body.innerHTML=viewIntro('Power','Control Debian/systemd power actions, profiles and idle behavior.', '')
+  body.innerHTML=viewIntro('Power','Control Debian/systemd power actions, profiles and idle behavior.', `<a class="btn" href="/static/energy-info.html" target="_blank" rel="noopener">Energy info</a>`)
     +`<div class="nx-summary-grid">
       ${summaryCard('Current state','Online','Server is running')}
       ${summaryCard('Scheduled power action',powerScheduledText(status.scheduled),status.scheduled?'Can be canceled':'No shutdown queued')}
