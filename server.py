@@ -1571,7 +1571,10 @@ def sysmgr_runvard_release(user: str = Depends(auth)):
 
 @app.post("/api/sysmgr/runvard-update/apply")
 def sysmgr_runvard_update_apply(user: str = Depends(confirmed_admin)):
-    return system_mgr.start_runvard_update()
+    try:
+        return system_mgr.start_runvard_update()
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
 
 
 @app.get("/api/sysmgr/runvard-update/log")

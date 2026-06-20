@@ -123,3 +123,25 @@ def test_readonly_user_cannot_enable_expert_mode(monkeypatch):
     response = _client("readonly").post("/api/expert-mode", data={"enabled": "1"})
 
     assert response.status_code == 403
+
+
+def test_runvard_update_start_error_returns_json(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    monkeypatch.setattr(
+        server.system_mgr,
+        "start_runvard_update",
+        lambda: (_ for _ in ()).throw(RuntimeError("systemd-run failed")),
+    )
+    client = _client()
+    token = client.post(
+        "/api/confirm-token",
+        data={"action": "sysmgr:runvard-update", "target": ""},
+    ).json()["token"]
+
+    response = client.post(
+        "/api/sysmgr/runvard-update/apply",
+        data={"confirm_token": token},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": False, "error": "systemd-run failed"}
