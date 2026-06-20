@@ -5996,6 +5996,20 @@ function applyExpertMode(){
 }
 async function setExpertMode(enabled){
   const t=$('#um-expert-toggle');
+  if(enabled&&!expertModeActive){
+    if(t)t.checked=false;
+    typedConfirm(
+      'Enable Expert Mode',
+      'Expert Mode reveals advanced system areas and actions that can change disks, services, users, packages, networking and diagnostics. Continue only if you know what you are changing.',
+      'EXPERT',
+      ()=>setExpertModeConfirmed(true)
+    );
+    return;
+  }
+  return setExpertModeConfirmed(enabled);
+}
+async function setExpertModeConfirmed(enabled){
+  const t=$('#um-expert-toggle');
   if(t)t.disabled=true;
   try{
     const r=await post('/expert-mode',{enabled:enabled?'1':'0'});
