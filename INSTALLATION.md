@@ -8,10 +8,25 @@ curl -fsSL https://raw.githubusercontent.com/mschoettli/runvard/main/install.sh 
 ```
 
 The installer downloads the current runvard release when needed, installs required system packages, creates the Python virtual environment, installs Python dependencies, writes the systemd service, and starts runvard.
-It asks for the admin username, admin password, and web port.
+It asks for the installer language, admin username, admin password, and web port.
 If the password is left empty, the installer generates a random password and prints it at the end.
 The selected username, password, and port are stored in `/opt/runvard/data/runvard.env` and loaded by the systemd service.
 After installation, runvard is available at the address printed by the installer; the default port is `8080`.
+
+For automated installs, pass options or environment variables:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mschoettli/runvard/main/install.sh | sudo RUNVARD_PASS='change-me' RUNVARD_LANG=en bash -s -- --yes --port 8080
+```
+
+Supported installer options:
+
+- `--lang en|de`: choose English or German installer output
+- `--port <n>`: set the web port
+- `--user <name>`: set the admin username
+- `-y`, `--yes`: install without prompts
+
+Supported installer environment variables include `RUNVARD_LANG`, `RUNVARD_USER`, `RUNVARD_PASS`, `RUNVARD_PORT`, `RUNVARD_YES`, `RUNVARD_ARCHIVE_URL`, `RUNVARD_SOURCE_DIR`, and `RUNVARD_SOURCE_COMMIT`.
 
 ## Bundled Wheels
 
@@ -26,6 +41,22 @@ systemctl status runvard
 systemctl restart runvard
 journalctl -u runvard -f
 systemctl stop runvard
+```
+
+## Update
+
+Run the update script from a local runvard release directory.
+
+```bash
+cd /opt/runvard
+sudo bash update.sh
+```
+
+The updater is English-only. It syncs program files with `rsync`, keeps `/opt/runvard/data` unchanged, refreshes Python dependencies, records the source commit when available, restarts the service, and checks `/login`.
+For emergency updates, dependency refresh can be skipped:
+
+```bash
+sudo RUNVARD_SKIP_PIP=1 bash update.sh
 ```
 
 ## Reverse Proxy
@@ -69,14 +100,15 @@ location / {
 
 ## Uninstall
 
-Run the uninstall script from the runvard directory on the server.
+Run the English-only uninstall script from the runvard directory on the server.
 
 ```bash
+cd /opt/runvard
 sudo bash uninstall.sh
 ```
 
 The default uninstall stops and removes the runvard service and backs up the data directory before removing `/opt/runvard`.
-Use `--purge` to remove runvard and its data without creating a backup.
+Use `--purge` to remove runvard and its data without creating a backup. Use `--yes` to skip the confirmation prompt.
 
 ```bash
 sudo bash uninstall.sh --purge
