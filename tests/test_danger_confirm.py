@@ -95,6 +95,53 @@ def test_non_dangerous_docker_action_does_not_require_confirm_token(monkeypatch)
     assert response.json()["action"] == "restart"
 
 
+def test_account_add_does_not_require_confirm_token(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    monkeypatch.setattr(server.accounts, "add_user", lambda username, password, role: {"ok": True})
+
+    response = _client().post(
+        "/api/accounts/add",
+        data={"username": "new-user", "password": "secret", "role": "readonly"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+
+
+def test_file_delete_job_requires_confirm_token(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    monkeypatch.setattr(server.files, "start_job", lambda *args: {"id": "job-1"})
+
+    response = _client().post(
+        "/api/files/job",
+        data={"action": "delete", "paths": "/tmp/demo.txt"},
+    )
+
+    assert response.status_code == 403
+
+
+def test_file_copy_job_does_not_require_confirm_token(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    monkeypatch.setattr(server.files, "start_job", lambda *args: {"id": "job-1"})
+
+    response = _client().post(
+        "/api/files/job",
+        data={"action": "copy", "paths": "/tmp/demo.txt", "dst_dir": "/tmp/copy"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"id": "job-1"}
+
+
+def test_dashboard_remove_requires_confirm_token(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    monkeypatch.setattr(server.dashboard, "remove_tile", lambda tile_id: {"ok": True})
+
+    response = _client().post("/api/dashboard/remove", data={"tile_id": "demo"})
+
+    assert response.status_code == 403
+
+
 def test_docker_compose_save_does_not_require_confirm_token(monkeypatch):
     monkeypatch.setattr(server, "login_enabled", lambda: True)
     monkeypatch.setattr(

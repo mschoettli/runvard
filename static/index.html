@@ -155,8 +155,9 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 .expert-mode .form-field .hint{display:none}
 .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
 .typed-confirm-copy{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px}
-.typed-confirm-hint{font-size:12px;color:var(--text2);line-height:1.45;margin-bottom:8px}
-.typed-confirm-hint .mono{font-size:12px;font-weight:600;color:var(--text)}
+.typed-confirm-check{display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--text);line-height:1.45;margin:12px 0}
+.typed-confirm-check input{margin-top:2px}
+.typed-confirm-target{display:block;font-size:11px;color:var(--text2);margin-top:4px}
 
 /* ── Confirm modal ── */
 .confirm-overlay{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center}
@@ -768,112 +769,60 @@ function boolish(v){return v===true||v===1||['1','true','on','yes'].includes(Str
 function dangerConfirmMeta(p,d){
   const simple={
     '/auth/toggle':['auth:disable','login'],
-    '/accounts/add':['accounts:add','username'],
     '/accounts/password':['accounts:password','username'],
     '/accounts/role':['accounts:role','username'],
     '/accounts/delete':['accounts:delete','username'],
-    '/files/trash/restore':['files:trash-restore','item_id'],
+    '/files/delete':['files:delete','path'],
     '/files/trash/empty':['files:trash-empty','trash'],
-    '/files/share':['files:share','path'],
-    '/files/samba-share':['shares:samba-add','path'],
-    '/files/mount-smb':['files:mount-smb','mountpoint'],
-    '/files/mount-nfs':['files:mount-nfs','mountpoint'],
-    '/storage/partition-table':['storage:partition-table','device'],
-    '/storage/partition':['storage:partition','device'],
+    '/files/shares/delete':['files:share-delete','token'],
     '/storage/format':['storage:format','partition'],
     '/storage/unmount':['storage:unmount','mountpoint'],
-    '/storage/swap/create':['storage:swap-create','path'],
-    '/storage/swap/action':['storage:swap-action','target'],
-    '/storage/raid/create':['storage:raid-create','name'],
-    '/storage/lvm/vg-create':['storage:lvm-vg-create','name'],
-    '/storage/lvm/lv-create':['storage:lvm-lv-create','name'],
-    '/storage/lvm/lv-extend':['storage:lvm-lv-extend','lv_path'],
     '/storage/lvm/lv-remove':['storage:lvm-lv-remove','lv_path'],
     '/storage/luks/format':['storage:luks-format','device'],
-    '/storage/luks/open':['storage:luks-open','device'],
     '/storage/luks/close':['storage:luks-close','name'],
-    '/storage/fs-grow':['storage:fs-grow','device','mountpoint'],
-    '/storage/zfs/create':['storage:zfs-create','name'],
     '/storage/zfs/destroy':['storage:zfs-destroy','name'],
     '/storage/zfs/scrub':['storage:zfs-scrub','name'],
-    '/storage/btrfs/create':['storage:btrfs-create','label'],
     '/storage/btrfs/scrub':['storage:btrfs-scrub','mountpoint'],
-    '/storage/iscsi/discover':['storage:iscsi-discover','portal'],
-    '/storage/iscsi/login':['storage:iscsi-login','target'],
     '/storage/iscsi/logout':['storage:iscsi-logout','target'],
     '/docker/images/remove':['docker:remove-image','image_id'],
     '/docker/volumes/remove':['docker:remove-volume','name'],
     '/docker/compose/remove':['docker:compose-remove','name'],
-    '/services/action':['services:action','name'],
-    '/vms/action':['vms:action','name'],
-    '/vms/disk/attach':['vms:disk-attach','name'],
     '/vms/disk/detach':['vms:disk-detach','name'],
-    '/vms/nic/attach':['vms:nic-attach','name'],
-    '/vms/nic/detach':['vms:nic-detach','name'],
-    '/vms/pool/create':['vms:pool-create','name'],
-    '/vms/pool/action':['vms:pool-action','name'],
-    '/vms/pool/vol-create':['vms:volume-create','name'],
     '/vms/pool/vol-delete':['vms:volume-delete','vol'],
-    '/vms/clone':['vms:clone','name'],
-    '/vms/cdrom':['vms:cdrom','name'],
-    '/vms/create':['vms:create','name'],
-    '/vms/snapshot':['vms:snapshot','name'],
-    '/vms/snapshot/action':['vms:snapshot-action','name'],
-    '/shares/samba/add':['shares:samba-add','path'],
-    '/shares/nfs/add':['shares:nfs-add','path'],
-    '/network/bond/create':['network:bond-create','name'],
     '/network/bond/delete':['network:bond-delete','name'],
-    '/network/firewall/add':['network:firewall-add','port'],
     '/network/firewall/remove':['network:firewall-remove','num'],
     '/network/configure-ip':['network:configure-ip','iface'],
-    '/network/bridge/create':['network:bridge-create','name'],
-    '/network/vlan/create':['network:vlan-create','parent'],
-    '/network/link/delete':['network:link-delete','name'],
-    '/security/users/add':['security:user-add','name'],
     '/security/users/smb-password':['security:smb-password','name'],
     '/security/users/password':['security:password','name'],
-    '/security/users/ssh-keys/add':['security:ssh-key-add','name'],
     '/security/users/ssh-keys/remove':['security:ssh-key-remove','name'],
-    '/security/users/sudo':['security:sudo','name'],
     '/security/users/aging':['security:aging','name'],
-    '/security/users/expire':['security:expire','name'],
-    '/security/groups/add':['security:group-add','name'],
     '/security/groups/delete':['security:group-delete','name'],
-    '/security/groups/add-member':['security:group-add-member','group'],
     '/security/groups/remove-member':['security:group-remove-member','group'],
-    '/security/certs/generate':['security:cert-generate','common_name'],
-    '/sysmgr/cron/add':['sysmgr:cron-add','command'],
-    '/sysmgr/power/profiles/set':['sysmgr:power-profile','profile'],
     '/sysmgr/power/logind/set':['sysmgr:logind-power','logind'],
     '/sysmgr/hostname':['sysmgr:hostname','name'],
-    '/sysmgr/apparmor/set':['sysmgr:apparmor','profile'],
-    '/sysmgr/packages/install':['sysmgr:package-install','name'],
     '/sysmgr/packages/remove':['sysmgr:package-remove','name'],
     '/sysmgr/unattended/set':['sysmgr:unattended','unattended-upgrades'],
     '/sysmgr/tuned/set':['sysmgr:tuned','profile'],
-    '/sysmgr/kdump/action':['sysmgr:kdump','action'],
-    '/apps/install':['apps:install','app_id'],
-    '/apps/save-compose':['apps:save-compose','app_id'],
-    '/apps/action':['apps:action','app_id'],
+    '/dashboard/remove':['dashboard:remove','tile_id'],
   };
   if(p==='/auth/toggle'&&String(d.enabled)==='1')return null;
-  if(p==='/storage/mount'&&!boolish(d.persist))return null;
-  if(p==='/storage/mount')return {action:'storage:mount-persist',target:valueOf(d,'partition')};
   if(p==='/docker/action'&&d.action!=='remove')return null;
   if(p==='/docker/action')return {action:'docker:remove-container',target:valueOf(d,'container_id')};
-  if(p==='/docker/create'&&!String(d.volumes||'').trim())return null;
-  if(p==='/docker/create')return {action:'docker:create-with-host-volumes',target:valueOf(d,'name','image')};
-  if(p==='/docker/compose/action'&&d.action!=='down')return null;
-  if(p==='/docker/compose/action')return {action:'docker:compose-down',target:valueOf(d,'name')};
+  if(p==='/files/job')return d.action==='delete'?{action:'files:delete',target:valueOf(d,'paths')}:null;
+  if(p==='/docker/compose/action')return null;
+  if(p==='/vms/action')return d.action==='delete'?{action:'vms:delete',target:valueOf(d,'name')}:null;
+  if(p==='/vms/pool/action')return d.action==='delete'?{action:'vms:pool-delete',target:valueOf(d,'name')}:null;
+  if(p==='/vms/snapshot/action')return d.action==='delete'?{action:'vms:snapshot-delete',target:valueOf(d,'name')}:null;
   if(p==='/sysmgr/power'&&d.action==='cancel')return null;
   if(p==='/sysmgr/power')return {action:'power:'+valueOf(d,'action'),target:valueOf(d,'action')};
+  if(p==='/apps/action')return d.action==='down'?{action:'apps:uninstall',target:valueOf(d,'app_id')}:null;
   const spec=simple[p];
   if(!spec)return null;
   return {action:spec[0],target:valueOf(d,...spec.slice(1))};
 }
-function dangerTitle(action){return uiText('System change requires confirmation');}
+function dangerTitle(action){return tr('dangerConfirmTitle');}
 function dangerMessage(meta){
-  return `${uiText('This action changes system-relevant settings or data. Please confirm the exact target before runvard continues.')}\n${meta.action}: ${meta.target}`;
+  return `${tr('dangerConfirmMessage')}\n${meta.action}: ${meta.target}`;
 }
 function requestDangerConfirm(meta){
   return new Promise((resolve,reject)=>{
@@ -913,7 +862,9 @@ const I18N_BASE={
   expertOn:'Expert mode enabled',expertOff:'Expert mode disabled',
   loginEnabled:'Login enabled. Sign-in is required on the next visit.',
   loginDisabled:'Login disabled',signedInAs:'Signed in as',loginDisabledHead:'Login is disabled',
-  daySuffix:'',typeToContinue:'Type the phrase to continue.',
+  daySuffix:'',confirmCheckbox:'I understand and want to continue.',
+  dangerConfirmTitle:'Confirmation required',
+  dangerConfirmMessage:'This action changes system-relevant settings or data. Please confirm before runvard continues.',
   tileTerminal:'Terminal',tileFiles:'Files',tileStorage:'Storage',tileDocker:'Docker',
   tileVms:'Virtual machines',tileBackup:'Backup',tileMonitoring:'Monitoring',
   tileSystem:'System',tileApps:'Apps',
@@ -932,11 +883,11 @@ const I18N_BASE={
 };
 const I18N={
   en:I18N_BASE,
-  de:{language:'Sprache',languageSettings:'Spracheinstellungen',languageField:'Oberflächensprache',save:'Speichern',cancel:'Abbrechen',delete:'Löschen',continue:'Fortfahren',close:'Schließen',search:'Suchen',searchPlaceholder:'Suchen...',loading:'Lädt...',error:'Fehler',logout:'Abmelden',loginPage:'Login-Seite',runvardAccounts:'runvard-Konten',background:'Hintergrund',backgroundTitle:'Hintergrund',presets:'Vorlagen',uploadImage:'Bild hochladen',dropImage:'Klicken oder Bild hier ablegen',imageUrl:'Bild-URL',restoreDefault:'Standard wiederherstellen',addTile:'Verknüpfung hinzufügen',confirmDelete:'Löschen bestätigen',saved:'Gespeichert',languageSaved:'Sprache gespeichert',expertOn:'Expertenmodus aktiviert',expertOff:'Expertenmodus deaktiviert',loginEnabled:'Login aktiviert. Beim nächsten Besuch ist eine Anmeldung erforderlich.',loginDisabled:'Login deaktiviert',signedInAs:'Angemeldet als',loginDisabledHead:'Login ist deaktiviert',daySuffix:'Uhr',typeToContinue:'Gib den Bestätigungstext ein.',tileTerminal:'Terminal',tileFiles:'Dateien',tileStorage:'Speicher',tileDocker:'Docker',tileVms:'Virtuelle Maschinen',tileBackup:'Backup',tileMonitoring:'Monitoring',tileSystem:'System',tileApps:'Apps',descShell:'Shell-Zugriff',descFiles:'Durchsuchen · Hochladen · Freigeben',descStorage:'Laufwerke · Pools · Status',descDocker:'Container · Compose',descVms:'Gäste · Speicher',descBackup:'Aufgaben · Verlauf',descMonitoring:'Logs · Hinweise · Audit',descSystem:'Übersicht · Updates · Benutzer',tabDisks:'Laufwerke',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Container',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',tabMachines:'Maschinen',tabStoragePools:'Speicher-Pools',tabJobs:'Aufgaben',tabHistory:'Verlauf',tabLogs:'Logs',tabAlerts:'Hinweise',tabAudit:'Audit',tabOverview:'Übersicht',tabUpdates:'Updates',tabUsers:'Benutzer',tabNetwork:'Netzwerk',tabServices:'Dienste',tabShares:'Freigaben',tabMaintenance:'Wartung',tabAdvanced:'Erweitert',tabPower:'Energie'},
-  fr:{language:'Langue',languageSettings:'Paramètres de langue',languageField:'Langue de l’interface',save:'Enregistrer',cancel:'Annuler',delete:'Supprimer',continue:'Continuer',close:'Fermer',search:'Rechercher',searchPlaceholder:'Rechercher...',loading:'Chargement...',error:'Erreur',logout:'Se déconnecter',loginPage:'Page de connexion',runvardAccounts:'Comptes runvard',background:'Arrière-plan',backgroundTitle:'Arrière-plan',presets:'Présélections',uploadImage:'Importer une image',dropImage:'Cliquer ou déposer une image ici',imageUrl:'URL de l’image',restoreDefault:'Restaurer la valeur par défaut',addTile:'Ajouter un raccourci',confirmDelete:'Confirmer la suppression',saved:'Enregistré',languageSaved:'Langue enregistrée',expertOn:'Mode expert activé',expertOff:'Mode expert désactivé',loginEnabled:'Connexion activée. Une connexion sera requise à la prochaine visite.',loginDisabled:'Connexion désactivée',signedInAs:'Connecté en tant que',loginDisabledHead:'La connexion est désactivée',daySuffix:'',typeToContinue:'Saisissez la phrase de confirmation.',tileTerminal:'Terminal',tileFiles:'Fichiers',tileStorage:'Stockage',tileDocker:'Docker',tileVms:'Machines virtuelles',tileBackup:'Sauvegarde',tileMonitoring:'Supervision',tileSystem:'Système',tileApps:'Applications',descShell:'Accès shell',descFiles:'Parcourir · Importer · Partager',descStorage:'Disques · Pools · État',descDocker:'Conteneurs · Compose',descVms:'Invités · Stockage',descBackup:'Tâches · Historique',descMonitoring:'Journaux · Alertes · Audit',descSystem:'Vue d’ensemble · Mises à jour · Utilisateurs',tabDisks:'Disques',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Conteneurs',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',tabMachines:'Machines',tabStoragePools:'Pools de stockage',tabJobs:'Tâches',tabHistory:'Historique',tabLogs:'Journaux',tabAlerts:'Alertes',tabAudit:'Audit',tabOverview:'Vue d’ensemble',tabUpdates:'Mises à jour',tabUsers:'Utilisateurs',tabNetwork:'Réseau',tabServices:'Services',tabShares:'Partages',tabMaintenance:'Maintenance',tabAdvanced:'Avancé',tabPower:'Alimentation'},
-  it:{language:'Lingua',languageSettings:'Impostazioni lingua',languageField:'Lingua dell’interfaccia',save:'Salva',cancel:'Annulla',delete:'Elimina',continue:'Continua',close:'Chiudi',search:'Cerca',searchPlaceholder:'Cerca...',loading:'Caricamento...',error:'Errore',logout:'Esci',loginPage:'Pagina di accesso',runvardAccounts:'Account runvard',background:'Sfondo',backgroundTitle:'Sfondo',presets:'Preset',uploadImage:'Carica immagine',dropImage:'Fai clic o rilascia un’immagine qui',imageUrl:'URL immagine',restoreDefault:'Ripristina predefinito',addTile:'Aggiungi collegamento',confirmDelete:'Conferma eliminazione',saved:'Salvato',languageSaved:'Lingua salvata',expertOn:'Modalità esperto attivata',expertOff:'Modalità esperto disattivata',loginEnabled:'Accesso attivato. Al prossimo accesso sarà richiesta l’autenticazione.',loginDisabled:'Accesso disattivato',signedInAs:'Accesso come',loginDisabledHead:'Accesso disattivato',daySuffix:'',typeToContinue:'Digita la frase di conferma.',tileTerminal:'Terminale',tileFiles:'File',tileStorage:'Archiviazione',tileDocker:'Docker',tileVms:'Macchine virtuali',tileBackup:'Backup',tileMonitoring:'Monitoraggio',tileSystem:'Sistema',tileApps:'App',descShell:'Accesso shell',descFiles:'Sfoglia · Carica · Condividi',descStorage:'Dischi · Pool · Stato',descDocker:'Container · Compose',descVms:'Guest · Archiviazione',descBackup:'Job · Cronologia',descMonitoring:'Log · Avvisi · Audit',descSystem:'Panoramica · Aggiornamenti · Utenti',tabDisks:'Dischi',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Container',tabCompose:'Compose',tabImages:'Immagini',tabVolumes:'Volumi',tabMachines:'Macchine',tabStoragePools:'Pool di archiviazione',tabJobs:'Job',tabHistory:'Cronologia',tabLogs:'Log',tabAlerts:'Avvisi',tabAudit:'Audit',tabOverview:'Panoramica',tabUpdates:'Aggiornamenti',tabUsers:'Utenti',tabNetwork:'Rete',tabServices:'Servizi',tabShares:'Condivisioni',tabMaintenance:'Manutenzione',tabAdvanced:'Avanzato',tabPower:'Alimentazione'},
-  es:{language:'Idioma',languageSettings:'Configuración de idioma',languageField:'Idioma de la interfaz',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Cerrar',search:'Buscar',searchPlaceholder:'Buscar...',loading:'Cargando...',error:'Error',logout:'Cerrar sesión',loginPage:'Página de inicio de sesión',runvardAccounts:'Cuentas runvard',background:'Fondo',backgroundTitle:'Fondo',presets:'Preajustes',uploadImage:'Subir imagen',dropImage:'Haz clic o suelta una imagen aquí',imageUrl:'URL de imagen',restoreDefault:'Restaurar valores predeterminados',addTile:'Añadir acceso directo',confirmDelete:'Confirmar eliminación',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo experto activado',expertOff:'Modo experto desactivado',loginEnabled:'Inicio de sesión activado. Se requerirá autenticación en la próxima visita.',loginDisabled:'Inicio de sesión desactivado',signedInAs:'Sesión iniciada como',loginDisabledHead:'El inicio de sesión está desactivado',daySuffix:'',typeToContinue:'Escribe la frase de confirmación.',tileTerminal:'Terminal',tileFiles:'Archivos',tileStorage:'Almacenamiento',tileDocker:'Docker',tileVms:'Máquinas virtuales',tileBackup:'Copias de seguridad',tileMonitoring:'Supervisión',tileSystem:'Sistema',tileApps:'Aplicaciones',descShell:'Acceso shell',descFiles:'Explorar · Subir · Compartir',descStorage:'Discos · Pools · Estado',descDocker:'Contenedores · Compose',descVms:'Invitados · Almacenamiento',descBackup:'Tareas · Historial',descMonitoring:'Registros · Alertas · Auditoría',descSystem:'Resumen · Actualizaciones · Usuarios',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contenedores',tabCompose:'Compose',tabImages:'Imágenes',tabVolumes:'Volúmenes',tabMachines:'Máquinas',tabStoragePools:'Pools de almacenamiento',tabJobs:'Tareas',tabHistory:'Historial',tabLogs:'Registros',tabAlerts:'Alertas',tabAudit:'Auditoría',tabOverview:'Resumen',tabUpdates:'Actualizaciones',tabUsers:'Usuarios',tabNetwork:'Red',tabServices:'Servicios',tabShares:'Recursos compartidos',tabMaintenance:'Mantenimiento',tabAdvanced:'Avanzado',tabPower:'Energía'},
-  pt:{language:'Idioma',languageSettings:'Definições de idioma',languageField:'Idioma da interface',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Fechar',search:'Pesquisar',searchPlaceholder:'Pesquisar...',loading:'A carregar...',error:'Erro',logout:'Terminar sessão',loginPage:'Página de início de sessão',runvardAccounts:'Contas runvard',background:'Fundo',backgroundTitle:'Fundo',presets:'Predefinições',uploadImage:'Carregar imagem',dropImage:'Clique ou largue uma imagem aqui',imageUrl:'URL da imagem',restoreDefault:'Restaurar predefinição',addTile:'Adicionar atalho',confirmDelete:'Confirmar eliminação',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo especialista ativado',expertOff:'Modo especialista desativado',loginEnabled:'Início de sessão ativado. Será necessária autenticação na próxima visita.',loginDisabled:'Início de sessão desativado',signedInAs:'Sessão iniciada como',loginDisabledHead:'Início de sessão desativado',daySuffix:'',typeToContinue:'Escreva a frase de confirmação.',tileTerminal:'Terminal',tileFiles:'Ficheiros',tileStorage:'Armazenamento',tileDocker:'Docker',tileVms:'Máquinas virtuais',tileBackup:'Cópias de segurança',tileMonitoring:'Monitorização',tileSystem:'Sistema',tileApps:'Aplicações',descShell:'Acesso shell',descFiles:'Navegar · Carregar · Partilhar',descStorage:'Discos · Pools · Estado',descDocker:'Contentores · Compose',descVms:'Convidados · Armazenamento',descBackup:'Tarefas · Histórico',descMonitoring:'Registos · Alertas · Auditoria',descSystem:'Visão geral · Atualizações · Utilizadores',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contentores',tabCompose:'Compose',tabImages:'Imagens',tabVolumes:'Volumes',tabMachines:'Máquinas',tabStoragePools:'Pools de armazenamento',tabJobs:'Tarefas',tabHistory:'Histórico',tabLogs:'Registos',tabAlerts:'Alertas',tabAudit:'Auditoria',tabOverview:'Visão geral',tabUpdates:'Atualizações',tabUsers:'Utilizadores',tabNetwork:'Rede',tabServices:'Serviços',tabShares:'Partilhas',tabMaintenance:'Manutenção',tabAdvanced:'Avançado',tabPower:'Energia'},
+  de:{language:'Sprache',languageSettings:'Spracheinstellungen',languageField:'Oberflächensprache',save:'Speichern',cancel:'Abbrechen',delete:'Löschen',continue:'Fortfahren',close:'Schließen',search:'Suchen',searchPlaceholder:'Suchen...',loading:'Lädt...',error:'Fehler',logout:'Abmelden',loginPage:'Login-Seite',runvardAccounts:'runvard-Konten',background:'Hintergrund',backgroundTitle:'Hintergrund',presets:'Vorlagen',uploadImage:'Bild hochladen',dropImage:'Klicken oder Bild hier ablegen',imageUrl:'Bild-URL',restoreDefault:'Standard wiederherstellen',addTile:'Verknüpfung hinzufügen',confirmDelete:'Löschen bestätigen',saved:'Gespeichert',languageSaved:'Sprache gespeichert',expertOn:'Expertenmodus aktiviert',expertOff:'Expertenmodus deaktiviert',loginEnabled:'Login aktiviert. Beim nächsten Besuch ist eine Anmeldung erforderlich.',loginDisabled:'Login deaktiviert',signedInAs:'Angemeldet als',loginDisabledHead:'Login ist deaktiviert',daySuffix:'Uhr',confirmCheckbox:'Ich habe verstanden und möchte fortfahren.',dangerConfirmTitle:'Bestätigung erforderlich',dangerConfirmMessage:'Diese Aktion ändert systemrelevante Einstellungen oder Daten. Bitte bestätige, bevor runvard fortfährt.',tileTerminal:'Terminal',tileFiles:'Dateien',tileStorage:'Speicher',tileDocker:'Docker',tileVms:'Virtuelle Maschinen',tileBackup:'Backup',tileMonitoring:'Monitoring',tileSystem:'System',tileApps:'Apps',descShell:'Shell-Zugriff',descFiles:'Durchsuchen · Hochladen · Freigeben',descStorage:'Laufwerke · Pools · Status',descDocker:'Container · Compose',descVms:'Gäste · Speicher',descBackup:'Aufgaben · Verlauf',descMonitoring:'Logs · Hinweise · Audit',descSystem:'Übersicht · Updates · Benutzer',tabDisks:'Laufwerke',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Container',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',tabMachines:'Maschinen',tabStoragePools:'Speicher-Pools',tabJobs:'Aufgaben',tabHistory:'Verlauf',tabLogs:'Logs',tabAlerts:'Hinweise',tabAudit:'Audit',tabOverview:'Übersicht',tabUpdates:'Updates',tabUsers:'Benutzer',tabNetwork:'Netzwerk',tabServices:'Dienste',tabShares:'Freigaben',tabMaintenance:'Wartung',tabAdvanced:'Erweitert',tabPower:'Energie'},
+  fr:{language:'Langue',languageSettings:'Paramètres de langue',languageField:'Langue de l’interface',save:'Enregistrer',cancel:'Annuler',delete:'Supprimer',continue:'Continuer',close:'Fermer',search:'Rechercher',searchPlaceholder:'Rechercher...',loading:'Chargement...',error:'Erreur',logout:'Se déconnecter',loginPage:'Page de connexion',runvardAccounts:'Comptes runvard',background:'Arrière-plan',backgroundTitle:'Arrière-plan',presets:'Présélections',uploadImage:'Importer une image',dropImage:'Cliquer ou déposer une image ici',imageUrl:'URL de l’image',restoreDefault:'Restaurer la valeur par défaut',addTile:'Ajouter un raccourci',confirmDelete:'Confirmer la suppression',saved:'Enregistré',languageSaved:'Langue enregistrée',expertOn:'Mode expert activé',expertOff:'Mode expert désactivé',loginEnabled:'Connexion activée. Une connexion sera requise à la prochaine visite.',loginDisabled:'Connexion désactivée',signedInAs:'Connecté en tant que',loginDisabledHead:'La connexion est désactivée',daySuffix:'',confirmCheckbox:'Je comprends et je veux continuer.',dangerConfirmTitle:'Confirmation requise',dangerConfirmMessage:'Cette action modifie des paramètres ou des données système. Veuillez confirmer avant que runvard continue.',tileTerminal:'Terminal',tileFiles:'Fichiers',tileStorage:'Stockage',tileDocker:'Docker',tileVms:'Machines virtuelles',tileBackup:'Sauvegarde',tileMonitoring:'Supervision',tileSystem:'Système',tileApps:'Applications',descShell:'Accès shell',descFiles:'Parcourir · Importer · Partager',descStorage:'Disques · Pools · État',descDocker:'Conteneurs · Compose',descVms:'Invités · Stockage',descBackup:'Tâches · Historique',descMonitoring:'Journaux · Alertes · Audit',descSystem:'Vue d’ensemble · Mises à jour · Utilisateurs',tabDisks:'Disques',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Conteneurs',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',tabMachines:'Machines',tabStoragePools:'Pools de stockage',tabJobs:'Tâches',tabHistory:'Historique',tabLogs:'Journaux',tabAlerts:'Alertes',tabAudit:'Audit',tabOverview:'Vue d’ensemble',tabUpdates:'Mises à jour',tabUsers:'Utilisateurs',tabNetwork:'Réseau',tabServices:'Services',tabShares:'Partages',tabMaintenance:'Maintenance',tabAdvanced:'Avancé',tabPower:'Alimentation'},
+  it:{language:'Lingua',languageSettings:'Impostazioni lingua',languageField:'Lingua dell’interfaccia',save:'Salva',cancel:'Annulla',delete:'Elimina',continue:'Continua',close:'Chiudi',search:'Cerca',searchPlaceholder:'Cerca...',loading:'Caricamento...',error:'Errore',logout:'Esci',loginPage:'Pagina di accesso',runvardAccounts:'Account runvard',background:'Sfondo',backgroundTitle:'Sfondo',presets:'Preset',uploadImage:'Carica immagine',dropImage:'Fai clic o rilascia un’immagine qui',imageUrl:'URL immagine',restoreDefault:'Ripristina predefinito',addTile:'Aggiungi collegamento',confirmDelete:'Conferma eliminazione',saved:'Salvato',languageSaved:'Lingua salvata',expertOn:'Modalità esperto attivata',expertOff:'Modalità esperto disattivata',loginEnabled:'Accesso attivato. Al prossimo accesso sarà richiesta l’autenticazione.',loginDisabled:'Accesso disattivato',signedInAs:'Accesso come',loginDisabledHead:'Accesso disattivato',daySuffix:'',confirmCheckbox:'Ho capito e voglio continuare.',dangerConfirmTitle:'Conferma richiesta',dangerConfirmMessage:'Questa azione modifica impostazioni o dati di sistema. Conferma prima che runvard continui.',tileTerminal:'Terminale',tileFiles:'File',tileStorage:'Archiviazione',tileDocker:'Docker',tileVms:'Macchine virtuali',tileBackup:'Backup',tileMonitoring:'Monitoraggio',tileSystem:'Sistema',tileApps:'App',descShell:'Accesso shell',descFiles:'Sfoglia · Carica · Condividi',descStorage:'Dischi · Pool · Stato',descDocker:'Container · Compose',descVms:'Guest · Archiviazione',descBackup:'Job · Cronologia',descMonitoring:'Log · Avvisi · Audit',descSystem:'Panoramica · Aggiornamenti · Utenti',tabDisks:'Dischi',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Container',tabCompose:'Compose',tabImages:'Immagini',tabVolumes:'Volumi',tabMachines:'Macchine',tabStoragePools:'Pool di archiviazione',tabJobs:'Job',tabHistory:'Cronologia',tabLogs:'Log',tabAlerts:'Avvisi',tabAudit:'Audit',tabOverview:'Panoramica',tabUpdates:'Aggiornamenti',tabUsers:'Utenti',tabNetwork:'Rete',tabServices:'Servizi',tabShares:'Condivisioni',tabMaintenance:'Manutenzione',tabAdvanced:'Avanzato',tabPower:'Alimentazione'},
+  es:{language:'Idioma',languageSettings:'Configuración de idioma',languageField:'Idioma de la interfaz',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Cerrar',search:'Buscar',searchPlaceholder:'Buscar...',loading:'Cargando...',error:'Error',logout:'Cerrar sesión',loginPage:'Página de inicio de sesión',runvardAccounts:'Cuentas runvard',background:'Fondo',backgroundTitle:'Fondo',presets:'Preajustes',uploadImage:'Subir imagen',dropImage:'Haz clic o suelta una imagen aquí',imageUrl:'URL de imagen',restoreDefault:'Restaurar valores predeterminados',addTile:'Añadir acceso directo',confirmDelete:'Confirmar eliminación',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo experto activado',expertOff:'Modo experto desactivado',loginEnabled:'Inicio de sesión activado. Se requerirá autenticación en la próxima visita.',loginDisabled:'Inicio de sesión desactivado',signedInAs:'Sesión iniciada como',loginDisabledHead:'El inicio de sesión está desactivado',daySuffix:'',confirmCheckbox:'Entiendo y quiero continuar.',dangerConfirmTitle:'Confirmación requerida',dangerConfirmMessage:'Esta acción cambia ajustes o datos del sistema. Confirma antes de que runvard continúe.',tileTerminal:'Terminal',tileFiles:'Archivos',tileStorage:'Almacenamiento',tileDocker:'Docker',tileVms:'Máquinas virtuales',tileBackup:'Copias de seguridad',tileMonitoring:'Supervisión',tileSystem:'Sistema',tileApps:'Aplicaciones',descShell:'Acceso shell',descFiles:'Explorar · Subir · Compartir',descStorage:'Discos · Pools · Estado',descDocker:'Contenedores · Compose',descVms:'Invitados · Almacenamiento',descBackup:'Tareas · Historial',descMonitoring:'Registros · Alertas · Auditoría',descSystem:'Resumen · Actualizaciones · Usuarios',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contenedores',tabCompose:'Compose',tabImages:'Imágenes',tabVolumes:'Volúmenes',tabMachines:'Máquinas',tabStoragePools:'Pools de almacenamiento',tabJobs:'Tareas',tabHistory:'Historial',tabLogs:'Registros',tabAlerts:'Alertas',tabAudit:'Auditoría',tabOverview:'Resumen',tabUpdates:'Actualizaciones',tabUsers:'Usuarios',tabNetwork:'Red',tabServices:'Servicios',tabShares:'Recursos compartidos',tabMaintenance:'Mantenimiento',tabAdvanced:'Avanzado',tabPower:'Energía'},
+  pt:{language:'Idioma',languageSettings:'Definições de idioma',languageField:'Idioma da interface',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Fechar',search:'Pesquisar',searchPlaceholder:'Pesquisar...',loading:'A carregar...',error:'Erro',logout:'Terminar sessão',loginPage:'Página de início de sessão',runvardAccounts:'Contas runvard',background:'Fundo',backgroundTitle:'Fundo',presets:'Predefinições',uploadImage:'Carregar imagem',dropImage:'Clique ou largue uma imagem aqui',imageUrl:'URL da imagem',restoreDefault:'Restaurar predefinição',addTile:'Adicionar atalho',confirmDelete:'Confirmar eliminação',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo especialista ativado',expertOff:'Modo especialista desativado',loginEnabled:'Início de sessão ativado. Será necessária autenticação na próxima visita.',loginDisabled:'Início de sessão desativado',signedInAs:'Sessão iniciada como',loginDisabledHead:'Início de sessão desativado',daySuffix:'',confirmCheckbox:'Compreendo e quero continuar.',dangerConfirmTitle:'Confirmação necessária',dangerConfirmMessage:'Esta ação altera definições ou dados do sistema. Confirme antes de o runvard continuar.',tileTerminal:'Terminal',tileFiles:'Ficheiros',tileStorage:'Armazenamento',tileDocker:'Docker',tileVms:'Máquinas virtuais',tileBackup:'Cópias de segurança',tileMonitoring:'Monitorização',tileSystem:'Sistema',tileApps:'Aplicações',descShell:'Acesso shell',descFiles:'Navegar · Carregar · Partilhar',descStorage:'Discos · Pools · Estado',descDocker:'Contentores · Compose',descVms:'Convidados · Armazenamento',descBackup:'Tarefas · Histórico',descMonitoring:'Registos · Alertas · Auditoria',descSystem:'Visão geral · Atualizações · Utilizadores',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contentores',tabCompose:'Compose',tabImages:'Imagens',tabVolumes:'Volumes',tabMachines:'Máquinas',tabStoragePools:'Pools de armazenamento',tabJobs:'Tarefas',tabHistory:'Histórico',tabLogs:'Registos',tabAlerts:'Alertas',tabAudit:'Auditoria',tabOverview:'Visão geral',tabUpdates:'Atualizações',tabUsers:'Utilizadores',tabNetwork:'Rede',tabServices:'Serviços',tabShares:'Partilhas',tabMaintenance:'Manutenção',tabAdvanced:'Avançado',tabPower:'Energia'},
 };
 function currentLanguage(){
   try{
@@ -1255,7 +1206,6 @@ const UI_PHRASES={
     "Encrypting device…":"Verschlüssele Device…",
     "Encryption tools are not installed on this server.":"Verschlüsselungs-Tools sind auf diesem Server nicht installiert.",
     "Enlarge":"Vergrößern",
-    "Enter the confirmation text.":"Gib den Bestätigungstext ein.",
     "Erase and set up disk":"Laufwerk löschen und einrichten",
     "Error":"Fehler",
     "Error (err)":"Fehler (err)",
@@ -2232,7 +2182,6 @@ const UI_PHRASES={
     "Encrypting device…":"Chiffrement du périphérique…",
     "Encryption tools are not installed on this server.":"Les outils de chiffrement ne sont pas installés sur ce serveur.",
     "Enlarge":"Agrandir",
-    "Enter the confirmation text.":"Saisissez le texte de confirmation.",
     "Erase and set up disk":"Effacer et configurer le disque",
     "Error":"Erreur",
     "Error (err)":"Erreur (err)",
@@ -3177,7 +3126,6 @@ const UI_PHRASES={
     "Encrypting device…":"Cifratura dispositivo…",
     "Encryption tools are not installed on this server.":"Gli strumenti di cifratura non sono installati su questo server.",
     "Enlarge":"Ingrandisci",
-    "Enter the confirmation text.":"Inserisci il testo di conferma.",
     "Erase and set up disk":"Cancella e configura disco",
     "Error":"Errore",
     "Error (err)":"Errore (err)",
@@ -4123,7 +4071,6 @@ const UI_PHRASES={
     "Encrypting device…":"Cifrando dispositivo…",
     "Encryption tools are not installed on this server.":"Las herramientas de cifrado no están instaladas en este servidor.",
     "Enlarge":"Ampliar",
-    "Enter the confirmation text.":"Introduce el texto de confirmación.",
     "Erase and set up disk":"Borrar y configurar disco",
     "Errors in":"Errores entrada",
     "Errors only":"Solo errores",
@@ -5071,7 +5018,6 @@ const UI_PHRASES={
     "Encrypting device…":"A cifrar dispositivo…",
     "Encryption tools are not installed on this server.":"As ferramentas de cifragem não estão instaladas neste servidor.",
     "Enlarge":"Ampliar",
-    "Enter the confirmation text.":"Introduza o texto de confirmação.",
     "Erase and set up disk":"Apagar e configurar disco",
     "Error":"Erro",
     "Error (err)":"Erro (err)",
@@ -6670,8 +6616,10 @@ function typedConfirm(title,msg,phrase,cb){
   $('#form-head').innerHTML=`<span>⚠</span> ${esc(uiText(title))}`;
   $('#form-body').innerHTML=`
     <p class="typed-confirm-copy">${esc(uiText(msg))}</p>
-    <div class="typed-confirm-hint">${esc(tr('typeToContinue'))} <span class="mono">${esc(phrase)}</span></div>
-    <input id="typed-confirm-input" class="mono" autocomplete="off" placeholder="${esc(phrase)}">
+    <label class="typed-confirm-check">
+      <input id="typed-confirm-input" type="checkbox">
+      <span>${esc(tr('confirmCheckbox'))}<span class="typed-confirm-target">${esc(phrase)}</span></span>
+    </label>
     <div class="form-actions">
       <button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button>
       <button class="btn danger" id="typed-confirm-ok" disabled>${esc(tr('continue'))}</button>
@@ -6679,7 +6627,7 @@ function typedConfirm(title,msg,phrase,cb){
   $('#form-overlay').classList.add('open');
   const inp=$('#typed-confirm-input'),ok=$('#typed-confirm-ok');
   inp.focus();
-  inp.oninput=()=>{ok.disabled=inp.value!==phrase;};
+  inp.onchange=()=>{ok.disabled=!inp.checked;};
   ok.onclick=()=>{closeForm();cb();};
 }
 
@@ -9520,7 +9468,10 @@ window.powerForm=action=>{
     }catch(e){toast('Error: '+e.message,'error');}
   };
   if(action==='shutdown'||action==='reboot'){
-    openForm(label,'⏻',[{name:'delay',label:'Delay (minutes)',value:0,type:'number',hint:'0 runs immediately'}],async d=>{closeForm();submit(d.delay||0);});
+    openForm(label,'⏻',[{name:'delay',label:'Delay (minutes)',value:0,type:'number',hint:'0 runs immediately'}],async d=>{
+      closeForm();
+      typedConfirm(label,uiText(label)+uiText(' can disconnect this server until it wakes again.'),action,()=>submit(d.delay||0));
+    });
     return;
   }
   typedConfirm(label,uiText(label)+uiText(' can disconnect this server until it wakes again.'),action,()=>submit(0));

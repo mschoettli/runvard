@@ -280,119 +280,80 @@ def _form_value(form, *names, default=""):
 
 def _danger_confirm_meta(path, form):
     simple = {
-        "/api/accounts/add": ("accounts:add", "username"),
         "/api/accounts/password": ("accounts:password", "username"),
         "/api/accounts/role": ("accounts:role", "username"),
         "/api/accounts/delete": ("accounts:delete", "username"),
-        "/api/files/trash/restore": ("files:trash-restore", "item_id"),
+        "/api/files/delete": ("files:delete", "path"),
         "/api/files/trash/empty": ("files:trash-empty", "trash"),
-        "/api/files/share": ("files:share", "path"),
-        "/api/files/samba-share": ("shares:samba-add", "path"),
-        "/api/files/mount-smb": ("files:mount-smb", "mountpoint"),
-        "/api/files/mount-nfs": ("files:mount-nfs", "mountpoint"),
-        "/api/storage/partition-table": ("storage:partition-table", "device"),
-        "/api/storage/partition": ("storage:partition", "device"),
+        "/api/files/shares/delete": ("files:share-delete", "token"),
         "/api/storage/format": ("storage:format", "partition"),
         "/api/storage/unmount": ("storage:unmount", "mountpoint"),
-        "/api/storage/swap/create": ("storage:swap-create", "path"),
-        "/api/storage/swap/action": ("storage:swap-action", "target"),
-        "/api/storage/raid/create": ("storage:raid-create", "name"),
-        "/api/storage/lvm/vg-create": ("storage:lvm-vg-create", "name"),
-        "/api/storage/lvm/lv-create": ("storage:lvm-lv-create", "name"),
-        "/api/storage/lvm/lv-extend": ("storage:lvm-lv-extend", "lv_path"),
         "/api/storage/lvm/lv-remove": ("storage:lvm-lv-remove", "lv_path"),
         "/api/storage/luks/format": ("storage:luks-format", "device"),
-        "/api/storage/luks/open": ("storage:luks-open", "device"),
         "/api/storage/luks/close": ("storage:luks-close", "name"),
-        "/api/storage/fs-grow": ("storage:fs-grow", "device", "mountpoint"),
-        "/api/storage/zfs/create": ("storage:zfs-create", "name"),
         "/api/storage/zfs/destroy": ("storage:zfs-destroy", "name"),
         "/api/storage/zfs/scrub": ("storage:zfs-scrub", "name"),
-        "/api/storage/btrfs/create": ("storage:btrfs-create", "label"),
         "/api/storage/btrfs/scrub": ("storage:btrfs-scrub", "mountpoint"),
-        "/api/storage/iscsi/discover": ("storage:iscsi-discover", "portal"),
-        "/api/storage/iscsi/login": ("storage:iscsi-login", "target"),
         "/api/storage/iscsi/logout": ("storage:iscsi-logout", "target"),
         "/api/docker/images/remove": ("docker:remove-image", "image_id"),
         "/api/docker/volumes/remove": ("docker:remove-volume", "name"),
         "/api/docker/compose/remove": ("docker:compose-remove", "name"),
-        "/api/services/action": ("services:action", "name"),
-        "/api/vms/action": ("vms:action", "name"),
-        "/api/vms/disk/attach": ("vms:disk-attach", "name"),
         "/api/vms/disk/detach": ("vms:disk-detach", "name"),
-        "/api/vms/nic/attach": ("vms:nic-attach", "name"),
-        "/api/vms/nic/detach": ("vms:nic-detach", "name"),
-        "/api/vms/pool/create": ("vms:pool-create", "name"),
-        "/api/vms/pool/action": ("vms:pool-action", "name"),
-        "/api/vms/pool/vol-create": ("vms:volume-create", "name"),
         "/api/vms/pool/vol-delete": ("vms:volume-delete", "vol"),
-        "/api/vms/clone": ("vms:clone", "name"),
-        "/api/vms/cdrom": ("vms:cdrom", "name"),
-        "/api/vms/create": ("vms:create", "name"),
-        "/api/vms/snapshot": ("vms:snapshot", "name"),
-        "/api/vms/snapshot/action": ("vms:snapshot-action", "name"),
-        "/api/shares/samba/add": ("shares:samba-add", "path"),
-        "/api/shares/nfs/add": ("shares:nfs-add", "path"),
-        "/api/network/bond/create": ("network:bond-create", "name"),
         "/api/network/bond/delete": ("network:bond-delete", "name"),
-        "/api/network/firewall/add": ("network:firewall-add", "port"),
         "/api/network/firewall/remove": ("network:firewall-remove", "num"),
         "/api/network/configure-ip": ("network:configure-ip", "iface"),
-        "/api/network/bridge/create": ("network:bridge-create", "name"),
-        "/api/network/vlan/create": ("network:vlan-create", "parent"),
-        "/api/network/link/delete": ("network:link-delete", "name"),
-        "/api/security/users/add": ("security:user-add", "name"),
         "/api/security/users/smb-password": ("security:smb-password", "name"),
         "/api/security/users/password": ("security:password", "name"),
-        "/api/security/users/ssh-keys/add": ("security:ssh-key-add", "name"),
         "/api/security/users/ssh-keys/remove": ("security:ssh-key-remove", "name"),
-        "/api/security/users/sudo": ("security:sudo", "name"),
         "/api/security/users/aging": ("security:aging", "name"),
-        "/api/security/users/expire": ("security:expire", "name"),
-        "/api/security/groups/add": ("security:group-add", "name"),
         "/api/security/groups/delete": ("security:group-delete", "name"),
-        "/api/security/groups/add-member": ("security:group-add-member", "group"),
         "/api/security/groups/remove-member": ("security:group-remove-member", "group"),
-        "/api/security/certs/generate": ("security:cert-generate", "common_name"),
-        "/api/sysmgr/cron/add": ("sysmgr:cron-add", "command"),
-        "/api/sysmgr/power/profiles/set": ("sysmgr:power-profile", "profile"),
         "/api/sysmgr/power/logind/set": ("sysmgr:logind-power", "logind"),
         "/api/sysmgr/hostname": ("sysmgr:hostname", "name"),
-        "/api/sysmgr/apparmor/set": ("sysmgr:apparmor", "profile"),
-        "/api/sysmgr/packages/install": ("sysmgr:package-install", "name"),
         "/api/sysmgr/packages/remove": ("sysmgr:package-remove", "name"),
         "/api/sysmgr/unattended/set": ("sysmgr:unattended", "unattended-upgrades"),
         "/api/sysmgr/tuned/set": ("sysmgr:tuned", "profile"),
-        "/api/sysmgr/kdump/action": ("sysmgr:kdump", "action"),
-        "/api/apps/save-compose": ("apps:save-compose", "app_id"),
-        "/api/apps/action": ("apps:action", "app_id"),
+        "/api/dashboard/remove": ("dashboard:remove", "tile_id"),
     }
     if path == "/api/auth/toggle":
         if str(form.get("enabled", "")) == "1":
             return None
         return ("auth:disable", "login")
-    if path == "/api/storage/mount":
-        if str(form.get("persist", "")).lower() in ("1", "true", "on", "yes"):
-            return ("storage:mount-persist", _form_value(form, "partition"))
-        return None
     if path == "/api/docker/action":
         action = _form_value(form, "action")
         if action == "remove":
             return ("docker:remove-container", _form_value(form, "container_id"))
         return None
-    if path == "/api/docker/create":
-        if str(form.get("volumes", "")).strip():
-            return ("docker:create-with-host-volumes", _form_value(form, "name", "image"))
+    if path == "/api/files/job":
+        if _form_value(form, "action") == "delete":
+            return ("files:delete", _form_value(form, "paths"))
         return None
     if path == "/api/docker/compose/action":
         action = _form_value(form, "action")
-        if action == "down":
-            return ("docker:compose-down", _form_value(form, "name"))
+        if action == "remove":
+            return ("docker:compose-remove", _form_value(form, "name"))
+        return None
+    if path == "/api/vms/action":
+        if _form_value(form, "action") == "delete":
+            return ("vms:delete", _form_value(form, "name"))
+        return None
+    if path == "/api/vms/pool/action":
+        if _form_value(form, "action") == "delete":
+            return ("vms:pool-delete", _form_value(form, "name"))
+        return None
+    if path == "/api/vms/snapshot/action":
+        if _form_value(form, "action") == "delete":
+            return ("vms:snapshot-delete", _form_value(form, "name"))
         return None
     if path == "/api/sysmgr/power":
         action = _form_value(form, "action")
         if action and action != "cancel":
             return (f"power:{action}", action)
+        return None
+    if path == "/api/apps/action":
+        if _form_value(form, "action") == "down":
+            return ("apps:uninstall", _form_value(form, "app_id"))
         return None
     if path in simple:
         spec = simple[path]
@@ -412,6 +373,17 @@ async def confirmed_admin(request: Request):
     form = await request.form()
     meta = _danger_confirm_meta(request.url.path, form)
     if meta:
+        action, target = meta
+        require_danger_confirm(user, action, target, str(form.get("confirm_token", "")))
+    return user
+
+
+async def confirmed_auth(request: Request):
+    user = auth(request)
+    form = await request.form()
+    meta = _danger_confirm_meta(request.url.path, form)
+    if meta:
+        user = require_admin(request)
         action, target = meta
         require_danger_confirm(user, action, target, str(form.get("confirm_token", "")))
     return user
@@ -682,7 +654,7 @@ def files_mkdir(path: str = Form(...), name: str = Form(...), user: str = Depend
     except Exception as e: raise HTTPException(400, str(e))
 
 @app.post("/api/files/delete")
-def files_delete(path: str = Form(...), user: str = Depends(auth)):
+def files_delete(path: str = Form(...), user: str = Depends(confirmed_auth)):
     try: return files.move_to_trash(path)
     except Exception as e: raise HTTPException(400, str(e))
 
@@ -732,8 +704,8 @@ def files_unzip(path: str = Form(...), dst_dir: str = Form(...), user: str = Dep
 
 @app.post("/api/files/job")
 def files_job(action: str = Form(...), paths: str = Form(...),
-              dst_dir: str = Form(""), output: str = Form(""),
-              user: str = Depends(auth)):
+    dst_dir: str = Form(""), output: str = Form(""),
+    user: str = Depends(confirmed_auth)):
     try:
         return files.start_job(action, paths.split("|"), dst_dir, output)
     except Exception as e:
@@ -777,7 +749,7 @@ def files_mounts(user: str = Depends(auth)):
     return {"mounts": files.list_mounts()}
 
 @app.post("/api/files/shares/delete")
-def files_share_delete(token: str = Form(...), user: str = Depends(auth)):
+def files_share_delete(token: str = Form(...), user: str = Depends(confirmed_auth)):
     return files.delete_share(token)
 
 @app.get("/dl/{token}")
@@ -1847,7 +1819,7 @@ def dashboard_add(tile_type: str = Form(...), tile_id: str = Form(...),
 
 
 @app.post("/api/dashboard/remove")
-def dashboard_remove(tile_id: str = Form(...), user: str = Depends(auth)):
+def dashboard_remove(tile_id: str = Form(...), user: str = Depends(confirmed_auth)):
     return dashboard.remove_tile(tile_id)
 
 
