@@ -15,8 +15,9 @@ curl -fsSL https://raw.githubusercontent.com/mschoettli/runvard/main/install.sh 
 
 The installer downloads the current runvard release when needed, installs required system packages, creates the Python virtual environment, installs Python dependencies, writes the systemd service, and starts runvard.
 It asks for the installer language, admin username, admin password, and web port.
+The selected installer language is also stored as the initial web interface language.
 If the password is left empty, the installer generates a random password and prints it at the end.
-The selected username, password, and port are stored in `/opt/runvard/data/runvard.env` and loaded by the systemd service.
+The selected username, password, port, and language are stored in `/opt/runvard/data/runvard.env` and loaded by the systemd service.
 After installation, runvard is available at the address printed by the installer; the default port is `8080`.
 
 For automated installs, pass options or environment variables:
@@ -33,6 +34,7 @@ Supported installer options:
 - `-y`, `--yes`: install without prompts
 
 Supported installer environment variables include `RUNVARD_LANG`, `RUNVARD_USER`, `RUNVARD_PASS`, `RUNVARD_PORT`, `RUNVARD_YES`, `RUNVARD_ARCHIVE_URL`, `RUNVARD_SOURCE_DIR`, and `RUNVARD_SOURCE_COMMIT`.
+`RUNVARD_LANG=en` starts the installer and web interface in English; `RUNVARD_LANG=de` starts them in German. Users can still change the interface language later from the web UI.
 
 ## Bundled Wheels
 

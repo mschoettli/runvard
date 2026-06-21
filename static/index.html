@@ -893,6 +893,7 @@ const fmtUptime=s=>{const d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=M
 const esc=s=>(s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const dockerPendingActions=new Map(),composePendingActions=new Map(),dashPendingActions=new Map();
 const LANGUAGE_KEY='runvard_language';
+const SERVER_DEFAULT_LANGUAGE='__RUNVARD_DEFAULT_LANG__';
 const LANGUAGES=[
   {code:'de',name:'Deutsch'},
   {code:'en',name:'English'},
@@ -940,7 +941,7 @@ const I18N={
 };
 function currentLanguage(){
   try{
-    const lang=localStorage.getItem(LANGUAGE_KEY)||'en';
+    const lang=localStorage.getItem(LANGUAGE_KEY)||SERVER_DEFAULT_LANGUAGE||'en';
     return LANGUAGES.some(x=>x.code===lang)?lang:'en';
   }catch(e){return'en';}
 }

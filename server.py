@@ -67,6 +67,7 @@ except Exception:
 
 RUNVARD_USER = os.environ.get("RUNVARD_USER", "admin")
 RUNVARD_PASS = os.environ.get("RUNVARD_PASS", "runvard")
+RUNVARD_LANG = os.environ.get("RUNVARD_LANG", "en")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ============ Auth: Session-Cookies + Login an/aus ============
@@ -420,20 +421,27 @@ async def confirmed_admin(request: Request):
 
 # ============ Frontend ============
 
+def _default_lang():
+    return RUNVARD_LANG if RUNVARD_LANG in {"en", "de"} else "en"
+
+
+def _frontend_html(name: str) -> str:
+    with open(os.path.join(BASE_DIR, "static", name), encoding="utf-8") as f:
+        html = f.read()
+    return html.replace("__RUNVARD_DEFAULT_LANG__", _default_lang())
+
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
     if login_enabled() and not _current_user(request):
         return RedirectResponse("/login", status_code=302)
-    with open(os.path.join(BASE_DIR, "static", "index.html")) as f:
-        return HTMLResponse(f.read(), headers={"Cache-Control": "no-store"})
+    return HTMLResponse(_frontend_html("index.html"), headers={"Cache-Control": "no-store"})
 
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
     if login_enabled() and _current_user(request):
         return RedirectResponse("/", status_code=302)
-    with open(os.path.join(BASE_DIR, "static", "login.html")) as f:
-        return HTMLResponse(f.read(), headers={"Cache-Control": "no-store"})
+    return HTMLResponse(_frontend_html("login.html"), headers={"Cache-Control": "no-store"})
 
 
 @app.post("/api/login")

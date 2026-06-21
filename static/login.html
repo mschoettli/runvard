@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="de">
+<html lang="en">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Runvard · Anmeldung</title>
+<title>Runvard · Sign in</title>
 <link rel="icon" type="image/png" href="/static/runvard-icon.png">
 <link rel="apple-touch-icon" href="/static/runvard-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -44,21 +44,21 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
       <div class="sub">Server Panel</div>
     </div>
     <div class="card">
-      <h1>Anmeldung</h1>
+      <h1 data-i18n="title">Sign in</h1>
       <div class="error" id="error"></div>
       <form id="login-form" autocomplete="on">
         <div class="field">
-          <label for="username">Benutzername</label>
+          <label for="username" data-i18n="username">Username</label>
           <input type="text" id="username" name="username" autocomplete="username" required autofocus>
         </div>
         <div class="field">
-          <label for="password">Passwort</label>
+          <label for="password" data-i18n="password">Password</label>
           <input type="password" id="password" name="password" autocomplete="current-password" required>
         </div>
         <div class="row">
-          <label><input type="checkbox" id="remember" name="remember"> Angemeldet bleiben</label>
+          <label><input type="checkbox" id="remember" name="remember"> <span data-i18n="remember">Stay signed in</span></label>
         </div>
-        <button type="submit" class="btn-login" id="submit-btn">Anmelden</button>
+        <button type="submit" class="btn-login" id="submit-btn" data-i18n="submit">Sign in</button>
       </form>
       <div class="lock-note" id="conn-note"></div>
     </div>
@@ -68,10 +68,52 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 <script>
 const $=s=>document.querySelector(s);
 const form=$('#login-form'), errBox=$('#error'), btn=$('#submit-btn');
+const DEFAULT_LANG='__RUNVARD_DEFAULT_LANG__';
+const TEXT={
+  en:{
+    title:'Sign in',
+    username:'Username',
+    password:'Password',
+    remember:'Stay signed in',
+    submit:'Sign in',
+    signingIn:'Signing in...',
+    insecure:'Unencrypted connection - HTTPS recommended',
+    tooMany:'Too many attempts. Please wait a moment.',
+    invalid:'Username or password is incorrect.',
+    failed:'Sign-in failed',
+    connection:'Connection to the server failed.'
+  },
+  de:{
+    title:'Anmeldung',
+    username:'Benutzername',
+    password:'Passwort',
+    remember:'Angemeldet bleiben',
+    submit:'Anmelden',
+    signingIn:'Anmelden...',
+    insecure:'Unverschluesselte Verbindung - HTTPS empfohlen',
+    tooMany:'Zu viele Versuche. Bitte kurz warten.',
+    invalid:'Benutzername oder Passwort falsch.',
+    failed:'Anmeldung fehlgeschlagen',
+    connection:'Verbindung zum Server fehlgeschlagen.'
+  }
+};
+function lang(){
+  return DEFAULT_LANG==='de'?'de':'en';
+}
+function t(key){
+  return (TEXT[lang()]&&TEXT[lang()][key])||TEXT.en[key]||key;
+}
+function applyLanguage(){
+  document.documentElement.lang=lang();
+  document.title='Runvard · '+t('title');
+  document.querySelectorAll('[data-i18n]').forEach(el=>{
+    el.textContent=t(el.getAttribute('data-i18n'));
+  });
+}
+applyLanguage();
 
-// Hinweis, falls unverschlüsselt aufgerufen (Passwort sollte nur über HTTPS gesendet werden)
 if(location.protocol!=='https:' && location.hostname!=='localhost' && location.hostname!=='127.0.0.1'){
-  $('#conn-note').textContent='⚠ Unverschlüsselte Verbindung – HTTPS empfohlen';
+  $('#conn-note').textContent='WARN '+t('insecure');
 }
 
 function showError(msg){errBox.textContent=msg;errBox.classList.add('show');}
@@ -80,7 +122,7 @@ function clearError(){errBox.classList.remove('show');}
 form.addEventListener('submit', async e=>{
   e.preventDefault();
   clearError();
-  btn.disabled=true; btn.textContent='Anmelden…';
+  btn.disabled=true; btn.textContent=t('signingIn');
   try{
     const body=new URLSearchParams();
     body.set('username', $('#username').value);
@@ -98,13 +140,13 @@ form.addEventListener('submit', async e=>{
       location.href = params.get('next') || '/';
       return;
     }
-    if(r.status===429){ showError('Zu viele Versuche. Bitte kurz warten.'); }
-    else if(r.status===401){ showError('Benutzername oder Passwort falsch.'); }
-    else { showError('Anmeldung fehlgeschlagen ('+r.status+').'); }
+    if(r.status===429){ showError(t('tooMany')); }
+    else if(r.status===401){ showError(t('invalid')); }
+    else { showError(t('failed')+' ('+r.status+').'); }
   }catch(err){
-    showError('Verbindung zum Server fehlgeschlagen.');
+    showError(t('connection'));
   }finally{
-    btn.disabled=false; btn.textContent='Anmelden';
+    btn.disabled=false; btn.textContent=t('submit');
   }
 });
 </script>
