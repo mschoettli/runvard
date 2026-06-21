@@ -25,13 +25,13 @@ def _connect():
 
 
 def available():
-    if not HAS_LIBVIRT:
-        return False
-    try:
-        _connect()
-        return True
-    except Exception:
-        return False
+    if HAS_LIBVIRT:
+        try:
+            _connect()
+            return True
+        except Exception:
+            pass
+    return _virsh(["list", "--all"], timeout=15)["ok"]
 
 
 _STATES = {
@@ -41,27 +41,137 @@ _STATES = {
 
 
 def list_vms():
-    if not available():
-        return []
+    if HAS_LIBVIRT:
+        try:
+            return _list_vms_libvirt()
+        except Exception:
+            pass
+    return _list_vms_virsh()
+
+
+def _list_vms_libvirt():
     conn = _connect()
     vms = []
     for dom in conn.listAllDomains():
-        try:
-            state, _ = dom.state()
-            info = dom.info()
-            vms.append({
-                "name": dom.name(),
-                "uuid": dom.UUIDString(),
-                "state": _STATES.get(state, "unknown"),
-                "active": dom.isActive() == 1,
-                "autostart": dom.autostart() == 1,
-                "max_mem": info[1] * 1024,
-                "mem": info[2] * 1024,
-                "vcpus": info[3],
-            })
-        except Exception:
-            continue
+        row = _domain_summary_libvirt(dom)
+        if row:
+            vms.append(row)
     return vms
+
+
+def _domain_summary_libvirt(dom):
+    try:
+        name = dom.name()
+    except Exception:
+        return None
+    row = {
+        "name": name,
+        "uuid": "",
+        "state": "unknown",
+        "active": False,
+        "autostart": False,
+        "max_mem": 0,
+        "mem": 0,
+        "vcpus": 0,
+    }
+    try:
+        state, _ = dom.state()
+        row["state"] = _STATES.get(state, "unknown")
+    except Exception:
+        pass
+    try:
+        info = dom.info()
+        row["max_mem"] = info[1] * 1024
+        row["mem"] = info[2] * 1024
+        row["vcpus"] = info[3]
+    except Exception:
+        pass
+    try:
+        row["uuid"] = dom.UUIDString()
+    except Exception:
+        pass
+    try:
+        row["active"] = dom.isActive() == 1
+    except Exception:
+        row["active"] = row["state"] == "running"
+    try:
+        row["autostart"] = dom.autostart() == 1
+    except Exception:
+        pass
+    return row
+
+
+def _list_vms_virsh():
+    r = _virsh(["list", "--all"], timeout=15)
+    if not r["ok"]:
+        return []
+    vms = []
+    for line in r["stdout"].splitlines()[2:]:
+        line = line.strip()
+        if not line or set(line) == {"-"}:
+            continue
+        parts = line.split(None, 2)
+        if len(parts) < 2:
+            continue
+        name = parts[1]
+        state = parts[2] if len(parts) >= 3 else "unknown"
+        vms.append(_domain_summary_virsh(name, state))
+    return vms
+
+
+def _domain_summary_virsh(name, state="unknown"):
+    info = _virsh(["dominfo", name], timeout=15)
+    data = _parse_dominfo(info["stdout"]) if info["ok"] else {}
+    state = data.get("State") or state
+    return {
+        "name": name,
+        "uuid": data.get("UUID", ""),
+        "state": state,
+        "active": state.lower() not in {"shut off", "crashed", "unknown"},
+        "autostart": data.get("Autostart", "").lower() in {"enable", "enabled", "yes"},
+        "max_mem": _parse_virsh_memory(data.get("Max memory", "")),
+        "mem": _parse_virsh_memory(data.get("Used memory", "")),
+        "vcpus": _parse_int(data.get("CPU(s)", "0")),
+    }
+
+
+def _parse_dominfo(text):
+    data = {}
+    for line in text.splitlines():
+        if ":" not in line:
+            continue
+        key, value = line.split(":", 1)
+        data[key.strip()] = value.strip()
+    return data
+
+
+def _parse_virsh_memory(value):
+    parts = value.split()
+    if not parts:
+        return 0
+    try:
+        number = float(parts[0])
+    except ValueError:
+        return 0
+    unit = parts[1].lower() if len(parts) > 1 else "b"
+    factor = {
+        "b": 1,
+        "bytes": 1,
+        "kib": 1024,
+        "kb": 1024,
+        "mib": 1024**2,
+        "mb": 1024**2,
+        "gib": 1024**3,
+        "gb": 1024**3,
+    }.get(unit, 1)
+    return int(number * factor)
+
+
+def _parse_int(value):
+    try:
+        return int(str(value).strip())
+    except (TypeError, ValueError):
+        return 0
 
 
 def vm_action(name, action):
@@ -143,11 +253,15 @@ def _wait_for_domain(name, timeout=10):
     deadline = time.monotonic() + timeout
     while time.monotonic() < deadline:
         try:
-            conn = _connect()
-            conn.lookupByName(name)
-            return True
+            if HAS_LIBVIRT:
+                conn = _connect()
+                conn.lookupByName(name)
+                return True
         except Exception:
-            time.sleep(0.25)
+            pass
+        if _virsh(["dominfo", name], timeout=5)["ok"]:
+            return True
+        time.sleep(0.25)
     return False
 
 
