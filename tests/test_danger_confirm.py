@@ -95,6 +95,37 @@ def test_non_dangerous_docker_action_does_not_require_confirm_token(monkeypatch)
     assert response.json()["action"] == "restart"
 
 
+def test_docker_compose_save_does_not_require_confirm_token(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    monkeypatch.setattr(
+        server.security_tokens,
+        "require_confirm_token",
+        lambda *args: (_ for _ in ()).throw(RuntimeError("confirm backend failed")),
+    )
+    monkeypatch.setattr(
+        server.docker_mgr,
+        "check_compose_ports",
+        lambda name, content: {"ok": True},
+    )
+    monkeypatch.setattr(
+        server.docker_mgr,
+        "save_compose",
+        lambda name, content, env_enabled=False, env_content="": {
+            "ok": True,
+            "name": name,
+            "env_enabled": env_enabled,
+        },
+    )
+
+    response = _client().post(
+        "/api/docker/compose/save",
+        data={"name": "demo", "content": "services: {}\n", "env_enabled": "1"},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "name": "demo", "env_enabled": True}
+
+
 def test_standard_admin_cannot_call_expert_only_endpoint(monkeypatch):
     monkeypatch.setattr(server, "login_enabled", lambda: True)
 

@@ -315,7 +315,6 @@ def _danger_confirm_meta(path, form):
         "/api/storage/iscsi/logout": ("storage:iscsi-logout", "target"),
         "/api/docker/images/remove": ("docker:remove-image", "image_id"),
         "/api/docker/volumes/remove": ("docker:remove-volume", "name"),
-        "/api/docker/compose/save": ("docker:compose-save", "name"),
         "/api/docker/compose/remove": ("docker:compose-remove", "name"),
         "/api/services/action": ("services:action", "name"),
         "/api/vms/action": ("vms:action", "name"),
@@ -1120,7 +1119,7 @@ def docker_compose_check_ports(name: str = Form(...), content: str = Form(...),
 def docker_compose_save(name: str = Form(...), content: str = Form(...),
                         env_enabled: bool = Form(False),
                         env_content: str = Form(""),
-                        user: str = Depends(confirmed_admin)):
+                        user: str = Depends(require_admin)):
     port_check = docker_mgr.check_compose_ports(name, content)
     if not port_check["ok"]:
         return {
