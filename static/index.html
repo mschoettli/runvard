@@ -1843,10 +1843,12 @@ const UI_PHRASES={
     "as a kernel boot parameter and reboot the system (GRUB).":"als Kernel-Boot-Parameter gesetzt und das System neu gestartet werden (GRUB).",
     "blocks all changing actions (incl. terminal/shell/console).":"blockiert alle ändernden Aktionen (inkl. Terminal/Shell/Konsole).",
     "connected":"verbunden",
+    "connecting…":"verbindet…",
     "Check manually":"Manuell prüfen",
     "Connection interrupted while the service restarts...":"Verbindung unterbrochen, während der Dienst neu startet...",
     "created":"erstellt",
     "disconnected":"getrennt",
+    "reconnecting…":"verbinde neu…",
     "e.g. +5G (additional) or 20G (absolute) · filesystem grows along":"z. B. +5G (zusätzlich) oder 20G (absolut) · Dateisystem wächst mit",
     "e.g. 1.5 (empty = unlimited)":"z. B. 1.5 (leer = unbegrenzt)",
     "e.g. 10G (absolute) or 100%FREE (rest of the VG)":"z. B. 10G (absolut) oder 100%FREE (Rest der VG)",
@@ -2799,8 +2801,10 @@ const UI_PHRASES={
     "as a kernel boot parameter and reboot the system (GRUB).":"comme paramètre de démarrage du noyau et redémarrez le système (GRUB).",
     "blocks all changing actions (incl. terminal/shell/console).":"bloque toutes les actions modifiantes (y compris terminal/shell/console).",
     "connected":"connecté",
+    "connecting…":"connexion…",
     "created":"créé",
     "disconnected":"déconnecté",
+    "reconnecting…":"reconnexion…",
     "e.g. +5G (additional) or 20G (absolute) · filesystem grows along":"p. ex. +5G (supplémentaire) ou 20G (absolu) · le système de fichiers suit",
     "e.g. 1.5 (empty = unlimited)":"p. ex. 1.5 (vide = illimité)",
     "e.g. 10G (absolute) or 100%FREE (rest of the VG)":"p. ex. 10G (absolu) ou 100%FREE (reste du VG)",
@@ -3738,8 +3742,10 @@ const UI_PHRASES={
     "as a kernel boot parameter and reboot the system (GRUB).":"come parametro di avvio del kernel e riavvia il sistema (GRUB).",
     "blocks all changing actions (incl. terminal/shell/console).":"blocca tutte le azioni di modifica (incl. terminale/shell/console).",
     "connected":"connesso",
+    "connecting…":"connessione…",
     "created":"creato",
     "disconnected":"disconnesso",
+    "reconnecting…":"riconnessione…",
     "e.g. +5G (additional) or 20G (absolute) · filesystem grows along":"es. +5G (aggiuntivo) o 20G (assoluto) · il filesystem cresce di pari passo",
     "e.g. 1.5 (empty = unlimited)":"es. 1.5 (vuoto = illimitato)",
     "e.g. 10G (absolute) or 100%FREE (rest of the VG)":"es. 10G (assoluto) o 100%FREE (resto del VG)",
@@ -4685,8 +4691,10 @@ const UI_PHRASES={
     "as a kernel boot parameter and reboot the system (GRUB).":"como parámetro de arranque del kernel y reinicia el sistema (GRUB).",
     "blocks all changing actions (incl. terminal/shell/console).":"bloquea todas las acciones de cambio (incl. terminal/shell/consola).",
     "connected":"conectado",
+    "connecting…":"conectando…",
     "created":"creado",
     "disconnected":"desconectado",
+    "reconnecting…":"reconectando…",
     "e.g. +5G (additional) or 20G (absolute) · filesystem grows along":"p. ej. +5G (adicional) o 20G (absoluto) · el sistema de archivos crece con él",
     "e.g. 1.5 (empty = unlimited)":"p. ej. 1.5 (vacío = ilimitado)",
     "e.g. 10G (absolute) or 100%FREE (rest of the VG)":"p. ej. 10G (absoluto) o 100%FREE (resto del VG)",
@@ -5632,8 +5640,10 @@ const UI_PHRASES={
     "as a kernel boot parameter and reboot the system (GRUB).":"como parâmetro de arranque do kernel e reinicie o sistema (GRUB).",
     "blocks all changing actions (incl. terminal/shell/console).":"bloqueia todas as ações de alteração (incl. terminal/shell/consola).",
     "connected":"ligado",
+    "connecting…":"a ligar…",
     "created":"criado",
     "disconnected":"desligado",
+    "reconnecting…":"a religar…",
     "e.g. +5G (additional) or 20G (absolute) · filesystem grows along":"p. ex. +5G (adicional) ou 20G (absoluto) · o sistema de ficheiros acompanha",
     "e.g. 1.5 (empty = unlimited)":"p. ex. 1.5 (vazio = ilimitado)",
     "e.g. 10G (absolute) or 100%FREE (rest of the VG)":"p. ex. 10G (absoluto) ou 100%FREE (resto do VG)",
@@ -6969,23 +6979,62 @@ function renderTerminal(body){
   term.focus();
 
   const sendResize=()=>{if(termWs&&termWs.readyState===1)termWs.send(JSON.stringify({type:'resize',rows:term.rows,cols:term.cols}));};
-  const setStatus=(state)=>{
+  let terminalActive=true,reconnectTimer=null,reconnectAttempts=0,connectSeq=0,hasConnected=false;
+  const clearReconnectTimer=()=>{
+    if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}
+  };
+  const setStatus=(state,label)=>{
     const dot=$('#term-dot'),txt=$('#term-state'),rc=$('#term-reconnect');
     if(!dot)return;
     dot.className='dot '+(state==='ok'?'ok':state==='off'?'off':'wait');
-    txt.textContent=uiText(state==='ok'?'connected':state==='off'?'disconnected':'verbindet…');
-    if(rc)rc.style.display=state==='off'?'':'none';
+    txt.textContent=uiText(label||(state==='ok'?'connected':state==='off'?'disconnected':'connecting…'));
+    if(rc)rc.style.display=(state==='ok'||(!hasConnected&&state==='wait'))?'none':'';
+  };
+  const scheduleReconnect=()=>{
+    if(!terminalActive)return;
+    clearReconnectTimer();
+    reconnectAttempts+=1;
+    const delay=Math.min(8000,500*Math.pow(1.7,reconnectAttempts-1));
+    setStatus('wait','reconnecting…');
+    reconnectTimer=setTimeout(()=>connect(),delay);
   };
 
   // (Wieder-)Verbinden – term-Instanz bleibt erhalten
   function connect(){
-    setStatus('wait');
+    if(!terminalActive)return;
+    clearReconnectTimer();
+    setStatus('wait',hasConnected?'reconnecting…':'connecting…');
     const proto=location.protocol==='https:'?'wss':'ws';
-    termWs=new WebSocket(`${proto}://${location.host}/ws/terminal`);
-    termWs.onopen=()=>{setStatus('ok');sendResize();term.focus();};
-    termWs.onmessage=e=>term.write(e.data);
-    termWs.onclose=()=>{setStatus('off');try{term.write('\r\n\x1b[2m\x1b[33m── Connection closed ──\x1b[0m\r\n');}catch(_){}};
-    termWs.onerror=()=>setStatus('off');
+    const seq=++connectSeq;
+    const ws=new WebSocket(`${proto}://${location.host}/ws/terminal`);
+    termWs=ws;
+    let opened=false;
+    ws.onopen=()=>{
+      if(!terminalActive||seq!==connectSeq||termWs!==ws)return;
+      opened=true;
+      reconnectAttempts=0;
+      if(hasConnected){try{term.write('\r\n\x1b[2m\x1b[32m── Reconnected ──\x1b[0m\r\n');}catch(_){}}
+      hasConnected=true;
+      setStatus('ok');
+      sendResize();
+      term.focus();
+    };
+    ws.onmessage=e=>{if(terminalActive&&seq===connectSeq&&termWs===ws)term.write(e.data);};
+    ws.onclose=e=>{
+      if(seq!==connectSeq||termWs!==ws)return;
+      termWs=null;
+      if(!terminalActive)return;
+      if(e&&e.code===1008){
+        setStatus('off');
+        try{term.write('\r\n\x1b[2m\x1b[31m── Terminal access denied ──\x1b[0m\r\n');}catch(_){}
+        return;
+      }
+      if(opened){try{term.write('\r\n\x1b[2m\x1b[33m── Connection lost, reconnecting ──\x1b[0m\r\n');}catch(_){}}
+      scheduleReconnect();
+    };
+    ws.onerror=()=>{
+      if(seq===connectSeq&&termWs===ws)setStatus('wait','reconnecting…');
+    };
   }
   // Eingaben gehen immer an die aktuelle Verbindung (auch nach Reconnect)
   term.onData(d=>{if(termWs&&termWs.readyState===1)termWs.send(JSON.stringify({type:'input',data:d}));});
@@ -7028,7 +7077,12 @@ function renderTerminal(body){
     const z=$('#term-zoom');if(z)z.textContent=fontSize+'px';
     fit.fit();sendResize();
   };
-  window.termReconnect=()=>{if(termWs){try{termWs.close();}catch(_){}}connect();};
+  window.termReconnect=()=>{
+    clearReconnectTimer();
+    reconnectAttempts=0;
+    if(termWs){try{termWs.close();}catch(_){}}
+    connect();
+  };
   const runSearch=(dir)=>{
     const q=($('#term-search-input')||{}).value||'';
     if(!q){search.clearDecorations&&search.clearDecorations();const c=$('#term-search-count');if(c){c.textContent='0/0';c.style.color='var(--text3)';}return;}
@@ -7062,6 +7116,9 @@ function renderTerminal(body){
 
   // Aufräum-Hook für closeModal
   window._termDispose=()=>{
+    terminalActive=false;
+    clearReconnectTimer();
+    connectSeq+=1;
     try{webgl&&webgl.dispose();}catch(_){}
     try{search.dispose();}catch(_){}
     try{term.dispose();}catch(_){}
