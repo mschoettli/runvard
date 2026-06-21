@@ -6098,6 +6098,37 @@ for(const lang of Object.keys(TERMINAL_PHRASES)){
   UI_PHRASES[lang]=Object.assign(UI_PHRASES[lang]||{},TERMINAL_PHRASES[lang]);
 }
 
+const BACKUP_PHRASES={
+  de:{
+    "Source path":"Quellpfad",
+    "Destination path":"Zielpfad",
+    "Documents backup":"Dokumente sichern"
+  },
+  fr:{
+    "Source path":"Chemin source",
+    "Destination path":"Chemin de destination",
+    "Documents backup":"Sauvegarde des documents"
+  },
+  it:{
+    "Source path":"Percorso sorgente",
+    "Destination path":"Percorso destinazione",
+    "Documents backup":"Backup documenti"
+  },
+  es:{
+    "Source path":"Ruta de origen",
+    "Destination path":"Ruta de destino",
+    "Documents backup":"Copia de documentos"
+  },
+  pt:{
+    "Source path":"Caminho de origem",
+    "Destination path":"Caminho de destino",
+    "Documents backup":"Cópia de documentos"
+  }
+};
+for(const lang of Object.keys(BACKUP_PHRASES)){
+  UI_PHRASES[lang]=Object.assign(UI_PHRASES[lang]||{},BACKUP_PHRASES[lang]);
+}
+
 const PHRASE_PATTERNS=[
   {re:new RegExp("^Really delete \"(.+)\"\\?$"),t:{"de": "\"$1\" wirklich löschen?", "fr": "Vraiment supprimer « $1 » ?", "it": "Eliminare davvero \"$1\"?", "es": "¿Eliminar realmente «$1»?", "pt": "Eliminar mesmo \"$1\"?"}},
   {re:new RegExp("^Move \"(.+)\" to trash\\?$"),t:{"de": "\"$1\" in den Papierkorb verschieben?", "fr": "Déplacer « $1 » vers la corbeille ?", "it": "Spostare \"$1\" nel cestino?", "es": "¿Mover «$1» a la papelera?", "pt": "Mover \"$1\" para o lixo?"}},
@@ -8688,8 +8719,9 @@ async function renderBackup(body,tab){
      <td style="color:var(--text2)">${x.duration}s</td>
      <td><span class="status-pill ${x.success?'run':'stop'}">${x.success?'OK':'Error'}</span></td>
    </tr>`).join('')||'<tr><td colspan="4"><div class="empty-state">No history</div></td></tr>'}</tbody></table>`;}
+ translateRenderedText(body);
 }
-window.backupForm=()=>openForm('Backup job','🗄',[{name:'name',label:'Name',placeholder:'Dokumente sichern'},{name:'source',label:'Quellpfad',placeholder:'/home/user/docs'},{name:'dest',label:'Zielpfad',placeholder:'/mnt/backup/docs'},{name:'schedule',label:'Schedule',type:'select',options:[{value:'manual',label:'Manuell'},{value:'hourly',label:'Hourly'},{value:'daily',label:'Daily'},{value:'weekly',label:'Weekly'}]}],async d=>{await post('/backup/add',d);closeForm();toast('Task created');renderBackup($('#modal-body'),'Jobs');});
+window.backupForm=()=>openForm('Create backup','🗄',[{name:'name',label:'Name',placeholder:'Documents backup'},{name:'source',label:'Source path',placeholder:'/home/user/docs'},{name:'dest',label:'Destination path',placeholder:'/mnt/backup/docs'},{name:'schedule',label:'Schedule',type:'select',options:[{value:'manual',label:'Manual'},{value:'hourly',label:'Hourly'},{value:'daily',label:'Daily'},{value:'weekly',label:'Weekly'}]}],async d=>{await post('/backup/add',d);closeForm();toast('Task created');renderBackup($('#modal-body'),'Jobs');});
 window.runBackup=async id=>{toast('Backup started…');try{const r=await post('/backup/run',{job_id:id});toast(r.ok?'Backup complete':'Error',r.ok?'success':'error');}catch(e){toast('Error: '+e.message,'error');}};
 
 // ═══ Freigaben – alle auf einer Seite ═══
@@ -11646,12 +11678,14 @@ async function renderBackup(body,tab){
   if(tab==='History'||tab==='History'){
     const h=await api('/backup/history');
     body.innerHTML=viewIntro('Backup history','Recent backup results and failures.','')+simpleTable(['Job','Time','Duration','Status'],h.map(x=>`<tr><td>${esc(x.name)}</td><td>${new Date(x.time*1000).toLocaleString(localeCode())}</td><td>${x.duration}s</td><td>${statusBadge(x.success?'OK':'Failed',x.success?'good':'bad')}</td></tr>`).join(''));
+    translateRenderedText(body);
     return;
   }
   const [j,h]=await Promise.all([api('/backup/jobs'),api('/backup/history').catch(()=>[])]);
   body.innerHTML=viewIntro('Backups','Protect important folders by copying them on a schedule.',`<button class="btn" onclick="backupForm()">Create backup</button>`)
     +`<div class="nx-summary-grid">${summaryCard('Backup jobs',j.length,'Configured')}${summaryCard('Last result',h[0]?(h[0].success?'OK':'Failed'):'Never',h[0]?new Date(h[0].time*1000).toLocaleString(localeCode()):'No backup has run')}</div>
     <div class="nx-card-grid">${j.map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${statusBadge(x.schedule==='manual'?'Manual':x.schedule,'good')}</div><div class="nx-kv">${cardMetric('From',esc(x.source))}${cardMetric('To',esc(x.dest))}</div><button class="btn sm" onclick="runBackup(${x.id})">Run now</button></div>`).join('')||emptyState('No backup jobs yet')}</div>`;
+  translateRenderedText(body);
 }
 
 async function renderMonitoring(body,tab){
