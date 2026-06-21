@@ -33,6 +33,11 @@ class _Conn:
         return [_BrokenDomain(), _GoodDomain()]
 
 
+class _EmptyConn:
+    def listAllDomains(self):
+        return []
+
+
 def test_list_vms_skips_unreadable_domains(monkeypatch):
     monkeypatch.setattr(vms, "HAS_LIBVIRT", True)
     monkeypatch.setattr(vms, "_connect", lambda: _Conn())
@@ -123,6 +128,49 @@ def test_list_vms_falls_back_to_virsh(monkeypatch):
         "mem": 0,
         "vcpus": 2,
     }]
+
+
+def test_list_vms_uses_virsh_when_libvirt_is_empty(monkeypatch):
+    monkeypatch.setattr(vms, "HAS_LIBVIRT", True)
+    monkeypatch.setattr(vms, "_connect", lambda: _EmptyConn())
+
+    def fake_virsh(args, timeout=120):
+        if args == ["list", "--all"]:
+            return {
+                "ok": True,
+                "stdout": "\n Id   Name        State\n---------------------------\n 1    fallback-vm running\n",
+                "stderr": "",
+            }
+        if args == ["dominfo", "fallback-vm"]:
+            return {
+                "ok": True,
+                "stdout": "Name: fallback-vm\nState: running\nCPU(s): 1\nMax memory: 1048576 KiB\nUsed memory: 524288 KiB\n",
+                "stderr": "",
+            }
+        return {"ok": False, "stdout": "", "stderr": "unexpected"}
+
+    monkeypatch.setattr(vms, "_virsh", fake_virsh)
+
+    listed = vms.list_vms()
+
+    assert [vm["name"] for vm in listed] == ["fallback-vm"]
+
+
+def test_virsh_uses_system_uri(monkeypatch):
+    seen = {}
+
+    def fake_run(args, capture_output, text, timeout):
+        seen["args"] = args
+        class Result:
+            returncode = 0
+            stdout = ""
+            stderr = ""
+        return Result()
+
+    monkeypatch.setattr(vms.subprocess, "run", fake_run)
+
+    assert vms._virsh(["list", "--all"])["ok"] is True
+    assert seen["args"][:3] == ["virsh", "-c", "qemu:///system"]
 
 
 def test_default_network_falls_back_to_runvard_nat(monkeypatch):

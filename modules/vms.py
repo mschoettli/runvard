@@ -14,6 +14,7 @@ import xml.etree.ElementTree as ET
 
 _conn = None
 ISO_DIR = "/var/lib/libvirt/images"
+LIBVIRT_URI = "qemu:///system"
 
 
 def _connect():
@@ -21,7 +22,7 @@ def _connect():
     if not HAS_LIBVIRT:
         raise RuntimeError("libvirt-python nicht installiert")
     if _conn is None or not _conn.isAlive():
-        _conn = libvirt.open("qemu:///system")
+        _conn = libvirt.open(LIBVIRT_URI)
     return _conn
 
 
@@ -44,7 +45,9 @@ _STATES = {
 def list_vms():
     if HAS_LIBVIRT:
         try:
-            return _list_vms_libvirt()
+            vms = _list_vms_libvirt()
+            if vms:
+                return vms
         except Exception:
             pass
     return _list_vms_virsh()
@@ -507,7 +510,7 @@ def get_vnc_port(name):
 
 def _virsh(args, timeout=120):
     try:
-        r = subprocess.run(["virsh"] + args, capture_output=True, text=True, timeout=timeout)
+        r = subprocess.run(["virsh", "-c", LIBVIRT_URI] + args, capture_output=True, text=True, timeout=timeout)
         return {"ok": r.returncode == 0, "stdout": r.stdout, "stderr": r.stderr}
     except Exception as e:
         return {"ok": False, "stdout": "", "stderr": str(e)}
