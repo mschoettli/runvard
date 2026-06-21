@@ -7,19 +7,19 @@
 #
 set -euo pipefail
 
-ARCHIVE_URL="${RUNVARD_ARCHIVE_URL:-${ACTAX_ARCHIVE_URL:-https://github.com/mschoettli/runvard/archive/refs/heads/main.tar.gz}}"
+ARCHIVE_URL="${RUNVARD_ARCHIVE_URL:-https://github.com/mschoettli/runvard/archive/refs/heads/main.tar.gz}"
 SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
 SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 LOCAL_INSTALLER="${SCRIPT_DIR}/scripts/install-full.sh"
+
+if [ -f "$LOCAL_INSTALLER" ] && [ -f "${SCRIPT_DIR}/server.py" ]; then
+  exec bash "$LOCAL_INSTALLER" "$@"
+fi
 
 if [ "$(id -u)" -ne 0 ]; then
   echo "runvard must be installed with root privileges." >&2
   echo "Run: curl -fsSL https://raw.githubusercontent.com/mschoettli/runvard/main/install.sh | sudo bash" >&2
   exit 1
-fi
-
-if [ -f "$LOCAL_INSTALLER" ] && [ -f "${SCRIPT_DIR}/server.py" ]; then
-  exec bash "$LOCAL_INSTALLER" "$@"
 fi
 
 command -v curl >/dev/null 2>&1 || {

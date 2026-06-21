@@ -1,66 +1,120 @@
-#!/bin/bash
+#!/usr/bin/env bash
+#
+# runvard updater
+#
 set -euo pipefail
 
-RED='\033[0;31m'
-GREEN='\033[0;32m'
-CYAN='\033[0;36m'
-NC='\033[0m'
-
-if [ "$EUID" -ne 0 ]; then
-  echo -e "${RED}Run this updater as root.${NC}"
-  exit 1
+if [ -t 1 ] && [ "${NO_COLOR:-}" = "" ]; then
+  BOLD=$'\033[1m'; RED=$'\033[0;31m'; GREEN=$'\033[0;32m'
+  YELLOW=$'\033[0;33m'; CYAN=$'\033[0;36m'; NC=$'\033[0m'
+else
+  BOLD=""; RED=""; GREEN=""; YELLOW=""; CYAN=""; NC=""
 fi
 
-INSTALL="/opt/runvard"
-SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-ENV_FILE="${INSTALL}/data/runvard.env"
-VERSION_FILE="${INSTALL}/data/runvard.version"
+INSTALL_DIR="/opt/runvard"
+ENV_FILE="${INSTALL_DIR}/data/runvard.env"
+VERSION_FILE="${INSTALL_DIR}/data/runvard.version"
+SCRIPT_PATH="${BASH_SOURCE[0]:-$0}"
+SRC="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 
-echo -e "${CYAN}Updating runvard...${NC}"
+info() { echo -e "${CYAN}$*${NC}"; }
+ok() { echo -e "${GREEN}OK${NC} $*"; }
+warn() { echo -e "${YELLOW}WARN${NC} $*"; }
+die() { echo -e "${RED}ERROR:${NC} $*" >&2; exit 1; }
 
-if [ ! -f "$ENV_FILE" ]; then
-  echo -e "${RED}Missing ${ENV_FILE}. Run install.sh first.${NC}"
-  exit 1
-fi
+usage() {
+  cat <<'USAGE'
+runvard updater
 
-TS=$(date +%Y%m%d%H%M%S)
-echo -e "${CYAN}Backing up current files (.bak.${TS})...${NC}"
-for f in server.py requirements.txt static/index.html static/login.html; do
-  [ -f "$INSTALL/$f" ] && cp -f "$INSTALL/$f" "$INSTALL/$f.bak.$TS"
+Usage:
+  sudo bash update.sh [options]
+
+Options:
+  -h, --help    Show this help
+
+Environment:
+  RUNVARD_SOURCE_COMMIT=<sha>  Version commit to write to data/runvard.version
+  RUNVARD_SKIP_PIP=1           Skip Python dependency refresh
+USAGE
+}
+
+while [ $# -gt 0 ]; do
+  case "$1" in
+    -h|--help) usage; exit 0 ;;
+    *) die "Unknown option: $1 (--help)" ;;
+  esac
 done
-for m in "$INSTALL/modules/"*.py; do
-  [ -f "$m" ] && cp -f "$m" "$m.bak.$TS"
-done
 
-cp -f "$SRC/server.py" "$INSTALL/server.py"
-cp -f "$SRC/requirements.txt" "$INSTALL/requirements.txt"
-cp -f "$SRC/static/index.html" "$INSTALL/static/index.html"
-[ -f "$SRC/static/login.html" ] && cp -f "$SRC/static/login.html" "$INSTALL/static/login.html"
-cp -f "$SRC/modules/"*.py "$INSTALL/modules/"
+[ "$(id -u)" -eq 0 ] || die "Run this updater as root."
+[ -f "$SRC/server.py" ] || die "server.py was not found. Run update.sh from a runvard release directory."
+[ -f "$SRC/requirements.txt" ] || die "requirements.txt was not found in the source directory."
+[ -d "$SRC/modules" ] || die "modules/ was not found in the source directory."
+[ -d "$SRC/static" ] || die "static/ was not found in the source directory."
+[ -d "$INSTALL_DIR" ] || die "Missing ${INSTALL_DIR}. Run install.sh first."
+[ -f "$ENV_FILE" ] || die "Missing ${ENV_FILE}. Run install.sh first."
+[ -x "$INSTALL_DIR/venv/bin/python" ] || die "Missing ${INSTALL_DIR}/venv. Run install.sh first."
+command -v rsync >/dev/null 2>&1 || die "rsync is required."
+command -v systemctl >/dev/null 2>&1 || die "systemctl is required."
+
+info "Updating runvard..."
+
+rsync -a --delete \
+  --exclude 'data' \
+  --exclude 'venv' \
+  --exclude '.venv' \
+  --exclude '.git' \
+  --exclude '.pytest_cache' \
+  --exclude '__pycache__' \
+  --exclude '*.pyc' \
+  --exclude '*.bak*' \
+  --exclude 'tests' \
+  "$SRC"/ "$INSTALL_DIR"/
+ok "Program files synced."
+
 SOURCE_COMMIT="${RUNVARD_SOURCE_COMMIT:-}"
 if [ -z "$SOURCE_COMMIT" ] && [ -d "$SRC/.git" ] && command -v git >/dev/null 2>&1; then
   SOURCE_COMMIT="$(git -C "$SRC" rev-parse HEAD 2>/dev/null || true)"
 fi
 if [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
   printf '%s\n' "$SOURCE_COMMIT" > "$VERSION_FILE"
+  ok "Version recorded."
+else
+  warn "No valid source commit found; version file was not updated."
 fi
 
-"$INSTALL/venv/bin/pip" install -q -r "$INSTALL/requirements.txt"
-"$INSTALL/venv/bin/pip" install -q libvirt-python==10.7.0 2>/dev/null || true
+if [ "${RUNVARD_SKIP_PIP:-0}" = "1" ]; then
+  warn "Skipping Python dependency refresh because RUNVARD_SKIP_PIP=1."
+else
+  PIP="$INSTALL_DIR/venv/bin/pip"
+  if [ -d "$INSTALL_DIR/wheels" ] && [ -n "$(ls -A "$INSTALL_DIR/wheels" 2>/dev/null)" ]; then
+    info "Installing Python dependencies from bundled wheels..."
+    "$PIP" install -q --no-index --find-links "$INSTALL_DIR/wheels" -r "$INSTALL_DIR/requirements.txt"
+    info "Upgrading pip..."
+    "$PIP" install -q --upgrade pip
+  else
+    info "Upgrading pip..."
+    "$PIP" install -q --upgrade pip
+    info "Installing Python dependencies..."
+    "$PIP" install -q -r "$INSTALL_DIR/requirements.txt"
+  fi
+  "$PIP" install -q libvirt-python || warn "libvirt-python could not be installed."
+fi
 
-echo -e "${CYAN}Restarting service...${NC}"
+info "Restarting runvard..."
 systemctl restart runvard
 sleep 3
 
 # shellcheck source=/dev/null
 . "$ENV_FILE"
-# Health-Check ohne Auth: die API nutzt Cookie-Sessions (kein HTTP-Basic),
-# daher die anmeldefreie Login-Seite prüfen.
-HTTP=$(curl -s -o /dev/null -w "%{http_code}" --max-time 3 "http://127.0.0.1:${RUNVARD_PORT:-8080}/login")
+HTTP="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "http://127.0.0.1:${RUNVARD_PORT:-8080}/login" || true)"
 
-if [ "$HTTP" = "200" ] || [ "$HTTP" = "302" ]; then
-  echo -e "${GREEN}Update succeeded. Dienst antwortet (HTTP ${HTTP}).${NC}"
-else
-  echo -e "${RED}Update failed. Dienst antwortet nicht (HTTP ${HTTP}).${NC}"
-  journalctl -u runvard -n 20 --no-pager
-fi
+case "$HTTP" in
+  200|302)
+    ok "Update succeeded. runvard responded with HTTP ${HTTP}."
+    ;;
+  *)
+    warn "Update finished, but runvard did not respond as expected (HTTP ${HTTP})."
+    journalctl -u runvard -n 30 --no-pager || true
+    exit 1
+    ;;
+esac

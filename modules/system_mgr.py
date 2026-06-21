@@ -123,13 +123,6 @@ if [ -f /opt/runvard/data/runvard.env ]; then
   set -a
   . /opt/runvard/data/runvard.env
   set +a
-elif [ -f /opt/actax/data/actax.env ]; then
-  set -a
-  . /opt/actax/data/actax.env
-  RUNVARD_USER="${{RUNVARD_USER:-${{ACTAX_USER:-}}}}"
-  RUNVARD_PASS="${{RUNVARD_PASS:-${{ACTAX_PASS:-}}}}"
-  RUNVARD_PORT="${{RUNVARD_PORT:-${{ACTAX_PORT:-}}}}"
-  set +a
 fi
 RUNVARD_SOURCE_COMMIT="$REMOTE_COMMIT" bash "$WORK_DIR/install.sh" --yes
 echo "runvard update finished: $(date -Is)"

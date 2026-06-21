@@ -65,8 +65,8 @@ try:
 except Exception:
     pass
 
-RUNVARD_USER = os.environ.get("RUNVARD_USER", os.environ.get("ACTAX_USER", "admin"))
-RUNVARD_PASS = os.environ.get("RUNVARD_PASS", os.environ.get("ACTAX_PASS", "runvard"))
+RUNVARD_USER = os.environ.get("RUNVARD_USER", "admin")
+RUNVARD_PASS = os.environ.get("RUNVARD_PASS", "runvard")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ============ Auth: Session-Cookies + Login an/aus ============
