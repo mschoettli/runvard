@@ -27,6 +27,14 @@ app = FastAPI(title="runvard", docs_url=None, redoc_url=None)
 http_basic = HTTPBasic()
 
 
+@app.exception_handler(Exception)
+async def _api_exception_handler(request: Request, exc: Exception):
+    if request.url.path.startswith("/api"):
+        message = str(exc) or exc.__class__.__name__
+        return JSONResponse({"ok": False, "error": message}, status_code=500)
+    raise exc
+
+
 @app.middleware("http")
 async def _audit_mw(request: Request, call_next):
     response = await call_next(request)
@@ -1888,6 +1896,8 @@ async def ws_terminal(websocket: WebSocket):
                 session.write(data["data"])
             elif data["type"] == "resize":
                 session.resize(data["rows"], data["cols"])
+            elif data["type"] == "ping":
+                await websocket.send_text("\0runvard:pong")
     except WebSocketDisconnect:
         pass
     finally:

@@ -6977,9 +6977,12 @@ function renderTerminal(body){
   term.focus();
 
   const sendResize=()=>{if(termWs&&termWs.readyState===1)termWs.send(JSON.stringify({type:'resize',rows:term.rows,cols:term.cols}));};
-  let terminalActive=true,reconnectTimer=null,reconnectAttempts=0,connectSeq=0,hasConnected=false;
+  let terminalActive=true,reconnectTimer=null,heartbeatTimer=null,reconnectAttempts=0,connectSeq=0,hasConnected=false;
   const clearReconnectTimer=()=>{
     if(reconnectTimer){clearTimeout(reconnectTimer);reconnectTimer=null;}
+  };
+  const clearHeartbeatTimer=()=>{
+    if(heartbeatTimer){clearInterval(heartbeatTimer);heartbeatTimer=null;}
   };
   const setStatus=(state,label)=>{
     const dot=$('#term-dot'),txt=$('#term-state'),rc=$('#term-reconnect');
@@ -6991,22 +6994,40 @@ function renderTerminal(body){
   const scheduleReconnect=()=>{
     if(!terminalActive)return;
     clearReconnectTimer();
+    clearHeartbeatTimer();
     reconnectAttempts+=1;
     const delay=Math.min(8000,500*Math.pow(1.7,reconnectAttempts-1));
     setStatus('wait','reconnecting…');
     reconnectTimer=setTimeout(()=>connect(),delay);
+  };
+  const startHeartbeat=(ws,seq)=>{
+    clearHeartbeatTimer();
+    let lastPong=Date.now();
+    const sendPing=()=>{
+      if(!terminalActive||seq!==connectSeq||termWs!==ws){clearHeartbeatTimer();return;}
+      if(ws.readyState!==1)return;
+      if(Date.now()-lastPong>15000){
+        try{ws.close(4000,'heartbeat timeout');}catch(_){}
+        return;
+      }
+      try{ws.send(JSON.stringify({type:'ping'}));}catch(_){try{ws.close(4000,'heartbeat failed');}catch(e){}}
+    };
+    heartbeatTimer=setInterval(sendPing,5000);
+    sendPing();
+    return ()=>{lastPong=Date.now();};
   };
 
   // (Wieder-)Verbinden – term-Instanz bleibt erhalten
   function connect(){
     if(!terminalActive)return;
     clearReconnectTimer();
+    clearHeartbeatTimer();
     setStatus('wait',hasConnected?'reconnecting…':'connecting…');
     const proto=location.protocol==='https:'?'wss':'ws';
     const seq=++connectSeq;
     const ws=new WebSocket(`${proto}://${location.host}/ws/terminal`);
     termWs=ws;
-    let opened=false;
+    let opened=false,markPong=null;
     ws.onopen=()=>{
       if(!terminalActive||seq!==connectSeq||termWs!==ws)return;
       opened=true;
@@ -7015,11 +7036,17 @@ function renderTerminal(body){
       hasConnected=true;
       setStatus('ok');
       sendResize();
+      markPong=startHeartbeat(ws,seq);
       term.focus();
     };
-    ws.onmessage=e=>{if(terminalActive&&seq===connectSeq&&termWs===ws)term.write(e.data);};
+    ws.onmessage=e=>{
+      if(!terminalActive||seq!==connectSeq||termWs!==ws)return;
+      if(e.data==='\0runvard:pong'){if(markPong)markPong();return;}
+      term.write(e.data);
+    };
     ws.onclose=e=>{
       if(seq!==connectSeq||termWs!==ws)return;
+      clearHeartbeatTimer();
       termWs=null;
       if(!terminalActive)return;
       if(e&&e.code===1008){
@@ -7116,6 +7143,7 @@ function renderTerminal(body){
   window._termDispose=()=>{
     terminalActive=false;
     clearReconnectTimer();
+    clearHeartbeatTimer();
     connectSeq+=1;
     try{webgl&&webgl.dispose();}catch(_){}
     try{search.dispose();}catch(_){}
