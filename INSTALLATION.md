@@ -7,6 +7,12 @@ Run the installer with root privileges on the target server.
 curl -fsSL https://raw.githubusercontent.com/mschoettli/runvard/main/install.sh | sudo bash
 ```
 
+German installer output:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/mschoettli/runvard/main/install.sh | sudo bash -s -- --lang de
+```
+
 The installer downloads the current runvard release when needed, installs required system packages, creates the Python virtual environment, installs Python dependencies, writes the systemd service, and starts runvard.
 It asks for the installer language, admin username, admin password, and web port.
 If the password is left empty, the installer generates a random password and prints it at the end.
