@@ -1,6 +1,7 @@
 from fastapi.testclient import TestClient
 
 import server
+from modules import jobs
 
 
 def _client(role="admin"):
@@ -133,15 +134,47 @@ def test_runvard_update_start_error_returns_json(monkeypatch):
         lambda: (_ for _ in ()).throw(RuntimeError("systemd-run failed")),
     )
     client = _client()
-    token = client.post(
-        "/api/confirm-token",
-        data={"action": "sysmgr:runvard-update", "target": ""},
-    ).json()["token"]
 
-    response = client.post(
-        "/api/sysmgr/runvard-update/apply",
-        data={"confirm_token": token},
-    )
+    response = client.post("/api/sysmgr/runvard-update/apply")
 
     assert response.status_code == 200
     assert response.json() == {"ok": False, "error": "systemd-run failed"}
+
+
+def test_runvard_update_does_not_require_confirm_token(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    monkeypatch.setattr(
+        server.security_tokens,
+        "require_confirm_token",
+        lambda *args: (_ for _ in ()).throw(RuntimeError("confirm backend failed")),
+    )
+    monkeypatch.setattr(
+        server.system_mgr,
+        "start_runvard_update",
+        lambda: {"ok": True, "started": True},
+    )
+    client = _client()
+
+    response = client.post("/api/sysmgr/runvard-update/apply")
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "started": True}
+
+
+def test_package_update_does_not_require_confirm_token(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    monkeypatch.setattr(
+        server.security_tokens,
+        "require_confirm_token",
+        lambda *args: (_ for _ in ()).throw(RuntimeError("confirm backend failed")),
+    )
+    monkeypatch.setattr(
+        jobs,
+        "start_job",
+        lambda name, func: {"ok": True, "job_id": "job-1", "name": name},
+    )
+
+    response = _client().post("/api/sysmgr/updates/apply")
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "job_id": "job-1", "name": "apt-upgrade"}

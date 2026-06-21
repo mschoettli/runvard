@@ -346,8 +346,6 @@ def _danger_confirm_meta(path, form):
         "/api/security/groups/add-member": ("security:group-add-member", "group"),
         "/api/security/groups/remove-member": ("security:group-remove-member", "group"),
         "/api/security/certs/generate": ("security:cert-generate", "common_name"),
-        "/api/sysmgr/runvard-update/apply": ("sysmgr:runvard-update", "runvard"),
-        "/api/sysmgr/updates/apply": ("sysmgr:update", "apt"),
         "/api/sysmgr/cron/add": ("sysmgr:cron-add", "command"),
         "/api/sysmgr/power/profiles/set": ("sysmgr:power-profile", "profile"),
         "/api/sysmgr/power/logind/set": ("sysmgr:logind-power", "logind"),
@@ -1570,7 +1568,7 @@ def sysmgr_runvard_release(user: str = Depends(auth)):
 
 
 @app.post("/api/sysmgr/runvard-update/apply")
-def sysmgr_runvard_update_apply(user: str = Depends(confirmed_admin)):
+def sysmgr_runvard_update_apply(user: str = Depends(require_admin)):
     try:
         return system_mgr.start_runvard_update()
     except Exception as e:
@@ -1583,7 +1581,7 @@ def sysmgr_runvard_update_log(user: str = Depends(auth)):
 
 
 @app.post("/api/sysmgr/updates/apply")
-def sysmgr_updates_apply(user: str = Depends(confirmed_admin)):
+def sysmgr_updates_apply(user: str = Depends(require_admin)):
     from modules import jobs
     return jobs.start_job("apt-upgrade", system_mgr.apply_updates)
 
