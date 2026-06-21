@@ -11536,7 +11536,13 @@ async function appComposeDraft(appId,contentOverride,composeData={}){
 window.appInstallForm=async id=>{
   try{
     const draft=await appComposeDraft(id);
-    await appInstallStart(draft);
+    appComposeFormOpen(draft,{
+      title:uiText('Install')+': '+draft.app.name,
+      icon:'🧩',
+      primaryLabel:'Install',
+      env:false,
+      onSubmit:appInstallStart,
+    });
   }catch(e){toast('Error: '+e.message,'error');}
 };
 window.appUninstall=(id,name)=>typedConfirm('Uninstall app',`"${name}" will be stopped and removed. Data in /opt/runvard/data/apps/${id}/ stays on disk.`,name,async()=>{
