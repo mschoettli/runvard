@@ -254,6 +254,7 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso, network="default"):
     net = _ensure_network(network)
     if not net["ok"]:
         return net
+    network = net.get("network", network)
 
     disk = _run(["qemu-img", "create", "-f", "qcow2", disk_path, f"{disk_gb}G"], timeout=300)
     if not disk["ok"]:
@@ -318,15 +319,82 @@ def _domain_exists(name):
 
 def _ensure_network(network):
     info = _virsh(["net-info", network], timeout=15)
-    if not info["ok"]:
+    if info["ok"]:
+        data = _parse_dominfo(info["stdout"])
+        if data.get("Active", "").lower() == "yes":
+            return {"ok": True, "network": network}
+        started = _virsh(["net-start", network], timeout=30)
+        if started["ok"]:
+            return {"ok": True, "network": network}
+        if network != "default":
+            return {"ok": False, "stderr": started["stderr"] or started["stdout"] or f"Netzwerk konnte nicht gestartet werden: {network}"}
+    elif network != "default":
         return {"ok": False, "stderr": f"Libvirt-Netzwerk nicht gefunden: {network}"}
-    data = _parse_dominfo(info["stdout"])
-    if data.get("Active", "").lower() == "yes":
-        return {"ok": True}
-    started = _virsh(["net-start", network], timeout=30)
-    if started["ok"]:
-        return {"ok": True}
-    return {"ok": False, "stderr": started["stderr"] or started["stdout"] or f"Netzwerk konnte nicht gestartet werden: {network}"}
+
+    fallback = _ensure_runvard_network()
+    if fallback["ok"]:
+        fallback["warning"] = "Libvirt default network unavailable; using runvard fallback network"
+        return fallback
+    detail = ""
+    if info["ok"]:
+        detail = started["stderr"] or started["stdout"]
+    else:
+        detail = info["stderr"] or info["stdout"]
+    return {"ok": False, "stderr": detail or "Libvirt default network unavailable and fallback network could not be created"}
+
+
+def _ensure_runvard_network():
+    for subnet in range(123, 240):
+        name = f"runvard{subnet}"
+        existing = _virsh(["net-info", name], timeout=10)
+        if existing["ok"]:
+            data = _parse_dominfo(existing["stdout"])
+            if data.get("Active", "").lower() == "yes":
+                return {"ok": True, "network": name}
+            started = _virsh(["net-start", name], timeout=30)
+            if started["ok"]:
+                _virsh(["net-autostart", name], timeout=10)
+                return {"ok": True, "network": name}
+            continue
+
+        xml = _network_xml(
+            name,
+            f"rvbr{subnet}",
+            f"192.168.{subnet}.1",
+            f"192.168.{subnet}.2",
+            f"192.168.{subnet}.254",
+        )
+        xml_path = ""
+        try:
+            with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".xml", delete=False) as f:
+                f.write(xml)
+                xml_path = f.name
+            defined = _virsh(["net-define", xml_path], timeout=20)
+            if not defined["ok"]:
+                continue
+            started = _virsh(["net-start", name], timeout=30)
+            if started["ok"]:
+                _virsh(["net-autostart", name], timeout=10)
+                return {"ok": True, "network": name}
+            _virsh(["net-undefine", name], timeout=20)
+        finally:
+            if xml_path:
+                try:
+                    os.unlink(xml_path)
+                except OSError:
+                    pass
+    return {"ok": False, "stderr": "Kein freies Runvard-VM-Netzwerk gefunden"}
+
+
+def _network_xml(name, bridge, address, dhcp_start, dhcp_end):
+    network = ET.Element("network")
+    ET.SubElement(network, "name").text = name
+    ET.SubElement(network, "bridge", {"name": bridge, "stp": "on", "delay": "0"})
+    ET.SubElement(network, "forward", {"mode": "nat"})
+    ip = ET.SubElement(network, "ip", {"address": address, "netmask": "255.255.255.0"})
+    dhcp = ET.SubElement(ip, "dhcp")
+    ET.SubElement(dhcp, "range", {"start": dhcp_start, "end": dhcp_end})
+    return ET.tostring(network, encoding="unicode")
 
 
 def _remove_created_disk(path):

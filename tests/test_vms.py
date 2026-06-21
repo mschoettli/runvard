@@ -123,3 +123,37 @@ def test_list_vms_falls_back_to_virsh(monkeypatch):
         "mem": 0,
         "vcpus": 2,
     }]
+
+
+def test_default_network_falls_back_to_runvard_nat(monkeypatch):
+    calls = []
+
+    def fake_virsh(args, timeout=120):
+        calls.append(args)
+        if args == ["net-info", "default"]:
+            return {"ok": True, "stdout": "Name: default\nActive: no\n", "stderr": ""}
+        if args == ["net-start", "default"]:
+            return {"ok": False, "stdout": "", "stderr": "Address already in use"}
+        if args == ["net-info", "runvard123"]:
+            return {"ok": False, "stdout": "", "stderr": "network not found"}
+        if args[0] == "net-define":
+            assert os.path.exists(args[1])
+            xml = open(args[1], encoding="utf-8").read()
+            assert "<name>runvard123</name>" in xml
+            assert 'name="rvbr123"' in xml
+            assert 'address="192.168.123.1"' in xml
+            return {"ok": True, "stdout": "defined", "stderr": ""}
+        if args == ["net-start", "runvard123"]:
+            return {"ok": True, "stdout": "started", "stderr": ""}
+        if args == ["net-autostart", "runvard123"]:
+            return {"ok": True, "stdout": "", "stderr": ""}
+        return {"ok": False, "stdout": "", "stderr": "unexpected"}
+
+    monkeypatch.setattr(vms, "_virsh", fake_virsh)
+
+    result = vms._ensure_network("default")
+
+    assert result["ok"] is True
+    assert result["network"] == "runvard123"
+    assert ["net-start", "default"] in calls
+    assert ["net-start", "runvard123"] in calls
