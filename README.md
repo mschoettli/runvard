@@ -44,6 +44,17 @@ The dashboard is the main starting point in runvard. It shows important services
 installed apps, Compose projects, and custom links as tiles. Ordering and visibility
 can be adjusted so frequently used services stay easy to reach.
 
+### Languages
+
+runvard supports multiple interface languages. The installer can currently be run
+in English or German, and the selected installer language is stored as the initial
+web interface language. Users can still switch the interface language later from
+the web UI.
+
+The main web interface includes language options for English, German, French,
+Italian, Spanish, and Portuguese. Translation coverage may vary in deeper system
+tools, but the interface is designed to fall back safely to English where needed.
+
 ### System monitoring
 
 runvard displays live system information such as CPU usage, memory, disks, network
@@ -87,6 +98,21 @@ with more than a single basic network interface.
 
 runvard includes tools for managing Linux users, groups, passwords, SSH keys, sudo
 permissions, and local certificates. Actions can be reviewed through audit views.
+
+### Expert Mode
+
+Expert Mode is an optional session mode for administrators. It reveals advanced
+areas and actions that can change disks, services, users, packages, networking,
+diagnostics, and other host-level settings.
+
+By default, runvard keeps the interface calmer and hides the most sensitive
+controls. An admin can enable Expert Mode from the user menu in the top-right
+corner. When it is enabled, additional tabs, buttons, and system actions become
+available for the current session.
+
+Expert Mode should only be used when you understand the affected system area.
+Some actions can interrupt services, change network access, alter storage devices,
+or modify privileged host configuration.
 
 ### Services, logs, and maintenance
 
