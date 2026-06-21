@@ -947,7 +947,9 @@ function currentLanguage(){
 }
 function tr(key){
   const lang=currentLanguage();
-  return (I18N[lang]&&I18N[lang][key])||I18N_BASE[key]||key;
+  if(I18N[lang]&&Object.prototype.hasOwnProperty.call(I18N[lang],key))return I18N[lang][key];
+  if(Object.prototype.hasOwnProperty.call(I18N_BASE,key))return I18N_BASE[key];
+  return key;
 }
 const UI_PHRASES={
   en:{"Benutzer":"Users",
@@ -6095,6 +6097,62 @@ for(const lang of Object.keys(STORAGE_PHRASES)){
   UI_PHRASES[lang]=Object.assign(UI_PHRASES[lang]||{},STORAGE_PHRASES[lang]);
 }
 
+const TERMINAL_PHRASES={
+  de:{
+    "Reconnect":"Neu verbinden",
+    "Search (Ctrl+Shift+F)":"Suchen (Strg+Umschalt+F)",
+    "Decrease font size":"Schrift verkleinern",
+    "Increase font size":"Schrift vergrößern",
+    "Copy (Ctrl+Shift+C)":"Kopieren (Strg+Umschalt+C)",
+    "Clear terminal":"Terminal leeren",
+    "Previous (Shift+Enter)":"Vorheriger (Umschalt+Enter)",
+    "Search in buffer…":"Im Puffer suchen…"
+  },
+  fr:{
+    "Reconnect":"Reconnecter",
+    "Search (Ctrl+Shift+F)":"Rechercher (Ctrl+Maj+F)",
+    "Decrease font size":"Réduire la police",
+    "Increase font size":"Agrandir la police",
+    "Copy (Ctrl+Shift+C)":"Copier (Ctrl+Maj+C)",
+    "Clear terminal":"Effacer le terminal",
+    "Previous (Shift+Enter)":"Précédent (Maj+Entrée)",
+    "Search in buffer…":"Rechercher dans le tampon…"
+  },
+  it:{
+    "Reconnect":"Riconnetti",
+    "Search (Ctrl+Shift+F)":"Cerca (Ctrl+Maiusc+F)",
+    "Decrease font size":"Riduci dimensione carattere",
+    "Increase font size":"Aumenta dimensione carattere",
+    "Copy (Ctrl+Shift+C)":"Copia (Ctrl+Maiusc+C)",
+    "Clear terminal":"Pulisci terminale",
+    "Previous (Shift+Enter)":"Precedente (Maiusc+Invio)",
+    "Search in buffer…":"Cerca nel buffer…"
+  },
+  es:{
+    "Reconnect":"Reconectar",
+    "Search (Ctrl+Shift+F)":"Buscar (Ctrl+Mayús+F)",
+    "Decrease font size":"Reducir tamaño de fuente",
+    "Increase font size":"Aumentar tamaño de fuente",
+    "Copy (Ctrl+Shift+C)":"Copiar (Ctrl+Mayús+C)",
+    "Clear terminal":"Limpiar terminal",
+    "Previous (Shift+Enter)":"Anterior (Mayús+Intro)",
+    "Search in buffer…":"Buscar en el búfer…"
+  },
+  pt:{
+    "Reconnect":"Religar",
+    "Search (Ctrl+Shift+F)":"Pesquisar (Ctrl+Shift+F)",
+    "Decrease font size":"Diminuir tamanho da letra",
+    "Increase font size":"Aumentar tamanho da letra",
+    "Copy (Ctrl+Shift+C)":"Copiar (Ctrl+Shift+C)",
+    "Clear terminal":"Limpar terminal",
+    "Previous (Shift+Enter)":"Anterior (Shift+Enter)",
+    "Search in buffer…":"Pesquisar no buffer…"
+  }
+};
+for(const lang of Object.keys(TERMINAL_PHRASES)){
+  UI_PHRASES[lang]=Object.assign(UI_PHRASES[lang]||{},TERMINAL_PHRASES[lang]);
+}
+
 const PHRASE_PATTERNS=[
   {re:new RegExp("^Really delete \"(.+)\"\\?$"),t:{"de": "\"$1\" wirklich löschen?", "fr": "Vraiment supprimer « $1 » ?", "it": "Eliminare davvero \"$1\"?", "es": "¿Eliminar realmente «$1»?", "pt": "Eliminar mesmo \"$1\"?"}},
   {re:new RegExp("^Move \"(.+)\" to trash\\?$"),t:{"de": "\"$1\" in den Papierkorb verschieben?", "fr": "Déplacer « $1 » vers la corbeille ?", "it": "Spostare \"$1\" nel cestino?", "es": "¿Mover «$1» a la papelera?", "pt": "Mover \"$1\" para o lixo?"}},
@@ -6910,21 +6968,21 @@ function renderTerminal(body){
     <div class="term-toolbar">
       <div class="term-status"><span class="dot wait" id="term-dot"></span><span id="term-state">verbindet…</span></div>
       <div style="flex:1"></div>
-      <button class="term-tbtn" id="term-reconnect" title="Neu verbinden" onclick="termReconnect()" style="display:none;color:#fca5a5">↻ Reconnect</button>
-      <button class="term-tbtn" title="Suchen (Strg+Umschalt+F)" onclick="termSearchToggle()">🔍</button>
+      <button class="term-tbtn" id="term-reconnect" title="Reconnect" onclick="termReconnect()" style="display:none;color:#fca5a5">↻ Reconnect</button>
+      <button class="term-tbtn" title="Search (Ctrl+Shift+F)" onclick="termSearchToggle()">🔍</button>
       <div class="term-sep"></div>
-      <button class="term-tbtn" title="Verkleinern" onclick="termZoom(-1)">A−</button>
+      <button class="term-tbtn" title="Decrease font size" onclick="termZoom(-1)">A−</button>
       <span class="term-zoom" id="term-zoom">13px</span>
-      <button class="term-tbtn" title="Enlarge" onclick="termZoom(1)">A+</button>
+      <button class="term-tbtn" title="Increase font size" onclick="termZoom(1)">A+</button>
       <div class="term-sep"></div>
-      <button class="term-tbtn" title="Kopieren (Strg+Umschalt+C)" onclick="termCopy()">⧉</button>
+      <button class="term-tbtn" title="Copy (Ctrl+Shift+C)" onclick="termCopy()">⧉</button>
       <button class="term-tbtn" title="Paste (Ctrl+Shift+V)" onclick="termPaste()">📋</button>
-      <button class="term-tbtn warn" title="Leeren (term.clear)" onclick="termClear()">🧹</button>
+      <button class="term-tbtn warn" title="Clear terminal" onclick="termClear()">🧹</button>
     </div>
     <div class="term-searchbar" id="term-searchbar">
       <input type="text" id="term-search-input" placeholder="Search in buffer…" autocomplete="off" spellcheck="false">
       <span class="term-count" id="term-search-count">0/0</span>
-      <button class="term-tbtn" title="Vorheriger (Umschalt+Enter)" onclick="termFindPrev()">↑</button>
+      <button class="term-tbtn" title="Previous (Shift+Enter)" onclick="termFindPrev()">↑</button>
       <button class="term-tbtn" title="Next (Enter)" onclick="termFindNext()">↓</button>
       <button class="term-tbtn term-opt" id="term-opt-case" title="Case sensitive" onclick="termToggleOpt('case')">Aa</button>
       <button class="term-tbtn term-opt" id="term-opt-regex" title="Regular expression" onclick="termToggleOpt('regex')">.*</button>
@@ -10590,6 +10648,27 @@ function dashSelfhstIconCandidates(value){
     `https://selfh.st/icons/${file}.svg`
   ];
 }
+function dashIconSearchTerms(...values){
+  const terms=[];
+  const add=v=>{
+    v=String(v||'').trim();
+    if(!v||v.length<=2||v.startsWith('data:image/'))return;
+    if(/^https?:\/\//i.test(v)){
+      try{
+        const host=new URL(v).hostname.replace(/^www\./,'');
+        if(host&&!/^\d{1,3}(\.\d{1,3}){3}$/.test(host)){
+          add(host);
+          add(host.split('.')[0]);
+        }
+      }catch(e){}
+      return;
+    }
+    const slug=dashSelfhstSlug(v);
+    if(slug&&!terms.includes(slug))terms.push(slug);
+  };
+  values.forEach(add);
+  return terms;
+}
 function dashProbeIcon(url){
   return new Promise(resolve=>{
     const img=new Image();
@@ -10599,6 +10678,15 @@ function dashProbeIcon(url){
     img.src=url;
   });
 }
+async function dashFindSelfhstIconForTerms(terms,seq){
+  for(const term of (terms||[])){
+    for(const url of dashSelfhstIconCandidates(term)){
+      if(seq!==undefined&&seq!==dashIconLookupSeq)return null;
+      if(await dashProbeIcon(url))return url;
+    }
+  }
+  return '';
+}
 function dashShowIconUpload(show){
   const btn=$('#tile-edit-upload-btn');
   if(!btn)return;
@@ -10606,11 +10694,7 @@ function dashShowIconUpload(show){
   btn.setAttribute('aria-hidden',show?'false':'true');
 }
 async function dashFindSelfhstIcon(value,seq){
-  for(const url of dashSelfhstIconCandidates(value)){
-    if(seq!==dashIconLookupSeq)return null;
-    if(await dashProbeIcon(url))return url;
-  }
-  return '';
+  return dashFindSelfhstIconForTerms(dashIconSearchTerms(value),seq);
 }
 function dashHandleIconInput(){
   const inp=$('#tile-edit-icon');if(!inp)return;
@@ -10750,11 +10834,17 @@ window.dashAddForm=()=>{
   openForm('Add tile','+',[
     {name:'name',label:'Name',placeholder:'Home Assistant'},
     {name:'url',label:'URL',placeholder:'http://192.168.1.50:8123'},
-    {name:'icon',label:'Icon (Emoji)',placeholder:'🏠'},
+    {name:'icon',label:'Icon',placeholder:'auto, home assistant, https://... or 🏠'},
   ],async d=>{
     if(!d.name||!d.url){toast('Name and URL required','error');return;}
     const id='custom_'+Date.now();
-    await post('/dashboard/add',{tile_type:'custom',tile_id:id,name:d.name,url:d.url,icon:d.icon||'🔗'});
+    let icon=String(d.icon||'').trim();
+    if(!icon||(!/^https?:\/\//i.test(icon)&&!icon.startsWith('data:image/')&&icon.length>2)){
+      toast(uiText('Searching icon…'));
+      const found=await dashFindSelfhstIconForTerms(dashIconSearchTerms(icon,d.name,d.url));
+      if(found)icon=found;
+    }
+    await post('/dashboard/add',{tile_type:'custom',tile_id:id,name:d.name,url:d.url,icon:icon||'🔗'});
     closeForm();toast(d.name+' added');loadDashboard();
   });
 };
