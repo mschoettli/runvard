@@ -1,6 +1,7 @@
 """VMs: KVM/QEMU über libvirt verwalten - inkl. erstellen/löschen."""
 import os
 import subprocess
+import tempfile
 import time
 
 try:
@@ -211,41 +212,175 @@ def list_isos():
 
 
 def create_vm(name, memory_mb, vcpus, disk_gb, iso, network="default"):
-    """Neue VM via virt-install erstellen.
+    """Neue VM deterministisch via qemu-img + virsh define erstellen.
 
     memory_mb: RAM in MB
     disk_gb:   Disk-Größe in GB
     iso:       ISO-Dateiname aus ISO_DIR (oder leer für PXE/Netzwerk)
     """
-    disk_path = os.path.join(ISO_DIR, f"{name}.qcow2")
-    cmd = [
-        "virt-install",
-        "--name", name,
-        "--memory", str(memory_mb),
-        "--vcpus", str(vcpus),
-        "--disk", f"path={disk_path},size={disk_gb},format=qcow2",
-        "--network", f"network={network}",
-        "--graphics", "vnc,listen=0.0.0.0",
-        "--noautoconsole",
-        "--osinfo", "detect=on,require=off",
-    ]
+    if not _valid_vm(name):
+        return {"ok": False, "stderr": "Ungueltiger VM-Name"}
+    try:
+        memory_mb = int(memory_mb)
+        vcpus = int(vcpus)
+        disk_gb = int(disk_gb)
+        if not (256 <= memory_mb <= 1048576 and 1 <= vcpus <= 256 and 1 <= disk_gb <= 65536):
+            raise ValueError
+    except (TypeError, ValueError):
+        return {"ok": False, "stderr": "Ungueltige VM-Ressourcen"}
+    if not _valid_vm(network or "default"):
+        return {"ok": False, "stderr": "Ungueltiges Netzwerk"}
+
+    network = network or "default"
+    iso_path = ""
     if iso:
-        cmd += ["--cdrom", os.path.join(ISO_DIR, iso)]
-    else:
-        cmd += ["--pxe"]
+        if os.path.basename(iso) != iso or not iso.lower().endswith(".iso"):
+            return {"ok": False, "stderr": "Ungueltiges ISO"}
+        iso_path = os.path.join(ISO_DIR, iso)
+        if not os.path.isfile(iso_path):
+            return {"ok": False, "stderr": f"ISO nicht gefunden: {iso}"}
+
+    if _domain_exists(name):
+        return {"ok": False, "stderr": f"VM existiert bereits: {name}"}
 
     try:
-        r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
-    except subprocess.TimeoutExpired as e:
-        output = ((e.stdout or "") + (e.stderr or "")).strip()
-        return {"ok": False, "output": output or "virt-install timed out"}
+        os.makedirs(ISO_DIR, exist_ok=True)
+    except OSError as e:
+        return {"ok": False, "stderr": f"VM-Image-Verzeichnis nicht nutzbar: {e}"}
+    disk_path = os.path.join(ISO_DIR, f"{name}.qcow2")
+    if os.path.exists(disk_path):
+        return {"ok": False, "stderr": f"Disk existiert bereits: {disk_path}"}
 
-    output = r.stdout + r.stderr
-    if r.returncode != 0:
-        return {"ok": False, "output": output}
+    net = _ensure_network(network)
+    if not net["ok"]:
+        return net
 
+    disk = _run(["qemu-img", "create", "-f", "qcow2", disk_path, f"{disk_gb}G"], timeout=300)
+    if not disk["ok"]:
+        return {"ok": False, "stderr": disk["stderr"] or disk["stdout"] or "qemu-img fehlgeschlagen"}
+
+    xml = _vm_domain_xml(name, memory_mb, vcpus, disk_path, iso_path, network)
+    xml_path = ""
+    try:
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".xml", delete=False) as f:
+            f.write(xml)
+            xml_path = f.name
+        defined = _virsh(["define", xml_path], timeout=30)
+        if not defined["ok"]:
+            _remove_created_disk(disk_path)
+            return {"ok": False, "stderr": defined["stderr"] or defined["stdout"] or "virsh define fehlgeschlagen"}
+    finally:
+        if xml_path:
+            try:
+                os.unlink(xml_path)
+            except OSError:
+                pass
+
+    started = _virsh(["start", name], timeout=60)
     visible = _wait_for_domain(name)
-    return {"ok": True, "output": output, "visible": visible}
+    output = "\n".join(x for x in [
+        disk["stdout"], disk["stderr"], started["stdout"], started["stderr"]
+    ] if x)
+    return {
+        "ok": True,
+        "output": output,
+        "visible": visible,
+        "started": started["ok"],
+        "stderr": "" if started["ok"] else (started["stderr"] or started["stdout"]),
+    }
+
+
+def _run(args, timeout=120):
+    try:
+        r = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+        return {"ok": r.returncode == 0, "stdout": r.stdout, "stderr": r.stderr}
+    except FileNotFoundError:
+        return {"ok": False, "stdout": "", "stderr": f"{args[0]} nicht installiert"}
+    except subprocess.TimeoutExpired as e:
+        return {
+            "ok": False,
+            "stdout": e.stdout or "",
+            "stderr": (e.stderr or "") + f"\n{args[0]} timed out",
+        }
+    except Exception as e:
+        return {"ok": False, "stdout": "", "stderr": str(e)}
+
+
+def _domain_exists(name):
+    if HAS_LIBVIRT:
+        try:
+            _connect().lookupByName(name)
+            return True
+        except Exception:
+            pass
+    return _virsh(["dominfo", name], timeout=10)["ok"]
+
+
+def _ensure_network(network):
+    info = _virsh(["net-info", network], timeout=15)
+    if not info["ok"]:
+        return {"ok": False, "stderr": f"Libvirt-Netzwerk nicht gefunden: {network}"}
+    data = _parse_dominfo(info["stdout"])
+    if data.get("Active", "").lower() == "yes":
+        return {"ok": True}
+    started = _virsh(["net-start", network], timeout=30)
+    if started["ok"]:
+        return {"ok": True}
+    return {"ok": False, "stderr": started["stderr"] or started["stdout"] or f"Netzwerk konnte nicht gestartet werden: {network}"}
+
+
+def _remove_created_disk(path):
+    try:
+        os.unlink(path)
+    except OSError:
+        pass
+
+
+def _vm_domain_xml(name, memory_mb, vcpus, disk_path, iso_path, network):
+    domain = ET.Element("domain", {"type": "kvm"})
+    ET.SubElement(domain, "name").text = name
+    ET.SubElement(domain, "memory", {"unit": "MiB"}).text = str(memory_mb)
+    ET.SubElement(domain, "currentMemory", {"unit": "MiB"}).text = str(memory_mb)
+    ET.SubElement(domain, "vcpu", {"placement": "static"}).text = str(vcpus)
+
+    os_node = ET.SubElement(domain, "os")
+    ET.SubElement(os_node, "type", {"arch": "x86_64"}).text = "hvm"
+    if iso_path:
+        ET.SubElement(os_node, "boot", {"dev": "cdrom"})
+    else:
+        ET.SubElement(os_node, "boot", {"dev": "network"})
+    ET.SubElement(os_node, "boot", {"dev": "hd"})
+
+    features = ET.SubElement(domain, "features")
+    ET.SubElement(features, "acpi")
+    ET.SubElement(features, "apic")
+    ET.SubElement(domain, "clock", {"offset": "utc"})
+    ET.SubElement(domain, "on_poweroff").text = "destroy"
+    ET.SubElement(domain, "on_reboot").text = "restart"
+    ET.SubElement(domain, "on_crash").text = "destroy"
+
+    devices = ET.SubElement(domain, "devices")
+    disk = ET.SubElement(devices, "disk", {"type": "file", "device": "disk"})
+    ET.SubElement(disk, "driver", {"name": "qemu", "type": "qcow2"})
+    ET.SubElement(disk, "source", {"file": disk_path})
+    ET.SubElement(disk, "target", {"dev": "vda", "bus": "virtio"})
+
+    if iso_path:
+        cdrom = ET.SubElement(devices, "disk", {"type": "file", "device": "cdrom"})
+        ET.SubElement(cdrom, "driver", {"name": "qemu", "type": "raw"})
+        ET.SubElement(cdrom, "source", {"file": iso_path})
+        ET.SubElement(cdrom, "target", {"dev": "sda", "bus": "sata"})
+        ET.SubElement(cdrom, "readonly")
+
+    iface = ET.SubElement(devices, "interface", {"type": "network"})
+    ET.SubElement(iface, "source", {"network": network})
+    ET.SubElement(iface, "model", {"type": "virtio"})
+    ET.SubElement(devices, "input", {"type": "tablet", "bus": "usb"})
+    ET.SubElement(devices, "graphics", {"type": "vnc", "port": "-1", "autoport": "yes", "listen": "0.0.0.0"})
+    video = ET.SubElement(devices, "video")
+    ET.SubElement(video, "model", {"type": "qxl"})
+    ET.SubElement(devices, "console", {"type": "pty"})
+    return ET.tostring(domain, encoding="unicode")
 
 
 def _wait_for_domain(name, timeout=10):

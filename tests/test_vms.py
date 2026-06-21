@@ -1,4 +1,4 @@
-import subprocess
+import os
 
 from modules import vms
 
@@ -44,18 +44,42 @@ def test_list_vms_skips_unreadable_domains(monkeypatch):
     assert listed[0]["max_mem"] == 2048 * 1024
 
 
-def test_create_vm_reports_visible_domain(monkeypatch):
-    def fake_run(cmd, capture_output, text, timeout):
-        assert cmd[:3] == ["virt-install", "--name", "debian-vm"]
-        assert timeout == 600
-        return subprocess.CompletedProcess(cmd, 0, "created", "")
+def test_create_vm_reports_visible_domain(monkeypatch, tmp_path):
+    calls = []
 
-    monkeypatch.setattr(vms.subprocess, "run", fake_run)
+    def fake_run(args, timeout=120):
+        calls.append(args)
+        assert args[:4] == ["qemu-img", "create", "-f", "qcow2"]
+        assert args[-1] == "20G"
+        return {"ok": True, "stdout": "disk created", "stderr": ""}
+
+    def fake_virsh(args, timeout=120):
+        calls.append(args)
+        if args[0] == "define":
+            assert os.path.exists(args[1])
+            xml = open(args[1], encoding="utf-8").read()
+            assert "<name>debian-vm</name>" in xml
+            assert 'network="default"' in xml
+            return {"ok": True, "stdout": "defined", "stderr": ""}
+        if args == ["start", "debian-vm"]:
+            return {"ok": True, "stdout": "started", "stderr": ""}
+        return {"ok": False, "stdout": "", "stderr": "unexpected"}
+
+    monkeypatch.setattr(vms, "_domain_exists", lambda name: False)
+    monkeypatch.setattr(vms, "_ensure_network", lambda network: {"ok": True})
+    monkeypatch.setattr(vms, "_run", fake_run)
+    monkeypatch.setattr(vms, "_virsh", fake_virsh)
     monkeypatch.setattr(vms, "_wait_for_domain", lambda name: name == "debian-vm")
+    monkeypatch.setattr(vms, "ISO_DIR", str(tmp_path))
 
     result = vms.create_vm("debian-vm", 2048, 2, 20, "", "default")
 
-    assert result == {"ok": True, "output": "created", "visible": True}
+    assert result["ok"] is True
+    assert result["visible"] is True
+    assert result["started"] is True
+    assert calls[0][0] == "qemu-img"
+    assert calls[1][0] == "define"
+    assert calls[2] == ["start", "debian-vm"]
 
 
 def test_list_vms_falls_back_to_virsh(monkeypatch):
