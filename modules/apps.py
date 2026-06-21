@@ -964,7 +964,8 @@ def install(app_id, content):
     job_id = f"{app_id}_{int(time.time())}"
     _install_jobs[job_id] = {
         "status": "preparing", "app_id": app_id, "app_name": app["name"],
-        "ok": None, "output": "", "step": "Vorbereitung…"
+        "ok": None, "output": "", "step": "Vorbereitung…",
+        "step_key": "preparing",
     }
 
     def run():
@@ -975,6 +976,7 @@ def install(app_id, content):
         job = _install_jobs[job_id]
         job["status"] = "pulling"
         job["step"] = "Image wird heruntergeladen…"
+        job["step_key"] = "pulling_image"
         try:
             r = subprocess.run(["docker", "compose", "pull"],
                                cwd=path, capture_output=True, text=True, timeout=1800)
@@ -983,15 +985,18 @@ def install(app_id, content):
                 job["status"] = "error"
                 job["ok"] = False
                 job["step"] = _failure_step("Image pull failed", job["output"])
+                job["step_key"] = "image_pull_failed"
                 return
         except subprocess.TimeoutExpired:
             job["status"] = "error"
             job["ok"] = False
             job["step"] = "Image pull timed out"
+            job["step_key"] = "image_pull_timeout"
             return
 
         job["status"] = "starting"
         job["step"] = "Container wird gestartet…"
+        job["step_key"] = "starting_container"
         try:
             r = subprocess.run(["docker", "compose", "up", "-d"],
                                cwd=path, capture_output=True, text=True, timeout=300)
@@ -1001,6 +1006,7 @@ def install(app_id, content):
             if r.returncode != 0:
                 job["step"] = _failure_step("Container start failed",
                                             job["output"])
+                job["step_key"] = "container_start_failed"
                 return
             time.sleep(1)
             if not _running(app_id):
@@ -1009,12 +1015,15 @@ def install(app_id, content):
                 job["output"] += _compose_diagnostics(path)
                 job["step"] = _failure_step("Container exited after start",
                                             job["output"])
+                job["step_key"] = "container_exited"
                 return
             job["step"] = "Fertig ✓"
+            job["step_key"] = "done"
         except subprocess.TimeoutExpired:
             job["status"] = "error"
             job["ok"] = False
             job["step"] = "Container start timed out"
+            job["step_key"] = "container_start_timeout"
 
     threading.Thread(target=run, daemon=True).start()
     return {"job_id": job_id}
@@ -1040,6 +1049,7 @@ def install_status(job_id):
     return {
         "status": job["status"],
         "step": job["step"],
+        "step_key": job.get("step_key", ""),
         "ok": job["ok"],
         "app_id": job["app_id"],
         "app_name": job.get("app_name", ""),
