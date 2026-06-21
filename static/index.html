@@ -10051,6 +10051,38 @@ function appById(id){
 function appPendingLabel(action){
   return appUi(({up:'starting',start:'starting',stop:'stopping',down:'stopping',restart:'restarting',update:'updating'})[action]||'starting');
 }
+const APP_INSTALL_STEP_PHRASES={
+  "Vorbereitung…":{de:"Vorbereitung…",en:"Preparing…",fr:"Préparation…",it:"Preparazione…",es:"Preparando…",pt:"A preparar…"},
+  "Preparing…":{de:"Vorbereitung…",en:"Preparing…",fr:"Préparation…",it:"Preparazione…",es:"Preparando…",pt:"A preparar…"},
+  "Image wird heruntergeladen…":{de:"Image wird heruntergeladen…",en:"Pulling image…",fr:"Téléchargement de l’image…",it:"Scaricamento immagine…",es:"Descargando imagen…",pt:"A obter imagem…"},
+  "Pulling image…":{de:"Image wird heruntergeladen…",en:"Pulling image…",fr:"Téléchargement de l’image…",it:"Scaricamento immagine…",es:"Descargando imagen…",pt:"A obter imagem…"},
+  "Container wird gestartet…":{de:"Container wird gestartet…",en:"Starting container…",fr:"Démarrage du conteneur…",it:"Avvio container…",es:"Iniciando contenedor…",pt:"A iniciar contentor…"},
+  "Starting container…":{de:"Container wird gestartet…",en:"Starting container…",fr:"Démarrage du conteneur…",it:"Avvio container…",es:"Iniciando contenedor…",pt:"A iniciar contentor…"},
+  "Fertig ✓":{de:"Fertig ✓",en:"Done ✓",fr:"Terminé ✓",it:"Fatto ✓",es:"Listo ✓",pt:"Concluído ✓"},
+  "Done ✓":{de:"Fertig ✓",en:"Done ✓",fr:"Terminé ✓",it:"Fatto ✓",es:"Listo ✓",pt:"Concluído ✓"},
+  "Image pull failed":{de:"Image-Download fehlgeschlagen",en:"Image pull failed",fr:"Échec du téléchargement de l’image",it:"Download immagine non riuscito",es:"Error al descargar la imagen",pt:"Falha ao obter imagem"},
+  "Image pull timed out":{de:"Image-Download hat zu lange gedauert",en:"Image pull timed out",fr:"Délai dépassé lors du téléchargement de l’image",it:"Timeout download immagine",es:"Tiempo agotado al descargar la imagen",pt:"Tempo esgotado ao obter imagem"},
+  "Container start failed":{de:"Container-Start fehlgeschlagen",en:"Container start failed",fr:"Échec du démarrage du conteneur",it:"Avvio container non riuscito",es:"Error al iniciar el contenedor",pt:"Falha ao iniciar contentor"},
+  "Container exited after start":{de:"Container wurde nach dem Start beendet",en:"Container exited after start",fr:"Le conteneur s’est arrêté après le démarrage",it:"Il container si è chiuso dopo l’avvio",es:"El contenedor salió tras iniciar",pt:"O contentor terminou após iniciar"},
+  "Container start timed out":{de:"Container-Start hat zu lange gedauert",en:"Container start timed out",fr:"Délai dépassé au démarrage du conteneur",it:"Timeout avvio container",es:"Tiempo agotado al iniciar el contenedor",pt:"Tempo esgotado ao iniciar contentor"}
+};
+function appInstallStepText(step){
+  const value=String(step||'…');
+  const lang=currentLanguage();
+  const direct=APP_INSTALL_STEP_PHRASES[value];
+  if(direct)return direct[lang]||direct.en||value;
+  const colon=value.indexOf(':');
+  if(colon>0){
+    const label=value.slice(0,colon);
+    const detail=value.slice(colon+1).trim();
+    const translated=APP_INSTALL_STEP_PHRASES[label];
+    if(translated){
+      const base=translated[lang]||translated.en||label;
+      return detail?`${base}: ${detail}`:base;
+    }
+  }
+  return uiText(value);
+}
 function appMatchesSearch(app,q){
   if(!q)return true;
   return [
@@ -11364,7 +11396,7 @@ async function appInstallStart(draft){
       try{
         const s=await api('/apps/install-status?job_id='+encodeURIComponent(r.job_id));
         const stepEl=$('#inst-step-'+draft.app.id),barEl=$('#inst-bar-'+draft.app.id),labelEl=indicator.querySelector('.install-label');
-        if(stepEl)stepEl.textContent=s.step||'…';
+        if(stepEl)stepEl.textContent=appInstallStepText(s.step||'…');
         if(s.status==='pulling')progress=Math.min(progress+2,70);
         else if(s.status==='starting')progress=Math.min(progress+6,95);
         if(barEl)barEl.style.width=Math.round(progress)+'%';
@@ -11372,7 +11404,7 @@ async function appInstallStart(draft){
           clearInterval(poller);_activeInstalls=Math.max(0,_activeInstalls-1);updateAppsBadge();
           if(barEl)barEl.style.width='100%';
           if(s.ok){indicator.classList.add('done');if(labelEl)labelEl.textContent=draft.app.name+' ✓';toast(draft.app.name+' installed');dashAutoAdd(draft.app.id,draft.app.name,draft.app.icon,draft.app.port);}
-          else{indicator.classList.add('error');indicator.title=s.output||s.step||'';if(labelEl)labelEl.textContent=appUi('installFailed');toast(s.step||appUi('installFailed'),'error');}
+          else{indicator.classList.add('error');indicator.title=s.output||appInstallStepText(s.step)||'';if(labelEl)labelEl.textContent=appUi('installFailed');toast(appInstallStepText(s.step)||appUi('installFailed'),'error');}
           setTimeout(()=>indicator.remove(),3000);
           renderApps($('#modal-body'));
         }
@@ -11484,13 +11516,7 @@ async function appComposeDraft(appId,contentOverride,composeData={}){
 window.appInstallForm=async id=>{
   try{
     const draft=await appComposeDraft(id);
-    appComposeFormOpen(draft,{
-      title:uiText('Install')+': '+draft.app.name,
-      icon:'🧩',
-      primaryLabel:'Install',
-      env:false,
-      onSubmit:appInstallStart,
-    });
+    await appInstallStart(draft);
   }catch(e){toast('Error: '+e.message,'error');}
 };
 window.appUninstall=(id,name)=>typedConfirm('Uninstall app',`"${name}" will be stopped and removed. Data in /opt/runvard/data/apps/${id}/ stays on disk.`,name,async()=>{

@@ -365,7 +365,6 @@ def _danger_confirm_meta(path, form):
         "/api/sysmgr/unattended/set": ("sysmgr:unattended", "unattended-upgrades"),
         "/api/sysmgr/tuned/set": ("sysmgr:tuned", "profile"),
         "/api/sysmgr/kdump/action": ("sysmgr:kdump", "action"),
-        "/api/apps/install": ("apps:install", "app_id"),
         "/api/apps/save-compose": ("apps:save-compose", "app_id"),
         "/api/apps/action": ("apps:action", "app_id"),
     }
