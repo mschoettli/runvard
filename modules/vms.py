@@ -297,6 +297,7 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso, network="default"):
     if not net["ok"]:
         return net
     network = net.get("network", network)
+    network_warning = net.get("warning", "")
 
     disk = _run(["qemu-img", "create", "-f", "qcow2", disk_path, f"{disk_gb}G"], timeout=300)
     if not disk["ok"]:
@@ -330,6 +331,8 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso, network="default"):
         "visible": visible,
         "started": started["ok"],
         "stderr": "" if started["ok"] else (started["stderr"] or started["stdout"]),
+        "network": network or "",
+        "warning": network_warning,
     }
 
 
@@ -368,6 +371,8 @@ def _ensure_network(network):
         started = _virsh(["net-start", network], timeout=30)
         if started["ok"]:
             return {"ok": True, "network": network}
+        if network == "default" and _dnsmasq_bind_conflict(started):
+            return _networkless_vm_fallback()
         if network != "default":
             return {"ok": False, "stderr": started["stderr"] or started["stdout"] or f"Netzwerk konnte nicht gestartet werden: {network}"}
     elif network != "default":
@@ -397,6 +402,8 @@ def _ensure_runvard_network():
             if started["ok"]:
                 _virsh(["net-autostart", name], timeout=10)
                 return {"ok": True, "network": name}
+            if _dnsmasq_bind_conflict(started):
+                return _networkless_vm_fallback()
             continue
 
         xml = _network_xml(
@@ -418,6 +425,9 @@ def _ensure_runvard_network():
             if started["ok"]:
                 _virsh(["net-autostart", name], timeout=10)
                 return {"ok": True, "network": name}
+            if _dnsmasq_bind_conflict(started):
+                _virsh(["net-undefine", name], timeout=20)
+                return _networkless_vm_fallback()
             _virsh(["net-undefine", name], timeout=20)
         finally:
             if xml_path:
@@ -426,6 +436,27 @@ def _ensure_runvard_network():
                 except OSError:
                     pass
     return {"ok": False, "stderr": "Kein freies Runvard-VM-Netzwerk gefunden"}
+
+
+def _dnsmasq_bind_conflict(result):
+    text = f"{result.get('stdout', '')}\n{result.get('stderr', '')}".lower()
+    return (
+        "failed to create listening socket" in text
+        or "address already in use" in text
+        or "adresse wird bereits verwendet" in text
+        or "adresse bereits in benutzung" in text
+    )
+
+
+def _networkless_vm_fallback():
+    return {
+        "ok": True,
+        "network": "",
+        "warning": (
+            "Libvirt DNS/DHCP network unavailable; creating VM without network. "
+            "Free port 53 on the host to enable VM networking."
+        ),
+    }
 
 
 def _network_xml(name, bridge, address, dhcp_start, dhcp_end):
@@ -457,7 +488,7 @@ def _vm_domain_xml(name, memory_mb, vcpus, disk_path, iso_path, network):
     ET.SubElement(os_node, "type", {"arch": "x86_64"}).text = "hvm"
     if iso_path:
         ET.SubElement(os_node, "boot", {"dev": "cdrom"})
-    else:
+    elif network:
         ET.SubElement(os_node, "boot", {"dev": "network"})
     ET.SubElement(os_node, "boot", {"dev": "hd"})
 
@@ -482,9 +513,10 @@ def _vm_domain_xml(name, memory_mb, vcpus, disk_path, iso_path, network):
         ET.SubElement(cdrom, "target", {"dev": "sda", "bus": "sata"})
         ET.SubElement(cdrom, "readonly")
 
-    iface = ET.SubElement(devices, "interface", {"type": "network"})
-    ET.SubElement(iface, "source", {"network": network})
-    ET.SubElement(iface, "model", {"type": "virtio"})
+    if network:
+        iface = ET.SubElement(devices, "interface", {"type": "network"})
+        ET.SubElement(iface, "source", {"network": network})
+        ET.SubElement(iface, "model", {"type": "virtio"})
     ET.SubElement(devices, "input", {"type": "tablet", "bus": "usb"})
     ET.SubElement(devices, "graphics", {"type": "vnc", "port": "-1", "autoport": "yes", "listen": "0.0.0.0"})
     video = ET.SubElement(devices, "video")

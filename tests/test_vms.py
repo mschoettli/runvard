@@ -87,6 +87,43 @@ def test_create_vm_reports_visible_domain(monkeypatch, tmp_path):
     assert calls[2] == ["start", "debian-vm"]
 
 
+def test_create_vm_can_define_networkless_domain(monkeypatch, tmp_path):
+    calls = []
+
+    def fake_run(args, timeout=120):
+        calls.append(args)
+        return {"ok": True, "stdout": "disk created", "stderr": ""}
+
+    def fake_virsh(args, timeout=120):
+        calls.append(args)
+        if args[0] == "define":
+            xml = open(args[1], encoding="utf-8").read()
+            assert "<interface" not in xml
+            assert 'dev="network"' not in xml
+            return {"ok": True, "stdout": "defined", "stderr": ""}
+        if args == ["start", "offline-vm"]:
+            return {"ok": True, "stdout": "started", "stderr": ""}
+        return {"ok": False, "stdout": "", "stderr": "unexpected"}
+
+    monkeypatch.setattr(vms, "_domain_exists", lambda name: False)
+    monkeypatch.setattr(
+        vms,
+        "_ensure_network",
+        lambda network: {"ok": True, "network": "", "warning": "creating VM without network"},
+    )
+    monkeypatch.setattr(vms, "_run", fake_run)
+    monkeypatch.setattr(vms, "_virsh", fake_virsh)
+    monkeypatch.setattr(vms, "_wait_for_domain", lambda name: True)
+    monkeypatch.setattr(vms, "ISO_DIR", str(tmp_path))
+
+    result = vms.create_vm("offline-vm", 2048, 2, 20, "", "default")
+
+    assert result["ok"] is True
+    assert result["network"] == ""
+    assert result["warning"] == "creating VM without network"
+    assert calls[1][0] == "define"
+
+
 def test_list_vms_falls_back_to_virsh(monkeypatch):
     monkeypatch.setattr(vms, "HAS_LIBVIRT", False)
 
@@ -204,7 +241,7 @@ def test_diagnostics_exposes_raw_virsh_and_parsed_vms(monkeypatch, tmp_path):
     assert diag["iso_dir_entries"] == ["installer.iso"]
 
 
-def test_default_network_falls_back_to_runvard_nat(monkeypatch):
+def test_default_network_dns_conflict_falls_back_to_no_nic(monkeypatch):
     calls = []
 
     def fake_virsh(args, timeout=120):
@@ -212,20 +249,7 @@ def test_default_network_falls_back_to_runvard_nat(monkeypatch):
         if args == ["net-info", "default"]:
             return {"ok": True, "stdout": "Name: default\nActive: no\n", "stderr": ""}
         if args == ["net-start", "default"]:
-            return {"ok": False, "stdout": "", "stderr": "Address already in use"}
-        if args == ["net-info", "runvard123"]:
-            return {"ok": False, "stdout": "", "stderr": "network not found"}
-        if args[0] == "net-define":
-            assert os.path.exists(args[1])
-            xml = open(args[1], encoding="utf-8").read()
-            assert "<name>runvard123</name>" in xml
-            assert 'name="rvbr123"' in xml
-            assert 'address="192.168.123.1"' in xml
-            return {"ok": True, "stdout": "defined", "stderr": ""}
-        if args == ["net-start", "runvard123"]:
-            return {"ok": True, "stdout": "started", "stderr": ""}
-        if args == ["net-autostart", "runvard123"]:
-            return {"ok": True, "stdout": "", "stderr": ""}
+            return {"ok": False, "stdout": "", "stderr": "failed to create listening socket for 192.168.122.1: Address already in use"}
         return {"ok": False, "stdout": "", "stderr": "unexpected"}
 
     monkeypatch.setattr(vms, "_virsh", fake_virsh)
@@ -233,6 +257,7 @@ def test_default_network_falls_back_to_runvard_nat(monkeypatch):
     result = vms._ensure_network("default")
 
     assert result["ok"] is True
-    assert result["network"] == "runvard123"
+    assert result["network"] == ""
+    assert "without network" in result["warning"]
     assert ["net-start", "default"] in calls
-    assert ["net-start", "runvard123"] in calls
+    assert not any(call and call[0] == "net-define" for call in calls)
