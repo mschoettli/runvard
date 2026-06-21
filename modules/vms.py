@@ -1,6 +1,7 @@
 """VMs: KVM/QEMU über libvirt verwalten - inkl. erstellen/löschen."""
 import os
 import subprocess
+import time
 
 try:
     import libvirt
@@ -45,18 +46,21 @@ def list_vms():
     conn = _connect()
     vms = []
     for dom in conn.listAllDomains():
-        state, _ = dom.state()
-        info = dom.info()
-        vms.append({
-            "name": dom.name(),
-            "uuid": dom.UUIDString(),
-            "state": _STATES.get(state, "unknown"),
-            "active": dom.isActive() == 1,
-            "autostart": dom.autostart() == 1,
-            "max_mem": info[1] * 1024,
-            "mem": info[2] * 1024,
-            "vcpus": info[3],
-        })
+        try:
+            state, _ = dom.state()
+            info = dom.info()
+            vms.append({
+                "name": dom.name(),
+                "uuid": dom.UUIDString(),
+                "state": _STATES.get(state, "unknown"),
+                "active": dom.isActive() == 1,
+                "autostart": dom.autostart() == 1,
+                "max_mem": info[1] * 1024,
+                "mem": info[2] * 1024,
+                "vcpus": info[3],
+            })
+        except Exception:
+            continue
     return vms
 
 
@@ -120,8 +124,31 @@ def create_vm(name, memory_mb, vcpus, disk_gb, iso, network="default"):
     else:
         cmd += ["--pxe"]
 
-    r = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
-    return {"ok": r.returncode == 0, "output": r.stdout + r.stderr}
+    try:
+        r = subprocess.run(cmd, capture_output=True, text=True, timeout=600)
+    except subprocess.TimeoutExpired as e:
+        output = ((e.stdout or "") + (e.stderr or "")).strip()
+        return {"ok": False, "output": output or "virt-install timed out"}
+
+    output = r.stdout + r.stderr
+    if r.returncode != 0:
+        return {"ok": False, "output": output}
+
+    visible = _wait_for_domain(name)
+    return {"ok": True, "output": output, "visible": visible}
+
+
+def _wait_for_domain(name, timeout=10):
+    """Wait until libvirt exposes a newly created domain to list/detail calls."""
+    deadline = time.monotonic() + timeout
+    while time.monotonic() < deadline:
+        try:
+            conn = _connect()
+            conn.lookupByName(name)
+            return True
+        except Exception:
+            time.sleep(0.25)
+    return False
 
 
 def list_snapshots(name):
