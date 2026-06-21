@@ -173,6 +173,37 @@ def test_virsh_uses_system_uri(monkeypatch):
     assert seen["args"][:3] == ["virsh", "-c", "qemu:///system"]
 
 
+def test_diagnostics_exposes_raw_virsh_and_parsed_vms(monkeypatch, tmp_path):
+    monkeypatch.setattr(vms, "HAS_LIBVIRT", False)
+    monkeypatch.setattr(vms, "ISO_DIR", str(tmp_path))
+    (tmp_path / "installer.iso").write_text("iso")
+
+    def fake_virsh(args, timeout=120):
+        if args == ["list", "--all"]:
+            return {
+                "ok": True,
+                "stdout": "\n Id   Name      State\n-------------------------\n -    diag-vm   shut off\n",
+                "stderr": "",
+            }
+        if args == ["dominfo", "diag-vm"]:
+            return {
+                "ok": True,
+                "stdout": "Name: diag-vm\nState: shut off\nCPU(s): 2\n",
+                "stderr": "",
+            }
+        return {"ok": True, "stdout": "", "stderr": ""}
+
+    monkeypatch.setattr(vms, "_virsh", fake_virsh)
+
+    diag = vms.diagnostics()
+
+    assert diag["uri"] == "qemu:///system"
+    assert diag["has_libvirt_python"] is False
+    assert "diag-vm" in diag["virsh"]["list_all"]["stdout"]
+    assert [vm["name"] for vm in diag["parsed_vms"]] == ["diag-vm"]
+    assert diag["iso_dir_entries"] == ["installer.iso"]
+
+
 def test_default_network_falls_back_to_runvard_nat(monkeypatch):
     calls = []
 

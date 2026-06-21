@@ -1148,6 +1148,11 @@ def vms_list(user: str = Depends(auth)):
         return []
 
 
+@app.get("/api/vms/diagnostics")
+def vms_diagnostics(user: str = Depends(auth)):
+    return vms.diagnostics()
+
+
 @app.post("/api/vms/action")
 def vms_action(name: str = Form(...), action: str = Form(...),
                user: str = Depends(confirmed_admin)):

@@ -53,6 +53,45 @@ def list_vms():
     return _list_vms_virsh()
 
 
+def diagnostics():
+    """Return VM subsystem facts without changing host state."""
+    libvirt_error = ""
+    libvirt_domains = []
+    if HAS_LIBVIRT:
+        try:
+            libvirt_domains = _list_vms_libvirt()
+        except Exception as e:
+            libvirt_error = str(e)
+    else:
+        libvirt_error = "libvirt-python nicht installiert"
+
+    virsh_list = _virsh(["list", "--all"], timeout=15)
+    networks = _virsh(["net-list", "--all"], timeout=15)
+    pools = _virsh(["pool-list", "--all"], timeout=15)
+    images = []
+    try:
+        if os.path.isdir(ISO_DIR):
+            images = sorted(os.listdir(ISO_DIR))
+    except Exception as e:
+        images = [f"error: {e}"]
+
+    return {
+        "uri": LIBVIRT_URI,
+        "has_libvirt_python": HAS_LIBVIRT,
+        "libvirt_error": libvirt_error,
+        "libvirt_domains": libvirt_domains,
+        "virsh": {
+            "list_all": virsh_list,
+            "net_list_all": networks,
+            "pool_list_all": pools,
+        },
+        "parsed_vms": list_vms(),
+        "iso_dir": ISO_DIR,
+        "iso_dir_exists": os.path.isdir(ISO_DIR),
+        "iso_dir_entries": images[:100],
+    }
+
+
 def _list_vms_libvirt():
     conn = _connect()
     vms = []
