@@ -777,6 +777,7 @@ function dangerConfirmMeta(p,d){
     '/files/shares/delete':['files:share-delete','token'],
     '/storage/format':['storage:format','partition'],
     '/storage/unmount':['storage:unmount','mountpoint'],
+    '/storage/raid/create':['storage:raid-create','name'],
     '/storage/lvm/lv-remove':['storage:lvm-lv-remove','lv_path'],
     '/storage/luks/format':['storage:luks-format','device'],
     '/storage/luks/close':['storage:luks-close','name'],
@@ -8102,7 +8103,25 @@ window.loadSmart=async()=>{
   </div>`;
 };
 window.diskWizard=dev=>openForm('Set up disk: '+dev,'💿',[{name:'fstype',label:'Filesystem',type:'select',options:['ext4','xfs','btrfs']},{name:'mountpoint',label:'Mount point',placeholder:'/mnt/data'},{name:'persist',label:'Add to /etc/fstab (permanent)',type:'checkbox',value:true}],async d=>{closeForm();toast('Setting up disk…');try{await post('/storage/partition-table',{device:dev,label:'gpt'});await post('/storage/partition',{device:dev});await post('/storage/format',{partition:dev+'1',fstype:d.fstype});await post('/storage/mount',{partition:dev+'1',mountpoint:d.mountpoint,persist:d.persist});toast('Disk ready');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}});
-window.raidForm=async()=>{const d=await api('/storage/devices');const disks=d.devices.filter(x=>x.type==='disk'&&!x.protected).map(x=>x.name);openForm('Create RAID','🗄',[{name:'name',label:'Array-Name',value:'md0'},{name:'level',label:'RAID-Level',type:'select',options:[{value:0,label:'RAID 0 (Stripe)'},{value:1,label:'RAID 1 (Mirror)'},{value:5,label:'RAID 5'},{value:6,label:'RAID 6'},{value:10,label:'RAID 10'}]},{name:'devices',label:'Disks (comma-separated)',value:disks.join(','),hint:'Available: '+(disks.join(', ')||'none')}],async f=>{closeForm();toast('Creating RAID…');try{await post('/storage/raid/create',f);toast('RAID created');renderStorage($('#modal-body'),'RAID');}catch(e){toast('Error: '+e.message,'error');}});};
+window.raidForm=async()=>{
+  const d=await api('/storage/devices');
+  const disks=d.devices.filter(x=>x.type==='disk'&&!x.protected).map(x=>x.name);
+  openForm('Create RAID','🗄',[
+    {name:'name',label:'Array-Name',value:'md0',hint:'Creates /dev/md0 by default.'},
+    {name:'level',label:'RAID-Level',type:'select',options:[{value:0,label:'RAID 0 (Stripe)'},{value:1,label:'RAID 1 (Mirror)'},{value:5,label:'RAID 5'},{value:6,label:'RAID 6'},{value:10,label:'RAID 10'}]},
+    {name:'devices',label:'Disks to erase (comma-separated)',placeholder:disks.slice(0,2).join(','),hint:'Available non-system disks: '+(disks.join(', ')||'none')},
+  ],async f=>{
+    const selected=(f.devices||'').split(',').map(x=>x.trim()).filter(Boolean);
+    const min={0:2,1:2,5:3,6:4,10:4}[Number(f.level)]||2;
+    if(selected.length<min){toast(`RAID ${f.level} needs at least ${min} disks`,'error');return;}
+    closeForm();toast('Creating RAID…');
+    try{
+      const r=await post('/storage/raid/create',Object.assign({},f,{devices:selected.join(',')}));
+      if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}
+      toast('RAID created');renderStorage($('#modal-body'),'RAID');
+    }catch(e){toast('Error: '+e.message,'error');}
+  });
+};
 
 // ═══ Phase 5: LUKS / ZFS·Btrfs / iSCSI ═══
 function flattenDevs(devs,out=[]){(devs||[]).forEach(d=>{out.push(d);if(d.children)flattenDevs(d.children,out);});return out;}

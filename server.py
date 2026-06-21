@@ -288,6 +288,7 @@ def _danger_confirm_meta(path, form):
         "/api/files/shares/delete": ("files:share-delete", "token"),
         "/api/storage/format": ("storage:format", "partition"),
         "/api/storage/unmount": ("storage:unmount", "mountpoint"),
+        "/api/storage/raid/create": ("storage:raid-create", "name"),
         "/api/storage/lvm/lv-remove": ("storage:lvm-lv-remove", "lv_path"),
         "/api/storage/luks/format": ("storage:luks-format", "device"),
         "/api/storage/luks/close": ("storage:luks-close", "name"),

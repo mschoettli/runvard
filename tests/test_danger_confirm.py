@@ -53,6 +53,48 @@ def test_dangerous_action_accepts_matching_confirm_token(monkeypatch):
     assert response.json()["partition"] == "sdb1"
 
 
+def test_raid_create_requires_confirm_token(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    called = False
+
+    def fake_create_raid(*args, **kwargs):
+        nonlocal called
+        called = True
+        return {"ok": True}
+
+    monkeypatch.setattr(server.storage, "create_raid", fake_create_raid)
+
+    response = _client().post(
+        "/api/storage/raid/create",
+        data={"name": "md0", "level": "1", "devices": "sdb,sdc"},
+    )
+
+    assert response.status_code == 403
+    assert called is False
+
+
+def test_raid_create_accepts_matching_confirm_token(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    monkeypatch.setattr(
+        server.storage,
+        "create_raid",
+        lambda name, level, devices: {"ok": True, "name": name, "level": level, "devices": devices},
+    )
+    client = _client()
+    token = client.post(
+        "/api/confirm-token",
+        data={"action": "storage:raid-create", "target": "md0"},
+    ).json()["token"]
+
+    response = client.post(
+        "/api/storage/raid/create",
+        data={"name": "md0", "level": "1", "devices": "sdb,sdc", "confirm_token": token},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["devices"] == ["sdb", "sdc"]
+
+
 def test_confirm_token_is_single_use(monkeypatch):
     monkeypatch.setattr(server, "login_enabled", lambda: True)
     monkeypatch.setattr(server.storage, "format_partition", lambda *args: {"ok": True})

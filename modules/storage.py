@@ -304,8 +304,22 @@ def list_raid():
 
 def create_raid(name: str, level: int, devices: list):
     """RAID-Array erstellen. level: 0,1,5,6,10."""
-    for d in devices:
-        _guard(d)
+    name = (name or "").strip()
+    if not re.fullmatch(r"md[0-9A-Za-z_.-]*", name):
+        return {"ok": False, "stdout": "", "stderr": "Ungültiger RAID-Array-Name"}
+    if level not in (0, 1, 5, 6, 10):
+        return {"ok": False, "stdout": "", "stderr": "Ungültiges RAID-Level"}
+    devices = [d.strip() for d in devices if d and d.strip()]
+    minimum = {0: 2, 1: 2, 5: 3, 6: 4, 10: 4}[level]
+    if len(devices) < minimum:
+        return {"ok": False, "stdout": "", "stderr": f"RAID {level} benötigt mindestens {minimum} Laufwerke"}
+    if len(set(devices)) != len(devices):
+        return {"ok": False, "stdout": "", "stderr": "Laufwerke dürfen nicht doppelt angegeben werden"}
+    try:
+        for d in devices:
+            _guard(d)
+    except PermissionError as e:
+        return {"ok": False, "stdout": "", "stderr": str(e)}
     dev_paths = [f"/dev/{d}" if not d.startswith("/dev/") else d for d in devices]
     cmd = ["mdadm", "--create", f"/dev/{name}", "--level", str(level),
            "--raid-devices", str(len(dev_paths))] + dev_paths
