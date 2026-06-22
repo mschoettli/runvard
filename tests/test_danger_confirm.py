@@ -137,6 +137,45 @@ def test_non_dangerous_docker_action_does_not_require_confirm_token(monkeypatch)
     assert response.json()["action"] == "restart"
 
 
+def test_docker_network_prune_requires_confirm_token(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    called = False
+
+    def fake_prune():
+        nonlocal called
+        called = True
+        return {"ok": True, "deleted_count": 0}
+
+    monkeypatch.setattr(server.docker_mgr, "prune_networks", fake_prune)
+
+    response = _client().post("/api/docker/networks/prune")
+
+    assert response.status_code == 403
+    assert called is False
+
+
+def test_docker_network_prune_accepts_matching_confirm_token(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    monkeypatch.setattr(
+        server.docker_mgr,
+        "prune_networks",
+        lambda: {"ok": True, "deleted": ["old_default"], "deleted_count": 1},
+    )
+    client = _client()
+    token = client.post(
+        "/api/confirm-token",
+        data={"action": "docker:network-prune", "target": "Docker"},
+    ).json()["token"]
+
+    response = client.post(
+        "/api/docker/networks/prune",
+        data={"confirm_token": token},
+    )
+
+    assert response.status_code == 200
+    assert response.json()["deleted_count"] == 1
+
+
 def test_account_add_does_not_require_confirm_token(monkeypatch):
     monkeypatch.setattr(server, "login_enabled", lambda: True)
     monkeypatch.setattr(server.accounts, "add_user", lambda username, password, role: {"ok": True})

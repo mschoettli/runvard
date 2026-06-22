@@ -326,6 +326,8 @@ def _danger_confirm_meta(path, form):
         if action == "remove":
             return ("docker:remove-container", _form_value(form, "container_id"))
         return None
+    if path == "/api/docker/networks/prune":
+        return ("docker:network-prune", "Docker")
     if path == "/api/files/job":
         if _form_value(form, "action") == "delete":
             return ("files:delete", _form_value(form, "paths"))
