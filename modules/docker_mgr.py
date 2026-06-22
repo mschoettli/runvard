@@ -309,13 +309,35 @@ def list_networks():
 
 
 def prune_networks():
-    client = _get_client()
-    if hasattr(client.networks, "prune"):
-        result = client.networks.prune()
-    else:
-        result = client.api.prune_networks()
-    deleted = result.get("NetworksDeleted") or []
-    return {"ok": True, "deleted": deleted, "deleted_count": len(deleted)}
+    result = subprocess.run(
+        ["docker", "network", "prune", "-f"],
+        capture_output=True,
+        text=True,
+        timeout=120,
+    )
+    output = (result.stdout or "") + (result.stderr or "")
+    if result.returncode != 0:
+        raise RuntimeError(output.strip() or "docker network prune failed")
+    deleted = []
+    collecting = False
+    for line in output.splitlines():
+        text = line.strip()
+        if not text:
+            continue
+        if text == "Deleted Networks:":
+            collecting = True
+            continue
+        if text.startswith("Total reclaimed space:"):
+            collecting = False
+            continue
+        if collecting:
+            deleted.append(text)
+    return {
+        "ok": True,
+        "deleted": deleted,
+        "deleted_count": len(deleted),
+        "output": output,
+    }
 
 
 # --- Docker Compose ---

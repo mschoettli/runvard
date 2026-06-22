@@ -121,13 +121,35 @@ def test_list_networks_marks_builtin_and_unused(monkeypatch):
 
 
 def test_prune_networks_returns_deleted_count(monkeypatch):
-    client = SimpleNamespace(
-        networks=SimpleNamespace(prune=lambda: {"NetworksDeleted": ["old_default"]})
-    )
-    monkeypatch.setattr(docker_mgr, "_get_client", lambda: client)
+    def fake_run(cmd, capture_output, text, timeout):
+        assert cmd == ["docker", "network", "prune", "-f"]
+        return SimpleNamespace(
+            returncode=0,
+            stdout="Deleted Networks:\nold_default\nlegacy_net\n",
+            stderr="",
+        )
 
-    assert docker_mgr.prune_networks() == {
+    monkeypatch.setattr(docker_mgr.subprocess, "run", fake_run)
+
+    result = docker_mgr.prune_networks()
+
+    assert result == {
         "ok": True,
-        "deleted": ["old_default"],
-        "deleted_count": 1,
+        "deleted": ["old_default", "legacy_net"],
+        "deleted_count": 2,
+        "output": "Deleted Networks:\nold_default\nlegacy_net\n",
     }
+
+
+def test_prune_networks_raises_cli_error(monkeypatch):
+    def fake_run(cmd, capture_output, text, timeout):
+        return SimpleNamespace(returncode=1, stdout="", stderr="did not find cr")
+
+    monkeypatch.setattr(docker_mgr.subprocess, "run", fake_run)
+
+    try:
+        docker_mgr.prune_networks()
+    except RuntimeError as exc:
+        assert str(exc) == "did not find cr"
+    else:
+        raise AssertionError("expected RuntimeError")

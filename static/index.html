@@ -1766,6 +1766,7 @@ const UI_PHRASES={
     "Update finished. Reload now to use the new version.":"Update abgeschlossen. Lade neu, um die neue Version zu verwenden.",
     "Update may still be finishing in the background.":"Das Update läuft möglicherweise noch im Hintergrund weiter.",
     "Update running":"Update läuft",
+    "Update runvard":"runvard aktualisieren",
     "Updates":"Updates",
     "Updates available":"Updates verfügbar",
     "Updates installed":"Updates installiert",
@@ -2742,6 +2743,7 @@ const UI_PHRASES={
     "Update available":"Mise à jour disponible",
     "Update check complete":"Vérification des mises à jour terminée",
     "Update completed. Click Refresh now when you are ready to reload.":"Mise à jour terminée. Cliquez sur Actualiser maintenant lorsque vous êtes prêt à recharger.",
+    "Update runvard":"Mettre à jour runvard",
     "Updates":"Mises à jour",
     "Updates available":"Mises à jour disponibles",
     "Updates installed":"Mises à jour installées",
@@ -3702,6 +3704,7 @@ const UI_PHRASES={
     "Update available":"Aggiornamento disponibile",
     "Update check complete":"Controllo aggiornamenti completato",
     "Update completed. Click Refresh now when you are ready to reload.":"Aggiornamento completato. Fai clic su Aggiorna ora quando sei pronto a ricaricare.",
+    "Update runvard":"Aggiorna runvard",
     "Updates":"Aggiornamenti",
     "Updates available":"Aggiornamenti disponibili",
     "Updates installed":"Aggiornamenti installati",
@@ -4668,6 +4671,7 @@ const UI_PHRASES={
     "Update available":"Actualización disponible",
     "Update check complete":"Comprobación de actualizaciones completada",
     "Update completed. Click Refresh now when you are ready to reload.":"Actualización completada. Haz clic en Actualizar ahora cuando estés listo para recargar.",
+    "Update runvard":"Actualizar runvard",
     "Updates":"Actualizaciones",
     "Updates available":"Actualizaciones disponibles",
     "Updates installed":"Actualizaciones instaladas",
@@ -5635,6 +5639,7 @@ const UI_PHRASES={
     "Update available":"Atualização disponível",
     "Update check complete":"Verificação de atualizações concluída",
     "Update completed. Click Refresh now when you are ready to reload.":"Atualização concluída. Clique em Atualizar agora quando estiver pronto para recarregar.",
+    "Update runvard":"Atualizar runvard",
     "Updates":"Atualizações",
     "Updates available":"Atualizações disponíveis",
     "Updates installed":"Atualizações instaladas",
@@ -9719,7 +9724,7 @@ window.runvardUpdateInstall=async()=>{
     if(out)out.innerHTML=runvardUpdateTerminalHtml('error','Failed','Failed to start runvard update.',e.message,100);
     if(btn){
       btn.disabled=false;
-      btn.textContent=uiText('Refresh now');
+      btn.textContent=uiText('Update runvard');
       btn.onclick=runvardUpdateInstall;
       btn.classList.remove('ghost','danger');
       btn.style.opacity='';
@@ -11954,7 +11959,7 @@ const renderSystemOriginalFallback=async(body,tab)=>{
             ${cardMetric('Latest commit date',esc(remote.date||'Unknown'))}
           </div>
           <div class="nx-action-row">
-            ${runvard.update_available?`<button class="btn sm" id="runvard-upd-go" onclick="runvardUpdateInstall()">Refresh now</button>`:''}
+            ${runvard.update_available?`<button class="btn sm" id="runvard-upd-go" onclick="runvardUpdateInstall()">${esc(uiText('Update runvard'))}</button>`:''}
           </div>
           <div class="nx-card-inner" id="runvard-upd-status" style="display:none;margin-top:12px"></div>
         </div>
