@@ -279,6 +279,45 @@ def remove_volume(name):
     return {"ok": True}
 
 
+# --- Networks ---
+
+def list_networks():
+    client = _get_client()
+    networks = []
+    for net in client.networks.list():
+        attrs = getattr(net, "attrs", {}) or {}
+        ipam = attrs.get("IPAM", {}) or {}
+        configs = ipam.get("Config", []) or []
+        containers = attrs.get("Containers") or {}
+        name = attrs.get("Name") or getattr(net, "name", "")
+        network_id = attrs.get("Id") or getattr(net, "id", "")
+        builtin = name in ("bridge", "host", "none")
+        networks.append({
+            "id": (network_id or "")[:12],
+            "name": name,
+            "driver": attrs.get("Driver") or "",
+            "scope": attrs.get("Scope") or "",
+            "internal": bool(attrs.get("Internal")),
+            "attachable": bool(attrs.get("Attachable")),
+            "containers": len(containers),
+            "subnets": [c.get("Subnet", "") for c in configs if c.get("Subnet")],
+            "gateways": [c.get("Gateway", "") for c in configs if c.get("Gateway")],
+            "builtin": builtin,
+            "unused": not builtin and len(containers) == 0,
+        })
+    return sorted(networks, key=lambda n: (not n["builtin"], n["name"]))
+
+
+def prune_networks():
+    client = _get_client()
+    if hasattr(client.networks, "prune"):
+        result = client.networks.prune()
+    else:
+        result = client.api.prune_networks()
+    deleted = result.get("NetworksDeleted") or []
+    return {"ok": True, "deleted": deleted, "deleted_count": len(deleted)}
+
+
 # --- Docker Compose ---
 
 def list_compose_projects():

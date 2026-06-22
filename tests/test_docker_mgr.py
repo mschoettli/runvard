@@ -89,3 +89,45 @@ services:
     assert result["ok"] is False
     assert [item["reason"] for item in result["conflicts"]] == ["duplicate", "duplicate"]
     assert [item["service"] for item in result["conflicts"]] == ["web", "api"]
+
+
+def test_list_networks_marks_builtin_and_unused(monkeypatch):
+    class FakeNetwork:
+        def __init__(self, name, containers=None, subnet=""):
+            self.attrs = {
+                "Id": f"{name}-1234567890",
+                "Name": name,
+                "Driver": "bridge",
+                "Scope": "local",
+                "Containers": containers or {},
+                "IPAM": {"Config": [{"Subnet": subnet}]} if subnet else {"Config": []},
+            }
+
+    client = SimpleNamespace(networks=SimpleNamespace(list=lambda: [
+        FakeNetwork("project_default", subnet="172.20.0.0/16"),
+        FakeNetwork("bridge"),
+        FakeNetwork("active_net", {"abc": {"Name": "web"}}),
+    ]))
+    monkeypatch.setattr(docker_mgr, "_get_client", lambda: client)
+
+    result = docker_mgr.list_networks()
+
+    assert [n["name"] for n in result] == ["bridge", "active_net", "project_default"]
+    assert result[0]["builtin"] is True
+    assert result[0]["unused"] is False
+    assert result[1]["unused"] is False
+    assert result[2]["unused"] is True
+    assert result[2]["subnets"] == ["172.20.0.0/16"]
+
+
+def test_prune_networks_returns_deleted_count(monkeypatch):
+    client = SimpleNamespace(
+        networks=SimpleNamespace(prune=lambda: {"NetworksDeleted": ["old_default"]})
+    )
+    monkeypatch.setattr(docker_mgr, "_get_client", lambda: client)
+
+    assert docker_mgr.prune_networks() == {
+        "ok": True,
+        "deleted": ["old_default"],
+        "deleted_count": 1,
+    }

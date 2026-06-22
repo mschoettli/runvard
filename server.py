@@ -1072,6 +1072,19 @@ def docker_volume_remove(name: str = Form(...), user: str = Depends(confirmed_ad
         raise HTTPException(400, str(e))
 
 
+@app.get("/api/docker/networks")
+def docker_networks(user: str = Depends(auth)):
+    return docker_mgr.list_networks()
+
+
+@app.post("/api/docker/networks/prune")
+def docker_networks_prune(user: str = Depends(confirmed_admin)):
+    try:
+        return docker_mgr.prune_networks()
+    except Exception as e:
+        raise HTTPException(400, str(e))
+
+
 @app.get("/api/docker/compose")
 def docker_compose_list(user: str = Depends(auth)):
     return docker_mgr.list_compose_projects()

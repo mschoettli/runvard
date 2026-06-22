@@ -809,6 +809,7 @@ function dangerConfirmMeta(p,d){
   if(p==='/auth/toggle'&&String(d.enabled)==='1')return null;
   if(p==='/docker/action'&&d.action!=='remove')return null;
   if(p==='/docker/action')return {action:'docker:remove-container',target:valueOf(d,'container_id')};
+  if(p==='/docker/networks/prune')return {action:'docker:network-prune',target:'Docker'};
   if(p==='/files/job')return d.action==='delete'?{action:'files:delete',target:valueOf(d,'paths')}:null;
   if(p==='/docker/compose/action')return null;
   if(p==='/vms/action')return d.action==='delete'?{action:'vms:delete',target:valueOf(d,'name')}:null;
@@ -1177,7 +1178,24 @@ const UI_PHRASES={
     "Disks (comma-separated)":"Disks (Komma-getrennt)",
     "Disks · Pools · Status":"Laufwerke · Pools · Status",
     "Docker is not available on this server.":"Docker ist auf diesem Server nicht verfügbar.",
+    "Docker networks":"Docker-Netzwerke",
+    "Docker keeps containers isolated. Remove unused Docker networks when Compose projects or containers have left old networks behind.":"Docker isoliert Container über Netzwerke. Entferne ungenutzte Docker-Netzwerke, wenn Compose-Projekte oder Container alte Netzwerke zurückgelassen haben.",
     "Docker unavailable":"Docker nicht verfügbar",
+    "All Docker networks":"Alle Docker-Netzwerke",
+    "Safe to prune":"Sicher löschbar",
+    "Docker built-in":"Docker-eigen",
+    "Unused":"Ungenutzt",
+    "Delete unused Docker networks":"Ungenutzte Docker-Netzwerke löschen",
+    "All unused Docker networks will be removed. Networks used by running or stopped containers stay in place.":"Alle ungenutzten Docker-Netzwerke werden gelöscht. Netzwerke von laufenden oder gestoppten Containern bleiben erhalten.",
+    "Networks removed":"Netzwerke gelöscht",
+    "No unused Docker networks":"Keine ungenutzten Docker-Netzwerke",
+    "Unused networks":"Ungenutzte Netzwerke",
+    "System networks":"System-Netzwerke",
+    "Connected containers":"Verbundene Container",
+    "Subnet":"Subnetz",
+    "Scope":"Geltungsbereich",
+    "System":"System",
+    "Custom":"Benutzerdefiniert",
     "Down":"Inaktiv",
     "Download":"Herunterladen",
     "Download link (copy)":"Download-Link (kopieren)",
@@ -1286,6 +1304,8 @@ const UI_PHRASES={
     "Installed":"Installiert",
     "Installing – wait a moment, then reopen the tab":"Wird installiert – kurz warten, dann Tab neu öffnen",
     "Installing…":"Installation läuft…",
+    "Starting apt-get upgrade …":"Starte apt-get upgrade …",
+    "Done":"Fertig",
     "Interface":"Schnittstelle",
     "Interface language":"Oberflächensprache",
     "Interfaces":"Schnittstellen",
@@ -2154,7 +2174,24 @@ const UI_PHRASES={
     "Disks (comma-separated)":"Disques (séparés par des virgules)",
     "Disks · Pools · Status":"Disques · Pools · État",
     "Docker is not available on this server.":"Docker n’est pas disponible sur ce serveur.",
+    "Docker networks":"Réseaux Docker",
+    "Docker keeps containers isolated. Remove unused Docker networks when Compose projects or containers have left old networks behind.":"Docker isole les conteneurs avec des réseaux. Supprimez les réseaux Docker inutilisés lorsque des projets Compose ou des conteneurs ont laissé d’anciens réseaux.",
     "Docker unavailable":"Docker indisponible",
+    "All Docker networks":"Tous les réseaux Docker",
+    "Safe to prune":"Suppression sûre",
+    "Docker built-in":"Intégré à Docker",
+    "Unused":"Inutilisé",
+    "Delete unused Docker networks":"Supprimer les réseaux Docker inutilisés",
+    "All unused Docker networks will be removed. Networks used by running or stopped containers stay in place.":"Tous les réseaux Docker inutilisés seront supprimés. Les réseaux utilisés par des conteneurs en cours ou arrêtés restent en place.",
+    "Networks removed":"Réseaux supprimés",
+    "No unused Docker networks":"Aucun réseau Docker inutilisé",
+    "Unused networks":"Réseaux inutilisés",
+    "System networks":"Réseaux système",
+    "Connected containers":"Conteneurs connectés",
+    "Subnet":"Sous-réseau",
+    "Scope":"Portée",
+    "System":"Système",
+    "Custom":"Personnalisé",
     "Down":"Inactif",
     "Download":"Télécharger",
     "Download link (copy)":"Lien de téléchargement (copier)",
@@ -2267,6 +2304,8 @@ const UI_PHRASES={
     "Installed":"Installé",
     "Installing – wait a moment, then reopen the tab":"Installation – patientez, puis rouvrez l’onglet",
     "Installing…":"Installation en cours…",
+    "Starting apt-get upgrade …":"Démarrage d’apt-get upgrade …",
+    "Done":"Terminé",
     "Interface language":"Langue de l’interface",
     "Interfaces (comma-separated)":"Interfaces (séparées par des virgules)",
     "Job":"Tâche",
@@ -3099,7 +3138,24 @@ const UI_PHRASES={
     "Disks (comma-separated)":"Dischi (separati da virgola)",
     "Disks · Pools · Status":"Dischi · Pool · Stato",
     "Docker is not available on this server.":"Docker non è disponibile su questo server.",
+    "Docker networks":"Reti Docker",
+    "Docker keeps containers isolated. Remove unused Docker networks when Compose projects or containers have left old networks behind.":"Docker isola i container tramite reti. Rimuovi le reti Docker inutilizzate quando progetti Compose o container hanno lasciato vecchie reti.",
     "Docker unavailable":"Docker non disponibile",
+    "All Docker networks":"Tutte le reti Docker",
+    "Safe to prune":"Eliminabili in sicurezza",
+    "Docker built-in":"Integrata in Docker",
+    "Unused":"Inutilizzata",
+    "Delete unused Docker networks":"Elimina reti Docker inutilizzate",
+    "All unused Docker networks will be removed. Networks used by running or stopped containers stay in place.":"Tutte le reti Docker inutilizzate verranno eliminate. Le reti usate da container in esecuzione o arrestati restano al loro posto.",
+    "Networks removed":"Reti eliminate",
+    "No unused Docker networks":"Nessuna rete Docker inutilizzata",
+    "Unused networks":"Reti inutilizzate",
+    "System networks":"Reti di sistema",
+    "Connected containers":"Container collegati",
+    "Subnet":"Subnet",
+    "Scope":"Ambito",
+    "System":"Sistema",
+    "Custom":"Personalizzata",
     "Down":"Inattivo",
     "Download":"Scarica",
     "Download link (copy)":"Link di download (copia)",
@@ -3208,6 +3264,8 @@ const UI_PHRASES={
     "Installed":"Installato",
     "Installing – wait a moment, then reopen the tab":"Installazione – attendi, poi riapri la scheda",
     "Installing…":"Installazione in corso…",
+    "Starting apt-get upgrade …":"Avvio di apt-get upgrade …",
+    "Done":"Fatto",
     "Interface":"Interfaccia",
     "Interface language":"Lingua dell’interfaccia",
     "Interfaces":"Interfacce",
@@ -4043,7 +4101,24 @@ const UI_PHRASES={
     "Disks (comma-separated)":"Discos (separados por comas)",
     "Disks · Pools · Status":"Discos · Pools · Estado",
     "Docker is not available on this server.":"Docker no está disponible en este servidor.",
+    "Docker networks":"Redes Docker",
+    "Docker keeps containers isolated. Remove unused Docker networks when Compose projects or containers have left old networks behind.":"Docker aísla los contenedores mediante redes. Elimina redes Docker sin usar cuando proyectos Compose o contenedores hayan dejado redes antiguas.",
     "Docker unavailable":"Docker no disponible",
+    "All Docker networks":"Todas las redes Docker",
+    "Safe to prune":"Seguro para limpiar",
+    "Docker built-in":"Integrada de Docker",
+    "Unused":"Sin usar",
+    "Delete unused Docker networks":"Eliminar redes Docker sin usar",
+    "All unused Docker networks will be removed. Networks used by running or stopped containers stay in place.":"Se eliminarán todas las redes Docker sin usar. Las redes usadas por contenedores en ejecución o detenidos permanecen.",
+    "Networks removed":"Redes eliminadas",
+    "No unused Docker networks":"No hay redes Docker sin usar",
+    "Unused networks":"Redes sin usar",
+    "System networks":"Redes del sistema",
+    "Connected containers":"Contenedores conectados",
+    "Subnet":"Subred",
+    "Scope":"Ámbito",
+    "System":"Sistema",
+    "Custom":"Personalizada",
     "Down":"Inactivo",
     "Download":"Descargar",
     "Download link (copy)":"Enlace de descarga (copiar)",
@@ -4152,6 +4227,8 @@ const UI_PHRASES={
     "Installed":"Instalado",
     "Installing – wait a moment, then reopen the tab":"Instalando – espera un momento y reabre la pestaña",
     "Installing…":"Instalando…",
+    "Starting apt-get upgrade …":"Iniciando apt-get upgrade …",
+    "Done":"Hecho",
     "Interface":"Interfaz",
     "Interface language":"Idioma de la interfaz",
     "Interfaces (comma-separated)":"Interfaces (separadas por comas)",
@@ -4990,7 +5067,24 @@ const UI_PHRASES={
     "Disks (comma-separated)":"Discos (separados por vírgulas)",
     "Disks · Pools · Status":"Discos · Pools · Estado",
     "Docker is not available on this server.":"O Docker não está disponível neste servidor.",
+    "Docker networks":"Redes Docker",
+    "Docker keeps containers isolated. Remove unused Docker networks when Compose projects or containers have left old networks behind.":"O Docker isola contentores através de redes. Remova redes Docker não utilizadas quando projetos Compose ou contentores deixam redes antigas.",
     "Docker unavailable":"Docker indisponível",
+    "All Docker networks":"Todas as redes Docker",
+    "Safe to prune":"Seguro para limpar",
+    "Docker built-in":"Integrada do Docker",
+    "Unused":"Não utilizada",
+    "Delete unused Docker networks":"Eliminar redes Docker não utilizadas",
+    "All unused Docker networks will be removed. Networks used by running or stopped containers stay in place.":"Todas as redes Docker não utilizadas serão eliminadas. Redes usadas por contentores em execução ou parados permanecem.",
+    "Networks removed":"Redes eliminadas",
+    "No unused Docker networks":"Sem redes Docker não utilizadas",
+    "Unused networks":"Redes não utilizadas",
+    "System networks":"Redes do sistema",
+    "Connected containers":"Contentores ligados",
+    "Subnet":"Sub-rede",
+    "Scope":"Âmbito",
+    "System":"Sistema",
+    "Custom":"Personalizada",
     "Down":"Inativo",
     "Download":"Transferir",
     "Download link (copy)":"Ligação de transferência (copiar)",
@@ -5103,6 +5197,8 @@ const UI_PHRASES={
     "Installed":"Instalado",
     "Installing – wait a moment, then reopen the tab":"A instalar – aguarde e reabra o separador",
     "Installing…":"A instalar…",
+    "Starting apt-get upgrade …":"A iniciar apt-get upgrade …",
+    "Done":"Concluído",
     "Interface language":"Idioma da interface",
     "Interfaces (comma-separated)":"Interfaces (separadas por vírgulas)",
     "Job":"Tarefa",
@@ -9547,8 +9643,8 @@ window.powerInstallPackage=async name=>{try{toast('Installation started…');con
 // Updates installieren (Hintergrund-Job + Polling)
 window.updatesInstall=async()=>{
   const reboot=$('#upd-reboot')?.checked;
-  const btn=$('#upd-go'); if(btn){btn.disabled=true;btn.textContent='Installiere…';}
-  const out=$('#upd-out'); if(out){out.style.display='block';out.textContent='Starte apt-get upgrade …';}
+  const btn=$('#upd-go'); if(btn){btn.disabled=true;btn.textContent=uiText('Installing…');}
+  const out=$('#upd-out'); if(out){out.style.display='block';out.textContent=uiText('Starting apt-get upgrade …');}
   try{
     const r=await post('/sysmgr/updates/apply',{});
     if(!r||!r.job_id){toast('Start fehlgeschlagen','error');if(btn){btn.disabled=false;btn.textContent=uiText('⬇ Install updates');}return;}
@@ -9565,9 +9661,9 @@ function pollUpdateJob(id,reboot){
     const btn=$('#upd-go');
     if(j.status==='succeeded'){
       const res=j.result||{};
-      if(out)out.textContent=(res.stdout||'')+(res.stderr?('\n'+res.stderr):'')||'(no output)';
+      if(out)out.textContent=(res.stdout||'')+(res.stderr?('\n'+res.stderr):'')||uiText('(no output)');
       toast(res.ok===false?'Mit Fehlern beendet':'Updates installed',res.ok===false?'error':'success');
-      if(btn){btn.disabled=false;btn.textContent='✓ Fertig';}
+      if(btn){btn.disabled=false;btn.textContent='✓ '+uiText('Done');}
       if(reboot){
         toast('Reboot starting…');
         try{
@@ -11727,16 +11823,31 @@ async function renderMonitoring(body,tab){
 }
 
 async function renderNetwork(body,tab){
-  const sub=(tab==='Firewall')?'Firewall':'Interfaces';
-  const tabs=`<div class="modal-tabs sub-tabs">${['Interfaces','Firewall'].map(t=>`<div class="modal-tab${t===sub?' active':''}" onclick="renderNetwork($('#modal-body'),'${t}')">${t}</div>`).join('')}</div>`;
+  const sub=(tab==='Firewall'||tab==='Docker')?tab:'Interfaces';
+  const tabs=`<div class="modal-tabs sub-tabs">${['Interfaces','Firewall','Docker'].map(t=>`<div class="modal-tab${t===sub?' active':''}" onclick="renderNetwork($('#modal-body'),'${t}')">${esc(uiText(t))}</div>`).join('')}</div>`;
   if(sub==='Firewall'){
     const f=await api('/network/firewall/rules');
     body.innerHTML=tabs+viewIntro('Firewall','Allow or block network access. Keep rules simple unless you know exactly what a service needs.',`<button class="btn" onclick="fwAddForm()">Add rule</button>`)
       +`<div class="nx-summary-grid">${summaryCard('Firewall',f.active?'Active':'Inactive',f.backend||'Unknown backend')}${summaryCard('Rules',(f.rules||[]).length,'Configured')}</div>`
       +simpleTable(['No.','To','Action','From',''],(f.rules||[]).map(r=>`<tr><td>${r.num}</td><td class="mono">${esc(r.to)}</td><td>${statusBadge(esc(r.action),/ALLOW/i.test(r.action)?'good':'bad')}</td><td>${esc(r.from)}</td><td><button class="btn danger sm" onclick="fwDelete(${r.num})">Delete</button></td></tr>`).join(''));
+    translateRenderedText(body);
     return;
   }
-  const ifs=await api('/network/interfaces');
+  if(sub==='Docker'){
+    const av=await api('/docker/available');
+    if(!av.available){body.innerHTML=tabs+viewIntro('Docker networks','Docker is not available on this server.','')+emptyState('Docker unavailable');translateRenderedText(body);return;}
+    const nets=await api('/docker/networks');
+    const unused=(nets||[]).filter(n=>n.unused);
+    const builtin=(nets||[]).filter(n=>n.builtin);
+    const actions=`<button class="btn danger" onclick="dockerNetworkPrune()" ${unused.length?'':'disabled'}>${esc(uiText('Delete unused Docker networks'))}</button>`;
+    body.innerHTML=tabs+viewIntro('Docker networks','Docker keeps containers isolated. Remove unused Docker networks when Compose projects or containers have left old networks behind.',actions)
+      +`<div class="nx-summary-grid">${summaryCard('Docker networks',(nets||[]).length,'All Docker networks')}${summaryCard('Unused networks',unused.length,'Safe to prune')}${summaryCard('System networks',builtin.length,'Docker built-in')}</div>`
+      +simpleTable(['Name','Driver','Scope','Containers','Subnet',''],(nets||[]).map(n=>`<tr><td class="mono">${esc(n.name||'-')}</td><td>${esc(n.driver||'-')}</td><td>${esc(n.scope||'-')}</td><td>${esc(String(n.containers||0))}</td><td class="mono">${esc((n.subnets||[]).join(', ')||'-')}</td><td>${statusBadge(n.builtin?'System':n.unused?'Unused':'Connected',n.builtin?'warn':n.unused?'bad':'good')}</td></tr>`).join(''));
+    translateRenderedText(body);
+    return;
+  }
+  const dockerInterface=i=>/^docker/.test(i.name||'')||/^br-[0-9a-f]{12,}$/i.test(i.name||'')||/^veth/.test(i.name||'');
+  const ifs=(await api('/network/interfaces')).filter(i=>!dockerInterface(i));
   const physical=ifs.filter(i=>i.is_physical);
   const virtual=ifs.filter(i=>!i.is_physical);
   const activePorts=physical.filter(i=>i.up);
@@ -11747,8 +11858,10 @@ async function renderNetwork(body,tab){
       <div class="nx-card-grid">${physical.map(ifaceCard).join('')||emptyState('No physical ports detected')}</div>
       <div class="sec-hdr" style="margin-top:18px"><h3>Virtual and logical interfaces</h3></div>
       <div class="nx-card-grid">${virtual.map(ifaceCard).join('')||emptyState('No virtual interfaces')}</div>`;
+  translateRenderedText(body);
 }
 window.fwDelete=num=>typedConfirm('Delete firewall rule',`Firewall rule ${num} will be removed.`,String(num),async()=>{try{await post('/network/firewall/remove',{num});toast('Rule removed');renderNetwork($('#modal-body'),'Firewall');}catch(e){toast('Error: '+e.message,'error');}});
+window.dockerNetworkPrune=()=>typedConfirm('Delete unused Docker networks','All unused Docker networks will be removed. Networks used by running or stopped containers stay in place.','Docker',async()=>{try{const r=await post('/docker/networks/prune',{});toast((r.deleted_count||0)?'Networks removed':'No unused Docker networks');renderNetwork($('#modal-body'),'Docker');}catch(e){toast('Error: '+e.message,'error');}});
 
 async function renderSecurity(body,tab){
   if(tab==='Gruppen'){
