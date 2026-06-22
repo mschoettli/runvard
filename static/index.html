@@ -8706,16 +8706,23 @@ window.vmConsole=async name=>{
       <span id="vnc-status" style="margin-left:auto;font-size:11px;color:var(--text3)">verbinde…</span>
     </div>
     <div id="vnc-screen" style="flex:1;overflow:hidden;background:#000"></div>`;
+  const resolveRfbConstructor=mod=>{
+    let candidate=mod;
+    for(let i=0;i<4&&candidate&&typeof candidate!=='function';i++){
+      candidate=typeof candidate.RFB==='function'?candidate.RFB:candidate.default;
+    }
+    return typeof candidate==='function'?candidate:null;
+  };
   let RFB;
   try{
-    const mod=await import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.5.0/core/rfb.js');
-    RFB=typeof mod.default==='function'?mod.default:typeof mod.RFB==='function'?mod.RFB:null;
+    const mod=await import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.5.0/lib/rfb.js/+esm');
+    RFB=resolveRfbConstructor(mod);
     if(!RFB)throw new Error('RFB export not found');
   }
   catch(e){
     try{
       const mod=await import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.5.0/+esm');
-      RFB=typeof mod.default==='function'?mod.default:typeof mod.RFB==='function'?mod.RFB:typeof mod.default?.default==='function'?mod.default.default:null;
+      RFB=resolveRfbConstructor(mod);
       if(!RFB)throw new Error('RFB export not found');
     }catch(_){
       const st=$('#vnc-status');if(st)st.textContent=uiText('noVNC could not be loaded');return;
