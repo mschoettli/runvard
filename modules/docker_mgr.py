@@ -1,5 +1,6 @@
 """Docker: Container, Images, Volumes, Compose - volle Verwaltung."""
 import os
+import re
 import shutil
 import socket
 import subprocess
@@ -309,34 +310,36 @@ def list_networks():
 
 
 def prune_networks():
-    result = subprocess.run(
-        ["docker", "network", "prune", "-f"],
-        capture_output=True,
-        text=True,
-        timeout=120,
-    )
-    output = (result.stdout or "") + (result.stderr or "")
-    if result.returncode != 0:
-        raise RuntimeError(output.strip() or "docker network prune failed")
     deleted = []
-    collecting = False
-    for line in output.splitlines():
-        text = line.strip()
-        if not text:
+    skipped = []
+    errors = []
+    for network in list_networks():
+        if not network.get("unused"):
             continue
-        if text == "Deleted Networks:":
-            collecting = True
+        name = network.get("name") or network.get("id")
+        if not name:
             continue
-        if text.startswith("Total reclaimed space:"):
-            collecting = False
+        result = subprocess.run(
+            ["docker", "network", "rm", name],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        output = ((result.stdout or "") + (result.stderr or "")).strip()
+        if result.returncode == 0:
+            deleted.append(name)
             continue
-        if collecting:
-            deleted.append(text)
+        if re.search(r"(no such network|not found|not find|did not find)", output, re.I):
+            skipped.append(name)
+            continue
+        errors.append(output or f"Could not remove Docker network {name}")
+    if errors:
+        raise RuntimeError("; ".join(errors))
     return {
         "ok": True,
         "deleted": deleted,
         "deleted_count": len(deleted),
-        "output": output,
+        "skipped": skipped,
     }
 
 

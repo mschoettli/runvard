@@ -121,35 +121,63 @@ def test_list_networks_marks_builtin_and_unused(monkeypatch):
 
 
 def test_prune_networks_returns_deleted_count(monkeypatch):
+    monkeypatch.setattr(docker_mgr, "list_networks", lambda: [
+        {"name": "bridge", "builtin": True, "unused": False},
+        {"name": "active_net", "builtin": False, "unused": False},
+        {"name": "old_default", "builtin": False, "unused": True},
+        {"name": "legacy_net", "builtin": False, "unused": True},
+    ])
+    removed = []
+
     def fake_run(cmd, capture_output, text, timeout):
-        assert cmd == ["docker", "network", "prune", "-f"]
-        return SimpleNamespace(
-            returncode=0,
-            stdout="Deleted Networks:\nold_default\nlegacy_net\n",
-            stderr="",
-        )
+        assert cmd[:3] == ["docker", "network", "rm"]
+        removed.append(cmd[3])
+        return SimpleNamespace(returncode=0, stdout=cmd[3] + "\n", stderr="")
 
     monkeypatch.setattr(docker_mgr.subprocess, "run", fake_run)
 
     result = docker_mgr.prune_networks()
 
+    assert removed == ["old_default", "legacy_net"]
     assert result == {
         "ok": True,
         "deleted": ["old_default", "legacy_net"],
         "deleted_count": 2,
-        "output": "Deleted Networks:\nold_default\nlegacy_net\n",
+        "skipped": [],
     }
 
 
-def test_prune_networks_raises_cli_error(monkeypatch):
+def test_prune_networks_skips_already_removed_network(monkeypatch):
+    monkeypatch.setattr(docker_mgr, "list_networks", lambda: [
+        {"name": "old_default", "builtin": False, "unused": True},
+    ])
+
     def fake_run(cmd, capture_output, text, timeout):
         return SimpleNamespace(returncode=1, stdout="", stderr="did not find cr")
+
+    monkeypatch.setattr(docker_mgr.subprocess, "run", fake_run)
+
+    assert docker_mgr.prune_networks() == {
+        "ok": True,
+        "deleted": [],
+        "deleted_count": 0,
+        "skipped": ["old_default"],
+    }
+
+
+def test_prune_networks_raises_unexpected_cli_error(monkeypatch):
+    monkeypatch.setattr(docker_mgr, "list_networks", lambda: [
+        {"name": "old_default", "builtin": False, "unused": True},
+    ])
+
+    def fake_run(cmd, capture_output, text, timeout):
+        return SimpleNamespace(returncode=1, stdout="", stderr="permission denied")
 
     monkeypatch.setattr(docker_mgr.subprocess, "run", fake_run)
 
     try:
         docker_mgr.prune_networks()
     except RuntimeError as exc:
-        assert str(exc) == "did not find cr"
+        assert str(exc) == "permission denied"
     else:
         raise AssertionError("expected RuntimeError")
