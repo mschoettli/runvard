@@ -136,11 +136,12 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 .modal-search .nx-search-wrap{width:200px}
 
 .modal-tabs{display:flex;gap:2px;padding:2px 28px 8px;flex-wrap:wrap}
-.modal-tabs.sub-tabs{padding:0 0 10px;margin-top:-4px;margin-bottom:10px}
+.modal-tabs.sub-tabs{padding:0 0 10px;margin-top:0;margin-bottom:10px}
 .modal-tab{position:relative;padding:8px 12px;font-size:12px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s}
 .modal-tab.active{color:var(--accent-light);border-bottom-color:var(--accent);border-bottom-width:2px}
 .modal-tab.has-update::after{content:'';position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#ef4444}
 .modal-body{flex:1;overflow:auto;padding:24px 28px}
+.modal-body:has(> .modal-tabs.sub-tabs){padding-top:8px}
 
 /* ── Form modal ── */
 .form-overlay{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.65);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px}
@@ -575,6 +576,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   .modal-head{padding:14px 16px}
   .modal-tabs{padding:2px 16px 10px;overflow-x:auto;flex-wrap:nowrap}
   .modal-body{padding:16px}
+  .modal-body:has(> .modal-tabs.sub-tabs){padding-top:8px}
   .nx-view-intro{grid-template-columns:1fr;gap:12px}
   .nx-card-grid,.nx-summary-grid{grid-template-columns:1fr}
   .nx-kv{grid-template-columns:1fr}
