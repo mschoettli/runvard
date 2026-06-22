@@ -176,6 +176,42 @@ def test_docker_network_prune_accepts_matching_confirm_token(monkeypatch):
     assert response.json()["deleted_count"] == 1
 
 
+def test_docker_network_list_ignores_stale_network_error(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    monkeypatch.setattr(
+        server.docker_mgr,
+        "list_networks",
+        lambda: (_ for _ in ()).throw(RuntimeError("did not find cr")),
+    )
+
+    response = _client().get("/api/docker/networks")
+
+    assert response.status_code == 200
+    assert response.json() == []
+
+
+def test_docker_network_prune_ignores_stale_network_error(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    monkeypatch.setattr(
+        server.docker_mgr,
+        "prune_networks",
+        lambda: (_ for _ in ()).throw(RuntimeError("did not find cr")),
+    )
+    client = _client()
+    token = client.post(
+        "/api/confirm-token",
+        data={"action": "docker:network-prune", "target": "Docker"},
+    ).json()["token"]
+
+    response = client.post(
+        "/api/docker/networks/prune",
+        data={"confirm_token": token},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True, "deleted": [], "deleted_count": 0, "skipped": []}
+
+
 def test_account_add_does_not_require_confirm_token(monkeypatch):
     monkeypatch.setattr(server, "login_enabled", lambda: True)
     monkeypatch.setattr(server.accounts, "add_user", lambda username, password, role: {"ok": True})

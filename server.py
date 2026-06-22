@@ -1076,7 +1076,12 @@ def docker_volume_remove(name: str = Form(...), user: str = Depends(confirmed_ad
 
 @app.get("/api/docker/networks")
 def docker_networks(user: str = Depends(auth)):
-    return docker_mgr.list_networks()
+    try:
+        return docker_mgr.list_networks()
+    except Exception as e:
+        if docker_mgr.is_network_not_found_error(e):
+            return []
+        raise HTTPException(400, str(e))
 
 
 @app.post("/api/docker/networks/prune")
@@ -1084,6 +1089,8 @@ def docker_networks_prune(user: str = Depends(confirmed_admin)):
     try:
         return docker_mgr.prune_networks()
     except Exception as e:
+        if docker_mgr.is_network_not_found_error(e):
+            return {"ok": True, "deleted": [], "deleted_count": 0, "skipped": []}
         raise HTTPException(400, str(e))
 
 

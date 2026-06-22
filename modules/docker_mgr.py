@@ -1,4 +1,5 @@
 """Docker: Container, Images, Volumes, Compose - volle Verwaltung."""
+import json
 import os
 import re
 import shutil
@@ -282,38 +283,116 @@ def remove_volume(name):
 
 # --- Networks ---
 
-def list_networks():
+_NETWORK_NOT_FOUND_RE = re.compile(
+    r"(no such network|network .* not found|not found|not find|did not find)",
+    re.I,
+)
+
+
+def _network_not_found(text):
+    return bool(_NETWORK_NOT_FOUND_RE.search(str(text or "")))
+
+
+def is_network_not_found_error(text):
+    return _network_not_found(text)
+
+
+def _normalize_network(attrs):
+    ipam = attrs.get("IPAM", {}) or {}
+    configs = ipam.get("Config", []) or []
+    containers = attrs.get("Containers") or {}
+    name = attrs.get("Name") or ""
+    network_id = attrs.get("Id") or attrs.get("ID") or ""
+    builtin = name in ("bridge", "host", "none")
+    return {
+        "id": (network_id or "")[:12],
+        "name": name,
+        "driver": attrs.get("Driver") or "",
+        "scope": attrs.get("Scope") or "",
+        "internal": bool(attrs.get("Internal")),
+        "attachable": bool(attrs.get("Attachable")),
+        "containers": len(containers),
+        "subnets": [c.get("Subnet", "") for c in configs if c.get("Subnet")],
+        "gateways": [c.get("Gateway", "") for c in configs if c.get("Gateway")],
+        "builtin": builtin,
+        "unused": not builtin and len(containers) == 0,
+    }
+
+
+def _list_networks_sdk():
     client = _get_client()
     networks = []
     for net in client.networks.list():
         attrs = getattr(net, "attrs", {}) or {}
-        ipam = attrs.get("IPAM", {}) or {}
-        configs = ipam.get("Config", []) or []
-        containers = attrs.get("Containers") or {}
-        name = attrs.get("Name") or getattr(net, "name", "")
-        network_id = attrs.get("Id") or getattr(net, "id", "")
-        builtin = name in ("bridge", "host", "none")
-        networks.append({
-            "id": (network_id or "")[:12],
-            "name": name,
-            "driver": attrs.get("Driver") or "",
-            "scope": attrs.get("Scope") or "",
-            "internal": bool(attrs.get("Internal")),
-            "attachable": bool(attrs.get("Attachable")),
-            "containers": len(containers),
-            "subnets": [c.get("Subnet", "") for c in configs if c.get("Subnet")],
-            "gateways": [c.get("Gateway", "") for c in configs if c.get("Gateway")],
-            "builtin": builtin,
-            "unused": not builtin and len(containers) == 0,
-        })
+        if not attrs:
+            attrs = {
+                "Name": getattr(net, "name", ""),
+                "Id": getattr(net, "id", ""),
+            }
+        networks.append(_normalize_network(attrs))
     return sorted(networks, key=lambda n: (not n["builtin"], n["name"]))
+
+
+def _list_networks_cli():
+    listed = subprocess.run(
+        ["docker", "network", "ls", "--format", "{{json .}}"],
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if listed.returncode != 0:
+        raise RuntimeError((listed.stderr or listed.stdout).strip() or "docker network ls failed")
+    networks = []
+    for line in listed.stdout.splitlines():
+        if not line.strip():
+            continue
+        try:
+            row = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        name = row.get("Name") or row.get("ID") or ""
+        if not name:
+            continue
+        inspected = subprocess.run(
+            ["docker", "network", "inspect", name],
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if inspected.returncode != 0:
+            output = (inspected.stdout or "") + (inspected.stderr or "")
+            if _network_not_found(output):
+                continue
+            raise RuntimeError(output.strip() or f"docker network inspect failed: {name}")
+        try:
+            data = json.loads(inspected.stdout or "[]")
+        except json.JSONDecodeError as e:
+            raise RuntimeError(f"Could not parse Docker network inspect output: {e}") from e
+        if data:
+            networks.append(_normalize_network(data[0] or {}))
+    return sorted(networks, key=lambda n: (not n["builtin"], n["name"]))
+
+
+def list_networks():
+    try:
+        return _list_networks_sdk()
+    except Exception as e:
+        if _network_not_found(e):
+            return _list_networks_cli()
+        raise
 
 
 def prune_networks():
     deleted = []
     skipped = []
     errors = []
-    for network in list_networks():
+    try:
+        networks = list_networks()
+    except Exception as e:
+        if _network_not_found(e):
+            return {"ok": True, "deleted": deleted, "deleted_count": 0, "skipped": skipped}
+        raise
+    for network in networks:
         if not network.get("unused"):
             continue
         name = network.get("name") or network.get("id")
@@ -329,7 +408,7 @@ def prune_networks():
         if result.returncode == 0:
             deleted.append(name)
             continue
-        if re.search(r"(no such network|not found|not find|did not find)", output, re.I):
+        if _network_not_found(output):
             skipped.append(name)
             continue
         errors.append(output or f"Could not remove Docker network {name}")

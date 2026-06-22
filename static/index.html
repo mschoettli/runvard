@@ -11887,7 +11887,7 @@ async function renderNetwork(body,tab){
   translateRenderedText(body);
 }
 window.fwDelete=num=>typedConfirm('Delete firewall rule',`Firewall rule ${num} will be removed.`,String(num),async()=>{try{await post('/network/firewall/remove',{num});toast('Rule removed');renderNetwork($('#modal-body'),'Firewall');}catch(e){toast('Error: '+e.message,'error');}});
-window.dockerNetworkPrune=()=>typedConfirm('Delete unused Docker networks','All unused Docker networks will be removed. Networks used by running or stopped containers stay in place.','Docker',async()=>{try{const r=await post('/docker/networks/prune',{});toast((r.deleted_count||0)?'Networks removed':'No unused Docker networks');renderNetwork($('#modal-body'),'Docker');}catch(e){toast('Error: '+e.message,'error');}});
+window.dockerNetworkPrune=()=>typedConfirm('Delete unused Docker networks','All unused Docker networks will be removed. Networks used by running or stopped containers stay in place.','Docker',async()=>{try{const r=await post('/docker/networks/prune',{});toast((r.deleted_count||0)?'Networks removed':'No unused Docker networks');try{await renderNetwork($('#modal-body'),'Docker');}catch(refreshErr){console.warn('Docker network refresh failed after prune',refreshErr);}}catch(e){toast('Error: '+e.message,'error');}});
 
 async function renderSecurity(body,tab){
   if(tab==='Gruppen'){

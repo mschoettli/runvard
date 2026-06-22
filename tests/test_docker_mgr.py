@@ -120,6 +120,48 @@ def test_list_networks_marks_builtin_and_unused(monkeypatch):
     assert result[2]["subnets"] == ["172.20.0.0/16"]
 
 
+def test_list_networks_falls_back_to_cli_when_sdk_sees_stale_network(monkeypatch):
+    monkeypatch.setattr(
+        docker_mgr,
+        "_list_networks_sdk",
+        lambda: (_ for _ in ()).throw(RuntimeError("did not find cr")),
+    )
+
+    def fake_run(cmd, capture_output, text, timeout):
+        if cmd[:3] == ["docker", "network", "ls"]:
+            return SimpleNamespace(
+                returncode=0,
+                stdout='{"ID":"abc123","Name":"bridge","Driver":"bridge","Scope":"local"}\n'
+                       '{"ID":"def456","Name":"old_default","Driver":"bridge","Scope":"local"}\n'
+                       '{"ID":"gone","Name":"cr","Driver":"bridge","Scope":"local"}\n',
+                stderr="",
+            )
+        if cmd[:3] == ["docker", "network", "inspect"] and cmd[3] == "bridge":
+            return SimpleNamespace(
+                returncode=0,
+                stdout='[{"Id":"abc123","Name":"bridge","Driver":"bridge","Scope":"local","Containers":{"x":{}},"IPAM":{"Config":[]}}]',
+                stderr="",
+            )
+        if cmd[:3] == ["docker", "network", "inspect"] and cmd[3] == "old_default":
+            return SimpleNamespace(
+                returncode=0,
+                stdout='[{"Id":"def456","Name":"old_default","Driver":"bridge","Scope":"local","Containers":{},"IPAM":{"Config":[{"Subnet":"172.20.0.0/16"}]}}]',
+                stderr="",
+            )
+        if cmd[:3] == ["docker", "network", "inspect"] and cmd[3] == "cr":
+            return SimpleNamespace(returncode=1, stdout="", stderr="did not find cr")
+        raise AssertionError(cmd)
+
+    monkeypatch.setattr(docker_mgr.subprocess, "run", fake_run)
+
+    result = docker_mgr.list_networks()
+
+    assert [n["name"] for n in result] == ["bridge", "old_default"]
+    assert result[0]["builtin"] is True
+    assert result[1]["unused"] is True
+    assert result[1]["subnets"] == ["172.20.0.0/16"]
+
+
 def test_prune_networks_returns_deleted_count(monkeypatch):
     monkeypatch.setattr(docker_mgr, "list_networks", lambda: [
         {"name": "bridge", "builtin": True, "unused": False},
@@ -162,6 +204,21 @@ def test_prune_networks_skips_already_removed_network(monkeypatch):
         "deleted": [],
         "deleted_count": 0,
         "skipped": ["old_default"],
+    }
+
+
+def test_prune_networks_treats_stale_list_error_as_clean(monkeypatch):
+    monkeypatch.setattr(
+        docker_mgr,
+        "list_networks",
+        lambda: (_ for _ in ()).throw(RuntimeError("did not find cr")),
+    )
+
+    assert docker_mgr.prune_networks() == {
+        "ok": True,
+        "deleted": [],
+        "deleted_count": 0,
+        "skipped": [],
     }
 
 
