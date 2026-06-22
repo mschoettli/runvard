@@ -195,7 +195,7 @@ def test_prune_networks_skips_already_removed_network(monkeypatch):
     ])
 
     def fake_run(cmd, capture_output, text, timeout):
-        return SimpleNamespace(returncode=1, stdout="", stderr="did not find cr")
+        return SimpleNamespace(returncode=1, stdout="", stderr="did not found cr at the end bound")
 
     monkeypatch.setattr(docker_mgr.subprocess, "run", fake_run)
 
@@ -211,7 +211,7 @@ def test_prune_networks_treats_stale_list_error_as_clean(monkeypatch):
     monkeypatch.setattr(
         docker_mgr,
         "list_networks",
-        lambda: (_ for _ in ()).throw(RuntimeError("did not find cr")),
+        lambda: (_ for _ in ()).throw(RuntimeError("did not found cr at the end bound")),
     )
 
     assert docker_mgr.prune_networks() == {

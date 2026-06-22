@@ -181,7 +181,7 @@ def test_docker_network_list_ignores_stale_network_error(monkeypatch):
     monkeypatch.setattr(
         server.docker_mgr,
         "list_networks",
-        lambda: (_ for _ in ()).throw(RuntimeError("did not find cr")),
+        lambda: (_ for _ in ()).throw(RuntimeError("did not found cr at the end bound")),
     )
 
     response = _client().get("/api/docker/networks")
@@ -195,7 +195,7 @@ def test_docker_network_prune_ignores_stale_network_error(monkeypatch):
     monkeypatch.setattr(
         server.docker_mgr,
         "prune_networks",
-        lambda: (_ for _ in ()).throw(RuntimeError("did not find cr")),
+        lambda: (_ for _ in ()).throw(RuntimeError("did not found cr at the end bound")),
     )
     client = _client()
     token = client.post(

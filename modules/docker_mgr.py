@@ -284,7 +284,7 @@ def remove_volume(name):
 # --- Networks ---
 
 _NETWORK_NOT_FOUND_RE = re.compile(
-    r"(no such network|network .* not found|not found|not find|did not find)",
+    r"(no such network|network .* not found|not found|not find|did not find|did not found)",
     re.I,
 )
 
