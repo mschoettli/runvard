@@ -376,16 +376,33 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 .nx-chip.good{border-color:rgba(34,197,94,.24);color:#4ade80;background:rgba(34,197,94,.08)}
 .nx-chip.warn{border-color:rgba(234,179,8,.24);color:#facc15;background:rgba(234,179,8,.08)}
 .nx-chip.bad{border-color:rgba(239,68,68,.24);color:#f87171;background:rgba(239,68,68,.08)}
-.vm-card-grid{grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))}
-.vm-card{padding:16px}
-.vm-card .nx-action-head{align-items:center;margin-bottom:14px}
-.vm-card .nx-action-title{font-size:16px}
+.vm-card-grid{display:flex;flex-direction:column;gap:10px}
+.vm-card{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,.85fr) auto;gap:16px;align-items:center;padding:16px 18px;border-radius:10px;background:linear-gradient(90deg,rgba(122,74,255,.08),rgba(255,255,255,.025) 34%,rgba(255,255,255,.02));border-color:rgba(255,255,255,.08)}
+.vm-card:hover{transform:none;border-color:rgba(139,92,246,.34)}
+.vm-card-main{min-width:0}
+.vm-card .nx-action-head{align-items:center;justify-content:flex-start;margin-bottom:8px}
+.vm-card .nx-action-title{font-size:17px}
 .vm-resource-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
 .vm-resource-grid div{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.035);border-radius:8px;padding:10px 12px;min-width:0}
 .vm-resource-grid span{display:block;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
 .vm-resource-grid strong{display:block;font-size:18px;line-height:1.1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .vm-chip-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
-.vm-card .nx-action-row{margin-top:14px}
+.vm-card-actions{justify-content:flex-end;min-width:230px}
+.vm-detail-head{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:12px;align-items:center;margin-bottom:16px}
+.vm-detail-title{display:flex;align-items:center;gap:8px;font-size:18px;font-weight:700;color:var(--text);min-width:0}
+.vm-detail-sub{font-size:12px;color:var(--text3);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vm-hardware-layout{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.vm-panel{background:var(--bg3);border:1px solid var(--border);border-radius:12px;padding:14px;min-width:0}
+.vm-panel-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px}
+.vm-panel-title{font-size:14px;font-weight:700;color:var(--text)}
+.vm-panel-sub{font-size:11px;color:var(--text3);margin-top:2px}
+.vm-device-list{display:flex;flex-direction:column;gap:8px}
+.vm-device-row{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:10px;align-items:center;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.05);border-radius:9px;padding:10px 11px}
+.vm-device-title{font-size:13px;font-weight:700;color:var(--text)}
+.vm-device-meta{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px}
+.vm-device-source{font-size:11px;color:var(--text3);margin-top:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vm-device-actions{display:flex;gap:5px;align-items:center}
+@media(max-width:760px){.vm-card{grid-template-columns:1fr}.vm-card-actions{justify-content:flex-start;min-width:0}.vm-hardware-layout{grid-template-columns:1fr}.vm-detail-head{grid-template-columns:1fr}.vm-detail-head>.btn{justify-self:start}}
 .nx-muted-table{opacity:.78}
 .nx-choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
 .nx-choice{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;transition:all .15s}
@@ -900,7 +917,7 @@ const I18N_BASE={
   tabDisks:'Disks',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',
   tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',
   tabContainer:'Containers',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',
-  tabMachines:'Machines',tabStoragePools:'Storage pools',tabJobs:'Jobs',
+  tabMachines:'Virtual machines',tabStoragePools:'Storage pools',tabJobs:'Jobs',
   tabHistory:'History',tabLogs:'Logs',tabAlerts:'Alerts',tabAudit:'Audit',
   tabOverview:'Overview',tabUpdates:'Updates',tabUsers:'Users',tabNetwork:'Network',
   tabServices:'Services',tabShares:'Shares',tabMaintenance:'Maintenance',
@@ -908,11 +925,11 @@ const I18N_BASE={
 };
 const I18N={
   en:I18N_BASE,
-  de:{language:'Sprache',languageSettings:'Spracheinstellungen',languageField:'Oberflächensprache',save:'Speichern',cancel:'Abbrechen',delete:'Löschen',continue:'Fortfahren',close:'Schließen',search:'Suchen',searchPlaceholder:'Suchen...',loading:'Lädt...',error:'Fehler',logout:'Abmelden',loginPage:'Login-Seite',runvardAccounts:'runvard-Konten',background:'Hintergrund',backgroundTitle:'Hintergrund',presets:'Vorlagen',uploadImage:'Bild hochladen',dropImage:'Klicken oder Bild hier ablegen',imageUrl:'Bild-URL',restoreDefault:'Standard wiederherstellen',addTile:'Verknüpfung hinzufügen',confirmDelete:'Löschen bestätigen',saved:'Gespeichert',languageSaved:'Sprache gespeichert',expertOn:'Expertenmodus aktiviert',expertOff:'Expertenmodus deaktiviert',loginEnabled:'Login aktiviert. Beim nächsten Besuch ist eine Anmeldung erforderlich.',loginDisabled:'Login deaktiviert',signedInAs:'Angemeldet als',loginDisabledHead:'Login ist deaktiviert',daySuffix:'Uhr',confirmCheckbox:'Ich habe verstanden und möchte fortfahren.',dangerConfirmTitle:'Bestätigung erforderlich',dangerConfirmMessage:'Diese Aktion ändert systemrelevante Einstellungen oder Daten. Bitte bestätige, bevor runvard fortfährt.',tileTerminal:'Terminal',tileFiles:'Dateien',tileStorage:'Speicher',tileDocker:'Docker',tileVms:'Virtuelle Maschinen',tileBackup:'Backup',tileMonitoring:'Monitoring',tileSystem:'System',tileApps:'Apps',descShell:'Shell-Zugriff',descFiles:'Durchsuchen · Hochladen · Freigeben',descStorage:'Laufwerke · Pools · Status',descDocker:'Container · Compose',descVms:'Gäste · Speicher',descBackup:'Aufgaben · Verlauf',descMonitoring:'Logs · Hinweise · Audit',descSystem:'Übersicht · Updates · Benutzer',tabDisks:'Laufwerke',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Container',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',tabMachines:'Maschinen',tabStoragePools:'Speicher-Pools',tabJobs:'Aufgaben',tabHistory:'Verlauf',tabLogs:'Logs',tabAlerts:'Hinweise',tabAudit:'Audit',tabOverview:'Übersicht',tabUpdates:'Updates',tabUsers:'Benutzer',tabNetwork:'Netzwerk',tabServices:'Dienste',tabShares:'Freigaben',tabMaintenance:'Wartung',tabAdvanced:'Erweitert',tabPower:'Energie'},
-  fr:{language:'Langue',languageSettings:'Paramètres de langue',languageField:'Langue de l’interface',save:'Enregistrer',cancel:'Annuler',delete:'Supprimer',continue:'Continuer',close:'Fermer',search:'Rechercher',searchPlaceholder:'Rechercher...',loading:'Chargement...',error:'Erreur',logout:'Se déconnecter',loginPage:'Page de connexion',runvardAccounts:'Comptes runvard',background:'Arrière-plan',backgroundTitle:'Arrière-plan',presets:'Présélections',uploadImage:'Importer une image',dropImage:'Cliquer ou déposer une image ici',imageUrl:'URL de l’image',restoreDefault:'Restaurer la valeur par défaut',addTile:'Ajouter un raccourci',confirmDelete:'Confirmer la suppression',saved:'Enregistré',languageSaved:'Langue enregistrée',expertOn:'Mode expert activé',expertOff:'Mode expert désactivé',loginEnabled:'Connexion activée. Une connexion sera requise à la prochaine visite.',loginDisabled:'Connexion désactivée',signedInAs:'Connecté en tant que',loginDisabledHead:'La connexion est désactivée',daySuffix:'',confirmCheckbox:'Je comprends et je veux continuer.',dangerConfirmTitle:'Confirmation requise',dangerConfirmMessage:'Cette action modifie des paramètres ou des données système. Veuillez confirmer avant que runvard continue.',tileTerminal:'Terminal',tileFiles:'Fichiers',tileStorage:'Stockage',tileDocker:'Docker',tileVms:'Machines virtuelles',tileBackup:'Sauvegarde',tileMonitoring:'Supervision',tileSystem:'Système',tileApps:'Applications',descShell:'Accès shell',descFiles:'Parcourir · Importer · Partager',descStorage:'Disques · Pools · État',descDocker:'Conteneurs · Compose',descVms:'Invités · Stockage',descBackup:'Tâches · Historique',descMonitoring:'Journaux · Alertes · Audit',descSystem:'Vue d’ensemble · Mises à jour · Utilisateurs',tabDisks:'Disques',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Conteneurs',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',tabMachines:'Machines',tabStoragePools:'Pools de stockage',tabJobs:'Tâches',tabHistory:'Historique',tabLogs:'Journaux',tabAlerts:'Alertes',tabAudit:'Audit',tabOverview:'Vue d’ensemble',tabUpdates:'Mises à jour',tabUsers:'Utilisateurs',tabNetwork:'Réseau',tabServices:'Services',tabShares:'Partages',tabMaintenance:'Maintenance',tabAdvanced:'Avancé',tabPower:'Alimentation'},
-  it:{language:'Lingua',languageSettings:'Impostazioni lingua',languageField:'Lingua dell’interfaccia',save:'Salva',cancel:'Annulla',delete:'Elimina',continue:'Continua',close:'Chiudi',search:'Cerca',searchPlaceholder:'Cerca...',loading:'Caricamento...',error:'Errore',logout:'Esci',loginPage:'Pagina di accesso',runvardAccounts:'Account runvard',background:'Sfondo',backgroundTitle:'Sfondo',presets:'Preset',uploadImage:'Carica immagine',dropImage:'Fai clic o rilascia un’immagine qui',imageUrl:'URL immagine',restoreDefault:'Ripristina predefinito',addTile:'Aggiungi collegamento',confirmDelete:'Conferma eliminazione',saved:'Salvato',languageSaved:'Lingua salvata',expertOn:'Modalità esperto attivata',expertOff:'Modalità esperto disattivata',loginEnabled:'Accesso attivato. Al prossimo accesso sarà richiesta l’autenticazione.',loginDisabled:'Accesso disattivato',signedInAs:'Accesso come',loginDisabledHead:'Accesso disattivato',daySuffix:'',confirmCheckbox:'Ho capito e voglio continuare.',dangerConfirmTitle:'Conferma richiesta',dangerConfirmMessage:'Questa azione modifica impostazioni o dati di sistema. Conferma prima che runvard continui.',tileTerminal:'Terminale',tileFiles:'File',tileStorage:'Archiviazione',tileDocker:'Docker',tileVms:'Macchine virtuali',tileBackup:'Backup',tileMonitoring:'Monitoraggio',tileSystem:'Sistema',tileApps:'App',descShell:'Accesso shell',descFiles:'Sfoglia · Carica · Condividi',descStorage:'Dischi · Pool · Stato',descDocker:'Container · Compose',descVms:'Guest · Archiviazione',descBackup:'Job · Cronologia',descMonitoring:'Log · Avvisi · Audit',descSystem:'Panoramica · Aggiornamenti · Utenti',tabDisks:'Dischi',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Container',tabCompose:'Compose',tabImages:'Immagini',tabVolumes:'Volumi',tabMachines:'Macchine',tabStoragePools:'Pool di archiviazione',tabJobs:'Job',tabHistory:'Cronologia',tabLogs:'Log',tabAlerts:'Avvisi',tabAudit:'Audit',tabOverview:'Panoramica',tabUpdates:'Aggiornamenti',tabUsers:'Utenti',tabNetwork:'Rete',tabServices:'Servizi',tabShares:'Condivisioni',tabMaintenance:'Manutenzione',tabAdvanced:'Avanzato',tabPower:'Alimentazione'},
-  es:{language:'Idioma',languageSettings:'Configuración de idioma',languageField:'Idioma de la interfaz',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Cerrar',search:'Buscar',searchPlaceholder:'Buscar...',loading:'Cargando...',error:'Error',logout:'Cerrar sesión',loginPage:'Página de inicio de sesión',runvardAccounts:'Cuentas runvard',background:'Fondo',backgroundTitle:'Fondo',presets:'Preajustes',uploadImage:'Subir imagen',dropImage:'Haz clic o suelta una imagen aquí',imageUrl:'URL de imagen',restoreDefault:'Restaurar valores predeterminados',addTile:'Añadir acceso directo',confirmDelete:'Confirmar eliminación',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo experto activado',expertOff:'Modo experto desactivado',loginEnabled:'Inicio de sesión activado. Se requerirá autenticación en la próxima visita.',loginDisabled:'Inicio de sesión desactivado',signedInAs:'Sesión iniciada como',loginDisabledHead:'El inicio de sesión está desactivado',daySuffix:'',confirmCheckbox:'Entiendo y quiero continuar.',dangerConfirmTitle:'Confirmación requerida',dangerConfirmMessage:'Esta acción cambia ajustes o datos del sistema. Confirma antes de que runvard continúe.',tileTerminal:'Terminal',tileFiles:'Archivos',tileStorage:'Almacenamiento',tileDocker:'Docker',tileVms:'Máquinas virtuales',tileBackup:'Copias de seguridad',tileMonitoring:'Supervisión',tileSystem:'Sistema',tileApps:'Aplicaciones',descShell:'Acceso shell',descFiles:'Explorar · Subir · Compartir',descStorage:'Discos · Pools · Estado',descDocker:'Contenedores · Compose',descVms:'Invitados · Almacenamiento',descBackup:'Tareas · Historial',descMonitoring:'Registros · Alertas · Auditoría',descSystem:'Resumen · Actualizaciones · Usuarios',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contenedores',tabCompose:'Compose',tabImages:'Imágenes',tabVolumes:'Volúmenes',tabMachines:'Máquinas',tabStoragePools:'Pools de almacenamiento',tabJobs:'Tareas',tabHistory:'Historial',tabLogs:'Registros',tabAlerts:'Alertas',tabAudit:'Auditoría',tabOverview:'Resumen',tabUpdates:'Actualizaciones',tabUsers:'Usuarios',tabNetwork:'Red',tabServices:'Servicios',tabShares:'Recursos compartidos',tabMaintenance:'Mantenimiento',tabAdvanced:'Avanzado',tabPower:'Energía'},
-  pt:{language:'Idioma',languageSettings:'Definições de idioma',languageField:'Idioma da interface',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Fechar',search:'Pesquisar',searchPlaceholder:'Pesquisar...',loading:'A carregar...',error:'Erro',logout:'Terminar sessão',loginPage:'Página de início de sessão',runvardAccounts:'Contas runvard',background:'Fundo',backgroundTitle:'Fundo',presets:'Predefinições',uploadImage:'Carregar imagem',dropImage:'Clique ou largue uma imagem aqui',imageUrl:'URL da imagem',restoreDefault:'Restaurar predefinição',addTile:'Adicionar atalho',confirmDelete:'Confirmar eliminação',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo especialista ativado',expertOff:'Modo especialista desativado',loginEnabled:'Início de sessão ativado. Será necessária autenticação na próxima visita.',loginDisabled:'Início de sessão desativado',signedInAs:'Sessão iniciada como',loginDisabledHead:'Início de sessão desativado',daySuffix:'',confirmCheckbox:'Compreendo e quero continuar.',dangerConfirmTitle:'Confirmação necessária',dangerConfirmMessage:'Esta ação altera definições ou dados do sistema. Confirme antes de o runvard continuar.',tileTerminal:'Terminal',tileFiles:'Ficheiros',tileStorage:'Armazenamento',tileDocker:'Docker',tileVms:'Máquinas virtuais',tileBackup:'Cópias de segurança',tileMonitoring:'Monitorização',tileSystem:'Sistema',tileApps:'Aplicações',descShell:'Acesso shell',descFiles:'Navegar · Carregar · Partilhar',descStorage:'Discos · Pools · Estado',descDocker:'Contentores · Compose',descVms:'Convidados · Armazenamento',descBackup:'Tarefas · Histórico',descMonitoring:'Registos · Alertas · Auditoria',descSystem:'Visão geral · Atualizações · Utilizadores',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contentores',tabCompose:'Compose',tabImages:'Imagens',tabVolumes:'Volumes',tabMachines:'Máquinas',tabStoragePools:'Pools de armazenamento',tabJobs:'Tarefas',tabHistory:'Histórico',tabLogs:'Registos',tabAlerts:'Alertas',tabAudit:'Auditoria',tabOverview:'Visão geral',tabUpdates:'Atualizações',tabUsers:'Utilizadores',tabNetwork:'Rede',tabServices:'Serviços',tabShares:'Partilhas',tabMaintenance:'Manutenção',tabAdvanced:'Avançado',tabPower:'Energia'},
+  de:{language:'Sprache',languageSettings:'Spracheinstellungen',languageField:'Oberflächensprache',save:'Speichern',cancel:'Abbrechen',delete:'Löschen',continue:'Fortfahren',close:'Schließen',search:'Suchen',searchPlaceholder:'Suchen...',loading:'Lädt...',error:'Fehler',logout:'Abmelden',loginPage:'Login-Seite',runvardAccounts:'runvard-Konten',background:'Hintergrund',backgroundTitle:'Hintergrund',presets:'Vorlagen',uploadImage:'Bild hochladen',dropImage:'Klicken oder Bild hier ablegen',imageUrl:'Bild-URL',restoreDefault:'Standard wiederherstellen',addTile:'Verknüpfung hinzufügen',confirmDelete:'Löschen bestätigen',saved:'Gespeichert',languageSaved:'Sprache gespeichert',expertOn:'Expertenmodus aktiviert',expertOff:'Expertenmodus deaktiviert',loginEnabled:'Login aktiviert. Beim nächsten Besuch ist eine Anmeldung erforderlich.',loginDisabled:'Login deaktiviert',signedInAs:'Angemeldet als',loginDisabledHead:'Login ist deaktiviert',daySuffix:'Uhr',confirmCheckbox:'Ich habe verstanden und möchte fortfahren.',dangerConfirmTitle:'Bestätigung erforderlich',dangerConfirmMessage:'Diese Aktion ändert systemrelevante Einstellungen oder Daten. Bitte bestätige, bevor runvard fortfährt.',tileTerminal:'Terminal',tileFiles:'Dateien',tileStorage:'Speicher',tileDocker:'Docker',tileVms:'Virtuelle Maschinen',tileBackup:'Backup',tileMonitoring:'Monitoring',tileSystem:'System',tileApps:'Apps',descShell:'Shell-Zugriff',descFiles:'Durchsuchen · Hochladen · Freigeben',descStorage:'Laufwerke · Pools · Status',descDocker:'Container · Compose',descVms:'Gäste · Speicher',descBackup:'Aufgaben · Verlauf',descMonitoring:'Logs · Hinweise · Audit',descSystem:'Übersicht · Updates · Benutzer',tabDisks:'Laufwerke',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Container',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',tabMachines:'Virtuelle Maschinen',tabStoragePools:'Speicher-Pools',tabJobs:'Aufgaben',tabHistory:'Verlauf',tabLogs:'Logs',tabAlerts:'Hinweise',tabAudit:'Audit',tabOverview:'Übersicht',tabUpdates:'Updates',tabUsers:'Benutzer',tabNetwork:'Netzwerk',tabServices:'Dienste',tabShares:'Freigaben',tabMaintenance:'Wartung',tabAdvanced:'Erweitert',tabPower:'Energie'},
+  fr:{language:'Langue',languageSettings:'Paramètres de langue',languageField:'Langue de l’interface',save:'Enregistrer',cancel:'Annuler',delete:'Supprimer',continue:'Continuer',close:'Fermer',search:'Rechercher',searchPlaceholder:'Rechercher...',loading:'Chargement...',error:'Erreur',logout:'Se déconnecter',loginPage:'Page de connexion',runvardAccounts:'Comptes runvard',background:'Arrière-plan',backgroundTitle:'Arrière-plan',presets:'Présélections',uploadImage:'Importer une image',dropImage:'Cliquer ou déposer une image ici',imageUrl:'URL de l’image',restoreDefault:'Restaurer la valeur par défaut',addTile:'Ajouter un raccourci',confirmDelete:'Confirmer la suppression',saved:'Enregistré',languageSaved:'Langue enregistrée',expertOn:'Mode expert activé',expertOff:'Mode expert désactivé',loginEnabled:'Connexion activée. Une connexion sera requise à la prochaine visite.',loginDisabled:'Connexion désactivée',signedInAs:'Connecté en tant que',loginDisabledHead:'La connexion est désactivée',daySuffix:'',confirmCheckbox:'Je comprends et je veux continuer.',dangerConfirmTitle:'Confirmation requise',dangerConfirmMessage:'Cette action modifie des paramètres ou des données système. Veuillez confirmer avant que runvard continue.',tileTerminal:'Terminal',tileFiles:'Fichiers',tileStorage:'Stockage',tileDocker:'Docker',tileVms:'Machines virtuelles',tileBackup:'Sauvegarde',tileMonitoring:'Supervision',tileSystem:'Système',tileApps:'Applications',descShell:'Accès shell',descFiles:'Parcourir · Importer · Partager',descStorage:'Disques · Pools · État',descDocker:'Conteneurs · Compose',descVms:'Invités · Stockage',descBackup:'Tâches · Historique',descMonitoring:'Journaux · Alertes · Audit',descSystem:'Vue d’ensemble · Mises à jour · Utilisateurs',tabDisks:'Disques',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Conteneurs',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',tabMachines:'Machines virtuelles',tabStoragePools:'Pools de stockage',tabJobs:'Tâches',tabHistory:'Historique',tabLogs:'Journaux',tabAlerts:'Alertes',tabAudit:'Audit',tabOverview:'Vue d’ensemble',tabUpdates:'Mises à jour',tabUsers:'Utilisateurs',tabNetwork:'Réseau',tabServices:'Services',tabShares:'Partages',tabMaintenance:'Maintenance',tabAdvanced:'Avancé',tabPower:'Alimentation'},
+  it:{language:'Lingua',languageSettings:'Impostazioni lingua',languageField:'Lingua dell’interfaccia',save:'Salva',cancel:'Annulla',delete:'Elimina',continue:'Continua',close:'Chiudi',search:'Cerca',searchPlaceholder:'Cerca...',loading:'Caricamento...',error:'Errore',logout:'Esci',loginPage:'Pagina di accesso',runvardAccounts:'Account runvard',background:'Sfondo',backgroundTitle:'Sfondo',presets:'Preset',uploadImage:'Carica immagine',dropImage:'Fai clic o rilascia un’immagine qui',imageUrl:'URL immagine',restoreDefault:'Ripristina predefinito',addTile:'Aggiungi collegamento',confirmDelete:'Conferma eliminazione',saved:'Salvato',languageSaved:'Lingua salvata',expertOn:'Modalità esperto attivata',expertOff:'Modalità esperto disattivata',loginEnabled:'Accesso attivato. Al prossimo accesso sarà richiesta l’autenticazione.',loginDisabled:'Accesso disattivato',signedInAs:'Accesso come',loginDisabledHead:'Accesso disattivato',daySuffix:'',confirmCheckbox:'Ho capito e voglio continuare.',dangerConfirmTitle:'Conferma richiesta',dangerConfirmMessage:'Questa azione modifica impostazioni o dati di sistema. Conferma prima che runvard continui.',tileTerminal:'Terminale',tileFiles:'File',tileStorage:'Archiviazione',tileDocker:'Docker',tileVms:'Macchine virtuali',tileBackup:'Backup',tileMonitoring:'Monitoraggio',tileSystem:'Sistema',tileApps:'App',descShell:'Accesso shell',descFiles:'Sfoglia · Carica · Condividi',descStorage:'Dischi · Pool · Stato',descDocker:'Container · Compose',descVms:'Guest · Archiviazione',descBackup:'Job · Cronologia',descMonitoring:'Log · Avvisi · Audit',descSystem:'Panoramica · Aggiornamenti · Utenti',tabDisks:'Dischi',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Container',tabCompose:'Compose',tabImages:'Immagini',tabVolumes:'Volumi',tabMachines:'Macchine virtuali',tabStoragePools:'Pool di archiviazione',tabJobs:'Job',tabHistory:'Cronologia',tabLogs:'Log',tabAlerts:'Avvisi',tabAudit:'Audit',tabOverview:'Panoramica',tabUpdates:'Aggiornamenti',tabUsers:'Utenti',tabNetwork:'Rete',tabServices:'Servizi',tabShares:'Condivisioni',tabMaintenance:'Manutenzione',tabAdvanced:'Avanzato',tabPower:'Alimentazione'},
+  es:{language:'Idioma',languageSettings:'Configuración de idioma',languageField:'Idioma de la interfaz',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Cerrar',search:'Buscar',searchPlaceholder:'Buscar...',loading:'Cargando...',error:'Error',logout:'Cerrar sesión',loginPage:'Página de inicio de sesión',runvardAccounts:'Cuentas runvard',background:'Fondo',backgroundTitle:'Fondo',presets:'Preajustes',uploadImage:'Subir imagen',dropImage:'Haz clic o suelta una imagen aquí',imageUrl:'URL de imagen',restoreDefault:'Restaurar valores predeterminados',addTile:'Añadir acceso directo',confirmDelete:'Confirmar eliminación',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo experto activado',expertOff:'Modo experto desactivado',loginEnabled:'Inicio de sesión activado. Se requerirá autenticación en la próxima visita.',loginDisabled:'Inicio de sesión desactivado',signedInAs:'Sesión iniciada como',loginDisabledHead:'El inicio de sesión está desactivado',daySuffix:'',confirmCheckbox:'Entiendo y quiero continuar.',dangerConfirmTitle:'Confirmación requerida',dangerConfirmMessage:'Esta acción cambia ajustes o datos del sistema. Confirma antes de que runvard continúe.',tileTerminal:'Terminal',tileFiles:'Archivos',tileStorage:'Almacenamiento',tileDocker:'Docker',tileVms:'Máquinas virtuales',tileBackup:'Copias de seguridad',tileMonitoring:'Supervisión',tileSystem:'Sistema',tileApps:'Aplicaciones',descShell:'Acceso shell',descFiles:'Explorar · Subir · Compartir',descStorage:'Discos · Pools · Estado',descDocker:'Contenedores · Compose',descVms:'Invitados · Almacenamiento',descBackup:'Tareas · Historial',descMonitoring:'Registros · Alertas · Auditoría',descSystem:'Resumen · Actualizaciones · Usuarios',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contenedores',tabCompose:'Compose',tabImages:'Imágenes',tabVolumes:'Volúmenes',tabMachines:'Máquinas virtuales',tabStoragePools:'Pools de almacenamiento',tabJobs:'Tareas',tabHistory:'Historial',tabLogs:'Registros',tabAlerts:'Alertas',tabAudit:'Auditoría',tabOverview:'Resumen',tabUpdates:'Actualizaciones',tabUsers:'Usuarios',tabNetwork:'Red',tabServices:'Servicios',tabShares:'Recursos compartidos',tabMaintenance:'Mantenimiento',tabAdvanced:'Avanzado',tabPower:'Energía'},
+  pt:{language:'Idioma',languageSettings:'Definições de idioma',languageField:'Idioma da interface',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Fechar',search:'Pesquisar',searchPlaceholder:'Pesquisar...',loading:'A carregar...',error:'Erro',logout:'Terminar sessão',loginPage:'Página de início de sessão',runvardAccounts:'Contas runvard',background:'Fundo',backgroundTitle:'Fundo',presets:'Predefinições',uploadImage:'Carregar imagem',dropImage:'Clique ou largue uma imagem aqui',imageUrl:'URL da imagem',restoreDefault:'Restaurar predefinição',addTile:'Adicionar atalho',confirmDelete:'Confirmar eliminação',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo especialista ativado',expertOff:'Modo especialista desativado',loginEnabled:'Início de sessão ativado. Será necessária autenticação na próxima visita.',loginDisabled:'Início de sessão desativado',signedInAs:'Sessão iniciada como',loginDisabledHead:'Início de sessão desativado',daySuffix:'',confirmCheckbox:'Compreendo e quero continuar.',dangerConfirmTitle:'Confirmação necessária',dangerConfirmMessage:'Esta ação altera definições ou dados do sistema. Confirme antes de o runvard continuar.',tileTerminal:'Terminal',tileFiles:'Ficheiros',tileStorage:'Armazenamento',tileDocker:'Docker',tileVms:'Máquinas virtuais',tileBackup:'Cópias de segurança',tileMonitoring:'Monitorização',tileSystem:'Sistema',tileApps:'Aplicações',descShell:'Acesso shell',descFiles:'Navegar · Carregar · Partilhar',descStorage:'Discos · Pools · Estado',descDocker:'Contentores · Compose',descVms:'Convidados · Armazenamento',descBackup:'Tarefas · Histórico',descMonitoring:'Registos · Alertas · Auditoria',descSystem:'Visão geral · Atualizações · Utilizadores',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contentores',tabCompose:'Compose',tabImages:'Imagens',tabVolumes:'Volumes',tabMachines:'Máquinas virtuais',tabStoragePools:'Pools de armazenamento',tabJobs:'Tarefas',tabHistory:'Histórico',tabLogs:'Registos',tabAlerts:'Alertas',tabAudit:'Auditoria',tabOverview:'Visão geral',tabUpdates:'Atualizações',tabUsers:'Utilizadores',tabNetwork:'Rede',tabServices:'Serviços',tabShares:'Partilhas',tabMaintenance:'Manutenção',tabAdvanced:'Avançado',tabPower:'Energia'},
 };
 function currentLanguage(){
   try{
@@ -6273,8 +6290,11 @@ const VM_PHRASES={
     "Console ready":"Konsole bereit",
     "Create a bridge first under Network → Interfaces.":"Erstelle zuerst unter Netzwerk → Schnittstellen eine Bridge.",
     "Detach network card":"Netzwerkkarte abhängen",
+    "Detach":"Abhängen",
     "Disk expanded":"Disk vergrößert",
+    "Disks attached to this VM.":"An diese VM angehängte Datenträger.",
     "Ejected":"Ausgeworfen",
+    "Expand":"Vergrößern",
     "Expanding disk…":"Vergrößere Disk…",
     "Expand disk":"Disk vergrößern",
     "Hardware":"Hardware",
@@ -6284,8 +6304,10 @@ const VM_PHRASES={
     "Live if supported, always saved":"Live, falls unterstützt; immer gespeichert",
     "Model":"Modell",
     "Network cards":"Netzwerkkarten",
+    "Network adapters connected to this VM.":"Mit dieser VM verbundene Netzwerkadapter.",
     "New total size (GB)":"Neue Gesamtgröße (GB)",
     "No network cards":"Keine Netzwerkkarten",
+    "No source":"Keine Quelle",
     "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Vergrößert nur das virtuelle Disk-Image. Partition/Dateisystem danach im Gast erweitern.",
     "Path to an existing qcow2/raw image or block device":"Pfad zu einem vorhandenen qcow2/raw-Image oder Block-Device",
     "Pool name":"Pool-Name",
@@ -6295,6 +6317,7 @@ const VM_PHRASES={
     "Resources & hardware":"Ressourcen & Hardware",
     "Resources saved; live update may require restart":"Ressourcen gespeichert; Live-Update benötigt evtl. Neustart",
     "Resources updated":"Ressourcen aktualisiert",
+    "Ready when needed":"Bei Bedarf bereit",
     "Restore":"Wiederherstellen",
     "Saved persistently. Live update is attempted while the VM is running.":"Wird dauerhaft gespeichert. Während die VM läuft, wird Live-Update versucht.",
     "Saved persistently. Live update may require guest support.":"Wird dauerhaft gespeichert. Live-Update kann Gast-Unterstützung benötigen.",
@@ -6313,6 +6336,7 @@ const VM_PHRASES={
     "VMs":"VMs",
     "Volume name":"Volume-Name",
     "vCPUs":"vCPUs",
+    "cores":"Kerne",
     "live":"live",
     "off":"aus"
   },
@@ -6334,8 +6358,11 @@ const VM_PHRASES={
     "Console ready":"Console prête",
     "Create a bridge first under Network → Interfaces.":"Créez d’abord un pont dans Réseau → Interfaces.",
     "Detach network card":"Détacher la carte réseau",
+    "Detach":"Détacher",
     "Disk expanded":"Disque agrandi",
+    "Disks attached to this VM.":"Disques attachés à cette VM.",
     "Ejected":"Éjecté",
+    "Expand":"Agrandir",
     "Expanding disk…":"Agrandissement du disque…",
     "Expand disk":"Agrandir le disque",
     "Hardware":"Matériel",
@@ -6345,8 +6372,10 @@ const VM_PHRASES={
     "Live if supported, always saved":"En direct si pris en charge ; toujours enregistré",
     "Model":"Modèle",
     "Network cards":"Cartes réseau",
+    "Network adapters connected to this VM.":"Adaptateurs réseau connectés à cette VM.",
     "New total size (GB)":"Nouvelle taille totale (Go)",
     "No network cards":"Aucune carte réseau",
+    "No source":"Aucune source",
     "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Agrandit uniquement l’image disque virtuelle. Étendez ensuite la partition/le système de fichiers dans l’invité.",
     "Path to an existing qcow2/raw image or block device":"Chemin vers une image qcow2/raw existante ou un périphérique bloc",
     "Pool name":"Nom du pool",
@@ -6356,6 +6385,7 @@ const VM_PHRASES={
     "Resources & hardware":"Ressources et matériel",
     "Resources saved; live update may require restart":"Ressources enregistrées ; la mise à jour en direct peut nécessiter un redémarrage",
     "Resources updated":"Ressources mises à jour",
+    "Ready when needed":"Prêt si nécessaire",
     "Restore":"Restaurer",
     "Saved persistently. Live update is attempted while the VM is running.":"Enregistré durablement. Une mise à jour en direct est tentée pendant que la VM fonctionne.",
     "Saved persistently. Live update may require guest support.":"Enregistré durablement. La mise à jour en direct peut nécessiter la prise en charge de l’invité.",
@@ -6374,6 +6404,7 @@ const VM_PHRASES={
     "VMs":"VM",
     "Volume name":"Nom du volume",
     "vCPUs":"vCPU",
+    "cores":"cœurs",
     "live":"en direct",
     "off":"arrêtée"
   },
@@ -6395,8 +6426,11 @@ const VM_PHRASES={
     "Console ready":"Console pronta",
     "Create a bridge first under Network → Interfaces.":"Crea prima un bridge in Rete → Interfacce.",
     "Detach network card":"Scollega scheda di rete",
+    "Detach":"Scollega",
     "Disk expanded":"Disco espanso",
+    "Disks attached to this VM.":"Dischi collegati a questa VM.",
     "Ejected":"Espulso",
+    "Expand":"Espandi",
     "Expanding disk…":"Espansione disco…",
     "Expand disk":"Espandi disco",
     "Hardware":"Hardware",
@@ -6406,8 +6440,10 @@ const VM_PHRASES={
     "Live if supported, always saved":"Live se supportato; sempre salvato",
     "Model":"Modello",
     "Network cards":"Schede di rete",
+    "Network adapters connected to this VM.":"Schede di rete collegate a questa VM.",
     "New total size (GB)":"Nuova dimensione totale (GB)",
     "No network cards":"Nessuna scheda di rete",
+    "No source":"Nessuna origine",
     "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Espande solo l’immagine disco virtuale. Estendi poi partizione/filesystem nel guest.",
     "Path to an existing qcow2/raw image or block device":"Percorso di un’immagine qcow2/raw esistente o di un dispositivo a blocchi",
     "Pool name":"Nome pool",
@@ -6417,6 +6453,7 @@ const VM_PHRASES={
     "Resources & hardware":"Risorse e hardware",
     "Resources saved; live update may require restart":"Risorse salvate; l’aggiornamento live può richiedere riavvio",
     "Resources updated":"Risorse aggiornate",
+    "Ready when needed":"Pronta quando serve",
     "Restore":"Ripristina",
     "Saved persistently. Live update is attempted while the VM is running.":"Salvato in modo persistente. L’aggiornamento live viene tentato mentre la VM è in esecuzione.",
     "Saved persistently. Live update may require guest support.":"Salvato in modo persistente. L’aggiornamento live può richiedere supporto del guest.",
@@ -6435,6 +6472,7 @@ const VM_PHRASES={
     "VMs":"VM",
     "Volume name":"Nome volume",
     "vCPUs":"vCPU",
+    "cores":"core",
     "live":"live",
     "off":"spenta"
   },
@@ -6456,8 +6494,11 @@ const VM_PHRASES={
     "Console ready":"Consola lista",
     "Create a bridge first under Network → Interfaces.":"Crea primero un puente en Red → Interfaces.",
     "Detach network card":"Desconectar tarjeta de red",
+    "Detach":"Desconectar",
     "Disk expanded":"Disco ampliado",
+    "Disks attached to this VM.":"Discos conectados a esta VM.",
     "Ejected":"Expulsado",
+    "Expand":"Ampliar",
     "Expanding disk…":"Ampliando disco…",
     "Expand disk":"Ampliar disco",
     "Hardware":"Hardware",
@@ -6467,8 +6508,10 @@ const VM_PHRASES={
     "Live if supported, always saved":"En vivo si es compatible; siempre guardado",
     "Model":"Modelo",
     "Network cards":"Tarjetas de red",
+    "Network adapters connected to this VM.":"Adaptadores de red conectados a esta VM.",
     "New total size (GB)":"Nuevo tamaño total (GB)",
     "No network cards":"Sin tarjetas de red",
+    "No source":"Sin origen",
     "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Solo amplía la imagen de disco virtual. Amplía después la partición/sistema de archivos dentro del invitado.",
     "Path to an existing qcow2/raw image or block device":"Ruta a una imagen qcow2/raw existente o dispositivo de bloques",
     "Pool name":"Nombre del pool",
@@ -6478,6 +6521,7 @@ const VM_PHRASES={
     "Resources & hardware":"Recursos y hardware",
     "Resources saved; live update may require restart":"Recursos guardados; la actualización en vivo puede requerir reinicio",
     "Resources updated":"Recursos actualizados",
+    "Ready when needed":"Lista cuando haga falta",
     "Restore":"Restaurar",
     "Saved persistently. Live update is attempted while the VM is running.":"Guardado de forma persistente. Se intenta actualizar en vivo mientras la VM se ejecuta.",
     "Saved persistently. Live update may require guest support.":"Guardado de forma persistente. La actualización en vivo puede requerir soporte del invitado.",
@@ -6496,6 +6540,7 @@ const VM_PHRASES={
     "VMs":"VM",
     "Volume name":"Nombre del volumen",
     "vCPUs":"vCPU",
+    "cores":"núcleos",
     "live":"en vivo",
     "off":"apagada"
   },
@@ -6517,8 +6562,11 @@ const VM_PHRASES={
     "Console ready":"Consola pronta",
     "Create a bridge first under Network → Interfaces.":"Crie primeiro uma bridge em Rede → Interfaces.",
     "Detach network card":"Desanexar placa de rede",
+    "Detach":"Desanexar",
     "Disk expanded":"Disco aumentado",
+    "Disks attached to this VM.":"Discos anexados a esta VM.",
     "Ejected":"Ejetado",
+    "Expand":"Aumentar",
     "Expanding disk…":"A aumentar disco…",
     "Expand disk":"Aumentar disco",
     "Hardware":"Hardware",
@@ -6528,8 +6576,10 @@ const VM_PHRASES={
     "Live if supported, always saved":"Em direto se suportado; sempre guardado",
     "Model":"Modelo",
     "Network cards":"Placas de rede",
+    "Network adapters connected to this VM.":"Adaptadores de rede ligados a esta VM.",
     "New total size (GB)":"Novo tamanho total (GB)",
     "No network cards":"Sem placas de rede",
+    "No source":"Sem origem",
     "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Aumenta apenas a imagem de disco virtual. Depois aumente a partição/sistema de ficheiros no convidado.",
     "Path to an existing qcow2/raw image or block device":"Caminho para uma imagem qcow2/raw existente ou dispositivo de blocos",
     "Pool name":"Nome do pool",
@@ -6539,6 +6589,7 @@ const VM_PHRASES={
     "Resources & hardware":"Recursos e hardware",
     "Resources saved; live update may require restart":"Recursos guardados; a atualização em direto pode exigir reinício",
     "Resources updated":"Recursos atualizados",
+    "Ready when needed":"Pronta quando necessário",
     "Restore":"Restaurar",
     "Saved persistently. Live update is attempted while the VM is running.":"Guardado de forma persistente. A atualização em direto é tentada enquanto a VM está em execução.",
     "Saved persistently. Live update may require guest support.":"Guardado de forma persistente. A atualização em direto pode exigir suporte do convidado.",
@@ -6557,6 +6608,7 @@ const VM_PHRASES={
     "VMs":"VMs",
     "Volume name":"Nome do volume",
     "vCPUs":"vCPUs",
+    "cores":"núcleos",
     "live":"em direto",
     "off":"desligada"
   }
@@ -9248,29 +9300,26 @@ window.vmHardware=async name=>{
   const h=await api('/vms/hardware?name='+encodeURIComponent(name));
   const body=$('#modal-body');
   if(h.ok===false){body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">← Back</button></div><div class="empty-state">${esc(h.stderr||'Error')}</div>`;return;}
-  body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">← Back</button><span style="padding:6px;color:var(--text2)">Hardware: ${esc(name)} ${h.active?'<span class="status-pill run" style="font-size:10px">live</span>':'<span class="status-pill stop" style="font-size:10px">off</span>'}</span></div>
-  <div class="sec-hdr"><h3>Resources</h3><button class="btn sm" onclick="vmResourcesForm('${esc(name)}',${Number(h.memory_mb)||0},${Number(h.vcpus)||1})">Change</button></div>
-  <div class="nx-summary-grid" style="margin-bottom:18px">
-    ${summaryCard('RAM',`${Number(h.memory_mb)||0} MB`,h.active?'Live if supported, always saved':'Applied on next start')}
-    ${summaryCard('CPU',`${Number(h.vcpus)||0} cores`,h.active?'Live if supported, always saved':'Applied on next start')}
+  const badge=h.active?statusBadge('live','good'):statusBadge('off','bad');
+  body.innerHTML=`<div class="vm-detail-head">
+    <button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">Back</button>
+    <div><div class="vm-detail-title">${esc(uiText('Hardware'))}: ${esc(name)} ${badge}</div><div class="vm-detail-sub">${esc(uiText('Resources & hardware'))}</div></div>
+    <button class="btn sm" onclick="vmResourcesForm('${esc(name)}',${Number(h.memory_mb)||0},${Number(h.vcpus)||1})">Change resources</button>
   </div>
-  <div class="sec-hdr"><h3>Disks</h3><button class="btn sm" onclick="vmDiskForm('${esc(name)}')">+ Attach disk</button></div>
-  <table style="margin-bottom:18px;table-layout:fixed;width:100%"><thead><tr><th style="width:70px">Target</th><th style="width:70px">Bus</th><th>Source</th><th style="width:60px">Type</th><th style="width:84px;text-align:right"></th></tr></thead><tbody>
-  ${h.disks.map(d=>`<tr>
-    <td class="mono" style="font-size:12px">${esc(d.target)}</td><td style="color:var(--text2)">${esc(d.bus)||'—'}</td>
-    <td class="mono" style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis">${esc(d.source)||'—'}</td>
-    <td>${esc(d.device)}</td>
-    <td style="text-align:right">${d.device==='disk'?`<div style="display:inline-flex;gap:4px"><button class="btn icon" title="Expand disk" onclick="vmDiskResizeForm('${esc(name)}','${esc(d.target)}')" style="width:26px;height:26px;font-size:12px">↗</button><button class="btn icon danger" title="Unmount" onclick="vmDiskDetach('${esc(name)}','${esc(d.target)}')" style="width:26px;height:26px;font-size:12px">✕</button></div>`:''}</td>
-  </tr>`).join('')||'<tr><td colspan="5"><div class="empty-state">No disks</div></td></tr>'}
-  </tbody></table>
-  <div class="sec-hdr"><h3>Network cards</h3><button class="btn sm" onclick="vmNicForm('${esc(name)}')">+ Attach NIC</button></div>
-  <table style="table-layout:fixed;width:100%"><thead><tr><th style="width:150px">MAC</th><th style="width:80px">Type</th><th>Source</th><th style="width:70px">Model</th><th style="width:50px;text-align:right"></th></tr></thead><tbody>
-  ${h.nics.map(n=>`<tr>
-    <td class="mono" style="font-size:12px">${esc(n.mac)}</td><td style="color:var(--text2)">${esc(n.type)}</td>
-    <td>${esc(n.source)||'—'}</td><td style="color:var(--text2)">${esc(n.model)||'—'}</td>
-    <td style="text-align:right"><button class="btn icon danger" title="Unmount" onclick="vmNicDetach('${esc(name)}','${esc(n.type)}','${esc(n.mac)}')" style="width:26px;height:26px;font-size:12px">✕</button></td>
-  </tr>`).join('')||'<tr><td colspan="5"><div class="empty-state">No network cards</div></td></tr>'}
-  </tbody></table>`;
+  <div class="nx-summary-grid">
+    ${summaryCard('RAM',`${Number(h.memory_mb)||0} MB`,h.active?'Live if supported, always saved':'Applied on next start')}
+    ${summaryCard('CPU',`${Number(h.vcpus)||0} ${uiText('cores')}`,h.active?'Live if supported, always saved':'Applied on next start')}
+  </div>
+  <div class="vm-hardware-layout">
+    <section class="vm-panel">
+      <div class="vm-panel-head"><div><div class="vm-panel-title">Disks</div><div class="vm-panel-sub">Disks attached to this VM.</div></div><button class="btn sm" onclick="vmDiskForm('${esc(name)}')">+ Attach disk</button></div>
+      <div class="vm-device-list">${(h.disks||[]).map(d=>vmDiskRow(name,d)).join('')||emptyState('No disks')}</div>
+    </section>
+    <section class="vm-panel">
+      <div class="vm-panel-head"><div><div class="vm-panel-title">Network cards</div><div class="vm-panel-sub">Network adapters connected to this VM.</div></div><button class="btn sm" onclick="vmNicForm('${esc(name)}')">+ Attach NIC</button></div>
+      <div class="vm-device-list">${(h.nics||[]).map(n=>vmNicRow(name,n)).join('')||emptyState('No network cards')}</div>
+    </section>
+  </div>`;
   translateRenderedText(body);
 };
 window.vmResourcesForm=(name,memoryMb,vcpus)=>openForm('Change resources: '+name,'⚙',[
@@ -11610,6 +11659,27 @@ function isMountableVolume(volume,parent){
   return ['part','disk','crypt','lvm'].includes(volume.type||'');
 }
 function cardMetric(label,value){return `<div><span>${esc(uiText(label))}</span><strong>${value}</strong></div>`;}
+function vmDeviceMeta(items){return `<div class="vm-device-meta">${items.filter(Boolean).map(x=>`<span class="nx-chip">${x}</span>`).join('')}</div>`;}
+function vmDiskRow(name,d){
+  return `<div class="vm-device-row">
+    <div>
+      <div class="vm-device-title">${esc(d.target||'Disk')}</div>
+      ${vmDeviceMeta([esc(uiText('Bus'))+': '+esc(d.bus||'-'),esc(uiText('Type'))+': '+esc(d.device||'disk')])}
+      <div class="vm-device-source mono">${esc(d.source||uiText('No source'))}</div>
+    </div>
+    <div class="vm-device-actions">${d.device==='disk'?`<button class="btn ghost sm" title="${esc(uiText('Expand disk'))}" onclick="vmDiskResizeForm('${esc(name)}','${esc(d.target)}')">Expand</button><button class="btn danger sm" title="${esc(uiText('Detach disk'))}" onclick="vmDiskDetach('${esc(name)}','${esc(d.target)}')">Detach</button>`:''}</div>
+  </div>`;
+}
+function vmNicRow(name,n){
+  return `<div class="vm-device-row">
+    <div>
+      <div class="vm-device-title mono">${esc(n.mac||'NIC')}</div>
+      ${vmDeviceMeta([esc(uiText('Type'))+': '+esc(n.type||'-'),esc(uiText('Model'))+': '+esc(n.model||'-')])}
+      <div class="vm-device-source">${esc(uiText('Source'))}: ${esc(n.source||'-')}</div>
+    </div>
+    <div class="vm-device-actions"><button class="btn danger sm" title="${esc(uiText('Detach NIC'))}" onclick="vmNicDetach('${esc(name)}','${esc(n.type)}','${esc(n.mac)}')">Detach</button></div>
+  </div>`;
+}
 function vmCard(vm){
   const name=esc(vm.name);
   const consoleChip=vm.active?'<span class="nx-chip good">Console ready</span>':'<span class="nx-chip warn">Start first</span>';
@@ -11618,13 +11688,15 @@ function vmCard(vm){
     ?`<button class="btn sm" onclick="vmConsole('${name}')">Open console</button>`
     :`<button class="btn sm play" onclick="vmAct('${name}','start')">Start</button>`;
   return `<div class="nx-action-card vm-card">
-    <div class="nx-action-head"><div class="nx-action-title">${name}</div>${statusBadge(vm.state,vm.active?'good':'warn')}</div>
+    <div class="vm-card-main">
+      <div class="nx-action-head"><div class="nx-action-title">${name}</div>${statusBadge(vm.state,vm.active?'good':'warn')}</div>
+      <div class="vm-chip-row">${consoleChip}${stateChip}</div>
+    </div>
     <div class="vm-resource-grid">
       ${cardMetric('RAM',fmtVmMemory(vm.max_mem))}
       ${cardMetric('CPU',esc(vm.vcpus))}
     </div>
-    <div class="vm-chip-row">${consoleChip}${stateChip}</div>
-    <div class="nx-action-row">
+    <div class="nx-action-row vm-card-actions">
       ${primary}
       ${vm.active?`<button class="btn ghost sm" onclick="vmAct('${name}','shutdown')" title="A VM shutdown asks the guest OS to power off cleanly.">Shut down</button>`:''}
       ${vm.active?`<button class="btn ghost sm" onclick="vmAct('${name}','reboot')">Restart</button>`:''}
@@ -11792,8 +11864,14 @@ async function renderVMs(body,tab){
   const av=await api('/vms/available');if(!av.available){body.innerHTML=viewIntro('Virtual machines','Virtualization is not available on this server.','')+emptyState('VM support unavailable');return;}
   if(tab==='Speicher-Pools'||tab==='Storage pools')return renderVmPoolsSimple(body);
   const v=await api('/vms/list');
+  const running=v.filter(x=>x.active).length;
   body.innerHTML=viewIntro('Virtual machines','Create and run complete guest systems. Advanced hardware and snapshots are inside Manage.',`<button class="btn" onclick="vmCreateForm()">Create VM</button>`)
-    +`<div class="nx-card-grid vm-card-grid">${v.map(vmCard).join('')||emptyState('No virtual machines')}</div>`;
+    +`<div class="nx-summary-grid">
+      ${summaryCard('VMs',v.length,'Total')}
+      ${summaryCard('Running',running,'Active now')}
+      ${summaryCard('Stopped',Math.max(0,v.length-running),'Ready when needed')}
+    </div>
+    <div class="nx-card-grid vm-card-grid">${v.map(vmCard).join('')||emptyState('No virtual machines')}</div>`;
   translateRenderedText(body);
 }
 async function renderVmPoolsSimple(body){
