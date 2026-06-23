@@ -250,6 +250,24 @@ def test_file_copy_job_does_not_require_confirm_token(monkeypatch):
     assert response.json() == {"id": "job-1"}
 
 
+def test_empty_trash_accepts_matching_confirm_token(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+    monkeypatch.setattr(server.files, "empty_trash", lambda: {"ok": True})
+    client = _client()
+    token = client.post(
+        "/api/confirm-token",
+        data={"action": "files:trash-empty", "target": "trash"},
+    ).json()["token"]
+
+    response = client.post(
+        "/api/files/trash/empty",
+        data={"trash": "trash", "confirm_token": token},
+    )
+
+    assert response.status_code == 200
+    assert response.json() == {"ok": True}
+
+
 def test_dashboard_remove_requires_confirm_token(monkeypatch):
     monkeypatch.setattr(server, "login_enabled", lambda: True)
     monkeypatch.setattr(server.dashboard, "remove_tile", lambda tile_id: {"ok": True})

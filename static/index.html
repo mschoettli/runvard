@@ -261,6 +261,11 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 .files-scroll.drag-over{outline:1px dashed var(--accent-light);outline-offset:-6px;background:rgba(122,74,255,.08)}
 .files-drop-hint{display:none;position:absolute;inset:8px;z-index:3;align-items:center;justify-content:center;border:1px dashed var(--accent-light);border-radius:12px;background:rgba(13,14,26,.82);color:var(--text);font-size:13px;font-weight:600;pointer-events:none}
 .files-scroll.drag-over .files-drop-hint{display:flex}
+.file-card.dragging,.files-scroll tr.dragging{opacity:.45}
+.file-card.drop-target{background:rgba(34,197,94,.12);border-color:rgba(34,197,94,.42);box-shadow:inset 0 0 0 1px rgba(34,197,94,.24)}
+.files-scroll tr.drop-target td{background:rgba(34,197,94,.12);border-bottom-color:rgba(34,197,94,.32)}
+.files-scroll tr.drop-target td:first-child{border-radius:8px 0 0 8px}
+.files-scroll tr.drop-target td:last-child{border-radius:0 8px 8px 0}
 .file-marquee{position:fixed;border:1px solid var(--accent-light);background:rgba(122,74,255,.18);border-radius:6px;pointer-events:none;z-index:1000}
 .sortable-th{cursor:pointer;user-select:none}
 .sortable-th:hover{color:var(--accent-light)}
@@ -290,6 +295,10 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 .files-statusbar .sb-sep{width:.5px;height:12px;background:var(--border)}
 .files-statusbar .sb-total{margin-left:auto;display:flex;align-items:center;gap:6px}
 .files-statusbar .sb-total strong{color:var(--text2);font-family:'JetBrains Mono',monospace;font-weight:400}
+.files-statusbar .sb-actions{margin-left:8px;display:none;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.files-statusbar .sb-actions.active{display:flex}
+.files-statusbar .sb-selected{font-size:11px;color:var(--text2);margin-right:2px;white-space:nowrap}
+.files-statusbar .sb-actions .btn{padding:3px 8px;font-size:11px}
 .breadcrumb{display:flex;align-items:center;gap:2px;margin-bottom:10px}
 .bc-seg{font-size:11px;color:var(--text3);padding:3px 6px;border-radius:6px;cursor:pointer;transition:all .12s}
 .bc-seg:hover{background:var(--glass);color:var(--text2)}
@@ -7330,7 +7339,7 @@ const QUICKLINKS=[
   {label:'🧱 Compose',path:'/opt/runvard/data/compose'},
   {label:'🗑 Trash',path:'__trash__'},
 ];
-let currentPath='/root', clipboard=null, viewMode='grid', sortBy='name', sortDir='asc', selectedFiles=new Set(), fileSelectionOrder=[], lastSelectedPath=null, fileJobsTimer=null, filesHotkeysReady=false, filesGlobalDropReady=false;
+let currentPath='/root', clipboard=null, viewMode='grid', sortBy='name', sortDir='asc', selectedFiles=new Set(), fileSelectionOrder=[], fileEntryMeta=new Map(), lastSelectedPath=null, fileJobsTimer=null, filesHotkeysReady=false, filesGlobalDropReady=false, fileDragPayload=null, fileExternalDragDepth=0;
 const FILE_I18N={
   up:{de:'Hoch',en:'Up',fr:'Remonter',it:'Su',es:'Subir',pt:'Subir'},
   parentFolder:{de:'Übergeordneter Ordner',en:'Parent folder',fr:'Dossier parent',it:'Cartella superiore',es:'Carpeta superior',pt:'Pasta superior'},
@@ -7373,6 +7382,9 @@ const FILE_I18N={
   cutMany:{de:'$1 Elemente ausgeschnitten',en:'$1 items cut',fr:'$1 éléments coupés',it:'$1 elementi tagliati',es:'$1 elementos cortados',pt:'$1 itens cortados'},
   startedMany:{de:'$1 Elemente gestartet',en:'$1 items started',fr:'$1 éléments démarrés',it:'$1 elementi avviati',es:'$1 elementos iniciados',pt:'$1 itens iniciados'},
   uploadedMany:{de:'$1 Datei(en) hochgeladen',en:'$1 file(s) uploaded',fr:'$1 fichier(s) importé(s)',it:'$1 file caricati',es:'$1 archivo(s) subido(s)',pt:'$1 ficheiro(s) carregado(s)'},
+  moveJobStarted:{de:'Verschieben gestartet',en:'Move started',fr:'Déplacement démarré',it:'Spostamento avviato',es:'Movimiento iniciado',pt:'Movimento iniciado'},
+  invalidDrop:{de:'Hier kann nicht abgelegt werden',en:'Cannot drop here',fr:'Impossible de déposer ici',it:'Impossibile rilasciare qui',es:'No se puede soltar aquí',pt:'Não é possível largar aqui'},
+  sameFolderDrop:{de:'Element ist bereits in diesem Ordner',en:'Item is already in this folder',fr:'L’élément est déjà dans ce dossier',it:'L’elemento è già in questa cartella',es:'El elemento ya está en esta carpeta',pt:'O item já está nesta pasta'},
   downloadSelected:{de:'Auswahl herunterladen',en:'Download selected',fr:'Télécharger la sélection',it:'Scarica selezionati',es:'Descargar selección',pt:'Transferir seleção'},
   copySelected:{de:'Auswahl kopieren',en:'Copy selected',fr:'Copier la sélection',it:'Copia selezionati',es:'Copiar selección',pt:'Copiar seleção'},
   cutSelected:{de:'Auswahl ausschneiden',en:'Cut selected',fr:'Couper la sélection',it:'Taglia selezionati',es:'Cortar selección',pt:'Cortar seleção'},
@@ -7449,6 +7461,7 @@ async function renderFiles(body){
     api('/files/mounts').catch(()=>({mounts:[]}))
   ]);
   const entries=sortEntries(data.entries);
+  fileEntryMeta=new Map(entries.map(e=>[e.path,{is_dir:!!e.is_dir,readonly:!!e.readonly}]));
   fileSelectionOrder=entries.filter(e=>!e.blocked).map(e=>e.path);
   selectedFiles=new Set([...selectedFiles].filter(p=>fileSelectionOrder.includes(p)));
   const remoteMounts=(mountData.mounts||[]);
@@ -7490,25 +7503,21 @@ async function renderFiles(body){
           <button class="btn icon" onclick="viewMode=viewMode==='grid'?'list':'grid';renderFiles($('#modal-body'))" title="${esc(fileText('view'))}" style="font-size:13px">${viewMode==='grid'?'☰':'⊞'}</button>
         </div>
       </div>
-      <div id="bulk-bar" style="display:none;gap:6px;flex-wrap:wrap;align-items:center">
-        <span id="sel-count" style="font-size:11px;color:var(--text3)"></span>
-        <button class="btn ghost sm" onclick="bulkCopy()">${esc(fileText('copy'))}</button>
-        <button class="btn ghost sm" onclick="bulkCut()">${esc(fileText('cut'))}</button>
-        ${clipboard?`<button class="btn ghost sm" onclick="pasteClipboard()">${esc(fileText('paste'))}</button>`:''}
-        <button class="btn ghost sm" onclick="bulkDownload()">↓ ${esc(fileText('download'))}</button>
-        <button class="btn ghost sm" onclick="bulkZip()">${esc(fileText('zip'))}</button>
-        <button class="btn danger sm" onclick="bulkDelete()">${esc(fileText('delete'))}</button>
-        <button class="btn ghost sm" onclick="selectedFiles.clear();renderFiles($('#modal-body'))">✕</button>
-      </div>
       <div class="files-scroll" id="files-scroll" oncontextmenu="showFolderCtx(event)">
       <div class="files-drop-hint">${esc(fileText('dropUpload'))}</div>
       ${viewMode==='grid'?`
       <div class="file-grid" id="file-area">
         ${entries.map(e=>{if(e.blocked)return'';const fi=fileIcon(e);return`
         <div class="file-card${selectedFiles.has(e.path)?' selected':''}"
-          data-path="${esc(e.path)}" data-name="${esc(e.name)}"
+          data-path="${esc(e.path)}" data-name="${esc(e.name)}" data-dir="${e.is_dir?'1':'0'}" draggable="${e.readonly?'false':'true'}"
           onclick="fileClick(event,'${esc(e.path)}',${e.is_dir})"
           ondblclick="fileDblClick('${esc(e.path)}',${e.is_dir})"
+          ondragstart="fileDragStart(event,'${esc(e.path)}',${e.is_dir})"
+          ondragend="fileDragEnd(event)"
+          ondragenter="fileDropTargetEnter(event,'${esc(e.path)}',${e.is_dir})"
+          ondragover="fileDropTargetOver(event,'${esc(e.path)}',${e.is_dir})"
+          ondragleave="fileDropTargetLeave(event)"
+          ondrop="fileDropTargetDrop(event,'${esc(e.path)}',${e.is_dir})"
           oncontextmenu="showCtx(event,'${esc(e.path)}',${e.is_dir},${e.readonly})">
           <div class="fi ${fi.cls}">${fi.icon}</div>
           <div class="fn">${esc(e.name)}</div>
@@ -7517,9 +7526,15 @@ async function renderFiles(body){
       <table id="file-area" style="font-size:12px">
         <thead><tr><th style="width:32px"></th><th class="sortable-th" onclick="setFileSort('name')">${esc(fileText('name'))}${sortMark('name')}</th><th class="sortable-th" onclick="setFileSort('size')" style="width:70px;text-align:right">${esc(fileText('size'))}${sortMark('size')}</th><th class="sortable-th" onclick="setFileSort('date')" style="width:90px">${esc(fileText('date'))}${sortMark('date')}</th></tr></thead>
         <tbody>${entries.map(e=>{if(e.blocked)return'';const fi=fileIcon(e);return`
-          <tr data-path="${esc(e.path)}" class="${selectedFiles.has(e.path)?'sel-row':''}"
+          <tr data-path="${esc(e.path)}" data-dir="${e.is_dir?'1':'0'}" draggable="${e.readonly?'false':'true'}" class="${selectedFiles.has(e.path)?'sel-row':''}"
           onclick="fileClick(event,'${esc(e.path)}',${e.is_dir})"
           ondblclick="fileDblClick('${esc(e.path)}',${e.is_dir})"
+          ondragstart="fileDragStart(event,'${esc(e.path)}',${e.is_dir})"
+          ondragend="fileDragEnd(event)"
+          ondragenter="fileDropTargetEnter(event,'${esc(e.path)}',${e.is_dir})"
+          ondragover="fileDropTargetOver(event,'${esc(e.path)}',${e.is_dir})"
+          ondragleave="fileDropTargetLeave(event)"
+          ondrop="fileDropTargetDrop(event,'${esc(e.path)}',${e.is_dir})"
           oncontextmenu="showCtx(event,'${esc(e.path)}',${e.is_dir},${e.readonly})">
           <td><div class="fi ${fi.cls}" style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px">${fi.icon}</div></td>
           <td class="${fi.ncls}">${esc(e.name)}</td>
@@ -7533,6 +7548,7 @@ async function renderFiles(body){
         <div class="sb-sep"></div>
         <div class="sb-item">📄 ${entries.filter(e=>!e.is_dir).length} ${esc(fileText('files'))}</div>
         <div class="sb-total"><span>${esc(fileText('total'))}</span><strong>${fmtBytes(entries.reduce((s,e)=>s+(e.is_dir?0:(e.size||0)),0))}</strong></div>
+        <div id="files-selection-actions" class="sb-actions" aria-live="polite"></div>
       </div>
     </div>
   </div>
@@ -7555,10 +7571,17 @@ function setupFileDropUpload(){
   const leave=e=>{
     if(!sc.contains(e.relatedTarget)) sc.classList.remove('drag-over');
   };
-  sc.addEventListener('dragenter',e=>{e.preventDefault();sc.classList.add('drag-over');});
-  sc.addEventListener('dragover',e=>{e.preventDefault();e.dataTransfer.dropEffect='copy';sc.classList.add('drag-over');});
+  sc.addEventListener('dragenter',e=>{
+    if(!fileDragHasExternalFiles(e))return;
+    e.preventDefault();sc.classList.add('drag-over');
+  });
+  sc.addEventListener('dragover',e=>{
+    if(!fileDragHasExternalFiles(e))return;
+    e.preventDefault();e.dataTransfer.dropEffect='copy';sc.classList.add('drag-over');
+  });
   sc.addEventListener('dragleave',leave);
   sc.addEventListener('drop',e=>{
+    if(!fileDragHasExternalFiles(e))return;
     e.preventDefault();
     e.stopPropagation();
     sc.classList.remove('drag-over');
@@ -7579,37 +7602,134 @@ function fileDropFiles(e){
   return [...(e.dataTransfer?.files||[])].filter(f=>f&&f.name);
 }
 
+function fileDragHasExternalFiles(e){
+  return Array.from(e.dataTransfer?.types||[]).includes('Files');
+}
+function markFileExternalDrop(on){
+  $('#files-scroll')?.classList.toggle('drag-over',!!on);
+}
+function clearFileDragState(){
+  document.querySelectorAll('#file-area .dragging,#file-area .drop-target').forEach(el=>el.classList.remove('dragging','drop-target'));
+  markFileExternalDrop(false);
+  fileExternalDragDepth=0;
+}
+function fileParentPath(path){
+  const parts=String(path||'').split('/').filter(Boolean);
+  parts.pop();
+  return parts.length?'/'+parts.join('/'):'/';
+}
+function fileDropWouldNest(path,dstDir){
+  const meta=fileEntryMeta.get(path);
+  return !!(meta&&meta.is_dir&&(dstDir===path||dstDir.startsWith(path+'/')));
+}
+function fileDraggedPathsFor(path){
+  return selectedFiles.has(path)?[...selectedFiles]:[path];
+}
+function fileDragElement(path){
+  return document.querySelector(`#file-area [data-path="${cssEscape(path)}"]`);
+}
+function cssEscape(value){
+  if(window.CSS&&CSS.escape)return CSS.escape(value);
+  return String(value).replace(/["\\]/g,'\\$&');
+}
+window.fileDragStart=(e,path,isDir)=>{
+  if(currentPath==='__trash__'){e.preventDefault();return;}
+  const paths=fileDraggedPathsFor(path);
+  if(!selectedFiles.has(path)){
+    selectedFiles.clear();
+    selectedFiles.add(path);
+    lastSelectedPath=path;
+    updateFileSelectionUI();
+  }
+  fileDragPayload={paths,source:path};
+  e.currentTarget.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move';
+  e.dataTransfer.setData('application/x-runvard-files',JSON.stringify(paths));
+  e.dataTransfer.setData('text/plain',paths.join('\n'));
+};
+window.fileDragEnd=()=>{
+  fileDragPayload=null;
+  clearFileDragState();
+};
+window.fileDropTargetEnter=(e,path,isDir)=>{
+  if(!fileDragPayload||!isDir)return;
+  if(fileDragPayload.paths.includes(path))return;
+  e.preventDefault();
+  e.stopPropagation();
+  e.currentTarget.classList.add('drop-target');
+};
+window.fileDropTargetOver=(e,path,isDir)=>{
+  if(!fileDragPayload||!isDir)return;
+  if(fileDragPayload.paths.includes(path))return;
+  e.preventDefault();
+  e.stopPropagation();
+  e.dataTransfer.dropEffect='move';
+  e.currentTarget.classList.add('drop-target');
+};
+window.fileDropTargetLeave=e=>{
+  e.currentTarget.classList.remove('drop-target');
+};
+window.fileDropTargetDrop=async(e,path,isDir)=>{
+  if(!fileDragPayload||!isDir)return;
+  e.preventDefault();
+  e.stopPropagation();
+  const payload=fileDragPayload;
+  fileDragPayload=null;
+  clearFileDragState();
+  if(payload.paths.includes(path)||payload.paths.some(p=>fileDropWouldNest(p,path))){
+    toast(fileText('invalidDrop'),'error');
+    return;
+  }
+  if(payload.paths.every(p=>fileParentPath(p)===path)){
+    toast(fileText('sameFolderDrop'),'error');
+    return;
+  }
+  try{
+    await startFileJob('move',payload.paths,{dst_dir:path});
+    selectedFiles.clear();
+    lastSelectedPath=null;
+    updateFileSelectionUI();
+    toast(fileText('moveJobStarted'));
+  }catch(err){toast(err.message,'error');}
+};
+
 function setupFilesGlobalDrop(){
   if(filesGlobalDropReady)return;
   filesGlobalDropReady=true;
-  const hasFiles=e=>Array.from(e.dataTransfer?.types||[]).includes('Files');
-  const mark=on=>{$('#files-scroll')?.classList.toggle('drag-over',!!on);};
   document.addEventListener('dragover',e=>{
-    if(!filesDropActive()||!hasFiles(e))return;
+    if(!filesDropActive()||!fileDragHasExternalFiles(e))return;
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect='copy';
-    mark(true);
+    markFileExternalDrop(true);
   },true);
   document.addEventListener('dragenter',e=>{
-    if(!filesDropActive()||!hasFiles(e))return;
+    if(!filesDropActive()||!fileDragHasExternalFiles(e))return;
     e.preventDefault();
     e.stopPropagation();
-    mark(true);
+    fileExternalDragDepth++;
+    markFileExternalDrop(true);
   },true);
   document.addEventListener('dragleave',e=>{
-    if(!filesDropActive())return;
-    const overlay=$('#overlay');
-    if(!overlay||!e.relatedTarget||!overlay.contains(e.relatedTarget))mark(false);
+    if(!filesDropActive()||!fileDragHasExternalFiles(e))return;
+    fileExternalDragDepth=Math.max(0,fileExternalDragDepth-1);
+    if(fileExternalDragDepth===0)markFileExternalDrop(false);
   },true);
   document.addEventListener('drop',e=>{
-    if(!filesDropActive()||!hasFiles(e))return;
+    if(!filesDropActive()||!fileDragHasExternalFiles(e))return;
     e.preventDefault();
     e.stopPropagation();
-    mark(false);
+    fileExternalDragDepth=0;
+    markFileExternalDrop(false);
     const files=fileDropFiles(e);
     if(files.length) uploadFileList(files,currentPath);
   },true);
+  document.addEventListener('drop',e=>{
+    if(!fileDragPayload)return;
+    e.preventDefault();
+    fileDragPayload=null;
+    clearFileDragState();
+  });
 }
 
 function setupFileMarquee(){
@@ -7886,9 +8006,21 @@ window.fileDblClick=(path,isDir)=>{
 };
 
 function updateBulkBar(){
-  const bar=$('#bulk-bar'); if(!bar) return;
-  bar.style.display=selectedFiles.size?'flex':'none';
-  const c=$('#sel-count'); if(c) c.textContent=`${selectedFiles.size} ${fileText('selected')}`;
+  const actions=$('#files-selection-actions');
+  if(!actions)return;
+  const count=selectedFiles.size;
+  actions.classList.toggle('active',count>0);
+  if(!count){actions.innerHTML='';return;}
+  actions.innerHTML=`
+    <span class="sb-selected">${count} ${esc(fileText('selected'))}</span>
+    ${count===1?`<button class="btn ghost sm" onclick="createShareLink([...selectedFiles][0])">${esc(fileText('share'))}</button>`:''}
+    <button class="btn ghost sm" onclick="bulkCopy()">${esc(fileText('copy'))}</button>
+    <button class="btn ghost sm" onclick="bulkCut()">${esc(fileText('cut'))}</button>
+    ${clipboard?`<button class="btn ghost sm" onclick="pasteClipboard()">${esc(fileText('paste'))}</button>`:''}
+    <button class="btn ghost sm" onclick="bulkDownload()">↓ ${esc(fileText('download'))}</button>
+    <button class="btn ghost sm" onclick="bulkZip()">${esc(fileText('zip'))}</button>
+    <button class="btn danger sm" onclick="bulkDelete()">${esc(fileText('delete'))}</button>
+    <button class="btn ghost sm" onclick="selectedFiles.clear();lastSelectedPath=null;updateFileSelectionUI()">✕</button>`;
 }
 
 window.navTo=p=>{currentPath=p;selectedFiles.clear();lastSelectedPath=null;closeCtx();renderFiles($('#modal-body'));};
@@ -8129,7 +8261,13 @@ async function renderTrash(body){
     </div>
   </div>`;
 }
-window.emptyTrash=()=>confirmDelete(uiText('Empty trash'),fileText('emptyTrashConfirm'),async()=>{await post('/files/trash/empty',{});toast('Trash emptied');renderTrash($('#modal-body'));});
+window.emptyTrash=()=>confirmDelete(uiText('Empty trash'),fileText('emptyTrashConfirm'),async()=>{
+  try{
+    await post('/files/trash/empty',{trash:'trash'});
+    toast('Trash emptied');
+    renderTrash($('#modal-body'));
+  }catch(e){toast(e.message,'error');}
+});
 window.restoreTrash=async(id,name)=>{try{await post('/files/trash/restore',{item_id:id});toast(name+' wiederhergestellt');renderTrash($('#modal-body'));}catch(e){toast(e.message,'error');}};
 
 
