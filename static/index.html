@@ -6243,6 +6243,312 @@ for(const lang of Object.keys(BACKUP_PHRASES)){
   UI_PHRASES[lang]=Object.assign(UI_PHRASES[lang]||{},BACKUP_PHRASES[lang]);
 }
 
+const VM_PHRASES={
+  de:{
+    "A VM shutdown asks the guest OS to power off cleanly.":"Ein VM-Shutdown bittet das Gast-OS, sauber herunterzufahren.",
+    "Actions":"Aktionen",
+    "Advanced":"Erweitert",
+    "Applied on next start":"Beim nächsten Start aktiv",
+    "Autostart off":"Autostart aus",
+    "Autostart on":"Autostart an",
+    "Bridge":"Bridge",
+    "Bus":"Bus",
+    "CD-ROM":"CD-ROM",
+    "CPU cores":"CPU-Kerne",
+    "Change":"Ändern",
+    "Change RAM, CPU, disks and network cards.":"RAM, CPU, Datenträger und Netzwerkkarten ändern.",
+    "Change resources":"Ressourcen ändern",
+    "Console":"Konsole",
+    "Create a bridge first under Network → Interfaces.":"Erstelle zuerst unter Netzwerk → Schnittstellen eine Bridge.",
+    "Detach network card":"Netzwerkkarte abhängen",
+    "Disk expanded":"Disk vergrößert",
+    "Ejected":"Ausgeworfen",
+    "Expanding disk…":"Vergrößere Disk…",
+    "Expand disk":"Disk vergrößern",
+    "Hardware":"Hardware",
+    "Host bridge":"Host-Bridge",
+    "Inserted":"Eingelegt",
+    "Libvirt network":"Libvirt-Netzwerk",
+    "Live if supported, always saved":"Live, falls unterstützt; immer gespeichert",
+    "Model":"Modell",
+    "Network cards":"Netzwerkkarten",
+    "New total size (GB)":"Neue Gesamtgröße (GB)",
+    "No network cards":"Keine Netzwerkkarten",
+    "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Vergrößert nur das virtuelle Disk-Image. Partition/Dateisystem danach im Gast erweitern.",
+    "Path to an existing qcow2/raw image or block device":"Pfad zu einem vorhandenen qcow2/raw-Image oder Block-Device",
+    "Pool name":"Pool-Name",
+    "Directory (dir)":"Verzeichnis (dir)",
+    "Filesystem (fs)":"Dateisystem (fs)",
+    "Resources":"Ressourcen",
+    "Resources & hardware":"Ressourcen & Hardware",
+    "Resources saved; live update may require restart":"Ressourcen gespeichert; Live-Update benötigt evtl. Neustart",
+    "Resources updated":"Ressourcen aktualisiert",
+    "Restore":"Wiederherstellen",
+    "Saved persistently. Live update is attempted while the VM is running.":"Wird dauerhaft gespeichert. Während die VM läuft, wird Live-Update versucht.",
+    "Saved persistently. Live update may require guest support.":"Wird dauerhaft gespeichert. Live-Update kann Gast-Unterstützung benötigen.",
+    "Shut down":"Ausschalten",
+    "Shutting down":"Ausschalten",
+    "Source":"Quelle",
+    "Source image/device":"Quell-Image/Gerät",
+    "Storage pools":"Speicher-Pools",
+    "Target":"Ziel",
+    "Target device":"Zielgerät",
+    "Target folder":"Zielverzeichnis",
+    "Type":"Typ",
+    "Updating resources…":"Aktualisiere Ressourcen…",
+    "VM shut down":"VM heruntergefahren",
+    "VM shutting down":"VM wird ausgeschaltet",
+    "VMs":"VMs",
+    "Volume name":"Volume-Name",
+    "vCPUs":"vCPUs",
+    "live":"live",
+    "off":"aus"
+  },
+  fr:{
+    "A VM shutdown asks the guest OS to power off cleanly.":"L’arrêt d’une VM demande au système invité de s’éteindre proprement.",
+    "Actions":"Actions",
+    "Advanced":"Avancé",
+    "Applied on next start":"Appliqué au prochain démarrage",
+    "Autostart off":"Désactiver le démarrage automatique",
+    "Autostart on":"Activer le démarrage automatique",
+    "Bridge":"Pont",
+    "Bus":"Bus",
+    "CD-ROM":"CD-ROM",
+    "CPU cores":"Cœurs CPU",
+    "Change":"Modifier",
+    "Change RAM, CPU, disks and network cards.":"Modifier la RAM, le CPU, les disques et les cartes réseau.",
+    "Change resources":"Modifier les ressources",
+    "Console":"Console",
+    "Create a bridge first under Network → Interfaces.":"Créez d’abord un pont dans Réseau → Interfaces.",
+    "Detach network card":"Détacher la carte réseau",
+    "Disk expanded":"Disque agrandi",
+    "Ejected":"Éjecté",
+    "Expanding disk…":"Agrandissement du disque…",
+    "Expand disk":"Agrandir le disque",
+    "Hardware":"Matériel",
+    "Host bridge":"Pont hôte",
+    "Inserted":"Inséré",
+    "Libvirt network":"Réseau libvirt",
+    "Live if supported, always saved":"En direct si pris en charge ; toujours enregistré",
+    "Model":"Modèle",
+    "Network cards":"Cartes réseau",
+    "New total size (GB)":"Nouvelle taille totale (Go)",
+    "No network cards":"Aucune carte réseau",
+    "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Agrandit uniquement l’image disque virtuelle. Étendez ensuite la partition/le système de fichiers dans l’invité.",
+    "Path to an existing qcow2/raw image or block device":"Chemin vers une image qcow2/raw existante ou un périphérique bloc",
+    "Pool name":"Nom du pool",
+    "Directory (dir)":"Répertoire (dir)",
+    "Filesystem (fs)":"Système de fichiers (fs)",
+    "Resources":"Ressources",
+    "Resources & hardware":"Ressources et matériel",
+    "Resources saved; live update may require restart":"Ressources enregistrées ; la mise à jour en direct peut nécessiter un redémarrage",
+    "Resources updated":"Ressources mises à jour",
+    "Restore":"Restaurer",
+    "Saved persistently. Live update is attempted while the VM is running.":"Enregistré durablement. Une mise à jour en direct est tentée pendant que la VM fonctionne.",
+    "Saved persistently. Live update may require guest support.":"Enregistré durablement. La mise à jour en direct peut nécessiter la prise en charge de l’invité.",
+    "Shut down":"Arrêter",
+    "Shutting down":"Arrêt",
+    "Source":"Source",
+    "Source image/device":"Image/périphérique source",
+    "Storage pools":"Pools de stockage",
+    "Target":"Cible",
+    "Target device":"Périphérique cible",
+    "Target folder":"Dossier cible",
+    "Type":"Type",
+    "Updating resources…":"Mise à jour des ressources…",
+    "VM shut down":"VM arrêtée",
+    "VM shutting down":"Arrêt de la VM",
+    "VMs":"VM",
+    "Volume name":"Nom du volume",
+    "vCPUs":"vCPU",
+    "live":"en direct",
+    "off":"arrêtée"
+  },
+  it:{
+    "A VM shutdown asks the guest OS to power off cleanly.":"Lo spegnimento della VM chiede al sistema guest di arrestarsi correttamente.",
+    "Actions":"Azioni",
+    "Advanced":"Avanzato",
+    "Applied on next start":"Applicato al prossimo avvio",
+    "Autostart off":"Disattiva autostart",
+    "Autostart on":"Attiva autostart",
+    "Bridge":"Bridge",
+    "Bus":"Bus",
+    "CD-ROM":"CD-ROM",
+    "CPU cores":"Core CPU",
+    "Change":"Modifica",
+    "Change RAM, CPU, disks and network cards.":"Modifica RAM, CPU, dischi e schede di rete.",
+    "Change resources":"Modifica risorse",
+    "Console":"Console",
+    "Create a bridge first under Network → Interfaces.":"Crea prima un bridge in Rete → Interfacce.",
+    "Detach network card":"Scollega scheda di rete",
+    "Disk expanded":"Disco espanso",
+    "Ejected":"Espulso",
+    "Expanding disk…":"Espansione disco…",
+    "Expand disk":"Espandi disco",
+    "Hardware":"Hardware",
+    "Host bridge":"Bridge host",
+    "Inserted":"Inserito",
+    "Libvirt network":"Rete libvirt",
+    "Live if supported, always saved":"Live se supportato; sempre salvato",
+    "Model":"Modello",
+    "Network cards":"Schede di rete",
+    "New total size (GB)":"Nuova dimensione totale (GB)",
+    "No network cards":"Nessuna scheda di rete",
+    "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Espande solo l’immagine disco virtuale. Estendi poi partizione/filesystem nel guest.",
+    "Path to an existing qcow2/raw image or block device":"Percorso di un’immagine qcow2/raw esistente o di un dispositivo a blocchi",
+    "Pool name":"Nome pool",
+    "Directory (dir)":"Directory (dir)",
+    "Filesystem (fs)":"Filesystem (fs)",
+    "Resources":"Risorse",
+    "Resources & hardware":"Risorse e hardware",
+    "Resources saved; live update may require restart":"Risorse salvate; l’aggiornamento live può richiedere riavvio",
+    "Resources updated":"Risorse aggiornate",
+    "Restore":"Ripristina",
+    "Saved persistently. Live update is attempted while the VM is running.":"Salvato in modo persistente. L’aggiornamento live viene tentato mentre la VM è in esecuzione.",
+    "Saved persistently. Live update may require guest support.":"Salvato in modo persistente. L’aggiornamento live può richiedere supporto del guest.",
+    "Shut down":"Spegni",
+    "Shutting down":"Spegnimento",
+    "Source":"Origine",
+    "Source image/device":"Immagine/dispositivo origine",
+    "Storage pools":"Pool di archiviazione",
+    "Target":"Target",
+    "Target device":"Dispositivo target",
+    "Target folder":"Cartella target",
+    "Type":"Tipo",
+    "Updating resources…":"Aggiornamento risorse…",
+    "VM shut down":"VM spenta",
+    "VM shutting down":"Spegnimento VM",
+    "VMs":"VM",
+    "Volume name":"Nome volume",
+    "vCPUs":"vCPU",
+    "live":"live",
+    "off":"spenta"
+  },
+  es:{
+    "A VM shutdown asks the guest OS to power off cleanly.":"El apagado de una VM pide al sistema invitado que se apague correctamente.",
+    "Actions":"Acciones",
+    "Advanced":"Avanzado",
+    "Applied on next start":"Aplicado en el próximo arranque",
+    "Autostart off":"Desactivar inicio automático",
+    "Autostart on":"Activar inicio automático",
+    "Bridge":"Puente",
+    "Bus":"Bus",
+    "CD-ROM":"CD-ROM",
+    "CPU cores":"Núcleos CPU",
+    "Change":"Cambiar",
+    "Change RAM, CPU, disks and network cards.":"Cambiar RAM, CPU, discos y tarjetas de red.",
+    "Change resources":"Cambiar recursos",
+    "Console":"Consola",
+    "Create a bridge first under Network → Interfaces.":"Crea primero un puente en Red → Interfaces.",
+    "Detach network card":"Desconectar tarjeta de red",
+    "Disk expanded":"Disco ampliado",
+    "Ejected":"Expulsado",
+    "Expanding disk…":"Ampliando disco…",
+    "Expand disk":"Ampliar disco",
+    "Hardware":"Hardware",
+    "Host bridge":"Puente del host",
+    "Inserted":"Insertado",
+    "Libvirt network":"Red libvirt",
+    "Live if supported, always saved":"En vivo si es compatible; siempre guardado",
+    "Model":"Modelo",
+    "Network cards":"Tarjetas de red",
+    "New total size (GB)":"Nuevo tamaño total (GB)",
+    "No network cards":"Sin tarjetas de red",
+    "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Solo amplía la imagen de disco virtual. Amplía después la partición/sistema de archivos dentro del invitado.",
+    "Path to an existing qcow2/raw image or block device":"Ruta a una imagen qcow2/raw existente o dispositivo de bloques",
+    "Pool name":"Nombre del pool",
+    "Directory (dir)":"Directorio (dir)",
+    "Filesystem (fs)":"Sistema de archivos (fs)",
+    "Resources":"Recursos",
+    "Resources & hardware":"Recursos y hardware",
+    "Resources saved; live update may require restart":"Recursos guardados; la actualización en vivo puede requerir reinicio",
+    "Resources updated":"Recursos actualizados",
+    "Restore":"Restaurar",
+    "Saved persistently. Live update is attempted while the VM is running.":"Guardado de forma persistente. Se intenta actualizar en vivo mientras la VM se ejecuta.",
+    "Saved persistently. Live update may require guest support.":"Guardado de forma persistente. La actualización en vivo puede requerir soporte del invitado.",
+    "Shut down":"Apagar",
+    "Shutting down":"Apagando",
+    "Source":"Origen",
+    "Source image/device":"Imagen/dispositivo de origen",
+    "Storage pools":"Pools de almacenamiento",
+    "Target":"Destino",
+    "Target device":"Dispositivo destino",
+    "Target folder":"Carpeta destino",
+    "Type":"Tipo",
+    "Updating resources…":"Actualizando recursos…",
+    "VM shut down":"VM apagada",
+    "VM shutting down":"Apagando VM",
+    "VMs":"VM",
+    "Volume name":"Nombre del volumen",
+    "vCPUs":"vCPU",
+    "live":"en vivo",
+    "off":"apagada"
+  },
+  pt:{
+    "A VM shutdown asks the guest OS to power off cleanly.":"O desligamento da VM pede ao sistema convidado para encerrar corretamente.",
+    "Actions":"Ações",
+    "Advanced":"Avançado",
+    "Applied on next start":"Aplicado no próximo arranque",
+    "Autostart off":"Desativar arranque automático",
+    "Autostart on":"Ativar arranque automático",
+    "Bridge":"Bridge",
+    "Bus":"Bus",
+    "CD-ROM":"CD-ROM",
+    "CPU cores":"Núcleos CPU",
+    "Change":"Alterar",
+    "Change RAM, CPU, disks and network cards.":"Alterar RAM, CPU, discos e placas de rede.",
+    "Change resources":"Alterar recursos",
+    "Console":"Consola",
+    "Create a bridge first under Network → Interfaces.":"Crie primeiro uma bridge em Rede → Interfaces.",
+    "Detach network card":"Desanexar placa de rede",
+    "Disk expanded":"Disco aumentado",
+    "Ejected":"Ejetado",
+    "Expanding disk…":"A aumentar disco…",
+    "Expand disk":"Aumentar disco",
+    "Hardware":"Hardware",
+    "Host bridge":"Bridge do anfitrião",
+    "Inserted":"Inserido",
+    "Libvirt network":"Rede libvirt",
+    "Live if supported, always saved":"Em direto se suportado; sempre guardado",
+    "Model":"Modelo",
+    "Network cards":"Placas de rede",
+    "New total size (GB)":"Novo tamanho total (GB)",
+    "No network cards":"Sem placas de rede",
+    "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Aumenta apenas a imagem de disco virtual. Depois aumente a partição/sistema de ficheiros no convidado.",
+    "Path to an existing qcow2/raw image or block device":"Caminho para uma imagem qcow2/raw existente ou dispositivo de blocos",
+    "Pool name":"Nome do pool",
+    "Directory (dir)":"Diretório (dir)",
+    "Filesystem (fs)":"Sistema de ficheiros (fs)",
+    "Resources":"Recursos",
+    "Resources & hardware":"Recursos e hardware",
+    "Resources saved; live update may require restart":"Recursos guardados; a atualização em direto pode exigir reinício",
+    "Resources updated":"Recursos atualizados",
+    "Restore":"Restaurar",
+    "Saved persistently. Live update is attempted while the VM is running.":"Guardado de forma persistente. A atualização em direto é tentada enquanto a VM está em execução.",
+    "Saved persistently. Live update may require guest support.":"Guardado de forma persistente. A atualização em direto pode exigir suporte do convidado.",
+    "Shut down":"Desligar",
+    "Shutting down":"A desligar",
+    "Source":"Origem",
+    "Source image/device":"Imagem/dispositivo de origem",
+    "Storage pools":"Pools de armazenamento",
+    "Target":"Alvo",
+    "Target device":"Dispositivo alvo",
+    "Target folder":"Pasta alvo",
+    "Type":"Tipo",
+    "Updating resources…":"A atualizar recursos…",
+    "VM shut down":"VM desligada",
+    "VM shutting down":"A desligar VM",
+    "VMs":"VMs",
+    "Volume name":"Nome do volume",
+    "vCPUs":"vCPUs",
+    "live":"em direto",
+    "off":"desligada"
+  }
+};
+for(const lang of Object.keys(VM_PHRASES)){
+  UI_PHRASES[lang]=Object.assign(UI_PHRASES[lang]||{},VM_PHRASES[lang]);
+}
+
 const PHRASE_PATTERNS=[
   {re:new RegExp("^Really delete \"(.+)\"\\?$"),t:{"de": "\"$1\" wirklich löschen?", "fr": "Vraiment supprimer « $1 » ?", "it": "Eliminare davvero \"$1\"?", "es": "¿Eliminar realmente «$1»?", "pt": "Eliminar mesmo \"$1\"?"}},
   {re:new RegExp("^Move \"(.+)\" to trash\\?$"),t:{"de": "\"$1\" in den Papierkorb verschieben?", "fr": "Déplacer « $1 » vers la corbeille ?", "it": "Spostare \"$1\" nel cestino?", "es": "¿Mover «$1» a la papelera?", "pt": "Mover \"$1\" para o lixo?"}},
@@ -6286,6 +6592,12 @@ const PHRASE_PATTERNS=[
 ];
 const PHRASE_PREFIX=[
   ["Error: ", 7, {"de": "Fehler: ", "fr": "Erreur : ", "it": "Errore: ", "es": "Error: ", "pt": "Erro: "}],
+  ["Attach disk: ", 13, {"de": "Disk anhängen: ", "fr": "Attacher un disque : ", "it": "Collega disco: ", "es": "Conectar disco: ", "pt": "Anexar disco: "}],
+  ["Attach NIC: ", 12, {"de": "NIC anhängen: ", "fr": "Attacher une carte réseau : ", "it": "Collega NIC: ", "es": "Conectar NIC: ", "pt": "Anexar NIC: "}],
+  ["Clone: ", 7, {"de": "Klonen: ", "fr": "Cloner : ", "it": "Clona: ", "es": "Clonar: ", "pt": "Clonar: "}],
+  ["Change resources: ", 18, {"de": "Ressourcen ändern: ", "fr": "Modifier les ressources : ", "it": "Modifica risorse: ", "es": "Cambiar recursos: ", "pt": "Alterar recursos: "}],
+  ["Expand disk: ", 13, {"de": "Disk vergrößern: ", "fr": "Agrandir le disque : ", "it": "Espandi disco: ", "es": "Ampliar disco: ", "pt": "Aumentar disco: "}],
+  ["Create volume in ", 17, {"de": "Volume erstellen in ", "fr": "Créer un volume dans ", "it": "Crea volume in ", "es": "Crear volumen en ", "pt": "Criar volume em "}],
   ["Latest: ", 8, {"de": "Neueste Version: ", "fr": "Dernière : ", "it": "Ultima: ", "es": "Última: ", "pt": "Mais recente: "}],
   ["Mount volume: ", 14, {"de": "Volume einhängen: ", "fr": "Monter le volume : ", "it": "Monta volume: ", "es": "Montar volumen: ", "pt": "Montar volume: "}],
   ["Set up disk: ", 13, {"de": "Laufwerk einrichten: ", "fr": "Configurer le disque : ", "it": "Configura disco: ", "es": "Configurar disco: ", "pt": "Configurar disco: "}],
@@ -6334,9 +6646,11 @@ const TOAST_ALIASES={
   "Suchbegriff eingeben":"Enter a search term",
   "CD-ROM eingelegt":"CD-ROM inserted",
   "CD-ROM ausgeworfen":"CD-ROM ejected",
+  "Disk vergrößert":"Disk expanded",
   "Umbenannt":"Renamed",
   "Update fehlgeschlagen":"Update failed",
   "VM geklont":"VM cloned",
+  "VM heruntergefahren":"VM shut down",
   "Ziehe Image…":"Pulling image…"
 };
 const TOAST_PHRASES={
@@ -6360,6 +6674,7 @@ const TOAST_PHRASES={
   "CD-ROM ejected":{de:"CD-ROM ausgeworfen",en:"CD-ROM ejected",fr:"CD-ROM éjecté",it:"CD-ROM espulso",es:"CD-ROM expulsado",pt:"CD-ROM ejetado"},
   "Disk attached":{de:"Disk angehängt",en:"Disk attached",fr:"Disque attaché",it:"Disco collegato",es:"Disco conectado",pt:"Disco anexado"},
   "Disk detached":{de:"Disk abgehängt",en:"Disk detached",fr:"Disque détaché",it:"Disco scollegato",es:"Disco desconectado",pt:"Disco desanexado"},
+  "Disk expanded":{de:"Disk vergrößert",en:"Disk expanded",fr:"Disque agrandi",it:"Disco espanso",es:"Disco ampliado",pt:"Disco aumentado"},
   "Disk ready":{de:"Laufwerk bereit",en:"Disk ready",fr:"Disque prêt",it:"Disco pronto",es:"Disco listo",pt:"Disco pronto"},
   "Done":{de:"Fertig",en:"Done",fr:"Terminé",it:"Fatto",es:"Hecho",pt:"Concluído"},
   "Enter a search term":{de:"Suchbegriff eingeben",en:"Enter a search term",fr:"Saisissez un terme de recherche",it:"Inserisci un termine di ricerca",es:"Introduce un término de búsqueda",pt:"Introduza um termo de pesquisa"},
@@ -6375,6 +6690,11 @@ const TOAST_PHRASES={
   "Partitioning and formatting…":{de:"Partitioniere und formatiere…",en:"Partitioning and formatting…",fr:"Partitionnement et formatage…",it:"Partizionamento e formattazione…",es:"Particionando y formateando…",pt:"A particionar e formatar…"},
   "Please enter a port":{de:"Bitte Port angeben",en:"Please enter a port",fr:"Veuillez indiquer un port",it:"Inserisci una porta",es:"Indica un puerto",pt:"Indique uma porta"},
   "Pulling image…":{de:"Ziehe Image…",en:"Pulling image…",fr:"Téléchargement de l’image…",it:"Scaricamento immagine…",es:"Descargando imagen…",pt:"A obter imagem…"},
+  "Autostart disabled":{de:"Autostart deaktiviert",en:"Autostart disabled",fr:"Démarrage automatique désactivé",it:"Autostart disattivato",es:"Inicio automático desactivado",pt:"Arranque automático desativado"},
+  "Autostart enabled":{de:"Autostart aktiviert",en:"Autostart enabled",fr:"Démarrage automatique activé",it:"Autostart attivato",es:"Inicio automático activado",pt:"Arranque automático ativado"},
+  "Pool started":{de:"Pool gestartet",en:"Pool started",fr:"Pool démarré",it:"Pool avviato",es:"Pool iniciado",pt:"Pool iniciado"},
+  "Pool stopped":{de:"Pool gestoppt",en:"Pool stopped",fr:"Pool arrêté",it:"Pool arrestato",es:"Pool detenido",pt:"Pool parado"},
+  "Popup blocked, opening console in this tab":{de:"Popup blockiert, öffne Konsole in diesem Tab",en:"Popup blocked, opening console in this tab",fr:"Popup bloquée, ouverture de la console dans cet onglet",it:"Popup bloccato, apro la console in questa scheda",es:"Popup bloqueado, abriendo consola en esta pestaña",pt:"Popup bloqueado, a abrir a consola neste separador"},
   "Removed":{de:"Entfernt",en:"Removed",fr:"Supprimé",it:"Rimosso",es:"Eliminado",pt:"Removido"},
   "Renamed":{de:"Umbenannt",en:"Renamed",fr:"Renommé",it:"Rinominato",es:"Renombrado",pt:"Renomeado"},
   "Saved":{de:"Gespeichert",en:"Saved",fr:"Enregistré",it:"Salvato",es:"Guardado",pt:"Guardado"},
@@ -6396,6 +6716,7 @@ const TOAST_PHRASES={
   "VM could not be created":{de:"VM konnte nicht erstellt werden",en:"VM could not be created",fr:"Impossible de créer la VM",it:"Impossibile creare la VM",es:"No se pudo crear la VM",pt:"Não foi possível criar a VM"},
   "VM created":{de:"VM erstellt",en:"VM created",fr:"VM créée",it:"VM creata",es:"VM creada",pt:"VM criada"},
   "VM deleted":{de:"VM gelöscht",en:"VM deleted",fr:"VM supprimée",it:"VM eliminata",es:"VM eliminada",pt:"VM eliminada"},
+  "VM shut down":{de:"VM heruntergefahren",en:"VM shut down",fr:"VM arrêtée",it:"VM spenta",es:"VM apagada",pt:"VM desligada"},
   "VM created, waiting for libvirt list refresh…":{de:"VM erstellt, warte auf libvirt-Listenaktualisierung…",en:"VM created, waiting for libvirt list refresh…",fr:"VM créée, attente de l’actualisation de la liste libvirt…",it:"VM creata, attendo l’aggiornamento dell’elenco libvirt…",es:"VM creada, esperando la actualización de la lista de libvirt…",pt:"VM criada, a aguardar atualização da lista libvirt…"}
 };
 const TOAST_PATTERNS=[
@@ -8865,11 +9186,11 @@ window.svcLogs=async name=>{const l=await api('/services/logs?name='+encodeURICo
 
 // ═══ VMs (Punkt 4+5) ═══
 async function renderVMs(body,tab){
-  const av=await api('/vms/available');if(!av.available){body.innerHTML='<div class="loading">libvirt unavailable</div>';return;}
+  const av=await api('/vms/available');if(!av.available){body.innerHTML='<div class="loading">libvirt unavailable</div>';translateRenderedText(body);return;}
   if(tab==='Speicher-Pools')return renderVmPools(body);
   const v=await api('/vms/list');
   body.innerHTML=`<div class="sec-hdr"><h3>Virtual machines</h3><button class="btn" onclick="vmCreateForm()">+ Create VM</button></div>
-  <table><thead><tr><th>Name</th><th>Status</th><th>RAM</th><th>vCPUs</th><th>Aktionen</th></tr></thead><tbody>
+  <table><thead><tr><th>Name</th><th>Status</th><th>RAM</th><th>vCPUs</th><th>Actions</th></tr></thead><tbody>
   ${v.map(x=>`<tr data-q="${esc(x.name)}">
     <td>${esc(x.name)}</td>
     <td><span class="status-pill ${x.active?'run':'stop'}">${x.state}</span></td>
@@ -8880,11 +9201,13 @@ async function renderVMs(body,tab){
       <button class="btn icon" title="Console" onclick="vmConsole('${esc(x.name)}')" ${!x.active?'disabled style="opacity:.4"':''}>🖥</button>
       <button class="btn icon" title="Hardware (Disks/NICs)" onclick="vmHardware('${esc(x.name)}')">🔌</button>
       <button class="btn icon" title="Snapshots" onclick="vmSnaps('${esc(x.name)}')">📸</button>
-      <button class="btn icon" title="Klonen" onclick="vmClone('${esc(x.name)}')">⎘</button>
-      <button class="btn icon" title="CD-ROM wechseln" onclick="vmCdromForm('${esc(x.name)}')">💿</button>
+      <button class="btn icon" title="Clone" onclick="vmClone('${esc(x.name)}')">⎘</button>
+      <button class="btn icon" title="CD-ROM" onclick="vmCdromForm('${esc(x.name)}')">💿</button>
       <button class="btn icon danger" title="Delete" onclick="vmDeleteConfirm('${esc(x.name)}')">🗑</button>
-    </td></tr>`).join('')||'<tr><td colspan="5" class="loading">No VMs</td></tr>'}</tbody></table>`;}
-window.vmAct=async(name,action)=>{try{await post('/vms/action',{name,action});const msgs={start:'VM started: '+name,shutdown:'VM heruntergefahren: '+name,reboot:'VM restarted: '+name,delete:'VM deleted: '+name};toast(msgs[action]||'OK');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}};
+    </td></tr>`).join('')||'<tr><td colspan="5" class="loading">No VMs</td></tr>'}</tbody></table>`;
+  translateRenderedText(body);
+}
+window.vmAct=async(name,action)=>{try{await post('/vms/action',{name,action});const msgs={start:'VM started: '+name,shutdown:'VM shut down: '+name,reboot:'VM restarted: '+name,delete:'VM deleted: '+name};toast(msgs[action]||'OK');renderVMs($('#modal-body'));loadDashboard();}catch(e){toast('Error: '+e.message,'error');}};
 
 window.vmConsole=name=>{
   const url='/vm-console?name='+encodeURIComponent(name);
@@ -8894,11 +9217,11 @@ window.vmConsole=name=>{
   else{toast('Popup blocked, opening console in this tab','error');location.href=url;}
 };
 // Punkt 4: VM löschen Bestätigung
-window.vmDeleteConfirm=name=>confirmDelete('Delete VM',`Really delete "${name}" permanently? The VM and its disk will be removed.`,async()=>{try{await post('/vms/action',{name,action:'delete'});toast('VM deleted');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
-window.vmCreateForm=async()=>{const [iso,net]=await Promise.all([api('/vms/isos'),api('/vms/networks').catch(()=>({networks:[]}))]);const nets=(net.networks||[]).map(n=>n.name);openForm('Create VM','🖥',[{name:'name',label:'Name',placeholder:'debian-vm'},{name:'memory_mb',label:'RAM (MB)',value:2048},{name:'vcpus',label:'CPU-Kerne',value:2},{name:'disk_gb',label:'Disk (GB)',value:20},{name:'iso',label:'ISO',type:'select',options:[{value:'',label:'— none —'}].concat(iso.isos.map(i=>({value:i,label:i}))),hint:iso.isos.length?'':'Upload ISOs via Files → VM images'},{name:'network',label:'Network',type:'select',options:nets.length?nets:['default']}],async d=>{closeForm();toast('Erstelle VM…');try{const r=requireOk(await post('/vms/create',d),'VM could not be created');toast(r.visible===false?'VM created, waiting for libvirt list refresh…':'VM created');renderVMs($('#modal-body'));if(r.visible===false)setTimeout(()=>renderVMs($('#modal-body')),3000);}catch(e){toast('Error: '+e.message,'error');}});};
-window.vmClone=name=>openForm('VM klonen: '+name,'⎘',[{name:'newname',label:'Name des Klons',value:name+'-clone'}],async d=>{closeForm();toast('Klone VM… (kann dauern)');try{const r=await post('/vms/clone',{name,newname:d.newname});if(r&&r.ok===false){toast((r.output||r.stderr||'Error').slice(0,200),'error');return;}toast('VM geklont');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
-window.vmCdromForm=async name=>{const iso=await api('/vms/isos');openForm('CD-ROM wechseln: '+name,'💿',[{name:'iso',label:'ISO',type:'select',options:[{value:'',label:'— auswerfen —'}].concat((iso.isos||[]).map(i=>({value:i,label:i})))}],async d=>{closeForm();try{const r=await post('/vms/cdrom',{name,iso:d.iso});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast(d.iso?'CD-ROM eingelegt':'CD-ROM ausgeworfen');}catch(e){toast('Error: '+e.message,'error');}});};
-window.vmSnaps=async name=>{const s=await api('/vms/snapshots?name='+encodeURIComponent(name));$('#modal-body').innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">← Back</button><button class="btn sm" onclick="snapCreate('${esc(name)}')">+ Snapshot</button><span style="padding:6px;color:var(--text2)">${esc(name)}</span></div><table><thead><tr><th>Snapshot</th><th>Aktionen</th></tr></thead><tbody>${s.map(x=>`<tr><td>${esc(x.name)}</td><td style="display:flex;gap:6px"><button class="btn icon" title="Restore" onclick="snapAct('${esc(name)}','${esc(x.name)}','revert')">↺</button><button class="btn icon danger" title="Delete" onclick="snapDelConfirm('${esc(name)}','${esc(x.name)}')">🗑</button></td></tr>`).join('')||'<tr><td colspan="2" class="loading">No snapshots</td></tr>'}</tbody></table>`;};
+window.vmDeleteConfirm=name=>confirmDelete('Delete VM',`VM "${name}" and its disk will be removed permanently.`,async()=>{try{await post('/vms/action',{name,action:'delete'});toast('VM deleted');renderVMs($('#modal-body'));loadDashboard();}catch(e){toast('Error: '+e.message,'error');}});
+window.vmCreateForm=async()=>{const [iso,net]=await Promise.all([api('/vms/isos'),api('/vms/networks').catch(()=>({networks:[]}))]);const nets=(net.networks||[]).map(n=>n.name);openForm('Create VM','🖥',[{name:'name',label:'Name',placeholder:'debian-vm'},{name:'memory_mb',label:'RAM (MB)',value:2048},{name:'vcpus',label:'CPU cores',value:2},{name:'disk_gb',label:'Disk (GB)',value:20},{name:'iso',label:'ISO',type:'select',options:[{value:'',label:'— none —'}].concat(iso.isos.map(i=>({value:i,label:i}))),hint:iso.isos.length?'':'Upload ISOs via Files → VM images'},{name:'network',label:'Network',type:'select',options:nets.length?nets:['default']}],async d=>{closeForm();toast('Creating VM…');try{const r=requireOk(await post('/vms/create',d),'VM could not be created');toast(r.visible===false?'VM created, waiting for libvirt list refresh…':'VM created');renderVMs($('#modal-body'));if(r.visible===false)setTimeout(()=>renderVMs($('#modal-body')),3000);}catch(e){toast('Error: '+e.message,'error');}});};
+window.vmClone=name=>openForm('Clone: '+name,'⎘',[{name:'newname',label:'New name',value:name+'-clone'}],async d=>{closeForm();toast('Cloning VM… (may take a while)');try{const r=await post('/vms/clone',{name,newname:d.newname});if(r&&r.ok===false){toast((r.output||r.stderr||'Error').slice(0,200),'error');return;}toast('VM cloned');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+window.vmCdromForm=async name=>{const iso=await api('/vms/isos');openForm('CD-ROM: '+name,'💿',[{name:'iso',label:'ISO',type:'select',options:[{value:'',label:'— none —'}].concat((iso.isos||[]).map(i=>({value:i,label:i})))}],async d=>{closeForm();try{const r=await post('/vms/cdrom',{name,iso:d.iso});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast(d.iso?'CD-ROM inserted':'CD-ROM ejected');}catch(e){toast('Error: '+e.message,'error');}});};
+window.vmSnaps=async name=>{const s=await api('/vms/snapshots?name='+encodeURIComponent(name));const body=$('#modal-body');body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">← Back</button><button class="btn sm" onclick="snapCreate('${esc(name)}')">+ Snapshot</button><span style="padding:6px;color:var(--text2)">${esc(name)}</span></div><table><thead><tr><th>Snapshot</th><th>Actions</th></tr></thead><tbody>${s.map(x=>`<tr><td>${esc(x.name)}</td><td style="display:flex;gap:6px"><button class="btn icon" title="Restore" onclick="snapAct('${esc(name)}','${esc(x.name)}','revert')">↺</button><button class="btn icon danger" title="Delete" onclick="snapDelConfirm('${esc(name)}','${esc(x.name)}')">🗑</button></td></tr>`).join('')||'<tr><td colspan="2" class="loading">No snapshots</td></tr>'}</tbody></table>`;translateRenderedText(body);};
 window.snapCreate=name=>openForm('Create snapshot','📸',[{name:'snap_name',label:'Name',value:'snap-'+new Date().toISOString().slice(0,10)}],async d=>{await post('/vms/snapshot',{name,snap_name:d.snap_name});closeForm();toast('Snapshot created');vmSnaps(name);});
 window.snapAct=async(name,snap,action)=>{try{await post('/vms/snapshot/action',{name,snap_name:snap,action});const msgs={revert:'Snapshot restored: '+snap,delete:'Snapshot deleted: '+snap};toast(msgs[action]||'OK');vmSnaps(name);}catch(e){toast('Error: '+e.message,'error');}};
 // Punkt 4: Snapshot löschen Bestätigung
@@ -8909,14 +9232,14 @@ window.vmHardware=async name=>{
   const h=await api('/vms/hardware?name='+encodeURIComponent(name));
   const body=$('#modal-body');
   if(h.ok===false){body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">← Back</button></div><div class="empty-state">${esc(h.stderr||'Error')}</div>`;return;}
-  body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">← Back</button><span style="padding:6px;color:var(--text2)">Hardware: ${esc(name)} ${h.active?'<span class="status-pill run" style="font-size:10px">live</span>':'<span class="status-pill stop" style="font-size:10px">aus</span>'}</span></div>
-  <div class="sec-hdr"><h3>Ressourcen</h3><button class="btn sm" onclick="vmResourcesForm('${esc(name)}',${Number(h.memory_mb)||0},${Number(h.vcpus)||1})">Change</button></div>
+  body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">← Back</button><span style="padding:6px;color:var(--text2)">Hardware: ${esc(name)} ${h.active?'<span class="status-pill run" style="font-size:10px">live</span>':'<span class="status-pill stop" style="font-size:10px">off</span>'}</span></div>
+  <div class="sec-hdr"><h3>Resources</h3><button class="btn sm" onclick="vmResourcesForm('${esc(name)}',${Number(h.memory_mb)||0},${Number(h.vcpus)||1})">Change</button></div>
   <div class="nx-summary-grid" style="margin-bottom:18px">
     ${summaryCard('RAM',`${Number(h.memory_mb)||0} MB`,h.active?'Live if supported, always saved':'Applied on next start')}
     ${summaryCard('CPU',`${Number(h.vcpus)||0} cores`,h.active?'Live if supported, always saved':'Applied on next start')}
   </div>
-  <div class="sec-hdr"><h3>Festplatten</h3><button class="btn sm" onclick="vmDiskForm('${esc(name)}')">+ Attach disk</button></div>
-  <table style="margin-bottom:18px;table-layout:fixed;width:100%"><thead><tr><th style="width:70px">Target</th><th style="width:70px">Bus</th><th>Quelle</th><th style="width:60px">Type</th><th style="width:84px;text-align:right"></th></tr></thead><tbody>
+  <div class="sec-hdr"><h3>Disks</h3><button class="btn sm" onclick="vmDiskForm('${esc(name)}')">+ Attach disk</button></div>
+  <table style="margin-bottom:18px;table-layout:fixed;width:100%"><thead><tr><th style="width:70px">Target</th><th style="width:70px">Bus</th><th>Source</th><th style="width:60px">Type</th><th style="width:84px;text-align:right"></th></tr></thead><tbody>
   ${h.disks.map(d=>`<tr>
     <td class="mono" style="font-size:12px">${esc(d.target)}</td><td style="color:var(--text2)">${esc(d.bus)||'—'}</td>
     <td class="mono" style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis">${esc(d.source)||'—'}</td>
@@ -8924,14 +9247,15 @@ window.vmHardware=async name=>{
     <td style="text-align:right">${d.device==='disk'?`<div style="display:inline-flex;gap:4px"><button class="btn icon" title="Expand disk" onclick="vmDiskResizeForm('${esc(name)}','${esc(d.target)}')" style="width:26px;height:26px;font-size:12px">↗</button><button class="btn icon danger" title="Unmount" onclick="vmDiskDetach('${esc(name)}','${esc(d.target)}')" style="width:26px;height:26px;font-size:12px">✕</button></div>`:''}</td>
   </tr>`).join('')||'<tr><td colspan="5"><div class="empty-state">No disks</div></td></tr>'}
   </tbody></table>
-  <div class="sec-hdr"><h3>Netzwerkkarten</h3><button class="btn sm" onclick="vmNicForm('${esc(name)}')">+ Attach NIC</button></div>
-  <table style="table-layout:fixed;width:100%"><thead><tr><th style="width:150px">MAC</th><th style="width:80px">Type</th><th>Quelle</th><th style="width:70px">Modell</th><th style="width:50px;text-align:right"></th></tr></thead><tbody>
+  <div class="sec-hdr"><h3>Network cards</h3><button class="btn sm" onclick="vmNicForm('${esc(name)}')">+ Attach NIC</button></div>
+  <table style="table-layout:fixed;width:100%"><thead><tr><th style="width:150px">MAC</th><th style="width:80px">Type</th><th>Source</th><th style="width:70px">Model</th><th style="width:50px;text-align:right"></th></tr></thead><tbody>
   ${h.nics.map(n=>`<tr>
     <td class="mono" style="font-size:12px">${esc(n.mac)}</td><td style="color:var(--text2)">${esc(n.type)}</td>
     <td>${esc(n.source)||'—'}</td><td style="color:var(--text2)">${esc(n.model)||'—'}</td>
     <td style="text-align:right"><button class="btn icon danger" title="Unmount" onclick="vmNicDetach('${esc(name)}','${esc(n.type)}','${esc(n.mac)}')" style="width:26px;height:26px;font-size:12px">✕</button></td>
   </tr>`).join('')||'<tr><td colspan="5"><div class="empty-state">No network cards</div></td></tr>'}
   </tbody></table>`;
+  translateRenderedText(body);
 };
 window.vmResourcesForm=(name,memoryMb,vcpus)=>openForm('Change resources: '+name,'⚙',[
   {name:'memory_mb',label:'RAM (MB)',type:'number',value:memoryMb||2048,hint:'Saved persistently. Live update is attempted while the VM is running.'},
@@ -8940,8 +9264,8 @@ window.vmResourcesForm=(name,memoryMb,vcpus)=>openForm('Change resources: '+name
 window.vmDiskForm=async name=>{
   const p=await api('/vms/pools').catch(()=>({pools:[]}));
   openForm('Attach disk: '+name,'🔌',[
-    {name:'source',label:'Quell-Image/Device',placeholder:'/var/lib/libvirt/images/data.qcow2',hint:'Path to an existing qcow2/raw image or block device'+(p.pools&&p.pools.length?' · Pools: '+p.pools.map(x=>x.name).join(', '):'')},
-    {name:'target',label:'Target-Device',value:'vdb',hint:'z. B. vdb, vdc …'},
+    {name:'source',label:'Source image/device',placeholder:'/var/lib/libvirt/images/data.qcow2',hint:'Path to an existing qcow2/raw image or block device'+(p.pools&&p.pools.length?' · Pools: '+p.pools.map(x=>x.name).join(', '):'')},
+    {name:'target',label:'Target device',value:'vdb',hint:'e.g. vdb, vdc …'},
     {name:'bus',label:'Bus',type:'select',options:['virtio','sata','scsi','ide']},
   ],async d=>{closeForm();toast('Attaching disk…');try{const r=await post('/vms/disk/attach',{name,source:d.source,target:d.target,bus:d.bus});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Disk attached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
 };
@@ -8960,7 +9284,7 @@ window.vmNicForm=async name=>{
     {name:'source_type',label:'Type',type:'select',options:[{value:'network',label:'Libvirt network'},{value:'bridge',label:'Host bridge'}]},
     {name:'network',label:'Libvirt network',type:'select',options:nets.length?nets:['default'],showWhen:'source_type',showValue:'network'},
     {name:'bridge',label:'Host bridge',type:'select',options:bridges.length?bridges:['br0'],showWhen:'source_type',showValue:'bridge',hint:bridges.length?'':'Create a bridge first under Network → Interfaces.'},
-    {name:'model',label:'Modell',type:'select',options:['virtio','e1000','rtl8139']},
+    {name:'model',label:'Model',type:'select',options:['virtio','e1000','rtl8139']},
   ],async d=>{closeForm();toast('Attaching NIC…');try{const r=await post('/vms/nic/attach',{name,source_type:d.source_type,network:d.source_type==='bridge'?d.bridge:d.network,model:d.model});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('NIC attached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
 };
 window.vmNicDetach=(name,type,mac)=>confirmDelete('Detach NIC',`Detach network card ${mac} from "${name}"?`,async()=>{try{const r=await post('/vms/nic/detach',{name,type,mac});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('NIC detached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
@@ -8968,8 +9292,8 @@ window.vmNicDetach=(name,type,mac)=>confirmDelete('Detach NIC',`Detach network c
 // ── VM-Storage-Pools ──
 async function renderVmPools(body){
   const d=await api('/vms/pools');
-  body.innerHTML=`<div class="sec-hdr"><h3>Storage-Pools</h3><button class="btn" onclick="vmPoolForm()">+ Pool</button></div>
-  <table style="table-layout:fixed;width:100%"><thead><tr><th>Name</th><th style="width:80px">Status</th><th style="width:80px">Auto</th><th>Belegung</th><th style="width:175px;text-align:right">Aktionen</th></tr></thead><tbody>
+  body.innerHTML=`<div class="sec-hdr"><h3>Storage pools</h3><button class="btn" onclick="vmPoolForm()">+ Pool</button></div>
+  <table style="table-layout:fixed;width:100%"><thead><tr><th>Name</th><th style="width:80px">Status</th><th style="width:80px">Auto</th><th>Used</th><th style="width:175px;text-align:right">Actions</th></tr></thead><tbody>
   ${(d.pools||[]).map(p=>{const pct=p.capacity?Math.round(p.allocation/p.capacity*100):0;const active=p.state==='active';return `<tr>
     <td style="font-weight:500">${esc(p.name)}</td>
     <td><span class="status-pill ${active?'run':'stop'}" style="font-size:10px">${esc(p.state)}</span></td>
@@ -8977,32 +9301,35 @@ async function renderVmPools(body){
     <td><div style="display:flex;align-items:center;gap:8px"><div style="flex:1;height:6px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden"><div style="width:${pct}%;height:100%;background:linear-gradient(90deg,var(--accent),#06b6d4)"></div></div><span style="font-size:10px;color:var(--text3);white-space:nowrap">${fmtBytes(p.allocation)} / ${fmtBytes(p.capacity)}</span></div></td>
     <td style="text-align:right"><div style="display:inline-flex;gap:4px">
       <button class="btn icon" title="Volumes" onclick="vmPoolVols('${esc(p.name)}')" style="width:26px;height:26px;font-size:12px">📂</button>
-      ${active?`<button class="btn icon stop" title="Stoppen" onclick="vmPoolAct('${esc(p.name)}','stop')" style="width:26px;height:26px;font-size:12px">⏹</button>`:`<button class="btn icon play" title="Start" onclick="vmPoolAct('${esc(p.name)}','start')" style="width:26px;height:26px;font-size:12px">▶</button>`}
-      <button class="btn icon" title="${p.autostart?'Autostart aus':'Autostart an'}" onclick="vmPoolAct('${esc(p.name)}','${p.autostart?'autostart-off':'autostart-on'}')" style="width:26px;height:26px;font-size:11px">${p.autostart?'☆':'★'}</button>
+      ${active?`<button class="btn icon stop" title="Stop" onclick="vmPoolAct('${esc(p.name)}','stop')" style="width:26px;height:26px;font-size:12px">⏹</button>`:`<button class="btn icon play" title="Start" onclick="vmPoolAct('${esc(p.name)}','start')" style="width:26px;height:26px;font-size:12px">▶</button>`}
+      <button class="btn icon" title="${p.autostart?'Autostart off':'Autostart on'}" onclick="vmPoolAct('${esc(p.name)}','${p.autostart?'autostart-off':'autostart-on'}')" style="width:26px;height:26px;font-size:11px">${p.autostart?'☆':'★'}</button>
       <button class="btn icon danger" title="Delete" onclick="vmPoolDel('${esc(p.name)}')" style="width:26px;height:26px;font-size:12px">🗑</button>
     </div></td>
   </tr>`}).join('')||'<tr><td colspan="5"><div class="empty-state">No storage pools</div></td></tr>'}
   </tbody></table>`;
+  translateRenderedText(body);
 }
 window.vmPoolForm=()=>openForm('Create storage pool','📂',[
-  {name:'name',label:'Pool-Name',placeholder:'vmdata'},
-  {name:'ptype',label:'Type',type:'select',options:[{value:'dir',label:'Verzeichnis (dir)'},{value:'fs',label:'Filesystem (fs)'}]},
-  {name:'target',label:'Zielverzeichnis',placeholder:'/var/lib/libvirt/pools/vmdata',hint:'Created when needed (pool-build)'},
-],async d=>{closeForm();toast('Erstelle Pool…');try{const r=await post('/vms/pool/create',d);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Pool created');renderVmPools($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
-window.vmPoolAct=async(name,action)=>{try{const r=await post('/vms/pool/action',{name,action});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('OK');renderVmPools($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}};
+  {name:'name',label:'Pool name',placeholder:'vmdata'},
+  {name:'ptype',label:'Type',type:'select',options:[{value:'dir',label:'Directory (dir)'},{value:'fs',label:'Filesystem (fs)'}]},
+  {name:'target',label:'Target folder',placeholder:'/var/lib/libvirt/pools/vmdata',hint:'Created when needed (pool-build)'},
+],async d=>{closeForm();toast('Creating pool…');try{const r=await post('/vms/pool/create',d);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Pool created');renderVmPools($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+window.vmPoolAct=async(name,action)=>{try{const r=await post('/vms/pool/action',{name,action});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}const msgs={start:'Pool started',stop:'Pool stopped','autostart-on':'Autostart enabled','autostart-off':'Autostart disabled'};toast(msgs[action]||'OK');renderVmPools($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}};
 window.vmPoolDel=name=>confirmDelete('Delete pool',`Delete storage pool "${name}"? (The pool definition is removed, files stay on disk)`,async()=>{try{const r=await post('/vms/pool/action',{name,action:'delete'});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Pool deleted');renderVmPools($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
 window.vmPoolVols=async pool=>{
   const v=await api('/vms/pool/volumes?pool='+encodeURIComponent(pool));
-  $('#modal-body').innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'),'Speicher-Pools')">← Back</button><button class="btn sm" onclick="vmVolForm('${esc(pool)}')">+ Volume</button><span style="padding:6px;color:var(--text2)">Pool: ${esc(pool)}</span></div>
-  <table style="table-layout:fixed;width:100%"><thead><tr><th style="width:30%">Volume</th><th>Pfad</th><th style="width:50px;text-align:right"></th></tr></thead><tbody>
+  const body=$('#modal-body');
+  body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'),'Speicher-Pools')">← Back</button><button class="btn sm" onclick="vmVolForm('${esc(pool)}')">+ Volume</button><span style="padding:6px;color:var(--text2)">Pool: ${esc(pool)}</span></div>
+  <table style="table-layout:fixed;width:100%"><thead><tr><th style="width:30%">Volume</th><th>Path</th><th style="width:50px;text-align:right"></th></tr></thead><tbody>
   ${(v.volumes||[]).map(x=>`<tr><td style="font-weight:500">${esc(x.name)}</td><td class="mono" style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis">${esc(x.path)}</td><td style="text-align:right"><button class="btn icon danger" title="Delete" onclick="vmVolDel('${esc(pool)}','${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">✕</button></td></tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">No volumes</div></td></tr>'}
   </tbody></table>`;
+  translateRenderedText(body);
 };
 window.vmVolForm=pool=>openForm('Create volume in '+pool,'📂',[
-  {name:'name',label:'Volume-Name',placeholder:'disk1'},
+  {name:'name',label:'Volume name',placeholder:'disk1'},
   {name:'size_gb',label:'Size (GB)',type:'number',value:20},
   {name:'format',label:'Format',type:'select',options:['qcow2','raw']},
-],async d=>{closeForm();toast('Erstelle Volume…');try{const r=await post('/vms/pool/vol-create',{pool,name:d.name,size_gb:d.size_gb,format:d.format});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Volume created');vmPoolVols(pool);}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();toast('Creating volume…');try{const r=await post('/vms/pool/vol-create',{pool,name:d.name,size_gb:d.size_gb,format:d.format});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Volume created');vmPoolVols(pool);}catch(e){toast('Error: '+e.message,'error');}});
 window.vmVolDel=(pool,vol)=>confirmDelete('Delete volume',`Delete volume "${vol}" from pool "${pool}" permanently?`,async()=>{try{const r=await post('/vms/pool/vol-delete',{pool,vol});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Volume deleted');vmPoolVols(pool);}catch(e){toast('Error: '+e.message,'error');}});
 
 // ═══ Backup ═══
@@ -11427,16 +11754,17 @@ async function renderVMs(body,tab){
   if(tab==='Speicher-Pools'||tab==='Storage pools')return renderVmPoolsSimple(body);
   const v=await api('/vms/list');
   body.innerHTML=viewIntro('Virtual machines','Create and run complete guest systems. Advanced hardware and snapshots are inside Manage.',`<button class="btn" onclick="vmCreateForm()">Create VM</button>`)
-    +`<div class="nx-card-grid">${v.map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${statusBadge(x.state,x.active?'good':'warn')}</div><div class="nx-kv">${cardMetric('RAM',fmtBytes(x.max_mem))}${cardMetric('CPU',x.vcpus)}${cardMetric('Console',x.active?'Available':'Start first')}${cardMetric('State',esc(x.state))}</div><div class="nx-action-row"><button class="btn sm" onclick="vmAct('${esc(x.name)}','${x.active?'reboot':'start'}')">${x.active?'Restart':'Start'}</button><button class="btn ghost sm" onclick="vmConsole('${esc(x.name)}')" ${!x.active?'disabled':''}>Open console</button><button class="btn ghost sm" onclick="vmManage('${esc(x.name)}')">Manage</button><button class="btn danger sm" onclick="vmDeleteConfirm('${esc(x.name)}')">Delete</button></div></div>`).join('')||emptyState('No virtual machines')}</div>`;
+    +`<div class="nx-card-grid">${v.map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${statusBadge(x.state,x.active?'good':'warn')}</div><div class="nx-kv">${cardMetric('RAM',fmtBytes(x.max_mem))}${cardMetric('CPU',x.vcpus)}${cardMetric('Console',x.active?'Available':'Start first')}${cardMetric('State',esc(x.state))}</div><div class="nx-action-row"><button class="btn sm" onclick="vmAct('${esc(x.name)}','${x.active?'reboot':'start'}')">${x.active?'Restart':'Start'}</button>${x.active?`<button class="btn ghost sm" onclick="vmAct('${esc(x.name)}','shutdown')" title="A VM shutdown asks the guest OS to power off cleanly.">Shut down</button>`:''}<button class="btn ghost sm" onclick="vmConsole('${esc(x.name)}')" ${!x.active?'disabled':''}>Open console</button><button class="btn ghost sm" onclick="vmManage('${esc(x.name)}')">Manage</button><button class="btn danger sm" onclick="vmDeleteConfirm('${esc(x.name)}')">Delete</button></div></div>`).join('')||emptyState('No virtual machines')}</div>`;
   translateRenderedText(body);
 }
 async function renderVmPoolsSimple(body){
   const d=await api('/vms/pools');
   body.innerHTML=viewIntro('VM storage pools','Pools are folders or filesystems where VM disks are stored.',`<button class="btn" onclick="vmPoolForm()">Create pool</button>`)
     +`<div class="nx-card-grid">${(d.pools||[]).map(p=>{const pct=p.capacity?Math.round(p.allocation/p.capacity*100):0;return `<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(p.name)}</div>${statusBadge(p.state,p.state==='active'?'good':'warn')}</div>${usageBar(pct)}<div class="nx-kv">${cardMetric('Used',fmtBytes(p.allocation))}${cardMetric('Size',fmtBytes(p.capacity))}</div><button class="btn ghost sm" onclick="vmPoolVols('${esc(p.name)}')">Volumes</button></div>`}).join('')||emptyState('No VM storage pools')}</div>`;
+  translateRenderedText(body);
 }
-window.vmManage=name=>{const body=$('#modal-body');body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">Back</button><span>${esc(name)}</span></div><div class="nx-card-grid"><div class="nx-action-card"><div class="nx-action-title">Console</div><p class="nx-action-sub">Open the VM screen.</p><button class="btn sm" onclick="vmConsole('${esc(name)}')">Open console</button></div><div class="nx-action-card"><div class="nx-action-title">Resources & hardware</div><p class="nx-action-sub">Change RAM, CPU, disks and network cards.</p><button class="btn sm" onclick="vmHardware('${esc(name)}')">Manage hardware</button></div><div class="nx-action-card"><div class="nx-action-title">Snapshots</div><p class="nx-action-sub">Save or restore a VM state.</p><button class="btn sm" onclick="vmSnaps('${esc(name)}')">Open snapshots</button></div><div class="nx-action-card"><div class="nx-action-title">Advanced</div><p class="nx-action-sub">Clone the VM or change the CD-ROM.</p><button class="btn ghost sm" onclick="vmClone('${esc(name)}')">Clone</button> <button class="btn ghost sm" onclick="vmCdromForm('${esc(name)}')">CD-ROM</button></div></div>`;translateRenderedText(body);};
-window.vmDeleteConfirm=name=>typedConfirm('Delete virtual machine',`VM "${name}" and its disk will be removed permanently.`,name,async()=>{try{await post('/vms/action',{name,action:'delete'});toast('VM deleted');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+window.vmManage=async name=>{const body=$('#modal-body');const v=await api('/vms/list').catch(()=>[]);const vm=(v||[]).find(x=>x.name===name)||{};body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">Back</button><span>${esc(name)}</span></div><div class="nx-card-grid"><div class="nx-action-card"><div class="nx-action-title">Console</div><p class="nx-action-sub">Open the VM screen.</p><button class="btn sm" onclick="vmConsole('${esc(name)}')" ${!vm.active?'disabled':''}>Open console</button></div><div class="nx-action-card"><div class="nx-action-title">Resources & hardware</div><p class="nx-action-sub">Change RAM, CPU, disks and network cards.</p><button class="btn sm" onclick="vmHardware('${esc(name)}')">Manage hardware</button></div><div class="nx-action-card"><div class="nx-action-title">Snapshots</div><p class="nx-action-sub">Save or restore a VM state.</p><button class="btn sm" onclick="vmSnaps('${esc(name)}')">Open snapshots</button></div><div class="nx-action-card"><div class="nx-action-title">Power</div><p class="nx-action-sub">A VM shutdown asks the guest OS to power off cleanly.</p><div class="nx-action-row">${vm.active?`<button class="btn ghost sm" onclick="vmAct('${esc(name)}','shutdown')">Shut down</button><button class="btn ghost sm" onclick="vmAct('${esc(name)}','reboot')">Restart</button>`:`<button class="btn sm" onclick="vmAct('${esc(name)}','start')">Start</button>`}</div></div><div class="nx-action-card"><div class="nx-action-title">Advanced</div><p class="nx-action-sub">Clone the VM or change the CD-ROM.</p><button class="btn ghost sm" onclick="vmClone('${esc(name)}')">Clone</button> <button class="btn ghost sm" onclick="vmCdromForm('${esc(name)}')">CD-ROM</button></div></div>`;translateRenderedText(body);};
+window.vmDeleteConfirm=name=>typedConfirm('Delete virtual machine',`VM "${name}" and its disk will be removed permanently.`,name,async()=>{try{await post('/vms/action',{name,action:'delete'});toast('VM deleted');renderVMs($('#modal-body'));loadDashboard();}catch(e){toast('Error: '+e.message,'error');}});
 
 let _appInstallDraft=null;
 let _appComposePortCheckTimer=null;
