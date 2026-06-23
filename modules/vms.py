@@ -142,6 +142,10 @@ def _domain_summary_libvirt(dom):
         row["autostart"] = dom.autostart() == 1
     except Exception:
         pass
+    config = _domain_config_resources(name, dom)
+    if config:
+        row["max_mem"] = config.get("max_mem") or row["max_mem"]
+        row["vcpus"] = config.get("vcpus") or row["vcpus"]
     return row
 
 
@@ -167,7 +171,7 @@ def _domain_summary_virsh(name, state="unknown"):
     info = _virsh(["dominfo", name], timeout=15)
     data = _parse_dominfo(info["stdout"]) if info["ok"] else {}
     state = data.get("State") or state
-    return {
+    row = {
         "name": name,
         "uuid": data.get("UUID", ""),
         "state": state,
@@ -177,6 +181,54 @@ def _domain_summary_virsh(name, state="unknown"):
         "mem": _parse_virsh_memory(data.get("Used memory", "")),
         "vcpus": _parse_int(data.get("CPU(s)", "0")),
     }
+    config = _domain_config_resources(name)
+    if config:
+        row["max_mem"] = config.get("max_mem") or row["max_mem"]
+        row["vcpus"] = config.get("vcpus") or row["vcpus"]
+    return row
+
+
+def _xml_memory_bytes(node):
+    if node is None or not (node.text or "").strip():
+        return 0
+    try:
+        value = int(node.text.strip())
+    except Exception:
+        return 0
+    unit = (node.get("unit") or "KiB").lower()
+    if unit in {"b", "bytes"}:
+        return value
+    if unit in {"kb", "kib"}:
+        return value * 1024
+    if unit in {"mb", "mib"}:
+        return value * 1024 * 1024
+    if unit in {"gb", "gib"}:
+        return value * 1024 * 1024 * 1024
+    return value * 1024
+
+
+def _domain_config_resources(name, dom=None):
+    xml = ""
+    if dom is not None and hasattr(dom, "XMLDesc"):
+        try:
+            flags = getattr(libvirt, "VIR_DOMAIN_XML_INACTIVE", 0) if HAS_LIBVIRT else 0
+            xml = dom.XMLDesc(flags)
+        except Exception:
+            xml = ""
+    if not xml:
+        dumped = _virsh(["dumpxml", "--inactive", name], timeout=15)
+        if dumped["ok"]:
+            xml = dumped["stdout"]
+    if not xml:
+        return {}
+    try:
+        root = ET.fromstring(xml)
+        return {
+            "max_mem": _xml_memory_bytes(root.find("./memory")),
+            "vcpus": _parse_int((root.findtext("./vcpu") or "0").strip()),
+        }
+    except Exception:
+        return {}
 
 
 def _parse_dominfo(text):
@@ -711,6 +763,41 @@ def _domain_active(name):
         return state["ok"] and "running" in state["stdout"].lower()
 
 
+def _define_resources(name, memory_mb, vcpus):
+    dumped = _virsh(["dumpxml", "--inactive", name], timeout=30)
+    if not dumped["ok"]:
+        return dumped
+    try:
+        root = ET.fromstring(dumped["stdout"])
+        memory = root.find("./memory")
+        if memory is None:
+            memory = ET.SubElement(root, "memory", {"unit": "MiB"})
+        memory.set("unit", "MiB")
+        memory.text = str(memory_mb)
+        current = root.find("./currentMemory")
+        if current is None:
+            current = ET.SubElement(root, "currentMemory", {"unit": "MiB"})
+        current.set("unit", "MiB")
+        current.text = str(memory_mb)
+        vcpu_node = root.find("./vcpu")
+        if vcpu_node is None:
+            vcpu_node = ET.SubElement(root, "vcpu", {"placement": "static"})
+        vcpu_node.text = str(vcpus)
+        xml = ET.tostring(root, encoding="unicode")
+    except Exception as e:
+        return {"ok": False, "stdout": "", "stderr": str(e)}
+    with tempfile.NamedTemporaryFile("w", delete=False, suffix=".xml") as f:
+        f.write(xml)
+        xml_path = f.name
+    try:
+        return _virsh(["define", xml_path], timeout=30)
+    finally:
+        try:
+            os.unlink(xml_path)
+        except OSError:
+            pass
+
+
 def update_resources(name, memory_mb, vcpus):
     if not _valid_vm(name):
         return {"ok": False, "stderr": "Ungueltiger VM-Name"}
@@ -722,15 +809,9 @@ def update_resources(name, memory_mb, vcpus):
     except Exception:
         return {"ok": False, "stderr": "Ungueltige VM-Ressourcen"}
 
-    commands = [
-        ["setmaxmem", name, f"{memory_mb}M", "--config"],
-        ["setmem", name, f"{memory_mb}M", "--config"],
-        ["setvcpus", name, str(vcpus), "--config"],
-    ]
-    for args in commands:
-        result = _virsh(args, timeout=30)
-        if not result["ok"]:
-            return {"ok": False, "stderr": result["stderr"] or result["stdout"] or "virsh fehlgeschlagen"}
+    defined = _define_resources(name, memory_mb, vcpus)
+    if not defined["ok"]:
+        return {"ok": False, "stderr": defined["stderr"] or defined["stdout"] or "VM-Definition konnte nicht gespeichert werden"}
 
     warnings = []
     if _domain_active(name):

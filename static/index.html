@@ -8936,7 +8936,7 @@ window.vmHardware=async name=>{
 window.vmResourcesForm=(name,memoryMb,vcpus)=>openForm('Change resources: '+name,'⚙',[
   {name:'memory_mb',label:'RAM (MB)',type:'number',value:memoryMb||2048,hint:'Saved persistently. Live update is attempted while the VM is running.'},
   {name:'vcpus',label:'CPU cores',type:'number',value:vcpus||2,hint:'Saved persistently. Live update may require guest support.'},
-],async d=>{closeForm();toast('Updating resources…');try{const r=await post('/vms/resources',{name,memory_mb:d.memory_mb,vcpus:d.vcpus});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast(r.warning?'Resources saved; live update may require restart':'Resources updated');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();toast('Updating resources…');try{const r=await post('/vms/resources',{name,memory_mb:d.memory_mb,vcpus:d.vcpus});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast(r.warning?'Resources saved; live update may require restart':'Resources updated');await vmHardware(name);loadDashboard();}catch(e){toast('Error: '+e.message,'error');}});
 window.vmDiskForm=async name=>{
   const p=await api('/vms/pools').catch(()=>({pools:[]}));
   openForm('Attach disk: '+name,'🔌',[
@@ -8947,7 +8947,7 @@ window.vmDiskForm=async name=>{
 };
 window.vmDiskResizeForm=(name,target)=>openForm('Expand disk: '+name,'💿',[
   {name:'size_gb',label:'New total size (GB)',type:'number',value:40,hint:'Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.'},
-],async d=>{closeForm();toast('Expanding disk…');try{const r=await post('/vms/disk/resize',{name,target,size_gb:d.size_gb});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,220),'error');return;}toast('Disk expanded');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
+],async d=>{closeForm();toast('Expanding disk…');try{const r=await post('/vms/disk/resize',{name,target,size_gb:d.size_gb});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,220),'error');return;}toast('Disk expanded');await vmHardware(name);loadDashboard();}catch(e){toast('Error: '+e.message,'error');}});
 window.vmDiskDetach=(name,target)=>confirmDelete('Detach disk',`Detach disk "${target}" from "${name}"? (The image is kept)`,async()=>{try{const r=await post('/vms/disk/detach',{name,target});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Disk detached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
 window.vmNicForm=async name=>{
   const [net,ifs]=await Promise.all([

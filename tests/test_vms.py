@@ -212,9 +212,22 @@ def test_virsh_uses_system_uri(monkeypatch):
 
 def test_update_resources_persists_and_attempts_live_for_running_vm(monkeypatch):
     calls = []
+    defined_xml = {}
 
     def fake_virsh(args, timeout=120):
         calls.append(args)
+        if args == ["dumpxml", "--inactive", "debian-vm"]:
+            return {
+                "ok": True,
+                "stdout": (
+                    "<domain><name>debian-vm</name><memory unit=\"MiB\">2048</memory>"
+                    "<currentMemory unit=\"MiB\">2048</currentMemory><vcpu>2</vcpu></domain>"
+                ),
+                "stderr": "",
+            }
+        if args[0] == "define":
+            defined_xml["text"] = open(args[1], encoding="utf-8").read()
+            return {"ok": True, "stdout": "defined", "stderr": ""}
         return {"ok": True, "stdout": "", "stderr": ""}
 
     monkeypatch.setattr(vms, "_virsh", fake_virsh)
@@ -223,13 +236,41 @@ def test_update_resources_persists_and_attempts_live_for_running_vm(monkeypatch)
     result = vms.update_resources("debian-vm", 4096, 4)
 
     assert result["ok"] is True
+    assert "<memory unit=\"MiB\">4096</memory>" in defined_xml["text"]
+    assert "<currentMemory unit=\"MiB\">4096</currentMemory>" in defined_xml["text"]
+    assert "<vcpu>4</vcpu>" in defined_xml["text"]
     assert calls == [
-        ["setmaxmem", "debian-vm", "4096M", "--config"],
-        ["setmem", "debian-vm", "4096M", "--config"],
-        ["setvcpus", "debian-vm", "4", "--config"],
+        ["dumpxml", "--inactive", "debian-vm"],
+        ["define", calls[1][1]],
         ["setmem", "debian-vm", "4096M", "--live"],
         ["setvcpus", "debian-vm", "4", "--live"],
     ]
+
+
+def test_domain_summary_prefers_config_resources(monkeypatch):
+    monkeypatch.setattr(vms, "HAS_LIBVIRT", False)
+
+    def fake_virsh(args, timeout=120):
+        if args == ["dominfo", "debian-vm"]:
+            return {
+                "ok": True,
+                "stdout": "Name: debian-vm\nState: running\nCPU(s): 2\nMax memory: 2097152 KiB\nUsed memory: 1048576 KiB\n",
+                "stderr": "",
+            }
+        if args == ["dumpxml", "--inactive", "debian-vm"]:
+            return {
+                "ok": True,
+                "stdout": "<domain><memory unit=\"MiB\">4096</memory><vcpu>4</vcpu></domain>",
+                "stderr": "",
+            }
+        return {"ok": False, "stdout": "", "stderr": "unexpected"}
+
+    monkeypatch.setattr(vms, "_virsh", fake_virsh)
+
+    result = vms._domain_summary_virsh("debian-vm", "running")
+
+    assert result["max_mem"] == 4096 * 1024 * 1024
+    assert result["vcpus"] == 4
 
 
 def test_resize_disk_rejects_shrinking(monkeypatch):
