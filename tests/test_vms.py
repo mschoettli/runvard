@@ -22,6 +22,9 @@ class _GoodDomain:
     def autostart(self):
         return 0
 
+    def XMLDesc(self, flags=0):
+        return "<domain><memory unit=\"KiB\">2048</memory><vcpu>2</vcpu></domain>"
+
 
 class _BrokenDomain:
     def state(self):
@@ -31,6 +34,11 @@ class _BrokenDomain:
 class _Conn:
     def listAllDomains(self):
         return [_BrokenDomain(), _GoodDomain()]
+
+    def lookupByName(self, name):
+        if name != "debian-vm":
+            raise RuntimeError("not found")
+        return _GoodDomain()
 
 
 class _EmptyConn:
@@ -270,6 +278,48 @@ def test_domain_summary_prefers_config_resources(monkeypatch):
     result = vms._domain_summary_virsh("debian-vm", "running")
 
     assert result["max_mem"] == 4096 * 1024 * 1024
+    assert result["vcpus"] == 4
+
+
+def test_domain_summary_libvirt_prefers_virsh_inactive_config(monkeypatch):
+    monkeypatch.setattr(vms, "HAS_LIBVIRT", True)
+
+    def fake_virsh(args, timeout=120):
+        if args == ["dumpxml", "--inactive", "debian-vm"]:
+            return {
+                "ok": True,
+                "stdout": "<domain><memory unit=\"MiB\">8192</memory><vcpu>4</vcpu></domain>",
+                "stderr": "",
+            }
+        return {"ok": False, "stdout": "", "stderr": "unexpected"}
+
+    monkeypatch.setattr(vms, "_virsh", fake_virsh)
+
+    result = vms._domain_summary_libvirt(_GoodDomain())
+
+    assert result["max_mem"] == 8192 * 1024 * 1024
+    assert result["vcpus"] == 4
+
+
+def test_list_hardware_prefers_saved_config_resources(monkeypatch):
+    monkeypatch.setattr(vms, "HAS_LIBVIRT", True)
+    monkeypatch.setattr(vms, "_connect", lambda: _Conn())
+
+    def fake_virsh(args, timeout=120):
+        if args == ["dumpxml", "--inactive", "debian-vm"]:
+            return {
+                "ok": True,
+                "stdout": "<domain><memory unit=\"MiB\">8192</memory><vcpu>4</vcpu></domain>",
+                "stderr": "",
+            }
+        return {"ok": False, "stdout": "", "stderr": "unexpected"}
+
+    monkeypatch.setattr(vms, "_virsh", fake_virsh)
+
+    result = vms.list_hardware("debian-vm")
+
+    assert result["memory_mb"] == 8192
+    assert result["current_memory_mb"] == 1
     assert result["vcpus"] == 4
 
 

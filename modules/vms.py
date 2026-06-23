@@ -209,16 +209,15 @@ def _xml_memory_bytes(node):
 
 def _domain_config_resources(name, dom=None):
     xml = ""
-    if dom is not None and hasattr(dom, "XMLDesc"):
+    dumped = _virsh(["dumpxml", "--inactive", name], timeout=15)
+    if dumped["ok"]:
+        xml = dumped["stdout"]
+    if not xml and dom is not None and hasattr(dom, "XMLDesc"):
         try:
             flags = getattr(libvirt, "VIR_DOMAIN_XML_INACTIVE", 0) if HAS_LIBVIRT else 0
             xml = dom.XMLDesc(flags)
         except Exception:
             xml = ""
-    if not xml:
-        dumped = _virsh(["dumpxml", "--inactive", name], timeout=15)
-        if dumped["ok"]:
-            xml = dumped["stdout"]
     if not xml:
         return {}
     try:
@@ -743,12 +742,15 @@ def list_hardware(name):
             "source": srcval,
             "model": model.get("type") if model is not None else "",
         })
+    config = _domain_config_resources(name, dom)
+    memory_mb = int((config.get("max_mem") or (info[1] * 1024)) / 1024 / 1024)
+    vcpus = int(config.get("vcpus") or info[3])
     return {
         "ok": True,
         "active": active,
-        "memory_mb": int(info[1] / 1024),
+        "memory_mb": memory_mb,
         "current_memory_mb": int(info[2] / 1024),
-        "vcpus": int(info[3]),
+        "vcpus": vcpus,
         "disks": disks,
         "nics": nics,
     }
