@@ -1,4 +1,5 @@
 """VMs: KVM/QEMU über libvirt verwalten - inkl. erstellen/löschen."""
+import json
 import os
 import subprocess
 import tempfile
@@ -658,6 +659,7 @@ def list_hardware(name):
         conn = _connect()
         dom = conn.lookupByName(name)
         active = dom.isActive() == 1
+        info = dom.info()
         root = ET.fromstring(dom.XMLDesc())
     except Exception as e:
         return {"ok": False, "stderr": str(e), "disks": [], "nics": []}
@@ -689,7 +691,112 @@ def list_hardware(name):
             "source": srcval,
             "model": model.get("type") if model is not None else "",
         })
-    return {"ok": True, "active": active, "disks": disks, "nics": nics}
+    return {
+        "ok": True,
+        "active": active,
+        "memory_mb": int(info[1] / 1024),
+        "current_memory_mb": int(info[2] / 1024),
+        "vcpus": int(info[3]),
+        "disks": disks,
+        "nics": nics,
+    }
+
+
+def _domain_active(name):
+    try:
+        conn = _connect()
+        return conn.lookupByName(name).isActive() == 1
+    except Exception:
+        state = _virsh(["domstate", name], timeout=10)
+        return state["ok"] and "running" in state["stdout"].lower()
+
+
+def update_resources(name, memory_mb, vcpus):
+    if not _valid_vm(name):
+        return {"ok": False, "stderr": "Ungueltiger VM-Name"}
+    try:
+        memory_mb = int(memory_mb)
+        vcpus = int(vcpus)
+        if not (256 <= memory_mb <= 1048576 and 1 <= vcpus <= 256):
+            raise ValueError()
+    except Exception:
+        return {"ok": False, "stderr": "Ungueltige VM-Ressourcen"}
+
+    commands = [
+        ["setmaxmem", name, f"{memory_mb}M", "--config"],
+        ["setmem", name, f"{memory_mb}M", "--config"],
+        ["setvcpus", name, str(vcpus), "--config"],
+    ]
+    for args in commands:
+        result = _virsh(args, timeout=30)
+        if not result["ok"]:
+            return {"ok": False, "stderr": result["stderr"] or result["stdout"] or "virsh fehlgeschlagen"}
+
+    warnings = []
+    if _domain_active(name):
+        for args in (["setmem", name, f"{memory_mb}M", "--live"],
+                     ["setvcpus", name, str(vcpus), "--live"]):
+            result = _virsh(args, timeout=30)
+            if not result["ok"]:
+                warnings.append(result["stderr"] or result["stdout"] or "Live-Aenderung nicht moeglich")
+
+    return {
+        "ok": True,
+        "memory_mb": memory_mb,
+        "vcpus": vcpus,
+        "warning": " ".join(warnings),
+    }
+
+
+def _disk_source_for_target(name, target):
+    conn = _connect()
+    dom = conn.lookupByName(name)
+    root = ET.fromstring(dom.XMLDesc())
+    for disk in root.findall(".//disk[@device='disk']"):
+        tgt = disk.find("target")
+        src = disk.find("source")
+        if tgt is not None and tgt.get("dev") == target and src is not None:
+            return src.get("file") or ""
+    return ""
+
+
+def resize_disk(name, target, size_gb):
+    if not _valid_vm(name):
+        return {"ok": False, "stderr": "Ungueltiger VM-Name"}
+    if not _TARGET_RE.fullmatch(target or ""):
+        return {"ok": False, "stderr": "Ungueltiges Target"}
+    try:
+        size_gb = int(size_gb)
+        if not (1 <= size_gb <= 65536):
+            raise ValueError()
+    except Exception:
+        return {"ok": False, "stderr": "Ungueltige Groesse"}
+    try:
+        source = _disk_source_for_target(name, target)
+    except Exception as e:
+        return {"ok": False, "stderr": str(e)}
+    if not source:
+        return {"ok": False, "stderr": "Disk-Image nicht gefunden oder nicht dateibasiert"}
+
+    info = _run(["qemu-img", "info", "--output=json", source], timeout=60)
+    if info["ok"]:
+        try:
+            current = int(json.loads(info["stdout"]).get("virtual-size") or 0)
+            requested = size_gb * 1024 * 1024 * 1024
+            if current and requested <= current:
+                return {"ok": False, "stderr": "Neue Groesse muss groesser als die aktuelle Disk sein"}
+        except Exception:
+            pass
+    resized = _run(["qemu-img", "resize", source, f"{size_gb}G"], timeout=300)
+    if not resized["ok"]:
+        return {"ok": False, "stderr": resized["stderr"] or resized["stdout"] or "qemu-img resize fehlgeschlagen"}
+    return {
+        "ok": True,
+        "target": target,
+        "source": source,
+        "size_gb": size_gb,
+        "warning": "Guest partition/filesystem may need to be extended inside the VM.",
+    }
 
 
 def _scope_flags(name):

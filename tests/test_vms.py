@@ -210,6 +210,66 @@ def test_virsh_uses_system_uri(monkeypatch):
     assert seen["args"][:3] == ["virsh", "-c", "qemu:///system"]
 
 
+def test_update_resources_persists_and_attempts_live_for_running_vm(monkeypatch):
+    calls = []
+
+    def fake_virsh(args, timeout=120):
+        calls.append(args)
+        return {"ok": True, "stdout": "", "stderr": ""}
+
+    monkeypatch.setattr(vms, "_virsh", fake_virsh)
+    monkeypatch.setattr(vms, "_domain_active", lambda name: True)
+
+    result = vms.update_resources("debian-vm", 4096, 4)
+
+    assert result["ok"] is True
+    assert calls == [
+        ["setmaxmem", "debian-vm", "4096M", "--config"],
+        ["setmem", "debian-vm", "4096M", "--config"],
+        ["setvcpus", "debian-vm", "4", "--config"],
+        ["setmem", "debian-vm", "4096M", "--live"],
+        ["setvcpus", "debian-vm", "4", "--live"],
+    ]
+
+
+def test_resize_disk_rejects_shrinking(monkeypatch):
+    monkeypatch.setattr(vms, "_disk_source_for_target", lambda name, target: "/vm/disk.qcow2")
+    monkeypatch.setattr(
+        vms,
+        "_run",
+        lambda args, timeout=120: {
+            "ok": True,
+            "stdout": '{"virtual-size": 21474836480}',
+            "stderr": "",
+        },
+    )
+
+    result = vms.resize_disk("debian-vm", "vda", 20)
+
+    assert result["ok"] is False
+    assert "groesser" in result["stderr"]
+
+
+def test_resize_disk_runs_qemu_img_resize(monkeypatch):
+    calls = []
+
+    def fake_run(args, timeout=120):
+        calls.append(args)
+        if args[:3] == ["qemu-img", "info", "--output=json"]:
+            return {"ok": True, "stdout": '{"virtual-size": 10737418240}', "stderr": ""}
+        if args[:2] == ["qemu-img", "resize"]:
+            return {"ok": True, "stdout": "resized", "stderr": ""}
+        return {"ok": False, "stdout": "", "stderr": "unexpected"}
+
+    monkeypatch.setattr(vms, "_disk_source_for_target", lambda name, target: "/vm/disk.qcow2")
+    monkeypatch.setattr(vms, "_run", fake_run)
+
+    result = vms.resize_disk("debian-vm", "vda", 30)
+
+    assert result["ok"] is True
+    assert calls[-1] == ["qemu-img", "resize", "/vm/disk.qcow2", "30G"]
+
+
 def test_diagnostics_exposes_raw_virsh_and_parsed_vms(monkeypatch, tmp_path):
     monkeypatch.setattr(vms, "HAS_LIBVIRT", False)
     monkeypatch.setattr(vms, "ISO_DIR", str(tmp_path))

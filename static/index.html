@@ -8910,13 +8910,18 @@ window.vmHardware=async name=>{
   const body=$('#modal-body');
   if(h.ok===false){body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">← Back</button></div><div class="empty-state">${esc(h.stderr||'Error')}</div>`;return;}
   body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">← Back</button><span style="padding:6px;color:var(--text2)">Hardware: ${esc(name)} ${h.active?'<span class="status-pill run" style="font-size:10px">live</span>':'<span class="status-pill stop" style="font-size:10px">aus</span>'}</span></div>
+  <div class="sec-hdr"><h3>Ressourcen</h3><button class="btn sm" onclick="vmResourcesForm('${esc(name)}',${Number(h.memory_mb)||0},${Number(h.vcpus)||1})">Change</button></div>
+  <div class="nx-summary-grid" style="margin-bottom:18px">
+    ${summaryCard('RAM',`${Number(h.memory_mb)||0} MB`,h.active?'Live if supported, always saved':'Applied on next start')}
+    ${summaryCard('CPU',`${Number(h.vcpus)||0} cores`,h.active?'Live if supported, always saved':'Applied on next start')}
+  </div>
   <div class="sec-hdr"><h3>Festplatten</h3><button class="btn sm" onclick="vmDiskForm('${esc(name)}')">+ Attach disk</button></div>
-  <table style="margin-bottom:18px;table-layout:fixed;width:100%"><thead><tr><th style="width:70px">Target</th><th style="width:70px">Bus</th><th>Quelle</th><th style="width:60px">Type</th><th style="width:50px;text-align:right"></th></tr></thead><tbody>
+  <table style="margin-bottom:18px;table-layout:fixed;width:100%"><thead><tr><th style="width:70px">Target</th><th style="width:70px">Bus</th><th>Quelle</th><th style="width:60px">Type</th><th style="width:84px;text-align:right"></th></tr></thead><tbody>
   ${h.disks.map(d=>`<tr>
     <td class="mono" style="font-size:12px">${esc(d.target)}</td><td style="color:var(--text2)">${esc(d.bus)||'—'}</td>
     <td class="mono" style="font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis">${esc(d.source)||'—'}</td>
     <td>${esc(d.device)}</td>
-    <td style="text-align:right">${d.device==='disk'?`<button class="btn icon danger" title="Unmount" onclick="vmDiskDetach('${esc(name)}','${esc(d.target)}')" style="width:26px;height:26px;font-size:12px">✕</button>`:''}</td>
+    <td style="text-align:right">${d.device==='disk'?`<div style="display:inline-flex;gap:4px"><button class="btn icon" title="Expand disk" onclick="vmDiskResizeForm('${esc(name)}','${esc(d.target)}')" style="width:26px;height:26px;font-size:12px">↗</button><button class="btn icon danger" title="Unmount" onclick="vmDiskDetach('${esc(name)}','${esc(d.target)}')" style="width:26px;height:26px;font-size:12px">✕</button></div>`:''}</td>
   </tr>`).join('')||'<tr><td colspan="5"><div class="empty-state">No disks</div></td></tr>'}
   </tbody></table>
   <div class="sec-hdr"><h3>Netzwerkkarten</h3><button class="btn sm" onclick="vmNicForm('${esc(name)}')">+ Attach NIC</button></div>
@@ -8928,6 +8933,10 @@ window.vmHardware=async name=>{
   </tr>`).join('')||'<tr><td colspan="5"><div class="empty-state">No network cards</div></td></tr>'}
   </tbody></table>`;
 };
+window.vmResourcesForm=(name,memoryMb,vcpus)=>openForm('Change resources: '+name,'⚙',[
+  {name:'memory_mb',label:'RAM (MB)',type:'number',value:memoryMb||2048,hint:'Saved persistently. Live update is attempted while the VM is running.'},
+  {name:'vcpus',label:'CPU cores',type:'number',value:vcpus||2,hint:'Saved persistently. Live update may require guest support.'},
+],async d=>{closeForm();toast('Updating resources…');try{const r=await post('/vms/resources',{name,memory_mb:d.memory_mb,vcpus:d.vcpus});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast(r.warning?'Resources saved; live update may require restart':'Resources updated');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
 window.vmDiskForm=async name=>{
   const p=await api('/vms/pools').catch(()=>({pools:[]}));
   openForm('Attach disk: '+name,'🔌',[
@@ -8936,6 +8945,9 @@ window.vmDiskForm=async name=>{
     {name:'bus',label:'Bus',type:'select',options:['virtio','sata','scsi','ide']},
   ],async d=>{closeForm();toast('Attaching disk…');try{const r=await post('/vms/disk/attach',{name,source:d.source,target:d.target,bus:d.bus});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Disk attached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
 };
+window.vmDiskResizeForm=(name,target)=>openForm('Expand disk: '+name,'💿',[
+  {name:'size_gb',label:'New total size (GB)',type:'number',value:40,hint:'Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.'},
+],async d=>{closeForm();toast('Expanding disk…');try{const r=await post('/vms/disk/resize',{name,target,size_gb:d.size_gb});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,220),'error');return;}toast('Disk expanded');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
 window.vmDiskDetach=(name,target)=>confirmDelete('Detach disk',`Detach disk "${target}" from "${name}"? (The image is kept)`,async()=>{try{const r=await post('/vms/disk/detach',{name,target});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Disk detached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
 window.vmNicForm=async name=>{
   const [net,ifs]=await Promise.all([
@@ -11423,7 +11435,7 @@ async function renderVmPoolsSimple(body){
   body.innerHTML=viewIntro('VM storage pools','Pools are folders or filesystems where VM disks are stored.',`<button class="btn" onclick="vmPoolForm()">Create pool</button>`)
     +`<div class="nx-card-grid">${(d.pools||[]).map(p=>{const pct=p.capacity?Math.round(p.allocation/p.capacity*100):0;return `<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(p.name)}</div>${statusBadge(p.state,p.state==='active'?'good':'warn')}</div>${usageBar(pct)}<div class="nx-kv">${cardMetric('Used',fmtBytes(p.allocation))}${cardMetric('Size',fmtBytes(p.capacity))}</div><button class="btn ghost sm" onclick="vmPoolVols('${esc(p.name)}')">Volumes</button></div>`}).join('')||emptyState('No VM storage pools')}</div>`;
 }
-window.vmManage=name=>{const body=$('#modal-body');body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">Back</button><span>${esc(name)}</span></div><div class="nx-card-grid"><div class="nx-action-card"><div class="nx-action-title">Console</div><p class="nx-action-sub">Open the VM screen.</p><button class="btn sm" onclick="vmConsole('${esc(name)}')">Open console</button></div><div class="nx-action-card"><div class="nx-action-title">Hardware</div><p class="nx-action-sub">Attach disks or network cards.</p><button class="btn sm" onclick="vmHardware('${esc(name)}')">Manage hardware</button></div><div class="nx-action-card"><div class="nx-action-title">Snapshots</div><p class="nx-action-sub">Save or restore a VM state.</p><button class="btn sm" onclick="vmSnaps('${esc(name)}')">Open snapshots</button></div><div class="nx-action-card"><div class="nx-action-title">Advanced</div><p class="nx-action-sub">Clone the VM or change the CD-ROM.</p><button class="btn ghost sm" onclick="vmClone('${esc(name)}')">Clone</button> <button class="btn ghost sm" onclick="vmCdromForm('${esc(name)}')">CD-ROM</button></div></div>`;translateRenderedText(body);};
+window.vmManage=name=>{const body=$('#modal-body');body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">Back</button><span>${esc(name)}</span></div><div class="nx-card-grid"><div class="nx-action-card"><div class="nx-action-title">Console</div><p class="nx-action-sub">Open the VM screen.</p><button class="btn sm" onclick="vmConsole('${esc(name)}')">Open console</button></div><div class="nx-action-card"><div class="nx-action-title">Resources & hardware</div><p class="nx-action-sub">Change RAM, CPU, disks and network cards.</p><button class="btn sm" onclick="vmHardware('${esc(name)}')">Manage hardware</button></div><div class="nx-action-card"><div class="nx-action-title">Snapshots</div><p class="nx-action-sub">Save or restore a VM state.</p><button class="btn sm" onclick="vmSnaps('${esc(name)}')">Open snapshots</button></div><div class="nx-action-card"><div class="nx-action-title">Advanced</div><p class="nx-action-sub">Clone the VM or change the CD-ROM.</p><button class="btn ghost sm" onclick="vmClone('${esc(name)}')">Clone</button> <button class="btn ghost sm" onclick="vmCdromForm('${esc(name)}')">CD-ROM</button></div></div>`;translateRenderedText(body);};
 window.vmDeleteConfirm=name=>typedConfirm('Delete virtual machine',`VM "${name}" and its disk will be removed permanently.`,name,async()=>{try{await post('/vms/action',{name,action:'delete'});toast('VM deleted');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
 
 let _appInstallDraft=null;

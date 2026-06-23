@@ -1299,6 +1299,12 @@ def vms_hardware(name: str, user: str = Depends(auth)):
     return vms.list_hardware(name)
 
 
+@app.post("/api/vms/resources")
+def vms_resources(name: str = Form(...), memory_mb: int = Form(...),
+                  vcpus: int = Form(...), user: str = Depends(confirmed_admin)):
+    return vms.update_resources(name, memory_mb, vcpus)
+
+
 @app.post("/api/vms/disk/attach")
 def vms_disk_attach(name: str = Form(...), source: str = Form(...),
                     target: str = Form(...), bus: str = Form("virtio"),
@@ -1310,6 +1316,12 @@ def vms_disk_attach(name: str = Form(...), source: str = Form(...),
 def vms_disk_detach(name: str = Form(...), target: str = Form(...),
                     user: str = Depends(confirmed_admin)):
     return vms.detach_disk(name, target)
+
+
+@app.post("/api/vms/disk/resize")
+def vms_disk_resize(name: str = Form(...), target: str = Form(...),
+                    size_gb: int = Form(...), user: str = Depends(confirmed_admin)):
+    return vms.resize_disk(name, target, size_gb)
 
 
 @app.post("/api/vms/nic/attach")
