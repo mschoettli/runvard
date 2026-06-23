@@ -261,3 +261,63 @@ def test_default_network_dns_conflict_falls_back_to_no_nic(monkeypatch):
     assert "without network" in result["warning"]
     assert ["net-start", "default"] in calls
     assert not any(call and call[0] == "net-define" for call in calls)
+
+
+def test_attach_nic_ensures_libvirt_network(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(vms, "_ensure_network", lambda network: {"ok": True, "network": "default"})
+    monkeypatch.setattr(vms, "_scope_flags", lambda name: ["--config"])
+
+    def fake_virsh(args, timeout=120):
+        calls.append(args)
+        return {"ok": True, "stdout": "attached", "stderr": ""}
+
+    monkeypatch.setattr(vms, "_virsh", fake_virsh)
+
+    result = vms.attach_nic("debian-vm", "default", "virtio")
+
+    assert result["ok"] is True
+    assert calls == [[
+        "attach-interface", "debian-vm", "network", "default",
+        "--model", "virtio", "--config",
+    ]]
+
+
+def test_attach_nic_reports_unavailable_default_network(monkeypatch):
+    monkeypatch.setattr(
+        vms,
+        "_ensure_network",
+        lambda network: {"ok": True, "network": "", "warning": "creating VM without network"},
+    )
+
+    result = vms.attach_nic("debian-vm", "default", "virtio")
+
+    assert result == {"ok": False, "stderr": "creating VM without network"}
+
+
+def test_attach_nic_can_attach_host_bridge(monkeypatch):
+    calls = []
+
+    monkeypatch.setattr(vms, "_ensure_network", lambda network: (_ for _ in ()).throw(AssertionError("unexpected")))
+    monkeypatch.setattr(vms, "_scope_flags", lambda name: ["--config", "--live"])
+
+    def fake_virsh(args, timeout=120):
+        calls.append(args)
+        return {"ok": True, "stdout": "attached", "stderr": ""}
+
+    monkeypatch.setattr(vms, "_virsh", fake_virsh)
+
+    result = vms.attach_nic("debian-vm", "br0", "e1000", "bridge")
+
+    assert result["ok"] is True
+    assert calls == [[
+        "attach-interface", "debian-vm", "bridge", "br0",
+        "--model", "e1000", "--config", "--live",
+    ]]
+
+
+def test_attach_nic_rejects_invalid_bridge(monkeypatch):
+    result = vms.attach_nic("debian-vm", "../br0", "virtio", "bridge")
+
+    assert result == {"ok": False, "stderr": "Ungueltige Bridge"}

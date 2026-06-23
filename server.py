@@ -1217,8 +1217,9 @@ def vms_disk_detach(name: str = Form(...), target: str = Form(...),
 
 @app.post("/api/vms/nic/attach")
 def vms_nic_attach(name: str = Form(...), network: str = Form(...),
-                   model: str = Form("virtio"), user: str = Depends(confirmed_admin)):
-    return vms.attach_nic(name, network, model)
+                   model: str = Form("virtio"), source_type: str = Form("network"),
+                   user: str = Depends(confirmed_admin)):
+    return vms.attach_nic(name, network, model, source_type)
 
 
 @app.post("/api/vms/nic/detach")

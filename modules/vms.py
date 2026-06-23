@@ -643,6 +643,7 @@ _VM_NAME_RE = _re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$")
 _VOL_NAME_RE = _re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$")
 _TARGET_RE = _re.compile(r"^[a-z]{2,4}[a-z0-9]{0,4}$")
 _MAC_RE = _re.compile(r"^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$")
+_IFACE_RE = _re.compile(r"^[A-Za-z0-9][A-Za-z0-9_.:-]{0,31}$")
 
 
 def _valid_vm(name):
@@ -723,14 +724,28 @@ def detach_disk(name, target):
     return _virsh(["detach-disk", name, target] + _scope_flags(name))
 
 
-def attach_nic(name, network, model="virtio"):
+def attach_nic(name, network, model="virtio", source_type="network"):
     if not _valid_vm(name):
         return {"ok": False, "stderr": "Ungueltiger VM-Name"}
-    if not _VM_NAME_RE.fullmatch(network or ""):
-        return {"ok": False, "stderr": "Ungueltiges Netzwerk"}
+    if source_type not in ("network", "bridge"):
+        return {"ok": False, "stderr": "Ungueltiger Interface-Typ"}
+    if source_type == "network":
+        if not _VM_NAME_RE.fullmatch(network or ""):
+            return {"ok": False, "stderr": "Ungueltiges Netzwerk"}
+        ensured = _ensure_network(network)
+        if not ensured.get("ok"):
+            return ensured
+        network = ensured.get("network") or ""
+        if not network:
+            return {
+                "ok": False,
+                "stderr": ensured.get("warning") or "Libvirt-Netzwerk nicht verfuegbar",
+            }
+    elif not _IFACE_RE.fullmatch(network or ""):
+        return {"ok": False, "stderr": "Ungueltige Bridge"}
     if model not in ("virtio", "e1000", "rtl8139"):
         return {"ok": False, "stderr": "Ungueltiges Modell"}
-    args = ["attach-interface", name, "network", network,
+    args = ["attach-interface", name, source_type, network,
             "--model", model] + _scope_flags(name)
     return _virsh(args)
 

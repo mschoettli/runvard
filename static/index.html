@@ -8788,12 +8788,18 @@ window.vmDiskForm=async name=>{
 };
 window.vmDiskDetach=(name,target)=>confirmDelete('Detach disk',`Detach disk "${target}" from "${name}"? (The image is kept)`,async()=>{try{const r=await post('/vms/disk/detach',{name,target});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Disk detached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
 window.vmNicForm=async name=>{
-  const net=await api('/vms/networks').catch(()=>({networks:[]}));
+  const [net,ifs]=await Promise.all([
+    api('/vms/networks').catch(()=>({networks:[]})),
+    api('/network/interfaces').catch(()=>[]),
+  ]);
   const nets=(net.networks||[]).map(n=>n.name);
+  const bridges=(ifs||[]).filter(i=>(i.interface_type==='bridge')||/^br[0-9A-Za-z_.:-]*$/.test(i.name||'')).map(i=>i.name);
   openForm('Attach NIC: '+name,'🔌',[
-    {name:'network',label:'Network',type:'select',options:nets.length?nets:['default']},
+    {name:'source_type',label:'Type',type:'select',options:[{value:'network',label:'Libvirt network'},{value:'bridge',label:'Host bridge'}]},
+    {name:'network',label:'Libvirt network',type:'select',options:nets.length?nets:['default'],showWhen:'source_type',showValue:'network'},
+    {name:'bridge',label:'Host bridge',type:'select',options:bridges.length?bridges:['br0'],showWhen:'source_type',showValue:'bridge',hint:bridges.length?'':'Create a bridge first under Network → Interfaces.'},
     {name:'model',label:'Modell',type:'select',options:['virtio','e1000','rtl8139']},
-  ],async d=>{closeForm();toast('Attaching NIC…');try{const r=await post('/vms/nic/attach',{name,network:d.network,model:d.model});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('NIC attached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
+  ],async d=>{closeForm();toast('Attaching NIC…');try{const r=await post('/vms/nic/attach',{name,source_type:d.source_type,network:d.source_type==='bridge'?d.bridge:d.network,model:d.model});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('NIC attached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
 };
 window.vmNicDetach=(name,type,mac)=>confirmDelete('Detach NIC',`Detach network card ${mac} from "${name}"?`,async()=>{try{const r=await post('/vms/nic/detach',{name,type,mac});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('NIC detached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
 
