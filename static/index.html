@@ -376,6 +376,16 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 .nx-chip.good{border-color:rgba(34,197,94,.24);color:#4ade80;background:rgba(34,197,94,.08)}
 .nx-chip.warn{border-color:rgba(234,179,8,.24);color:#facc15;background:rgba(234,179,8,.08)}
 .nx-chip.bad{border-color:rgba(239,68,68,.24);color:#f87171;background:rgba(239,68,68,.08)}
+.vm-card-grid{grid-template-columns:repeat(auto-fit,minmax(min(320px,100%),1fr))}
+.vm-card{padding:16px}
+.vm-card .nx-action-head{align-items:center;margin-bottom:14px}
+.vm-card .nx-action-title{font-size:16px}
+.vm-resource-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0}
+.vm-resource-grid div{background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.035);border-radius:8px;padding:10px 12px;min-width:0}
+.vm-resource-grid span{display:block;font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px}
+.vm-resource-grid strong{display:block;font-size:18px;line-height:1.1;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vm-chip-row{display:flex;gap:6px;flex-wrap:wrap;margin-top:10px}
+.vm-card .nx-action-row{margin-top:14px}
 .nx-muted-table{opacity:.78}
 .nx-choice-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px}
 .nx-choice{background:var(--bg);border:1px solid var(--border);border-radius:10px;padding:10px;cursor:pointer;transition:all .15s}
@@ -851,6 +861,7 @@ function requestDangerConfirm(meta){
   });
 }
 const fmtBytes=b=>{if(!b)return'0 B';const u=['B','KB','MB','GB','TB'],i=Math.floor(Math.log(b)/Math.log(1024));return(b/Math.pow(1024,i)).toFixed(1)+' '+u[i];};
+const fmtVmMemory=b=>{if(!b)return'0 B';const gb=b/1073741824;if(gb>=1){const rounded=Math.round(gb);return(Math.abs(gb-rounded)<.15?rounded:parseFloat(gb.toFixed(gb>=10?0:1)))+' GB';}return fmtBytes(b);};
 const fmtUptime=s=>{const d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60);return`${d}d ${h}h ${m}m`;};
 const esc=s=>(s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const dockerPendingActions=new Map(),composePendingActions=new Map(),dashPendingActions=new Map();
@@ -6259,6 +6270,7 @@ const VM_PHRASES={
     "Change RAM, CPU, disks and network cards.":"RAM, CPU, Datenträger und Netzwerkkarten ändern.",
     "Change resources":"Ressourcen ändern",
     "Console":"Konsole",
+    "Console ready":"Konsole bereit",
     "Create a bridge first under Network → Interfaces.":"Erstelle zuerst unter Netzwerk → Schnittstellen eine Bridge.",
     "Detach network card":"Netzwerkkarte abhängen",
     "Disk expanded":"Disk vergrößert",
@@ -6319,6 +6331,7 @@ const VM_PHRASES={
     "Change RAM, CPU, disks and network cards.":"Modifier la RAM, le CPU, les disques et les cartes réseau.",
     "Change resources":"Modifier les ressources",
     "Console":"Console",
+    "Console ready":"Console prête",
     "Create a bridge first under Network → Interfaces.":"Créez d’abord un pont dans Réseau → Interfaces.",
     "Detach network card":"Détacher la carte réseau",
     "Disk expanded":"Disque agrandi",
@@ -6379,6 +6392,7 @@ const VM_PHRASES={
     "Change RAM, CPU, disks and network cards.":"Modifica RAM, CPU, dischi e schede di rete.",
     "Change resources":"Modifica risorse",
     "Console":"Console",
+    "Console ready":"Console pronta",
     "Create a bridge first under Network → Interfaces.":"Crea prima un bridge in Rete → Interfacce.",
     "Detach network card":"Scollega scheda di rete",
     "Disk expanded":"Disco espanso",
@@ -6439,6 +6453,7 @@ const VM_PHRASES={
     "Change RAM, CPU, disks and network cards.":"Cambiar RAM, CPU, discos y tarjetas de red.",
     "Change resources":"Cambiar recursos",
     "Console":"Consola",
+    "Console ready":"Consola lista",
     "Create a bridge first under Network → Interfaces.":"Crea primero un puente en Red → Interfaces.",
     "Detach network card":"Desconectar tarjeta de red",
     "Disk expanded":"Disco ampliado",
@@ -6499,6 +6514,7 @@ const VM_PHRASES={
     "Change RAM, CPU, disks and network cards.":"Alterar RAM, CPU, discos e placas de rede.",
     "Change resources":"Alterar recursos",
     "Console":"Consola",
+    "Console ready":"Consola pronta",
     "Create a bridge first under Network → Interfaces.":"Crie primeiro uma bridge em Rede → Interfaces.",
     "Detach network card":"Desanexar placa de rede",
     "Disk expanded":"Disco aumentado",
@@ -9194,7 +9210,7 @@ async function renderVMs(body,tab){
   ${v.map(x=>`<tr data-q="${esc(x.name)}">
     <td>${esc(x.name)}</td>
     <td><span class="status-pill ${x.active?'run':'stop'}">${x.state}</span></td>
-    <td>${fmtBytes(x.max_mem)}</td><td>${x.vcpus}</td>
+    <td>${fmtVmMemory(x.max_mem)}</td><td>${x.vcpus}</td>
     <td style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn icon play" title="${x.active?'Restart':'Start'}" onclick="vmAct('${esc(x.name)}','${x.active?'reboot':'start'}')">${x.active?'↻':'▶'}</button>
       <button class="btn icon stop" title="Shut down" onclick="vmAct('${esc(x.name)}','shutdown')" ${!x.active?'disabled style="opacity:.4"':''}>⏹</button>
@@ -11594,6 +11610,29 @@ function isMountableVolume(volume,parent){
   return ['part','disk','crypt','lvm'].includes(volume.type||'');
 }
 function cardMetric(label,value){return `<div><span>${esc(uiText(label))}</span><strong>${value}</strong></div>`;}
+function vmCard(vm){
+  const name=esc(vm.name);
+  const consoleChip=vm.active?'<span class="nx-chip good">Console ready</span>':'<span class="nx-chip warn">Start first</span>';
+  const stateChip=`<span class="nx-chip">${esc(uiText('State'))}: ${esc(uiText(vm.state||'off'))}</span>`;
+  const primary=vm.active
+    ?`<button class="btn sm" onclick="vmConsole('${name}')">Open console</button>`
+    :`<button class="btn sm play" onclick="vmAct('${name}','start')">Start</button>`;
+  return `<div class="nx-action-card vm-card">
+    <div class="nx-action-head"><div class="nx-action-title">${name}</div>${statusBadge(vm.state,vm.active?'good':'warn')}</div>
+    <div class="vm-resource-grid">
+      ${cardMetric('RAM',fmtVmMemory(vm.max_mem))}
+      ${cardMetric('CPU',esc(vm.vcpus))}
+    </div>
+    <div class="vm-chip-row">${consoleChip}${stateChip}</div>
+    <div class="nx-action-row">
+      ${primary}
+      ${vm.active?`<button class="btn ghost sm" onclick="vmAct('${name}','shutdown')" title="A VM shutdown asks the guest OS to power off cleanly.">Shut down</button>`:''}
+      ${vm.active?`<button class="btn ghost sm" onclick="vmAct('${name}','reboot')">Restart</button>`:''}
+      <button class="btn ghost sm" onclick="vmManage('${name}')">Manage</button>
+      <button class="btn danger sm" onclick="vmDeleteConfirm('${name}')">Delete</button>
+    </div>
+  </div>`;
+}
 function simpleTable(headers,rows){
   return `<table class="nx-muted-table"><thead><tr>${headers.map(h=>`<th>${esc(uiText(h))}</th>`).join('')}</tr></thead><tbody>${rows||'<tr><td colspan="'+headers.length+'">'+emptyState('Nothing here yet')+'</td></tr>'}</tbody></table>`;
 }
@@ -11754,7 +11793,7 @@ async function renderVMs(body,tab){
   if(tab==='Speicher-Pools'||tab==='Storage pools')return renderVmPoolsSimple(body);
   const v=await api('/vms/list');
   body.innerHTML=viewIntro('Virtual machines','Create and run complete guest systems. Advanced hardware and snapshots are inside Manage.',`<button class="btn" onclick="vmCreateForm()">Create VM</button>`)
-    +`<div class="nx-card-grid">${v.map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${statusBadge(x.state,x.active?'good':'warn')}</div><div class="nx-kv">${cardMetric('RAM',fmtBytes(x.max_mem))}${cardMetric('CPU',x.vcpus)}${cardMetric('Console',x.active?'Available':'Start first')}${cardMetric('State',esc(x.state))}</div><div class="nx-action-row"><button class="btn sm" onclick="vmAct('${esc(x.name)}','${x.active?'reboot':'start'}')">${x.active?'Restart':'Start'}</button>${x.active?`<button class="btn ghost sm" onclick="vmAct('${esc(x.name)}','shutdown')" title="A VM shutdown asks the guest OS to power off cleanly.">Shut down</button>`:''}<button class="btn ghost sm" onclick="vmConsole('${esc(x.name)}')" ${!x.active?'disabled':''}>Open console</button><button class="btn ghost sm" onclick="vmManage('${esc(x.name)}')">Manage</button><button class="btn danger sm" onclick="vmDeleteConfirm('${esc(x.name)}')">Delete</button></div></div>`).join('')||emptyState('No virtual machines')}</div>`;
+    +`<div class="nx-card-grid vm-card-grid">${v.map(vmCard).join('')||emptyState('No virtual machines')}</div>`;
   translateRenderedText(body);
 }
 async function renderVmPoolsSimple(body){
