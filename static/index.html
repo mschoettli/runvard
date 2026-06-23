@@ -290,15 +290,16 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 .file-card.selected{background:rgba(122,74,255,.15);border-color:rgba(122,74,255,.4);box-shadow:inset 0 0 0 1px rgba(122,74,255,.2)}
 .file-card.selected .fn{color:var(--text)}
 .file-card.selected .fi{box-shadow:0 0 0 2px rgba(255,255,255,.08)}
-.files-statusbar{display:flex;align-items:center;gap:12px;padding:7px 4px 2px;margin-top:4px;border-top:.5px solid var(--border);font-size:11px;color:var(--text3);flex-shrink:0}
+.files-statusbar{display:flex;align-items:center;gap:12px;padding:7px 4px 2px;margin-top:4px;border-top:.5px solid var(--border);font-size:11px;color:var(--text3);flex-shrink:0;min-height:34px}
 .files-statusbar .sb-item{display:flex;align-items:center;gap:5px}
 .files-statusbar .sb-sep{width:.5px;height:12px;background:var(--border)}
-.files-statusbar .sb-total{margin-left:auto;display:flex;align-items:center;gap:6px}
+.files-statusbar .sb-total{margin-left:auto;display:flex;align-items:center;gap:6px;white-space:nowrap}
 .files-statusbar .sb-total strong{color:var(--text2);font-family:'JetBrains Mono',monospace;font-weight:400}
-.files-statusbar .sb-actions{margin-left:8px;display:none;align-items:center;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+.files-statusbar .sb-actions{margin-left:8px;display:none;align-items:center;gap:4px;flex-wrap:nowrap;justify-content:flex-end;min-width:0}
 .files-statusbar .sb-actions.active{display:flex}
-.files-statusbar .sb-selected{font-size:11px;color:var(--text2);margin-right:2px;white-space:nowrap}
-.files-statusbar .sb-actions .btn{padding:3px 8px;font-size:11px}
+.files-statusbar .sb-selected{font-size:11px;color:var(--text2);margin-right:4px;white-space:nowrap}
+.files-statusbar .sb-actions .btn{width:26px;height:26px;min-width:26px;padding:0;border-radius:8px;font-size:12px;justify-content:center;gap:0}
+.files-statusbar .sb-actions .btn.wide{width:34px;min-width:34px;font-size:10px;font-weight:700}
 .breadcrumb{display:flex;align-items:center;gap:2px;margin-bottom:10px}
 .bc-seg{font-size:11px;color:var(--text3);padding:3px 6px;border-radius:6px;cursor:pointer;transition:all .12s}
 .bc-seg:hover{background:var(--glass);color:var(--text2)}
@@ -8013,14 +8014,14 @@ function updateBulkBar(){
   if(!count){actions.innerHTML='';return;}
   actions.innerHTML=`
     <span class="sb-selected">${count} ${esc(fileText('selected'))}</span>
-    ${count===1?`<button class="btn ghost sm" onclick="createShareLink([...selectedFiles][0])">${esc(fileText('share'))}</button>`:''}
-    <button class="btn ghost sm" onclick="bulkCopy()">${esc(fileText('copy'))}</button>
-    <button class="btn ghost sm" onclick="bulkCut()">${esc(fileText('cut'))}</button>
-    ${clipboard?`<button class="btn ghost sm" onclick="pasteClipboard()">${esc(fileText('paste'))}</button>`:''}
-    <button class="btn ghost sm" onclick="bulkDownload()">↓ ${esc(fileText('download'))}</button>
-    <button class="btn ghost sm" onclick="bulkZip()">${esc(fileText('zip'))}</button>
-    <button class="btn danger sm" onclick="bulkDelete()">${esc(fileText('delete'))}</button>
-    <button class="btn ghost sm" onclick="selectedFiles.clear();lastSelectedPath=null;updateFileSelectionUI()">✕</button>`;
+    ${count===1?`<button class="btn ghost sm" onclick="createShareLink([...selectedFiles][0])" title="${esc(fileText('share'))}" aria-label="${esc(fileText('share'))}">↗</button>`:''}
+    <button class="btn ghost sm" onclick="bulkCopy()" title="${esc(fileText('copy'))}" aria-label="${esc(fileText('copy'))}">⧉</button>
+    <button class="btn ghost sm" onclick="bulkCut()" title="${esc(fileText('cut'))}" aria-label="${esc(fileText('cut'))}">✂</button>
+    ${clipboard?`<button class="btn ghost sm" onclick="pasteClipboard()" title="${esc(fileText('paste'))}" aria-label="${esc(fileText('paste'))}">▣</button>`:''}
+    <button class="btn ghost sm" onclick="bulkDownload()" title="${esc(fileText('download'))}" aria-label="${esc(fileText('download'))}">↓</button>
+    <button class="btn ghost sm wide" onclick="bulkZip()" title="${esc(fileText('zip'))}" aria-label="${esc(fileText('zip'))}">ZIP</button>
+    <button class="btn danger sm" onclick="bulkDelete()" title="${esc(fileText('delete'))}" aria-label="${esc(fileText('delete'))}">🗑</button>
+    <button class="btn ghost sm" onclick="selectedFiles.clear();lastSelectedPath=null;updateFileSelectionUI()" title="${esc(uiText('Cancel'))}" aria-label="${esc(uiText('Cancel'))}">✕</button>`;
 }
 
 window.navTo=p=>{currentPath=p;selectedFiles.clear();lastSelectedPath=null;closeCtx();renderFiles($('#modal-body'));};
