@@ -339,6 +339,32 @@ def test_readonly_user_cannot_enable_expert_mode(monkeypatch):
     assert response.status_code == 403
 
 
+def test_vm_console_page_requires_admin(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+
+    response = _client("readonly").get("/vm-console?name=debian-vm")
+
+    assert response.status_code == 403
+
+
+def test_vm_console_page_renders_for_admin(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+
+    response = _client().get("/vm-console?name=debian-vm")
+
+    assert response.status_code == 200
+    assert "Console: debian-vm" in response.text
+    assert "/ws/vnc?name=" in response.text
+
+
+def test_vm_console_page_rejects_bad_name(monkeypatch):
+    monkeypatch.setattr(server, "login_enabled", lambda: True)
+
+    response = _client().get("/vm-console?name=../bad")
+
+    assert response.status_code == 400
+
+
 def test_runvard_update_start_error_returns_json(monkeypatch):
     monkeypatch.setattr(server, "login_enabled", lambda: True)
     monkeypatch.setattr(

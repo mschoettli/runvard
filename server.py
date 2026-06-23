@@ -417,6 +417,103 @@ def login_page(request: Request):
     return HTMLResponse(_frontend_html("login.html"), headers={"Cache-Control": "no-store"})
 
 
+@app.get("/vm-console", response_class=HTMLResponse)
+def vm_console_page(name: str, user: str = Depends(require_admin)):
+    import html as _html
+    import re as _re
+    if not _re.match(r"^[A-Za-z0-9][A-Za-z0-9_.\- ]{0,127}$", name):
+        raise HTTPException(status_code=400, detail="Invalid VM name")
+    safe_name = _html.escape(name, quote=True)
+    json_name = json.dumps(name)
+    return HTMLResponse(f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>{safe_name} console - runvard</title>
+<link rel="icon" type="image/png" href="/static/runvard-icon.png">
+<style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+html,body{{width:100%;height:100%;background:#050508;color:#f0f0ff;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;overflow:hidden}}
+body{{display:flex;flex-direction:column}}
+.bar{{height:38px;display:flex;align-items:center;gap:8px;padding:6px 10px;background:#0d0e1a;border-bottom:1px solid rgba(255,255,255,.08);flex-shrink:0}}
+.name{{font-size:12px;color:rgba(240,240,255,.72);font-weight:600;max-width:40vw;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+.status{{margin-left:auto;font-size:11px;color:rgba(240,240,255,.45);font-family:ui-monospace,SFMono-Regular,Menlo,monospace}}
+button{{height:26px;border:1px solid rgba(255,255,255,.12);border-radius:8px;background:rgba(255,255,255,.04);color:rgba(240,240,255,.74);padding:0 10px;font:600 11px inherit;cursor:pointer}}
+button:hover{{background:rgba(122,74,255,.12);border-color:rgba(122,74,255,.35);color:#fff}}
+#screen{{flex:1;min-height:0;background:#000;overflow:auto}}
+#screen.fit{{overflow:hidden}}
+.dot{{width:7px;height:7px;border-radius:50%;background:#eab308;display:inline-block;margin-right:6px;vertical-align:-1px}}
+.ok .dot{{background:#22c55e}}.bad .dot{{background:#ef4444}}
+</style>
+</head>
+<body>
+<div class="bar">
+  <span class="name">Console: {safe_name}</span>
+  <button id="scale" type="button" onclick="toggleScale()">Fit</button>
+  <button type="button" onclick="connect()">Reconnect</button>
+  <button type="button" onclick="window.close()">Close</button>
+  <span id="status" class="status"><span class="dot"></span>connecting...</span>
+</div>
+<div id="screen" class="fit"></div>
+<script>
+const VM_NAME={json_name};
+let rfb=null;
+let scaleMode='fit';
+const screen=document.getElementById('screen');
+const statusEl=document.getElementById('status');
+function setStatus(text,tone=''){{statusEl.className='status '+tone;statusEl.innerHTML='<span class="dot"></span>'+text;}}
+function resolveRfbConstructor(mod){{
+  let candidate=mod;
+  for(let i=0;i<4&&candidate&&typeof candidate!=='function';i++){{
+    candidate=typeof candidate.RFB==='function'?candidate.RFB:candidate.default;
+  }}
+  return typeof candidate==='function'?candidate:null;
+}}
+async function loadRfb(){{
+  try{{
+    const mod=await import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.5.0/lib/rfb.js/+esm');
+    const RFB=resolveRfbConstructor(mod);
+    if(RFB)return RFB;
+  }}catch(e){{}}
+  const mod=await import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.5.0/+esm');
+  const RFB=resolveRfbConstructor(mod);
+  if(!RFB)throw new Error('RFB export not found');
+  return RFB;
+}}
+function applyScale(){{
+  if(!rfb)return;
+  rfb.scaleViewport=scaleMode==='fit';
+  screen.classList.toggle('fit',scaleMode==='fit');
+  document.getElementById('scale').textContent=scaleMode==='fit'?'Fit':'1:1';
+}}
+function toggleScale(){{
+  scaleMode=scaleMode==='fit'?'native':'fit';
+  applyScale();
+}}
+async function connect(){{
+  if(rfb){{try{{rfb.disconnect();}}catch(e){{}}rfb=null;}}
+  screen.innerHTML='';
+  setStatus('connecting...');
+  try{{
+    const RFB=await loadRfb();
+    const proto=location.protocol==='https:'?'wss':'ws';
+    const url=`${{proto}}://${{location.host}}/ws/vnc?name=${{encodeURIComponent(VM_NAME)}}`;
+    rfb=new RFB(screen,url,{{}});
+    rfb.resizeSession=false;
+    applyScale();
+    rfb.addEventListener('connect',()=>setStatus('connected','ok'));
+    rfb.addEventListener('disconnect',()=>setStatus('disconnected','bad'));
+    rfb.addEventListener('securityfailure',()=>setStatus('authentication failed','bad'));
+  }}catch(e){{setStatus('error: '+e.message,'bad');}}
+}}
+window.addEventListener('beforeunload',()=>{{if(rfb)try{{rfb.disconnect();}}catch(e){{}}}});
+connect();
+</script>
+</body>
+</html>""", headers={"Cache-Control": "no-store"})
+
+
 @app.post("/api/login")
 def api_login(request: Request, username: str = Form(...),
               password: str = Form(...), remember: str = Form("0")):

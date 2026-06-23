@@ -7034,7 +7034,7 @@ function syncModalLanguage(){
   loadAuthStatus();
 }
 function openTileById(id){const t=TILES.find(x=>x.id===id);if(t)openModal(t);}
-function closeModal(){$('#overlay').classList.remove('open');if(termWs){termWs.close();termWs=null;}if(typeof window._termDispose==='function'){try{window._termDispose();}catch(e){}}if(typeof _dockerStatsTimer!=='undefined'&&_dockerStatsTimer){clearInterval(_dockerStatsTimer);_dockerStatsTimer=null;}if(typeof destroyHistChart==='function')destroyHistChart();if(typeof _vncRfb!=='undefined'&&_vncRfb){try{_vncRfb.disconnect();}catch(e){}_vncRfb=null;}}
+function closeModal(){$('#overlay').classList.remove('open');if(termWs){termWs.close();termWs=null;}if(typeof window._termDispose==='function'){try{window._termDispose();}catch(e){}}if(typeof _dockerStatsTimer!=='undefined'&&_dockerStatsTimer){clearInterval(_dockerStatsTimer);_dockerStatsTimer=null;}if(typeof destroyHistChart==='function')destroyHistChart();}
 $('#overlay').onclick=e=>{if(e.target.id==='overlay')closeModal();};
 
 async function renderTab(id,tab){const body=$('#modal-body');body.style.padding='';body.style.overflow='';body.style.display='';body.style.flexDirection='';body.innerHTML=`<div class="loading">${esc(tr('loading'))}</div>`;try{
@@ -8886,54 +8886,12 @@ async function renderVMs(body,tab){
     </td></tr>`).join('')||'<tr><td colspan="5" class="loading">No VMs</td></tr>'}</tbody></table>`;}
 window.vmAct=async(name,action)=>{try{await post('/vms/action',{name,action});const msgs={start:'VM started: '+name,shutdown:'VM heruntergefahren: '+name,reboot:'VM restarted: '+name,delete:'VM deleted: '+name};toast(msgs[action]||'OK');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}};
 
-// VM-Konsole via noVNC (RFB über /ws/vnc-Proxy)
-let _vncRfb=null;
-window.vmConsole=async name=>{
-  const body=$('#modal-body');
-  body.style.display='flex';body.style.flexDirection='column';body.style.padding='0';body.style.overflow='hidden';
-  body.innerHTML=`
-    <div style="display:flex;align-items:center;gap:10px;padding:6px 10px;background:rgba(0,0,0,.3);border-bottom:.5px solid rgba(255,255,255,.06);flex-shrink:0">
-      <button class="btn ghost sm" onclick="vmConsoleBack()">← Back</button>
-      <span style="font-size:12px;color:var(--text2)">Konsole: ${esc(name)}</span>
-      <span id="vnc-status" style="margin-left:auto;font-size:11px;color:var(--text3)">verbinde…</span>
-    </div>
-    <div id="vnc-screen" style="flex:1;overflow:hidden;background:#000"></div>`;
-  const resolveRfbConstructor=mod=>{
-    let candidate=mod;
-    for(let i=0;i<4&&candidate&&typeof candidate!=='function';i++){
-      candidate=typeof candidate.RFB==='function'?candidate.RFB:candidate.default;
-    }
-    return typeof candidate==='function'?candidate:null;
-  };
-  let RFB;
-  try{
-    const mod=await import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.5.0/lib/rfb.js/+esm');
-    RFB=resolveRfbConstructor(mod);
-    if(!RFB)throw new Error('RFB export not found');
-  }
-  catch(e){
-    try{
-      const mod=await import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.5.0/+esm');
-      RFB=resolveRfbConstructor(mod);
-      if(!RFB)throw new Error('RFB export not found');
-    }catch(_){
-      const st=$('#vnc-status');if(st)st.textContent=uiText('noVNC could not be loaded');return;
-    }
-  }
-  const proto=location.protocol==='https:'?'wss':'ws';
-  const url=`${proto}://${location.host}/ws/vnc?name=${encodeURIComponent(name)}`;
-  try{
-    _vncRfb=new RFB($('#vnc-screen'),url,{});
-    _vncRfb.scaleViewport=true; _vncRfb.resizeSession=false;
-    _vncRfb.addEventListener('connect',()=>{const st=$('#vnc-status');if(st)st.textContent=uiText('connected');});
-    _vncRfb.addEventListener('disconnect',()=>{const st=$('#vnc-status');if(st)st.textContent=uiText('disconnected');});
-    _vncRfb.addEventListener('securityfailure',()=>{const st=$('#vnc-status');if(st)st.textContent='Authentifizierung fehlgeschlagen';});
-  }catch(e){const st=$('#vnc-status');if(st)st.textContent='Error: '+e.message;}
-};
-window.vmConsoleBack=()=>{
-  if(_vncRfb){try{_vncRfb.disconnect();}catch(e){}_vncRfb=null;}
-  const b=$('#modal-body');b.style.display='';b.style.flexDirection='';b.style.padding='';b.style.overflow='';
-  renderVMs(b);
+window.vmConsole=name=>{
+  const url='/vm-console?name='+encodeURIComponent(name);
+  const target='runvard-vm-'+String(name||'console').replace(/[^A-Za-z0-9_-]/g,'_');
+  const win=window.open(url,target,'width=1280,height=820,resizable=yes,scrollbars=no');
+  if(win)win.focus();
+  else{toast('Popup blocked, opening console in this tab','error');location.href=url;}
 };
 // Punkt 4: VM löschen Bestätigung
 window.vmDeleteConfirm=name=>confirmDelete('Delete VM',`Really delete "${name}" permanently? The VM and its disk will be removed.`,async()=>{try{await post('/vms/action',{name,action:'delete'});toast('VM deleted');renderVMs($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
