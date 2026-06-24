@@ -11074,28 +11074,43 @@ async function renderPorts(body){
   try{
     const data=await api('/ports');
     const rows=data.ports||[];
-    const apps=new Set(rows.map(r=>r.app));
+    const grouped=Array.from(rows.reduce((map,r)=>{
+      const key=[r.app,r.port,r.protocol||'tcp',r.source].join('|');
+      if(!map.has(key))map.set(key,{app:r.app,port:r.port,protocol:r.protocol||'tcp',source:r.source,ips:[]});
+      const item=map.get(key);
+      if(!item.ips.includes(r.ip))item.ips.push(r.ip);
+      return map;
+    },new Map()).values()).sort((a,b)=>a.app.localeCompare(b.app)||Number(a.port)-Number(b.port));
+    grouped.forEach(g=>g.ips.sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})));
+    const apps=new Set(grouped.map(r=>r.app));
     const ips=new Set(rows.map(r=>r.ip));
+    const portKeys=new Set(grouped.map(r=>`${r.port}/${r.protocol}`));
+    const urlFor=(ip,port,proto)=>{
+      const scheme=(Number(port)===443||Number(port)===8443||Number(port)===9443)?'https':'http';
+      return `${scheme}://${ip}:${port}`;
+    };
     body.innerHTML=`
       <div class="toolbar" style="margin-bottom:14px">
         <button class="btn sm" onclick="renderPorts($('#modal-body'))">↻ ${esc(uiText('Refresh'))}</button>
-        <span style="margin-left:auto;font-size:11px;color:var(--text3)">${esc(rows.length+' Ports · '+apps.size+' Apps · '+ips.size+' IPs')}</span>
+        <span style="margin-left:auto;font-size:11px;color:var(--text3)">${esc(apps.size+' Apps · '+portKeys.size+' Ports · '+ips.size+' IPs · '+rows.length+' Zuordnungen')}</span>
       </div>
       <div class="nx-summary-grid" style="margin-bottom:14px">
-        ${summaryCard('Ports',rows.length,'Runvard')}
-        ${summaryCard('Apps',apps.size,'Compose')}
+        ${summaryCard('Apps',apps.size,'Runvard')}
+        ${summaryCard('Ports',portKeys.size,'Genutzt')}
         ${summaryCard('IPs',ips.size,'Host')}
       </div>
-      <table>
-        <thead><tr><th>IP</th><th>Port</th><th>Name der App</th><th>Quelle</th></tr></thead>
-        <tbody>${rows.map(r=>`
+      <div style="overflow:auto">
+      <table style="table-layout:fixed;min-width:860px">
+        <thead><tr><th style="width:26%">Name der App</th><th style="width:110px">Port</th><th>IPs</th><th style="width:110px">Quelle</th></tr></thead>
+        <tbody>${grouped.map(r=>`
           <tr>
-            <td class="mono">${esc(r.ip)}</td>
-            <td class="mono">${esc(r.port)}${r.protocol&&r.protocol!=='tcp'?'/'+esc(r.protocol):''}</td>
-            <td>${esc(r.app)}</td>
-            <td style="color:var(--text3)">${esc(r.source)}</td>
+            <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.app)}</td>
+            <td class="mono" style="white-space:nowrap">${esc(r.port)}${r.protocol&&r.protocol!=='tcp'?'/'+esc(r.protocol):''}</td>
+            <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.ips.map(ip=>`<a class="mono" href="${esc(urlFor(ip,r.port,r.protocol))}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;margin-right:12px">${esc(ip)}</a>`).join('')}</td>
+            <td style="color:var(--text3);white-space:nowrap">${esc(r.source)}</td>
           </tr>`).join('')||'<tr><td colspan="4"><div class="empty-state">Keine von Runvard verwalteten Ports gefunden</div></td></tr>'}</tbody>
-      </table>`;
+      </table>
+      </div>`;
     translateRenderedText(body);
   }catch(e){
     body.innerHTML=`<div class="empty-state">Error: ${esc(e.message)}</div>`;

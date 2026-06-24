@@ -13,6 +13,7 @@ except ImportError:
 
 APPS_DIR = os.getenv("RUNVARD_APPS_DIR", "/opt/runvard/data/apps")
 COMPOSE_DIR = os.getenv("RUNVARD_COMPOSE_DIR", "/opt/runvard/data/compose")
+IGNORED_PROJECTS = {"portvard"}
 IGNORED_INTERFACE_PREFIXES = (
     "lo", "docker", "br-", "veth", "virbr", "tailscale", "zt", "wg", "tun",
 )
@@ -205,12 +206,18 @@ def compose_files(apps_dir=None, compose_dir=None):
     files = []
     if app_root.is_dir():
         for path in sorted(app_root.glob("*/docker-compose.yml")):
+            if path.parent.name in IGNORED_PROJECTS:
+                continue
             files.append((path.parent.name, "App", path))
     if compose_root.is_dir():
         for path in sorted(compose_root.glob("*")):
             if path.is_file() and path.suffix in (".yml", ".yaml"):
+                if path.stem in IGNORED_PROJECTS:
+                    continue
                 files.append((path.stem, "Compose", path))
             elif path.is_dir():
+                if path.name in IGNORED_PROJECTS:
+                    continue
                 for name in ("docker-compose.yml", "compose.yml", "docker-compose.yaml", "compose.yaml"):
                     candidate = path / name
                     if candidate.is_file():

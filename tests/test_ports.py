@@ -95,3 +95,22 @@ services:
         ("Jellyfin", 8096),
         ("Custom", 9000),
     ]
+
+
+def test_list_ports_ignores_legacy_portvard_app(monkeypatch, tmp_path):
+    apps_dir = tmp_path / "apps"
+    compose_dir = tmp_path / "compose"
+    old_dir = apps_dir / "portvard"
+    old_dir.mkdir(parents=True)
+    compose_dir.mkdir()
+    (old_dir / "docker-compose.yml").write_text("""
+services:
+  portvard:
+    network_mode: host
+    environment:
+      - PORT=8767
+""")
+
+    monkeypatch.setattr(ports, "host_ips", lambda: ["192.168.1.10"])
+
+    assert ports.list_ports(apps_dir, compose_dir)["ports"] == []
