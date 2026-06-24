@@ -1,71 +1,21 @@
 #!/usr/bin/env python3
-import ipaddress
+import html
 import json
 import os
 import re
 import socket
 import subprocess
-import threading
-import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
-from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import urlparse
 
 
-DATA_DIR = Path(os.environ.get("DATA_DIR", "/data"))
-STATE_FILE = DATA_DIR / "last_scan.json"
 PORT = int(os.environ.get("PORT", "8766"))
-SCAN_CIDRS = os.environ.get("SCAN_CIDRS", "auto")
-PORT_RANGE = os.environ.get("PORT_RANGE", "common")
-NAME_SOURCES = [x.strip().lower() for x in os.environ.get("NAME_SOURCES", "dns,mdns,netbios").split(",") if x.strip()]
-WORKERS = int(os.environ.get("SCAN_WORKERS", "512"))
-CONNECT_TIMEOUT = float(os.environ.get("CONNECT_TIMEOUT", "0.25"))
-QUICK_CONNECT_TIMEOUT = float(os.environ.get("QUICK_CONNECT_TIMEOUT", "0.08"))
-QUICK_MAX_HOSTS = int(os.environ.get("QUICK_MAX_HOSTS", "1024"))
-COMMON_PORTS = [
-    21, 22, 23, 25, 53, 80, 110, 139, 143, 443, 445, 548, 587, 631, 993,
-    995, 1883, 2049, 3000, 3306, 3389, 5000, 5432, 5900, 6379, 8000, 8080,
-    8123, 8443, 8765, 8766, 9000, 9090, 9100, 9443, 32400,
-]
-DISCOVERY_PORTS = [22, 53, 80, 139, 443, 445, 3389, 8080, 8766]
-IGNORED_AUTO_INTERFACE_PREFIXES = (
+RUNVARD_APPS_DIR = Path(os.environ.get("RUNVARD_APPS_DIR", "/runvard/apps"))
+RUNVARD_COMPOSE_DIR = Path(os.environ.get("RUNVARD_COMPOSE_DIR", "/runvard/compose"))
+IGNORED_INTERFACE_PREFIXES = (
     "lo", "docker", "br-", "veth", "virbr", "tailscale", "zt", "wg", "tun",
 )
-
-
-state_lock = threading.Lock()
-scan_cancel = threading.Event()
-scan_thread = None
-state = {
-    "running": False,
-    "progress": 0,
-    "total": 0,
-    "message": "Bereit",
-    "error": "",
-    "started_at": "",
-    "finished_at": "",
-    "scan_mode": "",
-    "port_count": 0,
-    "result": None,
-}
-
-
-def now_iso():
-    return datetime.now(timezone.utc).isoformat()
-
-
-def load_last_scan():
-    try:
-        return json.loads(STATE_FILE.read_text())
-    except Exception:
-        return None
-
-
-def save_last_scan(result):
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    STATE_FILE.write_text(json.dumps(result, indent=2, sort_keys=True))
 
 
 def run_cmd(args, timeout=3):
@@ -73,388 +23,241 @@ def run_cmd(args, timeout=3):
         proc = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
     except Exception:
         return ""
-    if proc.returncode != 0:
-        return proc.stdout + proc.stderr
-    return proc.stdout
+    return proc.stdout if proc.returncode == 0 else proc.stdout + proc.stderr
 
 
-def detect_cidrs():
-    if SCAN_CIDRS.strip().lower() != "auto":
-        return [x.strip() for x in SCAN_CIDRS.split(",") if x.strip()]
-
-    cidrs = []
+def host_ips():
+    ips = []
     out = run_cmd(["ip", "-o", "-4", "addr", "show", "scope", "global"], timeout=3)
     for line in out.splitlines():
         if_match = re.match(r"\d+:\s+([^:\s]+)", line)
         ifname = (if_match.group(1).split("@", 1)[0] if if_match else "").lower()
-        if ifname.startswith(IGNORED_AUTO_INTERFACE_PREFIXES):
+        if ifname.startswith(IGNORED_INTERFACE_PREFIXES):
             continue
-        match = re.search(r"\binet\s+(\d+\.\d+\.\d+\.\d+/\d+)", line)
-        if not match:
-            continue
-        try:
-            network = ipaddress.ip_interface(match.group(1)).network
-        except ValueError:
-            continue
-        if network.is_private and str(network) not in cidrs:
-            cidrs.append(str(network))
-
-    if cidrs:
-        return cidrs
-
+        match = re.search(r"\binet\s+(\d+\.\d+\.\d+\.\d+)/\d+", line)
+        if match:
+            ips.append(match.group(1))
+    if ips:
+        return sorted(dict.fromkeys(ips))
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         sock.connect(("8.8.8.8", 80))
         ip = sock.getsockname()[0]
         sock.close()
-        network = ipaddress.ip_network(f"{ip}/24", strict=False)
-        if network.is_private:
-            cidrs.append(str(network))
+        return [ip]
     except Exception:
-        pass
-    return cidrs
+        return ["127.0.0.1"]
 
 
-def parse_ports(spec):
-    value = str(spec or "").strip().lower()
-    if value in ("", "common", "quick", "default"):
-        return sorted(set(COMMON_PORTS))
-    if value in ("all", "full", "1-65535"):
-        return list(range(1, 65536))
-    ports = set()
-    for part in value.split(","):
-        item = part.strip()
-        if not item:
-            continue
-        if "-" in item:
-            left, right = item.split("-", 1)
-            start, end = int(left), int(right)
-            ports.update(range(max(1, start), min(65535, end) + 1))
-        else:
-            port = int(item)
-            if 1 <= port <= 65535:
-                ports.add(port)
-    return sorted(ports)
+def app_label(project_name):
+    return project_name.replace("-", " ").replace("_", " ").strip().title() or project_name
 
 
-def iter_hosts(cidrs, max_hosts=None):
-    seen = set()
-    for cidr in cidrs:
-        try:
-            net = ipaddress.ip_network(cidr, strict=False)
-        except ValueError:
-            continue
-        if not isinstance(net, ipaddress.IPv4Network) or not net.is_private:
-            continue
-        for ip in net.hosts():
-            value = str(ip)
-            if value not in seen:
-                seen.add(value)
-                yield value
-                if max_hosts and len(seen) >= max_hosts:
-                    return
+def _strip_quote(value):
+    value = str(value or "").strip()
+    if len(value) >= 2 and value[0] == value[-1] and value[0] in ("'", '"'):
+        return value[1:-1]
+    return value
 
 
-def ping_host(ip):
-    proc = subprocess.run(["ping", "-c", "1", "-W", "1", ip],
-                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    return proc.returncode == 0
-
-
-def check_port(ip, port, timeout=CONNECT_TIMEOUT):
-    try:
-        with socket.create_connection((ip, port), timeout=timeout):
-            return True
-    except OSError:
-        return False
-
-
-def discover_host(ip):
-    if scan_cancel.is_set():
+def _parse_port_token(token):
+    token = _strip_quote(token).strip()
+    token = token.split("#", 1)[0].strip()
+    if not token:
         return None
-    if ping_host(ip):
-        return ip
-    for port in DISCOVERY_PORTS:
-        if scan_cancel.is_set():
-            return None
-        if check_port(ip, port, QUICK_CONNECT_TIMEOUT):
-            return ip
-    return None
+    proto = "tcp"
+    if "/" in token:
+        token, proto = token.rsplit("/", 1)
+        proto = proto.strip() or "tcp"
+    parts = token.split(":")
+    if len(parts) == 1:
+        return None
+    bind_ip = ""
+    host_port = parts[0]
+    if len(parts) >= 3:
+        bind_ip = parts[-3] if re.match(r"^\d+\.\d+\.\d+\.\d+$", parts[-3]) else ""
+        host_port = parts[-2]
+    if "-" in host_port:
+        host_port = host_port.split("-", 1)[0]
+    if not host_port.isdigit():
+        return None
+    port = int(host_port)
+    if not 1 <= port <= 65535:
+        return None
+    return {"bind_ip": bind_ip, "port": port, "protocol": proto.lower()}
 
 
-def discover_arp_hosts(cidrs):
-    found = {}
-    for cidr in cidrs:
-        if scan_cancel.is_set():
-            break
-        out = run_cmd(
-            ["arp-scan", "--retry=1", "--timeout=500", "--plain", cidr],
-            timeout=8,
-        )
-        for line in out.splitlines():
-            match = re.match(
-                r"^\s*(\d+\.\d+\.\d+\.\d+)\s+([0-9a-fA-F:]{17})\b",
-                line,
-            )
-            if match:
-                found[match.group(1)] = match.group(2).lower()
-    return found
+def _service_display_name(project_name, service_name, service_count):
+    base = app_label(project_name)
+    if service_count <= 1 or service_name == project_name:
+        return base
+    return f"{base} / {service_name}"
 
 
-def resolve_dns(ip):
-    try:
-        return socket.gethostbyaddr(ip)[0]
-    except Exception:
-        return ""
-
-
-def resolve_mdns(ip):
-    out = run_cmd(["avahi-resolve-address", ip], timeout=2).strip()
-    if not out:
-        return ""
-    parts = out.split()
-    return parts[-1].rstrip(".") if len(parts) >= 2 else ""
-
-
-def resolve_netbios(ip):
-    out = run_cmd(["nmblookup", "-A", ip], timeout=3)
-    for line in out.splitlines():
-        if "<00>" in line and "GROUP" not in line:
-            name = line.split("<00>", 1)[0].strip()
-            if name:
-                return name
-    return ""
-
-
-def resolve_name(ip):
-    resolvers = {
-        "dns": resolve_dns,
-        "mdns": resolve_mdns,
-        "netbios": resolve_netbios,
-    }
-    for source in NAME_SOURCES:
-        resolver = resolvers.get(source)
-        if not resolver:
+def parse_compose_ports(content, project_name, source, fallback_ips):
+    services = {}
+    current = None
+    current_list = ""
+    for raw in str(content or "").splitlines():
+        line = raw.rstrip()
+        service_match = re.match(r"^  ([A-Za-z0-9_.-]+):\s*(?:#.*)?$", line)
+        if service_match:
+            current = service_match.group(1)
+            services.setdefault(current, {"ports": [], "env": {}, "host": False})
+            current_list = ""
             continue
-        name = resolver(ip)
-        if name:
-            return name, source
-    return "", ""
+        if not current or not line.startswith("    "):
+            current_list = ""
+            continue
+        stripped = line.strip()
+        if re.match(r"^[A-Za-z0-9_.-]+:", stripped):
+            current_list = ""
+        if stripped.startswith("network_mode:") and "host" in stripped:
+            services[current]["host"] = True
+        elif stripped.startswith("ports:"):
+            current_list = "ports"
+        elif stripped.startswith("environment:"):
+            current_list = "environment"
+        elif current_list == "ports" and stripped.startswith("- "):
+            parsed = _parse_port_token(stripped[2:].strip())
+            if parsed:
+                services[current]["ports"].append(parsed)
+        elif current_list == "environment" and stripped.startswith("- "):
+            item = _strip_quote(stripped[2:].strip())
+            if "=" in item:
+                key, value = item.split("=", 1)
+                services[current]["env"][key.strip()] = _strip_quote(value)
+        elif current_list == "environment" and ":" in stripped:
+            key, value = stripped.split(":", 1)
+            services[current]["env"][key.strip()] = _strip_quote(value)
+
+    rows = []
+    service_count = len(services)
+    for service_name, info in services.items():
+        display_name = _service_display_name(project_name, service_name, service_count)
+        for item in info["ports"]:
+            targets = [item["bind_ip"]] if item["bind_ip"] and item["bind_ip"] != "0.0.0.0" else fallback_ips
+            for ip in targets:
+                rows.append({
+                    "ip": ip,
+                    "port": item["port"],
+                    "protocol": item["protocol"],
+                    "app": display_name,
+                    "service": service_name,
+                    "source": source,
+                })
+        if info["host"]:
+            port = str(info["env"].get("PORT", "")).strip()
+            if port.isdigit():
+                for ip in fallback_ips:
+                    rows.append({
+                        "ip": ip,
+                        "port": int(port),
+                        "protocol": "tcp",
+                        "app": display_name,
+                        "service": service_name,
+                        "source": source,
+                    })
+    return rows
 
 
-def read_mac(ip):
-    try:
-        arp = Path("/proc/net/arp").read_text()
-    except Exception:
-        return ""
-    for line in arp.splitlines()[1:]:
-        parts = line.split()
-        if len(parts) >= 4 and parts[0] == ip and parts[3] != "00:00:00:00:00:00":
-            return parts[3]
-    return ""
-
-
-def scan_host(ip, ports, known_alive=False, timeout=CONNECT_TIMEOUT, known_mac=""):
-    if scan_cancel.is_set():
-        return None
-    alive = known_alive or ping_host(ip)
-    open_ports = []
-    for port in ports:
-        if scan_cancel.is_set():
-            return None
-        if check_port(ip, port, timeout):
-            open_ports.append(port)
-    if not alive and not open_ports:
-        return None
-    name, source = resolve_name(ip)
-    return {
-        "ip": ip,
-        "name": name,
-        "name_source": source,
-        "mac": known_mac or read_mac(ip),
-        "scan_time": now_iso(),
-        "open_ports": open_ports,
-        "closed_or_filtered": max(0, len(ports) - len(open_ports)),
-    }
-
-
-def scan_worker(port_spec=None, scan_mode="quick"):
-    started = now_iso()
-    try:
-        cidrs = detect_cidrs()
-        effective_spec = port_spec or PORT_RANGE
-        ports = parse_ports(effective_spec)
-        is_quick = scan_mode == "quick"
-        hosts = list(iter_hosts(cidrs, QUICK_MAX_HOSTS if is_quick else None))
-        with state_lock:
-            state.update({
-                "running": True,
-                "progress": 0,
-                "total": len(hosts),
-                "message": "Vollscan laeuft" if scan_mode == "full" else "Geraete werden gesucht",
-                "error": "",
-                "started_at": started,
-                "finished_at": "",
-                "scan_mode": scan_mode,
-                "port_count": len(ports),
-            })
-        devices = []
-        scan_hosts = hosts
-        discovery_macs = {}
-        if is_quick:
-            active_hosts = set()
-            discovery_macs = discover_arp_hosts(cidrs)
-            active_hosts.update(discovery_macs)
-            with state_lock:
-                state["message"] = f"{len(active_hosts)} Geraete per ARP gefunden"
-            with ThreadPoolExecutor(max_workers=max(1, WORKERS)) as pool:
-                futures = {pool.submit(discover_host, ip): ip for ip in hosts}
-                for idx, future in enumerate(as_completed(futures), start=1):
-                    if scan_cancel.is_set():
+def compose_files():
+    files = []
+    if RUNVARD_APPS_DIR.is_dir():
+        for path in sorted(RUNVARD_APPS_DIR.glob("*/docker-compose.yml")):
+            files.append((path.parent.name, "App", path))
+    if RUNVARD_COMPOSE_DIR.is_dir():
+        for path in sorted(RUNVARD_COMPOSE_DIR.glob("*")):
+            if path.is_file() and path.suffix in (".yml", ".yaml"):
+                files.append((path.stem, "Compose", path))
+            elif path.is_dir():
+                for name in ("docker-compose.yml", "compose.yml", "docker-compose.yaml", "compose.yaml"):
+                    candidate = path / name
+                    if candidate.is_file():
+                        files.append((path.name, "Compose", candidate))
                         break
-                    found = future.result()
-                    if found:
-                        active_hosts.add(found)
-                    with state_lock:
-                        state["progress"] = idx
-                        state["message"] = f"{idx}/{len(hosts)} Hosts gesucht, {len(active_hosts)} aktiv"
-            scan_hosts = sorted(active_hosts, key=ipaddress.ip_address)
-            with state_lock:
-                state["progress"] = 0
-                state["total"] = len(scan_hosts)
-                state["message"] = f"{len(scan_hosts)} aktive Geraete, Ports werden geprueft"
-        with ThreadPoolExecutor(max_workers=max(1, WORKERS)) as pool:
-            futures = {
-                pool.submit(
-                    scan_host,
-                    ip,
-                    ports,
-                    is_quick,
-                    QUICK_CONNECT_TIMEOUT if is_quick else CONNECT_TIMEOUT,
-                    discovery_macs.get(ip, ""),
-                ): ip for ip in scan_hosts
-            }
-            for idx, future in enumerate(as_completed(futures), start=1):
-                if scan_cancel.is_set():
-                    break
-                item = future.result()
-                if item:
-                    devices.append(item)
-                with state_lock:
-                    state["progress"] = idx
-                    state["message"] = f"{idx}/{len(scan_hosts)} aktive Hosts, {len(ports)} Ports je Host"
-        result = {
-            "started_at": started,
-            "finished_at": now_iso(),
-            "cancelled": scan_cancel.is_set(),
-            "cidrs": cidrs,
-            "port_range": effective_spec,
-            "port_count": len(ports),
-            "scan_mode": scan_mode,
-            "hosts_considered": len(hosts),
-            "hosts_scanned": len(scan_hosts),
-            "devices": sorted(devices, key=lambda x: ipaddress.ip_address(x["ip"])),
-        }
-        save_last_scan(result)
-        with state_lock:
-            state.update({
-                "running": False,
-                "finished_at": result["finished_at"],
-                "message": "Scan abgebrochen" if result["cancelled"] else "Scan fertig",
-                "result": result,
-            })
-    except Exception as exc:
-        with state_lock:
-            state.update({"running": False, "error": str(exc), "message": "Fehler"})
+    return files
 
 
-HTML = """<!doctype html>
+def runvard_ports():
+    ips = host_ips()
+    rows = []
+    for project_name, source, path in compose_files():
+        try:
+            content = path.read_text()
+        except OSError:
+            continue
+        rows.extend(parse_compose_ports(content, project_name, source, ips))
+    seen = set()
+    unique = []
+    for row in rows:
+        key = (row["ip"], row["port"], row["protocol"], row["app"], row["service"])
+        if key in seen:
+            continue
+        seen.add(key)
+        unique.append(row)
+    return sorted(unique, key=lambda x: (x["ip"], x["port"], x["app"]))
+
+
+def page():
+    return """<!doctype html>
 <html lang="de">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Ports</title>
   <style>
-    :root{color-scheme:dark;--bg:#101417;--panel:#171d21;--line:#2b353b;--text:#eef3f5;--muted:#91a0a8;--accent:#4fb3ff;--ok:#5ee28b;--bad:#ff7979}
+    :root{color-scheme:dark;--bg:#101417;--panel:#171d21;--line:#2b353b;--text:#eef3f5;--muted:#91a0a8;--accent:#4fb3ff}
     body{margin:0;background:var(--bg);color:var(--text);font:14px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
     header{display:flex;align-items:center;justify-content:space-between;gap:16px;padding:18px 24px;border-bottom:1px solid var(--line);background:#11181c}
     h1{font-size:22px;margin:0}
-    main{padding:22px 24px;max-width:1280px;margin:0 auto}
+    main{padding:22px 24px;max-width:1120px;margin:0 auto}
     button{border:1px solid var(--line);background:#1d262b;color:var(--text);border-radius:7px;padding:9px 13px;cursor:pointer}
     button.primary{background:var(--accent);border-color:var(--accent);color:#061017;font-weight:700}
-    button:disabled{opacity:.55;cursor:not-allowed}
-    .bar{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-    .status{display:grid;grid-template-columns:repeat(4,minmax(120px,1fr));gap:10px;margin:18px 0}
+    .summary{display:grid;grid-template-columns:repeat(3,minmax(120px,1fr));gap:10px;margin:18px 0}
     .metric{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:12px}
     .metric b{display:block;font-size:18px}.metric span{color:var(--muted);font-size:12px}
-    progress{width:100%;height:12px;accent-color:var(--accent)}
     table{width:100%;border-collapse:collapse;background:var(--panel);border:1px solid var(--line);border-radius:8px;overflow:hidden}
-    th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+    th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line)}
     th{color:var(--muted);font-size:12px;text-transform:uppercase;letter-spacing:.04em;background:#141a1e}
-    tr:last-child td{border-bottom:0}
-    .muted{color:var(--muted)}.ok{color:var(--ok)}.bad{color:var(--bad)}
-    .ports{display:flex;gap:5px;flex-wrap:wrap}
-    .chip{border:1px solid var(--line);border-radius:999px;padding:2px 7px;background:#10171b}
-    @media(max-width:760px){header{align-items:flex-start;flex-direction:column}.status{grid-template-columns:1fr 1fr}table{font-size:13px}}
+    tr:last-child td{border-bottom:0}.muted{color:var(--muted)}.mono{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    @media(max-width:760px){header{align-items:flex-start;flex-direction:column}.summary{grid-template-columns:1fr 1fr}table{font-size:13px}}
   </style>
 </head>
 <body>
-  <header>
-    <h1>Ports</h1>
-    <div class="bar">
-      <button class="primary" id="start">Schnellscan</button>
-      <button id="full">Vollscan</button>
-      <button id="cancel">Abbrechen</button>
-    </div>
-  </header>
+  <header><h1>Ports</h1><button class="primary" id="refresh">Aktualisieren</button></header>
   <main>
-    <progress id="progress" value="0" max="1"></progress>
-    <div class="status">
-      <div class="metric"><b id="devices">0</b><span>Geraete</span></div>
-      <div class="metric"><b id="checked">0</b><span>Gepruefte Hosts</span></div>
-      <div class="metric"><b id="range">-</b><span>Ports je Host</span></div>
-      <div class="metric"><b id="message">Bereit</b><span>Status</span></div>
+    <div class="summary">
+      <div class="metric"><b id="count">0</b><span>Runvard-Ports</span></div>
+      <div class="metric"><b id="apps">0</b><span>Apps</span></div>
+      <div class="metric"><b id="hosts">0</b><span>IPs</span></div>
     </div>
-    <p id="error" class="bad"></p>
     <table>
-      <thead><tr><th>IP</th><th>Name</th><th>MAC</th><th>Offene Ports</th><th>Geschlossen/gefiltert</th><th>Scanzeit</th></tr></thead>
+      <thead><tr><th>IP</th><th>Port</th><th>Name der App</th><th>Quelle</th></tr></thead>
       <tbody id="rows"></tbody>
     </table>
   </main>
   <script>
-    async function json(url, options){const r=await fetch(url, options||{}); return r.json();}
-    function render(data){
-      const result=data.result||{};
-      const devices=result.devices||[];
-      document.getElementById('start').disabled=!!data.running;
-      document.getElementById('full').disabled=!!data.running;
-      document.getElementById('cancel').disabled=!data.running;
-      document.getElementById('devices').textContent=devices.length;
-      document.getElementById('checked').textContent=(data.progress||0)+'/'+(data.total||0);
-      document.getElementById('range').textContent=(data.port_count||result.port_count||'-')+'';
-      document.getElementById('message').textContent=data.message||'Bereit';
-      document.getElementById('error').textContent=data.error||'';
-      const p=document.getElementById('progress');
-      p.max=Math.max(1,data.total||1); p.value=data.progress||0;
-      document.getElementById('rows').innerHTML=devices.map(d=>`
+    const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    async function load(){
+      const data=await fetch('/api/ports').then(r=>r.json());
+      const rows=data.ports||[];
+      document.getElementById('count').textContent=rows.length;
+      document.getElementById('apps').textContent=new Set(rows.map(r=>r.app)).size;
+      document.getElementById('hosts').textContent=new Set(rows.map(r=>r.ip)).size;
+      document.getElementById('rows').innerHTML=rows.map(r=>`
         <tr>
-          <td>${d.ip}</td>
-          <td>${d.name||'<span class="muted">-</span>'} <span class="muted">${d.name_source||''}</span></td>
-          <td>${d.mac||'<span class="muted">-</span>'}</td>
-          <td><div class="ports">${(d.open_ports||[]).map(p=>`<span class="chip ok">${p}</span>`).join('')||'<span class="muted">keine</span>'}</div></td>
-          <td>${d.closed_or_filtered||0}</td>
-          <td>${d.scan_time||''}</td>
-        </tr>`).join('');
+          <td class="mono">${esc(r.ip)}</td>
+          <td class="mono">${esc(r.port)}${r.protocol&&r.protocol!=='tcp'?'/'+esc(r.protocol):''}</td>
+          <td>${esc(r.app)}</td>
+          <td class="muted">${esc(r.source)}</td>
+        </tr>`).join('')||'<tr><td colspan="4" class="muted">Keine von Runvard verwalteten Ports gefunden.</td></tr>';
     }
-    async function refresh(){render(await json('/api/status'));}
-    document.getElementById('start').onclick=async()=>{await json('/api/scan/start?mode=quick',{method:'POST'}); refresh();};
-    document.getElementById('full').onclick=async()=>{await json('/api/scan/start?mode=full',{method:'POST'}); refresh();};
-    document.getElementById('cancel').onclick=async()=>{await json('/api/scan/cancel',{method:'POST'}); refresh();};
-    refresh(); setInterval(refresh, 1500);
+    document.getElementById('refresh').onclick=load;
+    load();
   </script>
 </body>
-</html>
-"""
+</html>"""
 
 
 class Handler(BaseHTTPRequestHandler):
@@ -469,42 +272,10 @@ class Handler(BaseHTTPRequestHandler):
     def do_GET(self):
         path = urlparse(self.path).path
         if path == "/":
-            self._send(200, HTML, "text/html; charset=utf-8")
+            self._send(200, page(), "text/html; charset=utf-8")
             return
-        if path == "/api/status":
-            with state_lock:
-                payload = dict(state)
-                payload["result"] = state["result"] or load_last_scan()
-            self._send(200, json.dumps(payload))
-            return
-        self._send(404, json.dumps({"error": "not found"}))
-
-    def do_POST(self):
-        global scan_thread
-        parsed = urlparse(self.path)
-        path = parsed.path
-        if path == "/api/scan/start":
-            with state_lock:
-                if state["running"]:
-                    self._send(409, json.dumps({"error": "scan already running"}))
-                    return
-                query = parse_qs(parsed.query)
-                mode = (query.get("mode") or ["quick"])[0]
-                if mode == "full":
-                    port_spec = "full"
-                    scan_mode = "full"
-                else:
-                    port_spec = PORT_RANGE
-                    scan_mode = "quick"
-                scan_cancel.clear()
-                state.update({"running": True, "progress": 0, "total": 0, "message": "Scan startet", "error": "", "scan_mode": scan_mode})
-                scan_thread = threading.Thread(target=scan_worker, args=(port_spec, scan_mode), daemon=True)
-                scan_thread.start()
-            self._send(202, json.dumps({"ok": True}))
-            return
-        if path == "/api/scan/cancel":
-            scan_cancel.set()
-            self._send(202, json.dumps({"ok": True}))
+        if path == "/api/ports":
+            self._send(200, json.dumps({"ports": runvard_ports()}))
             return
         self._send(404, json.dumps({"error": "not found"}))
 
@@ -513,8 +284,6 @@ class Handler(BaseHTTPRequestHandler):
 
 
 def main():
-    DATA_DIR.mkdir(parents=True, exist_ok=True)
-    state["result"] = load_last_scan()
     server = ThreadingHTTPServer(("0.0.0.0", PORT), Handler)
     print(f"Portvard listening on 0.0.0.0:{PORT}", flush=True)
     server.serve_forever()

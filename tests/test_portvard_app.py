@@ -10,45 +10,84 @@ def _load_portvard():
     return module
 
 
-def test_common_port_scan_is_small_default():
+def test_parse_compose_published_ports():
     portvard = _load_portvard()
+    content = """
+services:
+  web:
+    image: nginx
+    ports:
+      - "8080:80"
+      - "127.0.0.1:9443:443/tcp"
+"""
 
-    ports = portvard.parse_ports("common")
+    rows = portvard.parse_compose_ports(content, "demo-app", "App", ["192.168.1.10"])
 
-    assert 22 in ports
-    assert 80 in ports
-    assert 443 in ports
-    assert 8766 in ports
-    assert len(ports) < 50
+    assert rows == [
+        {
+            "ip": "192.168.1.10",
+            "port": 8080,
+            "protocol": "tcp",
+            "app": "Demo App",
+            "service": "web",
+            "source": "App",
+        },
+        {
+            "ip": "127.0.0.1",
+            "port": 9443,
+            "protocol": "tcp",
+            "app": "Demo App",
+            "service": "web",
+            "source": "App",
+        },
+    ]
 
 
-def test_full_port_scan_keeps_all_tcp_ports_available():
+def test_parse_host_network_port_env():
     portvard = _load_portvard()
+    content = """
+services:
+  portvard:
+    image: python:3.13-slim
+    network_mode: host
+    environment:
+      - PORT=8766
+"""
 
-    ports = portvard.parse_ports("full")
+    rows = portvard.parse_compose_ports(content, "portvard", "App", ["192.168.1.10"])
 
-    assert ports[0] == 1
-    assert ports[-1] == 65535
-    assert len(ports) == 65535
+    assert rows[0]["ip"] == "192.168.1.10"
+    assert rows[0]["port"] == 8766
+    assert rows[0]["app"] == "Portvard"
 
 
-def test_iter_hosts_can_limit_large_networks():
+def test_runvard_ports_reads_app_and_compose_dirs(monkeypatch, tmp_path):
     portvard = _load_portvard()
+    apps_dir = tmp_path / "apps"
+    compose_dir = tmp_path / "compose"
+    app_dir = apps_dir / "jellyfin"
+    app_dir.mkdir(parents=True)
+    compose_dir.mkdir()
+    (app_dir / "docker-compose.yml").write_text("""
+services:
+  jellyfin:
+    ports:
+      - "8096:8096"
+""")
+    (compose_dir / "custom.yml").write_text("""
+services:
+  ui:
+    ports:
+      - "9000:80"
+""")
 
-    hosts = list(portvard.iter_hosts(["10.0.0.0/16"], max_hosts=3))
+    monkeypatch.setattr(portvard, "RUNVARD_APPS_DIR", apps_dir)
+    monkeypatch.setattr(portvard, "RUNVARD_COMPOSE_DIR", compose_dir)
+    monkeypatch.setattr(portvard, "host_ips", lambda: ["192.168.1.10"])
 
-    assert hosts == ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
+    rows = portvard.runvard_ports()
 
-
-def test_arp_discovery_parses_ip_and_mac(monkeypatch):
-    portvard = _load_portvard()
-
-    def fake_run_cmd(args, timeout=3):
-        assert args[0] == "arp-scan"
-        return "192.168.1.20\taa:bb:cc:dd:ee:ff\tVendor\n"
-
-    monkeypatch.setattr(portvard, "run_cmd", fake_run_cmd)
-
-    assert portvard.discover_arp_hosts(["192.168.1.0/24"]) == {
-        "192.168.1.20": "aa:bb:cc:dd:ee:ff",
-    }
+    assert [(row["app"], row["port"]) for row in rows] == [
+        ("Jellyfin", 8096),
+        ("Custom", 9000),
+    ]

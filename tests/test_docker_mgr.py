@@ -104,11 +104,13 @@ def test_portvard_compose_uses_host_network_and_port_env(monkeypatch, tmp_path):
     assert "network_mode: host" in content
     assert "ports:" not in content
     assert "/opt/runvard/docker-apps/portvard/app.py:/app/app.py:ro" in content
+    assert "/opt/runvard/data/apps:/runvard/apps:ro" in content
+    assert "/opt/runvard/data/compose:/runvard/compose:ro" in content
     assert "apt-get install -y --no-install-recommends" in content
+    assert " iproute2 " in content
     assert "      - PORT=8766" in content
-    assert "      - SCAN_CIDRS=auto" in content
-    assert "      - PORT_RANGE=common" in content
-    assert "      - NAME_SOURCES=dns,mdns,netbios" in content
+    assert "      - RUNVARD_APPS_DIR=/runvard/apps" in content
+    assert "      - RUNVARD_COMPOSE_DIR=/runvard/compose" in content
     assert apps._first_host_port_from_compose(content, 0) == 8766
 
 
