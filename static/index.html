@@ -6277,6 +6277,9 @@ const VM_PHRASES={
     "Actions":"Aktionen",
     "Advanced":"Erweitert",
     "Applied on next start":"Beim nächsten Start aktiv",
+    "+ Attach disk":"+ Datenträger anhängen",
+    "Attach disk:":"Datenträger anhängen:",
+    "Attach disk: ":"Datenträger anhängen: ",
     "Autostart off":"Autostart aus",
     "Autostart on":"Autostart an",
     "Bridge":"Bridge",
@@ -6291,12 +6294,16 @@ const VM_PHRASES={
     "Create a bridge first under Network → Interfaces.":"Erstelle zuerst unter Netzwerk → Schnittstellen eine Bridge.",
     "Detach network card":"Netzwerkkarte abhängen",
     "Detach":"Abhängen",
-    "Disk expanded":"Disk vergrößert",
+    "Detach disk":"Datenträger abhängen",
+    "Disk attached":"Datenträger angehängt",
+    "Disk detached":"Datenträger abgehängt",
+    "Disk expanded":"Datenträger vergrößert",
+    "Disk (GB)":"Datenträger (GB)",
     "Disks attached to this VM.":"An diese VM angehängte Datenträger.",
     "Ejected":"Ausgeworfen",
     "Expand":"Vergrößern",
-    "Expanding disk…":"Vergrößere Disk…",
-    "Expand disk":"Disk vergrößern",
+    "Expanding disk…":"Vergrößere Datenträger…",
+    "Expand disk":"Datenträger vergrößern",
     "Hardware":"Hardware",
     "Host bridge":"Host-Bridge",
     "Inserted":"Eingelegt",
@@ -6308,6 +6315,7 @@ const VM_PHRASES={
     "New total size (GB)":"Neue Gesamtgröße (GB)",
     "No network cards":"Keine Netzwerkkarten",
     "No source":"Keine Quelle",
+    "Virtual disks":"Datenträger",
     "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Vergrößert nur das virtuelle Disk-Image. Partition/Dateisystem danach im Gast erweitern.",
     "Path to an existing qcow2/raw image or block device":"Pfad zu einem vorhandenen qcow2/raw-Image oder Block-Device",
     "Pool name":"Pool-Name",
@@ -6337,8 +6345,8 @@ const VM_PHRASES={
     "Volume name":"Volume-Name",
     "vCPUs":"vCPUs",
     "cores":"Kerne",
-    "live":"live",
-    "off":"aus"
+    "live":"Läuft",
+    "off":"Gestoppt"
   },
   fr:{
     "A VM shutdown asks the guest OS to power off cleanly.":"L’arrêt d’une VM demande au système invité de s’éteindre proprement.",
@@ -6360,6 +6368,7 @@ const VM_PHRASES={
     "Detach network card":"Détacher la carte réseau",
     "Detach":"Détacher",
     "Disk expanded":"Disque agrandi",
+    "Disk (GB)":"Disque (Go)",
     "Disks attached to this VM.":"Disques attachés à cette VM.",
     "Ejected":"Éjecté",
     "Expand":"Agrandir",
@@ -6376,6 +6385,7 @@ const VM_PHRASES={
     "New total size (GB)":"Nouvelle taille totale (Go)",
     "No network cards":"Aucune carte réseau",
     "No source":"Aucune source",
+    "Virtual disks":"Disques virtuels",
     "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Agrandit uniquement l’image disque virtuelle. Étendez ensuite la partition/le système de fichiers dans l’invité.",
     "Path to an existing qcow2/raw image or block device":"Chemin vers une image qcow2/raw existante ou un périphérique bloc",
     "Pool name":"Nom du pool",
@@ -6428,6 +6438,7 @@ const VM_PHRASES={
     "Detach network card":"Scollega scheda di rete",
     "Detach":"Scollega",
     "Disk expanded":"Disco espanso",
+    "Disk (GB)":"Disco (GB)",
     "Disks attached to this VM.":"Dischi collegati a questa VM.",
     "Ejected":"Espulso",
     "Expand":"Espandi",
@@ -6444,6 +6455,7 @@ const VM_PHRASES={
     "New total size (GB)":"Nuova dimensione totale (GB)",
     "No network cards":"Nessuna scheda di rete",
     "No source":"Nessuna origine",
+    "Virtual disks":"Dischi virtuali",
     "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Espande solo l’immagine disco virtuale. Estendi poi partizione/filesystem nel guest.",
     "Path to an existing qcow2/raw image or block device":"Percorso di un’immagine qcow2/raw esistente o di un dispositivo a blocchi",
     "Pool name":"Nome pool",
@@ -6496,6 +6508,7 @@ const VM_PHRASES={
     "Detach network card":"Desconectar tarjeta de red",
     "Detach":"Desconectar",
     "Disk expanded":"Disco ampliado",
+    "Disk (GB)":"Disco (GB)",
     "Disks attached to this VM.":"Discos conectados a esta VM.",
     "Ejected":"Expulsado",
     "Expand":"Ampliar",
@@ -6512,6 +6525,7 @@ const VM_PHRASES={
     "New total size (GB)":"Nuevo tamaño total (GB)",
     "No network cards":"Sin tarjetas de red",
     "No source":"Sin origen",
+    "Virtual disks":"Discos virtuales",
     "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Solo amplía la imagen de disco virtual. Amplía después la partición/sistema de archivos dentro del invitado.",
     "Path to an existing qcow2/raw image or block device":"Ruta a una imagen qcow2/raw existente o dispositivo de bloques",
     "Pool name":"Nombre del pool",
@@ -6564,6 +6578,7 @@ const VM_PHRASES={
     "Detach network card":"Desanexar placa de rede",
     "Detach":"Desanexar",
     "Disk expanded":"Disco aumentado",
+    "Disk (GB)":"Disco (GB)",
     "Disks attached to this VM.":"Discos anexados a esta VM.",
     "Ejected":"Ejetado",
     "Expand":"Aumentar",
@@ -6580,6 +6595,7 @@ const VM_PHRASES={
     "New total size (GB)":"Novo tamanho total (GB)",
     "No network cards":"Sem placas de rede",
     "No source":"Sem origem",
+    "Virtual disks":"Discos virtuais",
     "Only grows the virtual disk image. Extend the partition/filesystem inside the guest afterwards.":"Aumenta apenas a imagem de disco virtual. Depois aumente a partição/sistema de ficheiros no convidado.",
     "Path to an existing qcow2/raw image or block device":"Caminho para uma imagem qcow2/raw existente ou dispositivo de blocos",
     "Pool name":"Nome do pool",
@@ -6622,13 +6638,13 @@ const PHRASE_PATTERNS=[
   {re:new RegExp("^Move \"(.+)\" to trash\\?$"),t:{"de": "\"$1\" in den Papierkorb verschieben?", "fr": "Déplacer « $1 » vers la corbeille ?", "it": "Spostare \"$1\" nel cestino?", "es": "¿Mover «$1» a la papelera?", "pt": "Mover \"$1\" para o lixo?"}},
   {re:new RegExp("^Really delete \"(.+)\"\\? The container will be permanently removed\\.$"),t:{"de": "\"$1\" wirklich löschen? Der Container wird dauerhaft entfernt.", "fr": "Vraiment supprimer « $1 » ? Le conteneur sera définitivement supprimé.", "it": "Eliminare davvero \"$1\"? Il container verrà rimosso definitivamente.", "es": "¿Eliminar realmente «$1»? El contenedor se eliminará permanentemente.", "pt": "Eliminar mesmo \"$1\"? O contentor será removido permanentemente."}},
   {re:new RegExp("^Really delete \"(.+)\"\\? All data in this volume will be lost\\.$"),t:{"de": "\"$1\" wirklich löschen? Alle Daten in diesem Volume gehen verloren.", "fr": "Vraiment supprimer « $1 » ? Toutes les données de ce volume seront perdues.", "it": "Eliminare davvero \"$1\"? Tutti i dati in questo volume andranno persi.", "es": "¿Eliminar realmente «$1»? Se perderán todos los datos de este volumen.", "pt": "Eliminar mesmo \"$1\"? Todos os dados neste volume serão perdidos."}},
-  {re:new RegExp("^Really delete \"(.+)\" permanently\\? The VM and its disk will be removed\\.$"),t:{"de": "\"$1\" wirklich dauerhaft löschen? Die VM und ihre Disk werden entfernt.", "fr": "Vraiment supprimer définitivement « $1 » ? La VM et son disque seront supprimés.", "it": "Eliminare definitivamente \"$1\"? La VM e il suo disco verranno rimossi.", "es": "¿Eliminar permanentemente «$1»? Se eliminarán la VM y su disco.", "pt": "Eliminar \"$1\" permanentemente? A VM e o seu disco serão removidos."}},
+  {re:new RegExp("^Really delete \"(.+)\" permanently\\? The VM and its disk will be removed\\.$"),t:{"de": "\"$1\" wirklich dauerhaft löschen? Die VM und ihr Datenträger werden entfernt.", "fr": "Vraiment supprimer définitivement « $1 » ? La VM et son disque seront supprimés.", "it": "Eliminare definitivamente \"$1\"? La VM e il suo disco verranno rimossi.", "es": "¿Eliminar permanentemente «$1»? Se eliminarán la VM y su disco.", "pt": "Eliminar \"$1\" permanentemente? A VM e o seu disco serão removidos."}},
   {re:new RegExp("^Really delete group \"(.+)\"\\?$"),t:{"de": "Gruppe \"$1\" wirklich löschen?", "fr": "Vraiment supprimer le groupe « $1 » ?", "it": "Eliminare davvero il gruppo \"$1\"?", "es": "¿Eliminar realmente el grupo «$1»?", "pt": "Eliminar mesmo o grupo \"$1\"?"}},
   {re:new RegExp("^Destroy ZFS pool \"(.+)\"\\? All data will be irreversibly lost\\.$"),t:{"de": "ZFS-Pool \"$1\" zerstören? Alle Daten gehen unwiderruflich verloren.", "fr": "Détruire le pool ZFS « $1 » ? Toutes les données seront définitivement perdues.", "it": "Distruggere il pool ZFS \"$1\"? Tutti i dati andranno persi irreversibilmente.", "es": "¿Destruir el pool ZFS «$1»? Todos los datos se perderán de forma irreversible.", "pt": "Destruir o pool ZFS \"$1\"? Todos os dados serão perdidos irreversivelmente."}},
   {re:new RegExp("^Delete storage pool \"(.+)\"\\? \\(The pool definition is removed, files stay on disk\\)$"),t:{"de": "Storage-Pool \"$1\" löschen? (Pool-Definition wird entfernt, Dateien bleiben auf der Platte)", "fr": "Supprimer le pool de stockage « $1 » ? (la définition du pool est supprimée, les fichiers restent sur le disque)", "it": "Eliminare il pool di archiviazione \"$1\"? (la definizione del pool viene rimossa, i file restano sul disco)", "es": "¿Eliminar el pool de almacenamiento «$1»? (se elimina la definición del pool, los archivos permanecen en el disco)", "pt": "Eliminar o pool de armazenamento \"$1\"? (a definição do pool é removida, os ficheiros permanecem no disco)"}},
   {re:new RegExp("^Delete logical volume \"(.+)\" permanently\\? All data on it will be lost\\.$"),t:{"de": "Logical Volume \"$1\" dauerhaft löschen? Alle Daten darauf gehen verloren.", "fr": "Supprimer définitivement le volume logique « $1 » ? Toutes les données seront perdues.", "it": "Eliminare definitivamente il volume logico \"$1\"? Tutti i dati su di esso andranno persi.", "es": "¿Eliminar permanentemente el volumen lógico «$1»? Se perderán todos sus datos.", "pt": "Eliminar permanentemente o volume lógico \"$1\"? Todos os dados serão perdidos."}},
   {re:new RegExp("^Delete volume \"(.+)\" from pool \"(.+)\" permanently\\?$"),t:{"de": "Volume \"$1\" aus Pool \"$2\" dauerhaft löschen?", "fr": "Supprimer définitivement le volume « $1 » du pool « $2 » ?", "it": "Eliminare definitivamente il volume \"$1\" dal pool \"$2\"?", "es": "¿Eliminar permanentemente el volumen «$1» del pool «$2»?", "pt": "Eliminar permanentemente o volume \"$1\" do pool \"$2\"?"}},
-  {re:new RegExp("^Detach disk \"(.+)\" from \"(.+)\"\\? \\(The image is kept\\)$"),t:{"de": "Disk \"$1\" von \"$2\" abhängen? (Image bleibt erhalten)", "fr": "Détacher le disque « $1 » de « $2 » ? (l’image est conservée)", "it": "Scollegare il disco \"$1\" da \"$2\"? (l’immagine viene mantenuta)", "es": "¿Desconectar el disco «$1» de «$2»? (la imagen se conserva)", "pt": "Desanexar o disco \"$1\" de \"$2\"? (a imagem é mantida)"}},
+  {re:new RegExp("^Detach disk \"(.+)\" from \"(.+)\"\\? \\(The image is kept\\)$"),t:{"de": "Datenträger \"$1\" von \"$2\" abhängen? (Image bleibt erhalten)", "fr": "Détacher le disque « $1 » de « $2 » ? (l’image est conservée)", "it": "Scollegare il disco \"$1\" da \"$2\"? (l’immagine viene mantenuta)", "es": "¿Desconectar el disco «$1» de «$2»? (la imagen se conserva)", "pt": "Desanexar o disco \"$1\" de \"$2\"? (a imagem é mantida)"}},
   {re:new RegExp("^Detach network card (.+) from \"(.+)\"\\?$"),t:{"de": "Netzwerkkarte $1 von \"$2\" abhängen?", "fr": "Détacher la carte réseau $1 de « $2 » ?", "it": "Scollegare la scheda di rete $1 da \"$2\"?", "es": "¿Desconectar la tarjeta de red $1 de «$2»?", "pt": "Desanexar a placa de rede $1 de \"$2\"?"}},
   {re:new RegExp("^Delete snapshot \"(.+)\" from VM \"(.+)\"\\?$"),t:{"de": "Snapshot \"$1\" von VM \"$2\" löschen?", "fr": "Supprimer l’instantané « $1 » de la VM « $2 » ?", "it": "Eliminare lo snapshot \"$1\" dalla VM \"$2\"?", "es": "¿Eliminar la instantánea «$1» de la VM «$2»?", "pt": "Eliminar o snapshot \"$1\" da VM \"$2\"?"}},
   {re:new RegExp("^Disconnect session to \"(.+)\"\\?$"),t:{"de": "Sitzung zu \"$1\" trennen?", "fr": "Déconnecter la session vers « $1 » ?", "it": "Disconnettere la sessione verso \"$1\"?", "es": "¿Desconectar la sesión con «$1»?", "pt": "Desligar a sessão para \"$1\"?"}},
@@ -6660,11 +6676,11 @@ const PHRASE_PATTERNS=[
 ];
 const PHRASE_PREFIX=[
   ["Error: ", 7, {"de": "Fehler: ", "fr": "Erreur : ", "it": "Errore: ", "es": "Error: ", "pt": "Erro: "}],
-  ["Attach disk: ", 13, {"de": "Disk anhängen: ", "fr": "Attacher un disque : ", "it": "Collega disco: ", "es": "Conectar disco: ", "pt": "Anexar disco: "}],
+  ["Attach disk: ", 13, {"de": "Datenträger anhängen: ", "fr": "Attacher un disque : ", "it": "Collega disco: ", "es": "Conectar disco: ", "pt": "Anexar disco: "}],
   ["Attach NIC: ", 12, {"de": "NIC anhängen: ", "fr": "Attacher une carte réseau : ", "it": "Collega NIC: ", "es": "Conectar NIC: ", "pt": "Anexar NIC: "}],
   ["Clone: ", 7, {"de": "Klonen: ", "fr": "Cloner : ", "it": "Clona: ", "es": "Clonar: ", "pt": "Clonar: "}],
   ["Change resources: ", 18, {"de": "Ressourcen ändern: ", "fr": "Modifier les ressources : ", "it": "Modifica risorse: ", "es": "Cambiar recursos: ", "pt": "Alterar recursos: "}],
-  ["Expand disk: ", 13, {"de": "Disk vergrößern: ", "fr": "Agrandir le disque : ", "it": "Espandi disco: ", "es": "Ampliar disco: ", "pt": "Aumentar disco: "}],
+  ["Expand disk: ", 13, {"de": "Datenträger vergrößern: ", "fr": "Agrandir le disque : ", "it": "Espandi disco: ", "es": "Ampliar disco: ", "pt": "Aumentar disco: "}],
   ["Create volume in ", 17, {"de": "Volume erstellen in ", "fr": "Créer un volume dans ", "it": "Crea volume in ", "es": "Crear volumen en ", "pt": "Criar volume em "}],
   ["Latest: ", 8, {"de": "Neueste Version: ", "fr": "Dernière : ", "it": "Ultima: ", "es": "Última: ", "pt": "Mais recente: "}],
   ["Mount volume: ", 14, {"de": "Volume einhängen: ", "fr": "Monter le volume : ", "it": "Monta volume: ", "es": "Montar volumen: ", "pt": "Montar volume: "}],
@@ -6715,6 +6731,7 @@ const TOAST_ALIASES={
   "CD-ROM eingelegt":"CD-ROM inserted",
   "CD-ROM ausgeworfen":"CD-ROM ejected",
   "Disk vergrößert":"Disk expanded",
+  "Datenträger vergrößert":"Disk expanded",
   "Umbenannt":"Renamed",
   "Update fehlgeschlagen":"Update failed",
   "VM geklont":"VM cloned",
@@ -6736,13 +6753,13 @@ const TOAST_PHRASES={
   "Creating VM…":{de:"Erstelle VM…",en:"Creating VM…",fr:"Création de la VM…",it:"Creazione VM…",es:"Creando VM…",pt:"A criar VM…"},
   "Creating volume group…":{de:"Erstelle Volume-Gruppe…",en:"Creating volume group…",fr:"Création du groupe de volumes…",it:"Creazione gruppo di volumi…",es:"Creando grupo de volúmenes…",pt:"A criar grupo de volumes…"},
   "Creating volume…":{de:"Erstelle Volume…",en:"Creating volume…",fr:"Création du volume…",it:"Creazione volume…",es:"Creando volumen…",pt:"A criar volume…"},
-  "Attaching disk…":{de:"Hänge Disk an…",en:"Attaching disk…",fr:"Attachement du disque…",it:"Collegamento disco…",es:"Conectando disco…",pt:"A anexar disco…"},
+  "Attaching disk…":{de:"Hänge Datenträger an…",en:"Attaching disk…",fr:"Attachement du disque…",it:"Collegamento disco…",es:"Conectando disco…",pt:"A anexar disco…"},
   "Attaching NIC…":{de:"Hänge NIC an…",en:"Attaching NIC…",fr:"Attachement de la carte réseau…",it:"Collegamento NIC…",es:"Conectando NIC…",pt:"A anexar NIC…"},
   "CD-ROM inserted":{de:"CD-ROM eingelegt",en:"CD-ROM inserted",fr:"CD-ROM inséré",it:"CD-ROM inserito",es:"CD-ROM insertado",pt:"CD-ROM inserido"},
   "CD-ROM ejected":{de:"CD-ROM ausgeworfen",en:"CD-ROM ejected",fr:"CD-ROM éjecté",it:"CD-ROM espulso",es:"CD-ROM expulsado",pt:"CD-ROM ejetado"},
-  "Disk attached":{de:"Disk angehängt",en:"Disk attached",fr:"Disque attaché",it:"Disco collegato",es:"Disco conectado",pt:"Disco anexado"},
-  "Disk detached":{de:"Disk abgehängt",en:"Disk detached",fr:"Disque détaché",it:"Disco scollegato",es:"Disco desconectado",pt:"Disco desanexado"},
-  "Disk expanded":{de:"Disk vergrößert",en:"Disk expanded",fr:"Disque agrandi",it:"Disco espanso",es:"Disco ampliado",pt:"Disco aumentado"},
+  "Disk attached":{de:"Datenträger angehängt",en:"Disk attached",fr:"Disque attaché",it:"Disco collegato",es:"Disco conectado",pt:"Disco anexado"},
+  "Disk detached":{de:"Datenträger abgehängt",en:"Disk detached",fr:"Disque détaché",it:"Disco scollegato",es:"Disco desconectado",pt:"Disco desanexado"},
+  "Disk expanded":{de:"Datenträger vergrößert",en:"Disk expanded",fr:"Disque agrandi",it:"Disco espanso",es:"Disco ampliado",pt:"Disco aumentado"},
   "Disk ready":{de:"Laufwerk bereit",en:"Disk ready",fr:"Disque prêt",it:"Disco pronto",es:"Disco listo",pt:"Disco pronto"},
   "Done":{de:"Fertig",en:"Done",fr:"Terminé",it:"Fatto",es:"Hecho",pt:"Concluído"},
   "Enter a search term":{de:"Suchbegriff eingeben",en:"Enter a search term",fr:"Saisissez un terme de recherche",it:"Inserisci un termine di ricerca",es:"Introduce un término de búsqueda",pt:"Introduza um termo de pesquisa"},
@@ -9300,7 +9317,7 @@ window.vmHardware=async name=>{
   const h=await api('/vms/hardware?name='+encodeURIComponent(name));
   const body=$('#modal-body');
   if(h.ok===false){body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">← Back</button></div><div class="empty-state">${esc(h.stderr||'Error')}</div>`;return;}
-  const badge=h.active?statusBadge('live','good'):statusBadge('off','bad');
+  const badge=h.active?statusBadge('Running','good'):statusBadge('Stopped','bad');
   body.innerHTML=`<div class="vm-detail-head">
     <button class="btn ghost sm" onclick="renderVMs($('#modal-body'))">Back</button>
     <div><div class="vm-detail-title">${esc(uiText('Hardware'))}: ${esc(name)} ${badge}</div><div class="vm-detail-sub">${esc(uiText('Resources & hardware'))}</div></div>
@@ -9312,7 +9329,7 @@ window.vmHardware=async name=>{
   </div>
   <div class="vm-hardware-layout">
     <section class="vm-panel">
-      <div class="vm-panel-head"><div><div class="vm-panel-title">Disks</div><div class="vm-panel-sub">Disks attached to this VM.</div></div><button class="btn sm" onclick="vmDiskForm('${esc(name)}')">+ Attach disk</button></div>
+      <div class="vm-panel-head"><div><div class="vm-panel-title">Virtual disks</div><div class="vm-panel-sub">Disks attached to this VM.</div></div><button class="btn sm" onclick="vmDiskForm('${esc(name)}')">+ Attach disk</button></div>
       <div class="vm-device-list">${(h.disks||[]).map(d=>vmDiskRow(name,d)).join('')||emptyState('No disks')}</div>
     </section>
     <section class="vm-panel">
