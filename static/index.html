@@ -215,6 +215,13 @@ tr{outline:none;user-select:none}
 /* ── Form inputs ── */
 input,select,textarea{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);border-radius:8px;padding:7px 11px;color:var(--text);font-family:inherit;font-size:13px;width:100%}
 input:focus,select:focus,textarea:focus{outline:none;border-color:rgba(122,74,255,.5);background:rgba(122,74,255,.04)}
+.nx-check-list{display:grid;gap:7px}
+.nx-check-row{display:flex;align-items:center;gap:10px;padding:9px 10px;border:1px solid rgba(255,255,255,.08);border-radius:8px;background:rgba(255,255,255,.035);cursor:pointer;transition:border-color .15s,background .15s}
+.nx-check-row:hover{border-color:rgba(122,74,255,.3);background:rgba(122,74,255,.06)}
+.nx-check-row input{width:auto;flex:0 0 auto}
+.nx-check-row span{display:flex;flex-direction:column;gap:2px;min-width:0}
+.nx-check-row strong{font-size:12px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.nx-check-row small{font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
 /* ── PUNKT 3: Dark select dropdown ── */
 select{appearance:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='rgba(255,255,255,0.4)' stroke-width='1.5' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 12px center;padding-right:32px}
@@ -7097,6 +7104,11 @@ function openForm(title,icon,fields,onSubmit){
     if(f.type==='select') inp=`<select id="f_${f.name}">${(f.options||[]).map(o=>{const value=o.value??o;return`<option value="${esc(value)}" ${String(value)===String(f.value??'')?'selected':''}>${esc(uiText(o.label??o))}</option>`;}).join('')}</select>`;
     else if(f.type==='textarea') inp=`<textarea id="f_${f.name}" rows="${f.rows||6}" placeholder="${esc(uiText(f.placeholder||''))}" style="font-family:'JetBrains Mono',monospace">${esc(f.value||'')}</textarea>`;
     else if(f.type==='checkbox') inp=`<label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px"><input type="checkbox" id="f_${f.name}" ${f.value?'checked':''} style="width:auto"> ${esc(uiText(f.label))}</label>`;
+    else if(f.type==='checkbox-group'){
+      const selected=new Set(Array.isArray(f.value)?f.value:String(f.value||'').split(',').map(x=>x.trim()).filter(Boolean));
+      const options=f.options||[];
+      inp=options.length?`<div id="f_${f.name}" class="nx-check-list">${options.map((o,i)=>{const value=o.value??o;return`<label class="nx-check-row"><input type="checkbox" name="f_${f.name}" value="${esc(value)}" ${selected.has(String(value))?'checked':''}> <span><strong>${esc(o.label??value)}</strong>${o.sub?`<small>${esc(o.sub)}</small>`:''}</span></label>`;}).join('')}</div>`:`<div id="f_${f.name}" class="empty-state" style="padding:12px">${esc(uiText(f.empty||'No devices available'))}</div>`;
+    }
     else inp=`<input id="f_${f.name}" type="${f.type||'text'}" value="${esc(f.value||'')}" placeholder="${esc(uiText(f.placeholder||''))}">`;
     const cond=f.showWhen?` data-show-when="${esc(f.showWhen)}" data-show-value="${esc(String(f.showValue??'true'))}"`:'';
     if(f.type==='checkbox') return `<div class="form-field" id="field_${esc(f.name)}"${cond}>${inp}${f.hint?`<div class="hint">${esc(uiText(f.hint))}</div>`:''}</div>`;
@@ -7112,10 +7124,10 @@ function openForm(title,icon,fields,onSubmit){
   };
   fields.forEach(f=>{
     const el=$('#f_'+f.name);
-    if(el)el.addEventListener(f.type==='checkbox'?'change':'input',syncFormConditions);
+    if(el)el.addEventListener(f.type==='checkbox'||f.type==='checkbox-group'?'change':'input',syncFormConditions);
   });
   syncFormConditions();
-  formSubmitFn=()=>{const d={};fields.forEach(f=>{const el=$('#f_'+f.name);if(el)d[f.name]=f.type==='checkbox'?el.checked:el.value;});onSubmit(d);};
+  formSubmitFn=()=>{const d={};fields.forEach(f=>{const el=$('#f_'+f.name);if(el)d[f.name]=f.type==='checkbox'?el.checked:f.type==='checkbox-group'?Array.from(body.querySelectorAll(`input[name="f_${CSS.escape(f.name)}"]:checked`)).map(x=>x.value).join(','):el.value;});onSubmit(d);};
   $('#form-go').onclick=formSubmitFn;
   $('#form-overlay').classList.add('open');
 }
@@ -8764,11 +8776,11 @@ async function renderLvm(body){
 }
 window.vgForm=async()=>{
   const dev=await api('/storage/devices');
-  const free=dev.devices.filter(x=>x.type==='disk'&&!x.protected).map(x=>x.name);
+  const free=dev.devices.filter(x=>x.type==='disk'&&!x.protected);
   openForm('Create volume group','💾',[
     {name:'name',label:'VG-Name',value:'vg0'},
-    {name:'devices',label:'Disks (comma-separated)',value:free.join(','),hint:'Available: '+(free.join(', ')||'none') + ' · Warning: PVs will be initialized'},
-  ],async d=>{closeForm();toast('Creating volume group…');try{const r=await post('/storage/lvm/vg-create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Volume group created');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
+    {name:'devices',label:'Disks',type:'checkbox-group',options:free.map(deviceOption),empty:'No free disks available',hint:'Selected disks will be initialized as physical volumes.'},
+  ],async d=>{if(!selectedDeviceList(d.devices).length){toast('Select at least one disk','error');return;}closeForm();toast('Creating volume group…');try{const r=await post('/storage/lvm/vg-create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Volume group created');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
 };
 window.lvForm=vg=>openForm('Logical Volume in '+vg,'💾',[
   {name:'name',label:'LV-Name',placeholder:'data'},
@@ -8806,13 +8818,13 @@ window.loadSmart=async()=>{
 window.diskWizard=dev=>openForm('Set up disk: '+dev,'💿',[{name:'fstype',label:'Filesystem',type:'select',options:['ext4','xfs','btrfs']},{name:'mountpoint',label:'Mount point',placeholder:'/mnt/data'},{name:'persist',label:'Add to /etc/fstab (permanent)',type:'checkbox',value:true}],async d=>{closeForm();toast('Setting up disk…');try{await post('/storage/partition-table',{device:dev,label:'gpt'});await post('/storage/partition',{device:dev});await post('/storage/format',{partition:dev+'1',fstype:d.fstype});await post('/storage/mount',{partition:dev+'1',mountpoint:d.mountpoint,persist:d.persist});toast('Disk ready');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}});
 window.raidForm=async()=>{
   const d=await api('/storage/devices');
-  const disks=d.devices.filter(x=>x.type==='disk'&&!x.protected).map(x=>x.name);
+  const disks=d.devices.filter(x=>x.type==='disk'&&!x.protected);
   openForm('Create RAID','🗄',[
     {name:'name',label:'Array-Name',value:'md0',hint:'Creates /dev/md0 by default.'},
     {name:'level',label:'RAID-Level',type:'select',options:[{value:0,label:'RAID 0 (Stripe)'},{value:1,label:'RAID 1 (Mirror)'},{value:5,label:'RAID 5'},{value:6,label:'RAID 6'},{value:10,label:'RAID 10'}]},
-    {name:'devices',label:'Disks to erase (comma-separated)',placeholder:disks.slice(0,2).join(','),hint:'Available non-system disks: '+(disks.join(', ')||'none')},
+    {name:'devices',label:'Disks to erase',type:'checkbox-group',options:disks.map(deviceOption),empty:'No free disks available',hint:'Selected non-system disks will be erased.'},
   ],async f=>{
-    const selected=(f.devices||'').split(',').map(x=>x.trim()).filter(Boolean);
+    const selected=selectedDeviceList(f.devices);
     const min={0:2,1:2,5:3,6:4,10:4}[Number(f.level)]||2;
     if(selected.length<min){toast(`RAID ${f.level} needs at least ${min} disks`,'error');return;}
     closeForm();toast('Creating RAID…');
@@ -8827,6 +8839,8 @@ window.raidForm=async()=>{
 // ═══ Phase 5: LUKS / ZFS·Btrfs / iSCSI ═══
 function flattenDevs(devs,out=[]){(devs||[]).forEach(d=>{out.push(d);if(d.children)flattenDevs(d.children,out);});return out;}
 async function freeDevList(){const d=await api('/storage/devices');return flattenDevs(d.devices).filter(x=>!x.protected&&(x.type==='disk'||x.type==='part'));}
+function deviceOption(x){return {value:x.name,label:x.name,sub:[fmtBytes(x.size),x.fstype,x.model].filter(Boolean).join(' · ')};}
+function selectedDeviceList(value){return String(value||'').split(',').map(x=>x.trim()).filter(Boolean);}
 
 // ---- LUKS ----
 async function renderLuks(body){
@@ -8921,23 +8935,23 @@ async function renderZfsBtrfs(body){
 }
 window.zpoolForm=async()=>{
   const free=await freeDevList();
-  const disks=free.filter(x=>x.type==='disk').map(x=>x.name);
+  const disks=free.filter(x=>x.type==='disk');
   openForm('Create ZFS pool','💾',[
     {name:'name',label:'Pool-Name',value:'tank'},
     {name:'raid',label:'Layout',type:'select',options:[{value:'stripe',label:'Stripe (no protection)'},{value:'mirror',label:'Mirror'},{value:'raidz',label:'RAIDZ1'},{value:'raidz2',label:'RAIDZ2'},{value:'raidz3',label:'RAIDZ3'}]},
-    {name:'devices',label:'Devices (comma-separated)',value:disks.join(','),hint:'Available: '+(disks.join(', ')||'none')+' · Warning: devices will be overwritten'},
-  ],async d=>{closeForm();toast('Creating pool…');try{const r=await post('/storage/zfs/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool created');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
+    {name:'devices',label:'Devices',type:'checkbox-group',options:disks.map(deviceOption),empty:'No free disks available',hint:'Selected devices will be overwritten.'},
+  ],async d=>{if(!selectedDeviceList(d.devices).length){toast('Select at least one device','error');return;}closeForm();toast('Creating pool…');try{const r=await post('/storage/zfs/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool created');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
 };
 window.zpoolScrub=name=>{toast('Scrub started…');post('/storage/zfs/scrub',{name}).then(r=>{if(r&&r.ok===false)toast(r.stderr||'Error','error');else toast('Scrub running');}).catch(e=>toast('Error: '+e.message,'error'));};
 window.zpoolDestroy=name=>confirmDelete('Destroy pool',`Destroy ZFS pool "${name}"? All data will be irreversibly lost.`,async()=>{try{const r=await post('/storage/zfs/destroy',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool destroyed');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
 window.btrfsForm=async()=>{
   const free=await freeDevList();
-  const disks=free.filter(x=>x.type==='disk').map(x=>x.name);
+  const disks=free.filter(x=>x.type==='disk');
   openForm('Create Btrfs pool','💾',[
     {name:'label',label:'Label (optional)',placeholder:'daten'},
     {name:'profile',label:'Profile',type:'select',options:[{value:'single',label:'Single (1 Device)'},{value:'raid0',label:'RAID0 (Stripe)'},{value:'raid1',label:'RAID1 (Mirror)'},{value:'raid10',label:'RAID10'}]},
-    {name:'devices',label:'Devices (comma-separated)',value:disks.join(','),hint:'Available: '+(disks.join(', ')||'none')+' · Warning: devices will be overwritten'},
-  ],async d=>{closeForm();toast('Creating Btrfs pool…');try{const r=await post('/storage/btrfs/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Btrfs pool created');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
+    {name:'devices',label:'Devices',type:'checkbox-group',options:disks.map(deviceOption),empty:'No free disks available',hint:'Selected devices will be overwritten.'},
+  ],async d=>{if(!selectedDeviceList(d.devices).length){toast('Select at least one device','error');return;}closeForm();toast('Creating Btrfs pool…');try{const r=await post('/storage/btrfs/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Btrfs pool created');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
 };
 window.btrfsScrubForm=()=>openForm('Btrfs-Scrub','🧹',[
   {name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/daten',hint:'Mount path of the Btrfs filesystem'},
@@ -11777,7 +11791,7 @@ async function renderStorage(body,tab){
     translateRenderedText(body);
     Promise.all(disks.map(async x=>({disk:x,smart:await api('/storage/smart?device='+encodeURIComponent(x.name)).catch(e=>({available:false,error:e.message}))}))).then(rows=>{
       const el=$('#smart-cards');if(!el)return;
-      el.innerHTML=rows.map(({disk,smart})=>`<div class="nx-action-card">
+      el.innerHTML=rows.length?rows.map(({disk,smart})=>`<div class="nx-action-card">
         <div class="nx-action-head"><div class="nx-action-title">${esc(disk.name)}</div>${smart.available?statusBadge(smart.healthy?'Healthy':'Attention',smart.healthy?'good':'bad'):statusBadge('Unavailable','warn')}</div>
         <div class="nx-kv">
           ${cardMetric('Temperature',smart.temperature?smart.temperature+'°C':'Unknown')}
@@ -11785,7 +11799,7 @@ async function renderStorage(body,tab){
           ${cardMetric('Size',fmtBytes(disk.size))}
           ${cardMetric('Model',esc(smart.model||disk.model||'Disk'))}
         </div>
-      </div>`).join('');
+      </div>`).join(''):emptyState('No disks found');
       translateRenderedText(el);
     });
     return;
@@ -11821,11 +11835,14 @@ async function renderLuksSimple(body){
 }
 async function renderZfsBtrfsSimple(body){
   const [zfs,btrfs]=await Promise.all([api('/storage/zfs'),api('/storage/btrfs')]);
+  const zAvail=!!(zfs.pools&&zfs.pools.available);
+  const bAvail=!!btrfs.available;
   const pools=(zfs.pools&&zfs.pools.pools)||[];
   const bfs=(btrfs.filesystems)||[];
-  body.innerHTML=viewIntro('Advanced filesystems','ZFS and Btrfs are for storage pools, snapshots, scrubs and multi-disk layouts.',`<button class="btn" onclick="zpoolForm()">Create ZFS pool</button><button class="btn ghost" onclick="btrfsForm()">Create Btrfs</button>`)
-    +`<div class="section-label">ZFS pools</div><div class="nx-card-grid">${pools.map(p=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(p.name)}</div>${statusBadge(esc(p.health),p.health==='ONLINE'?'good':'bad')}</div><div class="nx-kv">${cardMetric('Size',esc(p.size))}${cardMetric('Used',esc(p.alloc))}${cardMetric('Free',esc(p.free))}${cardMetric('Capacity',esc(p.cap))}</div><div class="nx-action-row"><button class="btn ghost sm" onclick="zpoolScrub('${esc(p.name)}')">Scrub</button><button class="btn danger sm" onclick="zpoolDestroy('${esc(p.name)}')">Destroy</button></div></div>`).join('')||emptyState('No ZFS pools')}</div>
-    <div class="section-label">Btrfs filesystems</div><div class="nx-card-grid">${bfs.map(b=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(b.label||b.uuid)}</div>${statusBadge('Mounted','good')}</div><div class="nx-action-sub">${esc((b.devices||[]).join(', ')||'No device details')}</div><button class="btn ghost sm" onclick="btrfsScrubForm()">Run scrub</button></div>`).join('')||emptyState('No Btrfs filesystems')}</div>`;
+  const actions=[zAvail?'<button class="btn" onclick="zpoolForm()">Create ZFS pool</button>':'',bAvail?'<button class="btn ghost" onclick="btrfsForm()">Create Btrfs</button>':''].join('');
+  body.innerHTML=viewIntro('Advanced filesystems','ZFS and Btrfs are for storage pools, snapshots, scrubs and multi-disk layouts.',actions)
+    +`<div class="section-label">ZFS pools</div><div class="nx-card-grid">${zAvail?pools.map(p=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(p.name)}</div>${statusBadge(esc(p.health),p.health==='ONLINE'?'good':'bad')}</div><div class="nx-kv">${cardMetric('Size',esc(p.size))}${cardMetric('Used',esc(p.alloc))}${cardMetric('Free',esc(p.free))}${cardMetric('Capacity',esc(p.cap))}</div><div class="nx-action-row"><button class="btn ghost sm" onclick="zpoolScrub('${esc(p.name)}')">Scrub</button><button class="btn danger sm" onclick="zpoolDestroy('${esc(p.name)}')">Destroy</button></div></div>`).join('')||emptyState('No ZFS pools'):emptyState('ZFS is unavailable')}</div>
+    <div class="section-label">Btrfs filesystems</div><div class="nx-card-grid">${bAvail?bfs.map(b=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(b.label||b.uuid)}</div>${statusBadge('Mounted','good')}</div><div class="nx-action-sub">${esc((b.devices||[]).join(', ')||'No device details')}</div><button class="btn ghost sm" onclick="btrfsScrubForm()">Run scrub</button></div>`).join('')||emptyState('No Btrfs filesystems'):emptyState('Btrfs is unavailable')}</div>`;
   translateRenderedText(body);
 }
 async function renderIscsiSimple(body){
