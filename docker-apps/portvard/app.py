@@ -20,16 +20,19 @@ PORT = int(os.environ.get("PORT", "8766"))
 SCAN_CIDRS = os.environ.get("SCAN_CIDRS", "auto")
 PORT_RANGE = os.environ.get("PORT_RANGE", "common")
 NAME_SOURCES = [x.strip().lower() for x in os.environ.get("NAME_SOURCES", "dns,mdns,netbios").split(",") if x.strip()]
-WORKERS = int(os.environ.get("SCAN_WORKERS", "256"))
+WORKERS = int(os.environ.get("SCAN_WORKERS", "512"))
 CONNECT_TIMEOUT = float(os.environ.get("CONNECT_TIMEOUT", "0.25"))
+QUICK_CONNECT_TIMEOUT = float(os.environ.get("QUICK_CONNECT_TIMEOUT", "0.08"))
+QUICK_MAX_HOSTS = int(os.environ.get("QUICK_MAX_HOSTS", "1024"))
 COMMON_PORTS = [
-    20, 21, 22, 23, 25, 53, 67, 68, 80, 110, 111, 123, 135, 137, 138, 139,
-    143, 161, 162, 389, 443, 445, 465, 500, 515, 548, 587, 631, 636, 853,
-    873, 902, 989, 990, 993, 995, 1194, 1433, 1521, 1723, 1883, 2049, 2375,
-    2376, 3000, 3306, 3389, 5000, 5353, 5432, 5900, 5985, 5986, 6379, 8000,
-    8080, 8081, 8123, 8443, 8765, 8766, 8883, 9000, 9090, 9100, 9200, 9443,
-    10000, 11211, 27017, 32400,
+    21, 22, 23, 25, 53, 80, 110, 139, 143, 443, 445, 548, 587, 631, 993,
+    995, 1883, 2049, 3000, 3306, 3389, 5000, 5432, 5900, 6379, 8000, 8080,
+    8123, 8443, 8765, 8766, 9000, 9090, 9100, 9443, 32400,
 ]
+DISCOVERY_PORTS = [22, 53, 80, 139, 443, 445, 3389, 8080, 8766]
+IGNORED_AUTO_INTERFACE_PREFIXES = (
+    "lo", "docker", "br-", "veth", "virbr", "tailscale", "zt", "wg", "tun",
+)
 
 
 state_lock = threading.Lock()
@@ -81,7 +84,14 @@ def detect_cidrs():
 
     cidrs = []
     out = run_cmd(["ip", "-o", "-4", "addr", "show", "scope", "global"], timeout=3)
-    for match in re.finditer(r"\binet\s+(\d+\.\d+\.\d+\.\d+/\d+)", out):
+    for line in out.splitlines():
+        if_match = re.match(r"\d+:\s+([^:\s]+)", line)
+        ifname = (if_match.group(1).split("@", 1)[0] if if_match else "").lower()
+        if ifname.startswith(IGNORED_AUTO_INTERFACE_PREFIXES):
+            continue
+        match = re.search(r"\binet\s+(\d+\.\d+\.\d+\.\d+/\d+)", line)
+        if not match:
+            continue
         try:
             network = ipaddress.ip_interface(match.group(1)).network
         except ValueError:
@@ -127,7 +137,7 @@ def parse_ports(spec):
     return sorted(ports)
 
 
-def iter_hosts(cidrs):
+def iter_hosts(cidrs, max_hosts=None):
     seen = set()
     for cidr in cidrs:
         try:
@@ -141,6 +151,8 @@ def iter_hosts(cidrs):
             if value not in seen:
                 seen.add(value)
                 yield value
+                if max_hosts and len(seen) >= max_hosts:
+                    return
 
 
 def ping_host(ip):
@@ -149,12 +161,25 @@ def ping_host(ip):
     return proc.returncode == 0
 
 
-def check_port(ip, port):
+def check_port(ip, port, timeout=CONNECT_TIMEOUT):
     try:
-        with socket.create_connection((ip, port), timeout=CONNECT_TIMEOUT):
+        with socket.create_connection((ip, port), timeout=timeout):
             return True
     except OSError:
         return False
+
+
+def discover_host(ip):
+    if scan_cancel.is_set():
+        return None
+    if ping_host(ip):
+        return ip
+    for port in DISCOVERY_PORTS:
+        if scan_cancel.is_set():
+            return None
+        if check_port(ip, port, QUICK_CONNECT_TIMEOUT):
+            return ip
+    return None
 
 
 def resolve_dns(ip):
@@ -210,15 +235,15 @@ def read_mac(ip):
     return ""
 
 
-def scan_host(ip, ports):
+def scan_host(ip, ports, known_alive=False, timeout=CONNECT_TIMEOUT):
     if scan_cancel.is_set():
         return None
-    alive = ping_host(ip)
+    alive = known_alive or ping_host(ip)
     open_ports = []
     for port in ports:
         if scan_cancel.is_set():
             return None
-        if check_port(ip, port):
+        if check_port(ip, port, timeout):
             open_ports.append(port)
     if not alive and not open_ports:
         return None
@@ -240,13 +265,14 @@ def scan_worker(port_spec=None, scan_mode="quick"):
         cidrs = detect_cidrs()
         effective_spec = port_spec or PORT_RANGE
         ports = parse_ports(effective_spec)
-        hosts = list(iter_hosts(cidrs))
+        is_quick = scan_mode == "quick"
+        hosts = list(iter_hosts(cidrs, QUICK_MAX_HOSTS if is_quick else None))
         with state_lock:
             state.update({
                 "running": True,
                 "progress": 0,
                 "total": len(hosts),
-                "message": "Vollscan laeuft" if scan_mode == "full" else "Schnellscan laeuft",
+                "message": "Vollscan laeuft" if scan_mode == "full" else "Geraete werden gesucht",
                 "error": "",
                 "started_at": started,
                 "finished_at": "",
@@ -254,8 +280,27 @@ def scan_worker(port_spec=None, scan_mode="quick"):
                 "port_count": len(ports),
             })
         devices = []
+        scan_hosts = hosts
+        if is_quick:
+            active_hosts = []
+            with ThreadPoolExecutor(max_workers=max(1, WORKERS)) as pool:
+                futures = {pool.submit(discover_host, ip): ip for ip in hosts}
+                for idx, future in enumerate(as_completed(futures), start=1):
+                    if scan_cancel.is_set():
+                        break
+                    found = future.result()
+                    if found:
+                        active_hosts.append(found)
+                    with state_lock:
+                        state["progress"] = idx
+                        state["message"] = f"{idx}/{len(hosts)} Hosts gesucht, {len(active_hosts)} aktiv"
+            scan_hosts = sorted(active_hosts, key=ipaddress.ip_address)
+            with state_lock:
+                state["progress"] = 0
+                state["total"] = len(scan_hosts)
+                state["message"] = f"{len(scan_hosts)} aktive Geraete, Ports werden geprueft"
         with ThreadPoolExecutor(max_workers=max(1, WORKERS)) as pool:
-            futures = {pool.submit(scan_host, ip, ports): ip for ip in hosts}
+            futures = {pool.submit(scan_host, ip, ports, is_quick, QUICK_CONNECT_TIMEOUT if is_quick else CONNECT_TIMEOUT): ip for ip in scan_hosts}
             for idx, future in enumerate(as_completed(futures), start=1):
                 if scan_cancel.is_set():
                     break
@@ -264,7 +309,7 @@ def scan_worker(port_spec=None, scan_mode="quick"):
                     devices.append(item)
                 with state_lock:
                     state["progress"] = idx
-                    state["message"] = f"{idx}/{len(hosts)} Hosts, {len(ports)} Ports je Host"
+                    state["message"] = f"{idx}/{len(scan_hosts)} aktive Hosts, {len(ports)} Ports je Host"
         result = {
             "started_at": started,
             "finished_at": now_iso(),
@@ -273,6 +318,8 @@ def scan_worker(port_spec=None, scan_mode="quick"):
             "port_range": effective_spec,
             "port_count": len(ports),
             "scan_mode": scan_mode,
+            "hosts_considered": len(hosts),
+            "hosts_scanned": len(scan_hosts),
             "devices": sorted(devices, key=lambda x: ipaddress.ip_address(x["ip"])),
         }
         save_last_scan(result)
