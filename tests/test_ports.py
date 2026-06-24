@@ -99,6 +99,68 @@ services:
     assert [row["reachable"] for row in rows] == [True, False]
 
 
+def test_list_ports_hides_database_and_cache_ports(monkeypatch, tmp_path):
+    apps_dir = tmp_path / "apps"
+    compose_dir = tmp_path / "compose"
+    app_dir = apps_dir / "stack"
+    app_dir.mkdir(parents=True)
+    compose_dir.mkdir()
+    (app_dir / "docker-compose.yml").write_text("""
+services:
+  web:
+    image: nginx
+    ports:
+      - "8080:80"
+  postgres:
+    image: postgres
+    ports:
+      - "5432:5432"
+  redis:
+    image: redis
+    ports:
+      - "6379:6379"
+  mariadb:
+    image: mariadb
+    ports:
+      - "3306:3306"
+""")
+
+    monkeypatch.setattr(ports, "host_ips", lambda: ["192.168.1.10"])
+    monkeypatch.setattr(ports, "_tcp_reachable", lambda ip, port: True)
+
+    rows = ports.list_ports(apps_dir, compose_dir)["ports"]
+
+    assert [(row["service"], row["port"]) for row in rows] == [("web", 8080)]
+
+
+def test_list_ports_hides_infra_service_even_on_web_like_port(monkeypatch, tmp_path):
+    apps_dir = tmp_path / "apps"
+    compose_dir = tmp_path / "compose"
+    app_dir = apps_dir / "infra"
+    app_dir.mkdir(parents=True)
+    compose_dir.mkdir()
+    (app_dir / "docker-compose.yml").write_text("""
+services:
+  db-admin-internal:
+    image: example
+    ports:
+      - "8080:8080"
+  app:
+    image: example
+    ports:
+      - target: 3000
+        published: 3000
+        protocol: tcp
+""")
+
+    monkeypatch.setattr(ports, "host_ips", lambda: ["192.168.1.10"])
+    monkeypatch.setattr(ports, "_tcp_reachable", lambda ip, port: True)
+
+    rows = ports.list_ports(apps_dir, compose_dir)["ports"]
+
+    assert [(row["service"], row["port"]) for row in rows] == [("app", 3000)]
+
+
 def test_list_ports_ignores_legacy_portvard_app(monkeypatch, tmp_path):
     apps_dir = tmp_path / "apps"
     compose_dir = tmp_path / "compose"
