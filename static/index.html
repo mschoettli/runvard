@@ -665,7 +665,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
     </div>
   </div>
   <div class="topright">
-    <button class="bg-btn-icon ports-toplink" onclick="openPortsApp()" title="Ports">Ports</button>
+    <button class="bg-btn-icon ports-toplink" onclick="openPortsView()" title="Ports">Ports</button>
     <button class="bg-btn-icon" onclick="openBtop()" title="btop – System Monitor" style="font-size:11px;font-weight:600;letter-spacing:.03em">btop</button>
     <button class="bg-btn-icon" onclick="toggleBgPanel()" data-i18n-title="backgroundTitle" title="Hintergrund" style="font-size:14px">⬡</button>
     <div class="topbar-sep"></div>
@@ -10658,12 +10658,6 @@ const APP_UI={
   stopping:{de:'Stoppt...',en:'Stopping...',fr:'Arrêt...',it:'Arresto...',es:'Deteniendo...',pt:'A parar...'},
   restarting:{de:'Startet neu...',en:'Restarting...',fr:'Redémarrage...',it:'Riavvio...',es:'Reiniciando...',pt:'A reiniciar...'},
   updating:{de:'Aktualisiert...',en:'Updating...',fr:'Mise à jour...',it:'Aggiornamento...',es:'Actualizando...',pt:'A atualizar...'},
-  portsAppNotFound:{de:'Ports-App nicht gefunden',en:'Ports app not found',fr:'App Ports introuvable',it:'App Ports non trovata',es:'App Ports no encontrada',pt:'App Ports não encontrada'},
-  installingPorts:{de:'Ports wird installiert...',en:'Installing Ports...',fr:'Installation de Ports...',it:'Installazione di Ports...',es:'Instalando Ports...',pt:'A instalar Ports...'},
-  portsInstalled:{de:'Ports installiert',en:'Ports installed',fr:'Ports installée',it:'Ports installata',es:'Ports instalada',pt:'Ports instalada'},
-  startingPorts:{de:'Ports wird gestartet...',en:'Starting Ports...',fr:'Démarrage de Ports...',it:'Avvio di Ports...',es:'Iniciando Ports...',pt:'A iniciar Ports...'},
-  portsDidNotStart:{de:'Ports konnte nicht gestartet werden',en:'Ports did not start',fr:'Ports n’a pas démarré',it:'Ports non si è avviata',es:'Ports no se inició',pt:'Ports não iniciou'},
-  installationTimedOut:{de:'Installation hat zu lange gedauert',en:'Installation timed out',fr:'Délai d’installation dépassé',it:'Timeout dell’installazione',es:'Tiempo de instalación agotado',pt:'Tempo de instalação esgotado'},
 };
 const APP_CATEGORY_LABELS={
   all:{de:'Alle',en:'All',fr:'Toutes',it:'Tutte',es:'Todas',pt:'Todas'},
@@ -10703,7 +10697,6 @@ const APP_DESC_ROWS=[
   ['immich','Foto- & Video-Backup in Hochleistung','High-performance photo and video backup','Sauvegarde photo et vidéo haute performance','Backup foto e video ad alte prestazioni','Copia de seguridad rápida de fotos y vídeos','Backup de fotos e vídeos de alto desempenho'],
   ['tube-archivist','Eigenes YouTube-Archiv','Self-hosted YouTube archive','Archive YouTube auto-hébergée','Archivio YouTube self-hosted','Archivo propio de YouTube','Arquivo próprio do YouTube'],
   ['pihole','Netzwerkweiter Ad- & Tracker-Blocker','Network-wide ad and tracker blocker','Blocage des publicités et traqueurs pour tout le réseau','Blocco di pubblicità e tracker per tutta la rete','Bloqueador de anuncios y rastreadores para toda la red','Bloqueador de anúncios e rastreadores para toda a rede'],
-  ['portvard','Übersicht der von Runvard verwalteten App-Ports','Overview of app ports managed by Runvard','Vue des ports d’apps gérés par Runvard','Panoramica delle porte app gestite da Runvard','Vista de los puertos de apps gestionados por Runvard','Visão das portas de apps geridas pelo Runvard'],
   ['adguard-home','Netzwerkweite Werbe- & Tracking-Sperre','Network-wide ad and tracking protection','Protection réseau contre publicités et suivi','Protezione di rete contro annunci e tracciamento','Protección de red contra anuncios y seguimiento','Proteção de rede contra anúncios e rastreamento'],
   ['tailscale','Zero-Config-VPN für Zugriff von überall','Zero-config VPN for access from anywhere','VPN sans configuration pour accéder depuis partout','VPN zero-config per accedere da ovunque','VPN sin configuración para acceder desde cualquier lugar','VPN sem configuração para acesso a partir de qualquer lugar'],
   ['wg-easy','WireGuard-VPN mit Web-UI','WireGuard VPN with a web UI','VPN WireGuard avec interface web','VPN WireGuard con interfaccia web','VPN WireGuard con interfaz web','VPN WireGuard com interface web'],
@@ -11076,53 +11069,46 @@ window.appOpen=(id,port)=>{
   window.open(`http://${location.hostname}:${port}`,'_blank');
 };
 
-async function getPortvardApp(){
-  try{return await api('/apps/get?app_id=portvard');}
-  catch(e){
-    const data=await api('/apps/catalog');
-    appsCatalog=data.apps||appsCatalog;
-    appsCatalogCategories=data.categories||appsCatalogCategories;
-    return appById('portvard')||null;
-  }
-}
-async function waitForPortvardInstall(jobId){
-  for(let i=0;i<180;i++){
-    const s=await api('/apps/install-status?job_id='+encodeURIComponent(jobId));
-    if(s.status==='done'&&s.ok)return true;
-    if(s.status==='error'||s.ok===false){
-      throw new Error(appInstallStepText(s.step||appUi('installFailed'),s.step_key));
-    }
-    await new Promise(resolve=>setTimeout(resolve,1500));
-  }
-  throw new Error(appUi('installationTimedOut'));
-}
-window.openPortsApp=async()=>{
+async function renderPorts(body){
+  body.innerHTML=`<div class="loading">${esc(tr('loading'))}</div>`;
   try{
-    let app=await getPortvardApp();
-    if(!app){toast(appUi('portsAppNotFound'),'error');return;}
-    if(!app.installed){
-      toast(appUi('installingPorts'));
-      const r=await post('/apps/install',{app_id:'portvard',content:app.compose});
-      if(!r.job_id)throw new Error(appUi('installDidNotStart'));
-      await waitForPortvardInstall(r.job_id);
-      toast(appUi('portsInstalled'));
-      app=await api('/apps/get?app_id=portvard');
-      loadDashboard();
-    }
-    if(!app.running){
-      toast(appUi('startingPorts'));
-      const started=await post('/apps/action',{app_id:'portvard',action:'start'});
-      if(started&&started.ok===false){
-        const detail=(started.output||'').split('\n').map(x=>x.trim()).filter(Boolean).pop();
-        throw new Error(detail||appUi('portsDidNotStart'));
-      }
-      app=await api('/apps/get?app_id=portvard');
-      loadDashboard();
-    }
-    appOpen('portvard',app.port);
+    const data=await api('/ports');
+    const rows=data.ports||[];
+    const apps=new Set(rows.map(r=>r.app));
+    const ips=new Set(rows.map(r=>r.ip));
+    body.innerHTML=`
+      <div class="toolbar" style="margin-bottom:14px">
+        <button class="btn sm" onclick="renderPorts($('#modal-body'))">↻ ${esc(uiText('Refresh'))}</button>
+        <span style="margin-left:auto;font-size:11px;color:var(--text3)">${esc(rows.length+' Ports · '+apps.size+' Apps · '+ips.size+' IPs')}</span>
+      </div>
+      <div class="nx-summary-grid" style="margin-bottom:14px">
+        ${summaryCard('Ports',rows.length,'Runvard')}
+        ${summaryCard('Apps',apps.size,'Compose')}
+        ${summaryCard('IPs',ips.size,'Host')}
+      </div>
+      <table>
+        <thead><tr><th>IP</th><th>Port</th><th>Name der App</th><th>Quelle</th></tr></thead>
+        <tbody>${rows.map(r=>`
+          <tr>
+            <td class="mono">${esc(r.ip)}</td>
+            <td class="mono">${esc(r.port)}${r.protocol&&r.protocol!=='tcp'?'/'+esc(r.protocol):''}</td>
+            <td>${esc(r.app)}</td>
+            <td style="color:var(--text3)">${esc(r.source)}</td>
+          </tr>`).join('')||'<tr><td colspan="4"><div class="empty-state">Keine von Runvard verwalteten Ports gefunden</div></td></tr>'}</tbody>
+      </table>`;
+    translateRenderedText(body);
   }catch(e){
-    toast('Error: '+e.message,'error');
+    body.innerHTML=`<div class="empty-state">Error: ${esc(e.message)}</div>`;
   }
+}
+window.openPortsView=()=>{
+  currentTile={id:'ports',icon:'▦',name:'Ports'};
+  currentTab=null;
+  $('#modal-title').innerHTML='<span>▦</span> Ports';
+  $('#modal-tabs').innerHTML='';
+  $('#search-btn').style.display='none';
+  $('#overlay').classList.add('open');
+  renderPorts($('#modal-body'));
 };
 
 window.appAddToDashboard=async id=>{

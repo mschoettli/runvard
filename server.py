@@ -20,7 +20,8 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
 from modules import (system, terminal, files, storage, docker_mgr, services,
                      vms, backup, shares, network, security, monitoring,
-                     system_mgr, apps, dashboard, metrics, accounts, audit)
+                     system_mgr, apps, dashboard, metrics, accounts, audit,
+                     ports)
 from modules import security_tokens
 
 app = FastAPI(title="runvard", docs_url=None, redoc_url=None)
@@ -1882,6 +1883,11 @@ def sysmgr_sosreport_run(user: str = Depends(auth)):
 
 
 # ============ Apps (App-Store) ============
+
+@app.get("/api/ports")
+def ports_list(user: str = Depends(auth)):
+    return ports.list_ports()
+
 
 @app.get("/api/apps/catalog")
 def apps_catalog(user: str = Depends(auth)):

@@ -137,22 +137,6 @@ volumes:
      "tpl": _c("pihole/pihole:latest", ["8053:80/tcp", "53:53/tcp", "53:53/udp"],
                ["./etc-pihole:/etc/pihole", "./etc-dnsmasq.d:/etc/dnsmasq.d"],
                {"TZ": "Europe/Zurich", "WEBPASSWORD": "changeme"})},
-    {"id": "portvard", "name": "Ports", "icon": "network", "category": "Netzwerk",
-     "desc": "Übersicht der von Runvard verwalteten App-Ports",
-     "port": 8766,
-     "tpl": _c("python:3.13-slim", [],
-               ["./data:/data",
-                "/opt/runvard/docker-apps/portvard/app.py:/app/app.py:ro",
-                "/opt/runvard/data/apps:/runvard/apps:ro",
-                "/opt/runvard/data/compose:/runvard/compose:ro"],
-               {
-                   "PORT": "8766",
-                   "RUNVARD_APPS_DIR": "/runvard/apps",
-                   "RUNVARD_COMPOSE_DIR": "/runvard/compose",
-               },
-               network_mode="host",
-               extra="""    command: >
-      sh -c 'apt-get update && apt-get install -y --no-install-recommends iproute2 && rm -rf /var/lib/apt/lists/* && python /app/app.py'""")},
     {"id": "adguard-home", "name": "AdGuard Home", "icon": "adguard-home", "category": "Netzwerk",
      "desc": "Netzwerkweite Werbe- & Tracking-Sperre", "port": 3000,
      "tpl": _c("adguard/adguardhome:latest", ["3000:3000", "53:53/tcp", "53:53/udp"],
@@ -789,17 +773,6 @@ def _prepare_host_network_content(app, content):
 
 def _normalize_app_compose(app, content):
     """Apply catalog migrations to already saved app compose files."""
-    text = str(content or "")
-    portvard_old_compose = (
-        "ghcr.io/mschoettli/portvard" in text
-        or "portvard:local" in text
-        or ("/opt/runvard/docker-apps/portvard" in text and "build:" in text)
-    )
-    if app["id"] == "portvard" and portvard_old_compose:
-        port = _environment_port_from_compose(content) or int(app.get("port") or 0)
-        content = build_compose(app)
-        if port:
-            content = _replace_environment_port(content, port)
     return content
 
 
