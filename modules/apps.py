@@ -39,7 +39,7 @@ CATEGORIES = [
 ]
 
 
-def _c(image, ports=None, volumes=None, env=None, extra="", network_mode=""):
+def _c(image, ports=None, volumes=None, env=None, extra="", network_mode="", build=""):
     """Hilfsfunktion: baut ein minimales docker-compose.yml-Template."""
     return {
         "image": image,
@@ -48,6 +48,7 @@ def _c(image, ports=None, volumes=None, env=None, extra="", network_mode=""):
         "env": env or {},
         "extra": extra,
         "network_mode": network_mode,
+        "build": build,
     }
 
 
@@ -139,7 +140,7 @@ volumes:
     {"id": "portvard", "name": "Ports", "icon": "network", "category": "Netzwerk",
      "desc": "Netzwerkweite IP- und Port-Übersicht mit Vollscan",
      "port": 8766,
-     "tpl": _c("ghcr.io/mschoettli/portvard:latest", [],
+     "tpl": _c("portvard:local", [],
                ["./data:/data"],
                {
                    "PORT": "8766",
@@ -147,7 +148,8 @@ volumes:
                    "PORT_RANGE": "1-65535",
                    "NAME_SOURCES": "dns,mdns,netbios",
                },
-               network_mode="host")},
+               network_mode="host",
+               build="/opt/runvard/docker-apps/portvard")},
     {"id": "adguard-home", "name": "AdGuard Home", "icon": "adguard-home", "category": "Netzwerk",
      "desc": "Netzwerkweite Werbe- & Tracking-Sperre", "port": 3000,
      "tpl": _c("adguard/adguardhome:latest", ["3000:3000", "53:53/tcp", "53:53/udp"],
@@ -782,6 +784,19 @@ def _prepare_host_network_content(app, content):
     return content
 
 
+def _compose_uses_build(content):
+    if yaml is not None:
+        try:
+            data = yaml.safe_load(content) or {}
+        except Exception:
+            data = {}
+        services = data.get("services") if isinstance(data, dict) else {}
+        if isinstance(services, dict):
+            return any(isinstance(service, dict) and "build" in service
+                       for service in services.values())
+    return bool(re.search(r"^\s+build\s*:", str(content or ""), re.MULTILINE))
+
+
 def _read_compose(app_id):
     try:
         with open(_compose_file(app_id)) as f:
@@ -873,6 +888,8 @@ def build_compose(app):
     lines = ["services:", f"  {app['id']}:", f"    image: {t['image']}",
              "    restart: unless-stopped",
              f"    container_name: {app['id']}"]
+    if t.get("build"):
+        lines.append(f"    build: {t['build']}")
     if t.get("network_mode"):
         lines.append(f"    network_mode: {t['network_mode']}")
     if t["ports"]:
@@ -1097,31 +1114,36 @@ def install(app_id, content):
         with open(_compose_file(app_id), "w") as f:
             f.write(content)
         job = _install_jobs[job_id]
-        job["status"] = "pulling"
-        job["step"] = "Image wird heruntergeladen…"
-        job["step_key"] = "pulling_image"
-        try:
-            r = subprocess.run(["docker", "compose", "pull"],
-                               cwd=path, capture_output=True, text=True, timeout=1800)
-            job["output"] += r.stdout + r.stderr
-            if r.returncode != 0:
+        uses_build = _compose_uses_build(content)
+        if not uses_build:
+            job["status"] = "pulling"
+            job["step"] = "Image wird heruntergeladen…"
+            job["step_key"] = "pulling_image"
+            try:
+                r = subprocess.run(["docker", "compose", "pull"],
+                                   cwd=path, capture_output=True, text=True, timeout=1800)
+                job["output"] += r.stdout + r.stderr
+                if r.returncode != 0:
+                    job["status"] = "error"
+                    job["ok"] = False
+                    job["step"] = _failure_step("Image pull failed", job["output"])
+                    job["step_key"] = "image_pull_failed"
+                    return
+            except subprocess.TimeoutExpired:
                 job["status"] = "error"
                 job["ok"] = False
-                job["step"] = _failure_step("Image pull failed", job["output"])
-                job["step_key"] = "image_pull_failed"
+                job["step"] = "Image pull timed out"
+                job["step_key"] = "image_pull_timeout"
                 return
-        except subprocess.TimeoutExpired:
-            job["status"] = "error"
-            job["ok"] = False
-            job["step"] = "Image pull timed out"
-            job["step_key"] = "image_pull_timeout"
-            return
 
         job["status"] = "starting"
         job["step"] = "Container wird gestartet…"
         job["step_key"] = "starting_container"
         try:
-            r = subprocess.run(["docker", "compose", "up", "-d"],
+            up_cmd = ["docker", "compose", "up", "-d"]
+            if uses_build:
+                up_cmd.insert(3, "--build")
+            r = subprocess.run(up_cmd,
                                cwd=path, capture_output=True, text=True, timeout=300)
             job["output"] += r.stdout + r.stderr
             job["ok"] = r.returncode == 0
@@ -1250,6 +1272,11 @@ def action(app_id, act):
             if updated != content:
                 with open(_compose_file(app_id), "w") as f:
                     f.write(updated)
+            if _compose_uses_build(updated):
+                cmds["start"] = [["docker", "compose", "up", "--build", "-d"]]
+                cmds["restart"] = [["docker", "compose", "up", "--build", "-d"]]
+                cmds["update"] = [["docker", "compose", "build", "--pull"],
+                                  ["docker", "compose", "up", "-d"]]
     output = ""
     ok = True
     for cmd in cmds[act]:

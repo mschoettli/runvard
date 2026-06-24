@@ -10658,6 +10658,12 @@ const APP_UI={
   stopping:{de:'Stoppt...',en:'Stopping...',fr:'Arrêt...',it:'Arresto...',es:'Deteniendo...',pt:'A parar...'},
   restarting:{de:'Startet neu...',en:'Restarting...',fr:'Redémarrage...',it:'Riavvio...',es:'Reiniciando...',pt:'A reiniciar...'},
   updating:{de:'Aktualisiert...',en:'Updating...',fr:'Mise à jour...',it:'Aggiornamento...',es:'Actualizando...',pt:'A atualizar...'},
+  portsAppNotFound:{de:'Ports-App nicht gefunden',en:'Ports app not found',fr:'App Ports introuvable',it:'App Ports non trovata',es:'App Ports no encontrada',pt:'App Ports não encontrada'},
+  installingPorts:{de:'Ports wird installiert...',en:'Installing Ports...',fr:'Installation de Ports...',it:'Installazione di Ports...',es:'Instalando Ports...',pt:'A instalar Ports...'},
+  portsInstalled:{de:'Ports installiert',en:'Ports installed',fr:'Ports installée',it:'Ports installata',es:'Ports instalada',pt:'Ports instalada'},
+  startingPorts:{de:'Ports wird gestartet...',en:'Starting Ports...',fr:'Démarrage de Ports...',it:'Avvio di Ports...',es:'Iniciando Ports...',pt:'A iniciar Ports...'},
+  portsDidNotStart:{de:'Ports konnte nicht gestartet werden',en:'Ports did not start',fr:'Ports n’a pas démarré',it:'Ports non si è avviata',es:'Ports no se inició',pt:'Ports não iniciou'},
+  installationTimedOut:{de:'Installation hat zu lange gedauert',en:'Installation timed out',fr:'Délai d’installation dépassé',it:'Timeout dell’installazione',es:'Tiempo de instalación agotado',pt:'Tempo de instalação esgotado'},
 };
 const APP_CATEGORY_LABELS={
   all:{de:'Alle',en:'All',fr:'Toutes',it:'Tutte',es:'Todas',pt:'Todas'},
@@ -10697,6 +10703,7 @@ const APP_DESC_ROWS=[
   ['immich','Foto- & Video-Backup in Hochleistung','High-performance photo and video backup','Sauvegarde photo et vidéo haute performance','Backup foto e video ad alte prestazioni','Copia de seguridad rápida de fotos y vídeos','Backup de fotos e vídeos de alto desempenho'],
   ['tube-archivist','Eigenes YouTube-Archiv','Self-hosted YouTube archive','Archive YouTube auto-hébergée','Archivio YouTube self-hosted','Archivo propio de YouTube','Arquivo próprio do YouTube'],
   ['pihole','Netzwerkweiter Ad- & Tracker-Blocker','Network-wide ad and tracker blocker','Blocage des publicités et traqueurs pour tout le réseau','Blocco di pubblicità e tracker per tutta la rete','Bloqueador de anuncios y rastreadores para toda la red','Bloqueador de anúncios e rastreadores para toda a rede'],
+  ['portvard','Netzwerkweite IP- und Port-Übersicht mit Vollscan','Network-wide IP and port overview with full scan','Vue réseau des IP et ports avec scan complet','Panoramica IP e porte di rete con scansione completa','Vista de IPs y puertos de red con escaneo completo','Visão de IPs e portas da rede com scan completo'],
   ['adguard-home','Netzwerkweite Werbe- & Tracking-Sperre','Network-wide ad and tracking protection','Protection réseau contre publicités et suivi','Protezione di rete contro annunci e tracciamento','Protección de red contra anuncios y seguimiento','Proteção de rede contra anúncios e rastreamento'],
   ['tailscale','Zero-Config-VPN für Zugriff von überall','Zero-config VPN for access from anywhere','VPN sans configuration pour accéder depuis partout','VPN zero-config per accedere da ovunque','VPN sin configuración para acceder desde cualquier lugar','VPN sem configuração para acesso a partir de qualquer lugar'],
   ['wg-easy','WireGuard-VPN mit Web-UI','WireGuard VPN with a web UI','VPN WireGuard avec interface web','VPN WireGuard con interfaccia web','VPN WireGuard con interfaz web','VPN WireGuard com interface web'],
@@ -11083,31 +11090,31 @@ async function waitForPortvardInstall(jobId){
     const s=await api('/apps/install-status?job_id='+encodeURIComponent(jobId));
     if(s.status==='done'&&s.ok)return true;
     if(s.status==='error'||s.ok===false){
-      throw new Error(appInstallStepText(s.step||'Installation failed',s.step_key));
+      throw new Error(appInstallStepText(s.step||appUi('installFailed'),s.step_key));
     }
     await new Promise(resolve=>setTimeout(resolve,1500));
   }
-  throw new Error('Installation timed out');
+  throw new Error(appUi('installationTimedOut'));
 }
 window.openPortsApp=async()=>{
   try{
     let app=await getPortvardApp();
-    if(!app){toast('Ports app not found','error');return;}
+    if(!app){toast(appUi('portsAppNotFound'),'error');return;}
     if(!app.installed){
-      toast('Installing Ports…');
+      toast(appUi('installingPorts'));
       const r=await post('/apps/install',{app_id:'portvard',content:app.compose});
-      if(!r.job_id)throw new Error('Installation did not start');
+      if(!r.job_id)throw new Error(appUi('installDidNotStart'));
       await waitForPortvardInstall(r.job_id);
-      toast('Ports installed');
+      toast(appUi('portsInstalled'));
       app=await api('/apps/get?app_id=portvard');
       loadDashboard();
     }
     if(!app.running){
-      toast('Starting Ports…');
+      toast(appUi('startingPorts'));
       const started=await post('/apps/action',{app_id:'portvard',action:'start'});
       if(started&&started.ok===false){
         const detail=(started.output||'').split('\n').map(x=>x.trim()).filter(Boolean).pop();
-        throw new Error(detail||'Ports did not start');
+        throw new Error(detail||appUi('portsDidNotStart'));
       }
       app=await api('/apps/get?app_id=portvard');
       loadDashboard();

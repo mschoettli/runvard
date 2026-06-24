@@ -99,7 +99,8 @@ def test_portvard_compose_uses_host_network_and_port_env(monkeypatch, tmp_path):
 
     content = apps.build_compose(app)
 
-    assert "image: ghcr.io/mschoettli/portvard:latest" in content
+    assert "image: portvard:local" in content
+    assert "build: /opt/runvard/docker-apps/portvard" in content
     assert "network_mode: host" in content
     assert "ports:" not in content
     assert "      - PORT=8766" in content
@@ -127,7 +128,8 @@ def test_portvard_install_content_rewrites_occupied_host_port(monkeypatch, tmp_p
     content = """
 services:
   portvard:
-    image: ghcr.io/mschoettli/portvard:latest
+    image: portvard:local
+    build: /opt/runvard/docker-apps/portvard
     network_mode: host
     environment:
       - PORT=8766
@@ -152,7 +154,7 @@ def test_portvard_is_exposed_in_app_catalog(monkeypatch, tmp_path):
     assert entry["installed"] is False
 
 
-def test_portvard_get_app_returns_external_image_compose(monkeypatch, tmp_path):
+def test_portvard_get_app_returns_local_build_compose(monkeypatch, tmp_path):
     monkeypatch.setattr(apps, "APPS_DIR", str(tmp_path))
     monkeypatch.setattr(apps, "_port_is_available", lambda port: True)
 
@@ -160,8 +162,20 @@ def test_portvard_get_app_returns_external_image_compose(monkeypatch, tmp_path):
 
     assert entry["id"] == "portvard"
     assert entry["port"] == 8766
-    assert "ghcr.io/mschoettli/portvard:latest" in entry["compose"]
+    assert "portvard:local" in entry["compose"]
+    assert "build: /opt/runvard/docker-apps/portvard" in entry["compose"]
     assert "network_mode: host" in entry["compose"]
+
+
+def test_compose_uses_build_detects_build_services():
+    content = """
+services:
+  portvard:
+    image: portvard:local
+    build: /opt/runvard/docker-apps/portvard
+"""
+
+    assert apps._compose_uses_build(content) is True
 
 
 def test_list_networks_marks_builtin_and_unused(monkeypatch):
