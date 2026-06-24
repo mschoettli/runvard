@@ -140,8 +140,8 @@ volumes:
     {"id": "portvard", "name": "Ports", "icon": "network", "category": "Netzwerk",
      "desc": "Netzwerkweite IP- und Port-Übersicht mit Vollscan",
      "port": 8766,
-     "tpl": _c("portvard:local", [],
-               ["./data:/data"],
+     "tpl": _c("python:3.13-slim", [],
+               ["./data:/data", "/opt/runvard/docker-apps/portvard/app.py:/app/app.py:ro"],
                {
                    "PORT": "8766",
                    "SCAN_CIDRS": "auto",
@@ -149,7 +149,8 @@ volumes:
                    "NAME_SOURCES": "dns,mdns,netbios",
                },
                network_mode="host",
-               build="/opt/runvard/docker-apps/portvard")},
+               extra="""    command: >
+      sh -c 'apt-get update && apt-get install -y --no-install-recommends iproute2 iputils-ping avahi-utils samba-common-bin && rm -rf /var/lib/apt/lists/* && python /app/app.py'""")},
     {"id": "adguard-home", "name": "AdGuard Home", "icon": "adguard-home", "category": "Netzwerk",
      "desc": "Netzwerkweite Werbe- & Tracking-Sperre", "port": 3000,
      "tpl": _c("adguard/adguardhome:latest", ["3000:3000", "53:53/tcp", "53:53/udp"],
@@ -786,7 +787,13 @@ def _prepare_host_network_content(app, content):
 
 def _normalize_app_compose(app, content):
     """Apply catalog migrations to already saved app compose files."""
-    if app["id"] == "portvard" and "ghcr.io/mschoettli/portvard" in str(content or ""):
+    text = str(content or "")
+    portvard_old_compose = (
+        "ghcr.io/mschoettli/portvard" in text
+        or "portvard:local" in text
+        or ("/opt/runvard/docker-apps/portvard" in text and "build:" in text)
+    )
+    if app["id"] == "portvard" and portvard_old_compose:
         port = _environment_port_from_compose(content) or int(app.get("port") or 0)
         content = build_compose(app)
         if port:

@@ -99,10 +99,12 @@ def test_portvard_compose_uses_host_network_and_port_env(monkeypatch, tmp_path):
 
     content = apps.build_compose(app)
 
-    assert "image: portvard:local" in content
-    assert "build: /opt/runvard/docker-apps/portvard" in content
+    assert "image: python:3.13-slim" in content
+    assert "build:" not in content
     assert "network_mode: host" in content
     assert "ports:" not in content
+    assert "/opt/runvard/docker-apps/portvard/app.py:/app/app.py:ro" in content
+    assert "apt-get install -y --no-install-recommends" in content
     assert "      - PORT=8766" in content
     assert "      - SCAN_CIDRS=auto" in content
     assert "      - PORT_RANGE=1-65535" in content
@@ -155,10 +157,33 @@ services:
 
     updated = apps._normalize_app_compose(app, content)
 
-    assert "image: portvard:local" in updated
-    assert "build: /opt/runvard/docker-apps/portvard" in updated
+    assert "image: python:3.13-slim" in updated
+    assert "build:" not in updated
+    assert "/opt/runvard/docker-apps/portvard/app.py:/app/app.py:ro" in updated
     assert "ghcr.io/mschoettli/portvard" not in updated
     assert "      - PORT=8770" in updated
+
+
+def test_portvard_normalizes_old_local_build_compose(monkeypatch, tmp_path):
+    monkeypatch.setattr(apps, "APPS_DIR", str(tmp_path))
+    monkeypatch.setattr(apps, "_port_is_available", lambda port: True)
+    app = next(a for a in apps.CATALOG if a["id"] == "portvard")
+    content = """
+services:
+  portvard:
+    image: portvard:local
+    build: /opt/runvard/docker-apps/portvard
+    network_mode: host
+    environment:
+      - PORT=8771
+"""
+
+    updated = apps._normalize_app_compose(app, content)
+
+    assert "image: python:3.13-slim" in updated
+    assert "build:" not in updated
+    assert "portvard:local" not in updated
+    assert "      - PORT=8771" in updated
 
 
 def test_portvard_is_exposed_in_app_catalog(monkeypatch, tmp_path):
@@ -175,7 +200,7 @@ def test_portvard_is_exposed_in_app_catalog(monkeypatch, tmp_path):
     assert entry["installed"] is False
 
 
-def test_portvard_get_app_returns_local_build_compose(monkeypatch, tmp_path):
+def test_portvard_get_app_returns_buildx_free_compose(monkeypatch, tmp_path):
     monkeypatch.setattr(apps, "APPS_DIR", str(tmp_path))
     monkeypatch.setattr(apps, "_port_is_available", lambda port: True)
 
@@ -183,9 +208,10 @@ def test_portvard_get_app_returns_local_build_compose(monkeypatch, tmp_path):
 
     assert entry["id"] == "portvard"
     assert entry["port"] == 8766
-    assert "portvard:local" in entry["compose"]
-    assert "build: /opt/runvard/docker-apps/portvard" in entry["compose"]
+    assert "image: python:3.13-slim" in entry["compose"]
+    assert "build:" not in entry["compose"]
     assert "network_mode: host" in entry["compose"]
+    assert "/opt/runvard/docker-apps/portvard/app.py:/app/app.py:ro" in entry["compose"]
 
 
 def test_compose_uses_build_detects_build_services():
