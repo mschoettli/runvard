@@ -1,10 +1,12 @@
 """Runvard-managed port overview."""
+import json
 import os
 import re
 import socket
 import subprocess
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
+from urllib.parse import urlparse
 
 from modules import compose_utils
 
@@ -16,6 +18,7 @@ except ImportError:
 
 APPS_DIR = os.getenv("RUNVARD_APPS_DIR", "/opt/runvard/data/apps")
 COMPOSE_DIR = os.getenv("RUNVARD_COMPOSE_DIR", "/opt/runvard/data/compose")
+DASH_FILE = os.path.join(os.getenv("RUNVARD_DATA_DIR", "/opt/runvard/data"), "dashboard.json")
 IGNORED_PROJECTS = {"portvard"}
 IGNORED_INTERFACE_PREFIXES = (
     "lo", "docker", "br-", "veth", "virbr", "tailscale", "zt", "wg", "tun",
@@ -260,7 +263,34 @@ def compose_files(apps_dir=None, compose_dir=None):
     return files
 
 
-def list_ports(apps_dir=None, compose_dir=None):
+def _custom_dashboard_ports(dashboard_file=None):
+    path = Path(dashboard_file or DASH_FILE)
+    try:
+        data = json.loads(path.read_text())
+    except Exception:
+        return []
+    rows = []
+    for tile in data.get("tiles", []):
+        if tile.get("type") != "custom":
+            continue
+        url = str(tile.get("url") or "").strip()
+        parsed = urlparse(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.hostname:
+            continue
+        port = parsed.port or (443 if parsed.scheme == "https" else 80)
+        rows.append({
+            "ip": parsed.hostname,
+            "port": port,
+            "protocol": "tcp",
+            "app": str(tile.get("name") or parsed.hostname),
+            "service": str(tile.get("id") or "custom"),
+            "source": "Custom",
+            "url": url,
+        })
+    return rows
+
+
+def list_ports(apps_dir=None, compose_dir=None, dashboard_file=None):
     ips = host_ips()
     rows = []
     for project_name, source, path in compose_files(apps_dir, compose_dir):
@@ -269,10 +299,11 @@ def list_ports(apps_dir=None, compose_dir=None):
         except OSError:
             continue
         rows.extend(parse_compose_ports(content, project_name, source, ips))
+    rows.extend(_custom_dashboard_ports(dashboard_file))
     seen = set()
     unique = []
     for row in rows:
-        key = (row["ip"], row["port"], row["protocol"], row["app"], row["service"])
+        key = (row["ip"], row["port"], row["protocol"], row["app"], row["service"], row.get("url", ""))
         if key in seen:
             continue
         seen.add(key)

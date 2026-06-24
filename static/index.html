@@ -11075,8 +11075,8 @@ async function renderPorts(body){
     const data=await api('/ports');
     const rows=data.ports||[];
     const grouped=Array.from(rows.reduce((map,r)=>{
-      const key=[r.app,r.port,r.protocol||'tcp'].join('|');
-      if(!map.has(key))map.set(key,{app:r.app,port:r.port,protocol:r.protocol||'tcp',endpoints:[]});
+      const key=[r.app,r.port,r.protocol||'tcp',r.url||''].join('|');
+      if(!map.has(key))map.set(key,{app:r.app,port:r.port,protocol:r.protocol||'tcp',url:r.url||'',endpoints:[]});
       const item=map.get(key);
       if(!item.endpoints.some(e=>e.ip===r.ip))item.endpoints.push({ip:r.ip,reachable:!!r.reachable});
       return map;
@@ -11100,7 +11100,7 @@ async function renderPorts(body){
         <tbody>${grouped.map(r=>`
           <tr>
             <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.app)}</td>
-            <td class="mono" style="white-space:nowrap">${(()=>{const ok=r.endpoints.some(e=>e.reachable);return `<a href="${esc(portUrlFor(r.port,r.protocol))}" target="_blank" rel="noopener" style="color:var(${ok?'--green':'--red'});text-decoration:none;font-weight:700">${esc(r.port)}${r.protocol&&r.protocol!=='tcp'?'/'+esc(r.protocol):''}</a>`;})()}</td>
+            <td class="mono" style="white-space:nowrap">${(()=>{const ok=r.endpoints.some(e=>e.reachable);return `<a href="${esc(r.url||portUrlFor(r.port,r.protocol))}" target="_blank" rel="noopener" style="color:var(${ok?'--green':'--red'});text-decoration:none;font-weight:700">${esc(r.port)}${r.protocol&&r.protocol!=='tcp'?'/'+esc(r.protocol):''}</a>`;})()}</td>
             <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.endpoints.map(e=>`<a class="mono" href="${esc(urlFor(e.ip,r.port,r.protocol))}" target="_blank" rel="noopener" style="color:var(${e.reachable?'--text':'--red'});text-decoration:none;margin-right:12px">${esc(e.ip)}</a>`).join('')}</td>
           </tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">Keine von Runvard verwalteten Ports gefunden</div></td></tr>'}</tbody>
       </table>

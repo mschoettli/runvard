@@ -1,3 +1,5 @@
+import json
+
 from modules import ports
 
 
@@ -159,6 +161,47 @@ services:
     rows = ports.list_ports(apps_dir, compose_dir)["ports"]
 
     assert [(row["service"], row["port"]) for row in rows] == [("app", 3000)]
+
+
+def test_list_ports_includes_custom_dashboard_tiles(monkeypatch, tmp_path):
+    apps_dir = tmp_path / "apps"
+    compose_dir = tmp_path / "compose"
+    dash_file = tmp_path / "dashboard.json"
+    apps_dir.mkdir()
+    compose_dir.mkdir()
+    dash_file.write_text(json.dumps({
+        "tiles": [
+            {
+                "id": "custom_1",
+                "type": "custom",
+                "name": "Home Assistant",
+                "url": "http://192.168.1.50:8123/lovelace",
+            },
+            {
+                "id": "custom_2",
+                "type": "custom",
+                "name": "Router",
+                "url": "https://router.local",
+            },
+            {
+                "id": "custom_3",
+                "type": "custom",
+                "name": "Invalid",
+                "url": "ftp://192.168.1.5:21",
+            },
+        ]
+    }))
+
+    monkeypatch.setattr(ports, "host_ips", lambda: ["192.168.1.10"])
+    monkeypatch.setattr(ports, "_tcp_reachable", lambda ip, port: port == 8123)
+
+    rows = ports.list_ports(apps_dir, compose_dir, dash_file)["ports"]
+
+    assert [(row["app"], row["ip"], row["port"], row.get("url")) for row in rows] == [
+        ("Home Assistant", "192.168.1.50", 8123, "http://192.168.1.50:8123/lovelace"),
+        ("Router", "router.local", 443, "https://router.local"),
+    ]
+    assert [row["reachable"] for row in rows] == [True, False]
 
 
 def test_list_ports_ignores_legacy_portvard_app(monkeypatch, tmp_path):
