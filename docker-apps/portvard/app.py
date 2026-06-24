@@ -11,17 +11,25 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
-from urllib.parse import urlparse
+from urllib.parse import parse_qs, urlparse
 
 
 DATA_DIR = Path(os.environ.get("DATA_DIR", "/data"))
 STATE_FILE = DATA_DIR / "last_scan.json"
 PORT = int(os.environ.get("PORT", "8766"))
 SCAN_CIDRS = os.environ.get("SCAN_CIDRS", "auto")
-PORT_RANGE = os.environ.get("PORT_RANGE", "1-65535")
+PORT_RANGE = os.environ.get("PORT_RANGE", "common")
 NAME_SOURCES = [x.strip().lower() for x in os.environ.get("NAME_SOURCES", "dns,mdns,netbios").split(",") if x.strip()]
 WORKERS = int(os.environ.get("SCAN_WORKERS", "256"))
 CONNECT_TIMEOUT = float(os.environ.get("CONNECT_TIMEOUT", "0.25"))
+COMMON_PORTS = [
+    20, 21, 22, 23, 25, 53, 67, 68, 80, 110, 111, 123, 135, 137, 138, 139,
+    143, 161, 162, 389, 443, 445, 465, 500, 515, 548, 587, 631, 636, 853,
+    873, 902, 989, 990, 993, 995, 1194, 1433, 1521, 1723, 1883, 2049, 2375,
+    2376, 3000, 3306, 3389, 5000, 5353, 5432, 5900, 5985, 5986, 6379, 8000,
+    8080, 8081, 8123, 8443, 8765, 8766, 8883, 9000, 9090, 9100, 9200, 9443,
+    10000, 11211, 27017, 32400,
+]
 
 
 state_lock = threading.Lock()
@@ -35,6 +43,8 @@ state = {
     "error": "",
     "started_at": "",
     "finished_at": "",
+    "scan_mode": "",
+    "port_count": 0,
     "result": None,
 }
 
@@ -96,8 +106,13 @@ def detect_cidrs():
 
 
 def parse_ports(spec):
+    value = str(spec or "").strip().lower()
+    if value in ("", "common", "quick", "default"):
+        return sorted(set(COMMON_PORTS))
+    if value in ("all", "full", "1-65535"):
+        return list(range(1, 65536))
     ports = set()
-    for part in spec.split(","):
+    for part in value.split(","):
         item = part.strip()
         if not item:
             continue
@@ -219,21 +234,24 @@ def scan_host(ip, ports):
     }
 
 
-def scan_worker():
+def scan_worker(port_spec=None, scan_mode="quick"):
     started = now_iso()
     try:
         cidrs = detect_cidrs()
-        ports = parse_ports(PORT_RANGE)
+        effective_spec = port_spec or PORT_RANGE
+        ports = parse_ports(effective_spec)
         hosts = list(iter_hosts(cidrs))
         with state_lock:
             state.update({
                 "running": True,
                 "progress": 0,
                 "total": len(hosts),
-                "message": "Scan laeuft",
+                "message": "Vollscan laeuft" if scan_mode == "full" else "Schnellscan laeuft",
                 "error": "",
                 "started_at": started,
                 "finished_at": "",
+                "scan_mode": scan_mode,
+                "port_count": len(ports),
             })
         devices = []
         with ThreadPoolExecutor(max_workers=max(1, WORKERS)) as pool:
@@ -246,13 +264,15 @@ def scan_worker():
                     devices.append(item)
                 with state_lock:
                     state["progress"] = idx
-                    state["message"] = f"{idx}/{len(hosts)} Hosts geprueft"
+                    state["message"] = f"{idx}/{len(hosts)} Hosts, {len(ports)} Ports je Host"
         result = {
             "started_at": started,
             "finished_at": now_iso(),
             "cancelled": scan_cancel.is_set(),
             "cidrs": cidrs,
-            "port_range": PORT_RANGE,
+            "port_range": effective_spec,
+            "port_count": len(ports),
+            "scan_mode": scan_mode,
             "devices": sorted(devices, key=lambda x: ipaddress.ip_address(x["ip"])),
         }
         save_last_scan(result)
@@ -302,7 +322,8 @@ HTML = """<!doctype html>
   <header>
     <h1>Ports</h1>
     <div class="bar">
-      <button class="primary" id="start">Scan starten</button>
+      <button class="primary" id="start">Schnellscan</button>
+      <button id="full">Vollscan</button>
       <button id="cancel">Abbrechen</button>
     </div>
   </header>
@@ -311,7 +332,7 @@ HTML = """<!doctype html>
     <div class="status">
       <div class="metric"><b id="devices">0</b><span>Geraete</span></div>
       <div class="metric"><b id="checked">0</b><span>Gepruefte Hosts</span></div>
-      <div class="metric"><b id="range">-</b><span>Portbereich</span></div>
+      <div class="metric"><b id="range">-</b><span>Ports je Host</span></div>
       <div class="metric"><b id="message">Bereit</b><span>Status</span></div>
     </div>
     <p id="error" class="bad"></p>
@@ -326,10 +347,11 @@ HTML = """<!doctype html>
       const result=data.result||{};
       const devices=result.devices||[];
       document.getElementById('start').disabled=!!data.running;
+      document.getElementById('full').disabled=!!data.running;
       document.getElementById('cancel').disabled=!data.running;
       document.getElementById('devices').textContent=devices.length;
       document.getElementById('checked').textContent=(data.progress||0)+'/'+(data.total||0);
-      document.getElementById('range').textContent=result.port_range||'-';
+      document.getElementById('range').textContent=(data.port_count||result.port_count||'-')+'';
       document.getElementById('message').textContent=data.message||'Bereit';
       document.getElementById('error').textContent=data.error||'';
       const p=document.getElementById('progress');
@@ -345,7 +367,8 @@ HTML = """<!doctype html>
         </tr>`).join('');
     }
     async function refresh(){render(await json('/api/status'));}
-    document.getElementById('start').onclick=async()=>{await json('/api/scan/start',{method:'POST'}); refresh();};
+    document.getElementById('start').onclick=async()=>{await json('/api/scan/start?mode=quick',{method:'POST'}); refresh();};
+    document.getElementById('full').onclick=async()=>{await json('/api/scan/start?mode=full',{method:'POST'}); refresh();};
     document.getElementById('cancel').onclick=async()=>{await json('/api/scan/cancel',{method:'POST'}); refresh();};
     refresh(); setInterval(refresh, 1500);
   </script>
@@ -378,15 +401,24 @@ class Handler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         global scan_thread
-        path = urlparse(self.path).path
+        parsed = urlparse(self.path)
+        path = parsed.path
         if path == "/api/scan/start":
             with state_lock:
                 if state["running"]:
                     self._send(409, json.dumps({"error": "scan already running"}))
                     return
+                query = parse_qs(parsed.query)
+                mode = (query.get("mode") or ["quick"])[0]
+                if mode == "full":
+                    port_spec = "full"
+                    scan_mode = "full"
+                else:
+                    port_spec = PORT_RANGE
+                    scan_mode = "quick"
                 scan_cancel.clear()
-                state.update({"running": True, "progress": 0, "total": 0, "message": "Scan startet", "error": ""})
-                scan_thread = threading.Thread(target=scan_worker, daemon=True)
+                state.update({"running": True, "progress": 0, "total": 0, "message": "Scan startet", "error": "", "scan_mode": scan_mode})
+                scan_thread = threading.Thread(target=scan_worker, args=(port_spec, scan_mode), daemon=True)
                 scan_thread.start()
             self._send(202, json.dumps({"ok": True}))
             return

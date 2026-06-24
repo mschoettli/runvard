@@ -145,7 +145,7 @@ volumes:
                {
                    "PORT": "8766",
                    "SCAN_CIDRS": "auto",
-                   "PORT_RANGE": "1-65535",
+                   "PORT_RANGE": "common",
                    "NAME_SOURCES": "dns,mdns,netbios",
                },
                network_mode="host",

@@ -107,7 +107,7 @@ def test_portvard_compose_uses_host_network_and_port_env(monkeypatch, tmp_path):
     assert "apt-get install -y --no-install-recommends" in content
     assert "      - PORT=8766" in content
     assert "      - SCAN_CIDRS=auto" in content
-    assert "      - PORT_RANGE=1-65535" in content
+    assert "      - PORT_RANGE=common" in content
     assert "      - NAME_SOURCES=dns,mdns,netbios" in content
     assert apps._first_host_port_from_compose(content, 0) == 8766
 
