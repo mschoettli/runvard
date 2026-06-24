@@ -784,6 +784,16 @@ def _prepare_host_network_content(app, content):
     return content
 
 
+def _normalize_app_compose(app, content):
+    """Apply catalog migrations to already saved app compose files."""
+    if app["id"] == "portvard" and "ghcr.io/mschoettli/portvard" in str(content or ""):
+        port = _environment_port_from_compose(content) or int(app.get("port") or 0)
+        content = build_compose(app)
+        if port:
+            content = _replace_environment_port(content, port)
+    return content
+
+
 def _compose_uses_build(content):
     if yaml is not None:
         try:
@@ -1100,6 +1110,7 @@ def install(app_id, content):
     app = next((a for a in CATALOG if a["id"] == app_id), None)
     if not app:
         raise ValueError("App nicht gefunden")
+    content = _normalize_app_compose(app, content)
     content = _prepare_host_network_content(app, content)
     job_id = f"{app_id}_{int(time.time())}"
     _install_jobs[job_id] = {
@@ -1268,7 +1279,8 @@ def action(app_id, act):
         app = next((a for a in CATALOG if a["id"] == app_id), None)
         if app:
             content = _read_compose(app_id)
-            updated = _prepare_host_network_content(app, content)
+            updated = _normalize_app_compose(app, content)
+            updated = _prepare_host_network_content(app, updated)
             if updated != content:
                 with open(_compose_file(app_id), "w") as f:
                     f.write(updated)

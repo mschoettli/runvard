@@ -140,6 +140,27 @@ services:
     assert "      - PORT=8767" in updated
 
 
+def test_portvard_normalizes_old_external_image_compose(monkeypatch, tmp_path):
+    monkeypatch.setattr(apps, "APPS_DIR", str(tmp_path))
+    monkeypatch.setattr(apps, "_port_is_available", lambda port: True)
+    app = next(a for a in apps.CATALOG if a["id"] == "portvard")
+    content = """
+services:
+  portvard:
+    image: ghcr.io/mschoettli/portvard:latest
+    network_mode: host
+    environment:
+      - PORT=8770
+"""
+
+    updated = apps._normalize_app_compose(app, content)
+
+    assert "image: portvard:local" in updated
+    assert "build: /opt/runvard/docker-apps/portvard" in updated
+    assert "ghcr.io/mschoettli/portvard" not in updated
+    assert "      - PORT=8770" in updated
+
+
 def test_portvard_is_exposed_in_app_catalog(monkeypatch, tmp_path):
     monkeypatch.setattr(apps, "APPS_DIR", str(tmp_path))
     monkeypatch.setattr(apps.docker_mgr, "list_compose_projects", lambda: [])
