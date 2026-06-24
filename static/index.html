@@ -11075,43 +11075,35 @@ async function renderPorts(body){
     const data=await api('/ports');
     const rows=data.ports||[];
     const grouped=Array.from(rows.reduce((map,r)=>{
-      const key=[r.app,r.port,r.protocol||'tcp',r.source].join('|');
-      if(!map.has(key))map.set(key,{app:r.app,port:r.port,protocol:r.protocol||'tcp',source:r.source,ips:[]});
+      const key=[r.app,r.port,r.protocol||'tcp'].join('|');
+      if(!map.has(key))map.set(key,{app:r.app,port:r.port,protocol:r.protocol||'tcp',ips:[]});
       const item=map.get(key);
       if(!item.ips.includes(r.ip))item.ips.push(r.ip);
       return map;
     },new Map()).values()).sort((a,b)=>a.app.localeCompare(b.app)||Number(a.port)-Number(b.port));
     grouped.forEach(g=>g.ips.sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})));
-    const apps=new Set(grouped.map(r=>r.app));
-    const ips=new Set(rows.map(r=>r.ip));
-    const portKeys=new Set(grouped.map(r=>`${r.port}/${r.protocol}`));
     const urlFor=(ip,port,proto)=>{
       const scheme=(Number(port)===443||Number(port)===8443||Number(port)===9443)?'https':'http';
       return `${scheme}://${ip}:${port}`;
     };
     body.innerHTML=`
-      <div class="toolbar" style="margin-bottom:14px">
-        <button class="btn sm" onclick="renderPorts($('#modal-body'))">↻ ${esc(uiText('Refresh'))}</button>
-        <span style="margin-left:auto;font-size:11px;color:var(--text3)">${esc(apps.size+' Apps · '+portKeys.size+' Ports · '+ips.size+' IPs · '+rows.length+' Zuordnungen')}</span>
-      </div>
-      <div class="nx-summary-grid" style="margin-bottom:14px">
-        ${summaryCard('Apps',apps.size,'Runvard')}
-        ${summaryCard('Ports',portKeys.size,'Genutzt')}
-        ${summaryCard('IPs',ips.size,'Host')}
+      <div class="toolbar" style="margin-bottom:14px;justify-content:flex-end">
+        <button class="btn sm ghost" onclick="renderPorts($('#modal-body'))">↻ ${esc(uiText('Refresh'))}</button>
       </div>
       <div style="overflow:auto">
       <table style="table-layout:fixed;min-width:860px">
-        <thead><tr><th style="width:26%">Name der App</th><th style="width:110px">Port</th><th>IPs</th><th style="width:110px">Quelle</th></tr></thead>
+        <thead><tr><th style="width:26%">Name der App</th><th style="width:110px">Port</th><th>IPs</th></tr></thead>
         <tbody>${grouped.map(r=>`
           <tr>
             <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.app)}</td>
             <td class="mono" style="white-space:nowrap">${esc(r.port)}${r.protocol&&r.protocol!=='tcp'?'/'+esc(r.protocol):''}</td>
             <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.ips.map(ip=>`<a class="mono" href="${esc(urlFor(ip,r.port,r.protocol))}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;margin-right:12px">${esc(ip)}</a>`).join('')}</td>
-            <td style="color:var(--text3);white-space:nowrap">${esc(r.source)}</td>
-          </tr>`).join('')||'<tr><td colspan="4"><div class="empty-state">Keine von Runvard verwalteten Ports gefunden</div></td></tr>'}</tbody>
+          </tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">Keine von Runvard verwalteten Ports gefunden</div></td></tr>'}</tbody>
       </table>
       </div>`;
     translateRenderedText(body);
+    const si=$('#search-input');
+    if(searchEnabled&&si)doSearch(si.value||'');
   }catch(e){
     body.innerHTML=`<div class="empty-state">Error: ${esc(e.message)}</div>`;
   }
@@ -11121,7 +11113,8 @@ window.openPortsView=()=>{
   currentTab=null;
   $('#modal-title').innerHTML='<span>▦</span> Ports';
   $('#modal-tabs').innerHTML='';
-  $('#search-btn').style.display='none';
+  resetSearch();
+  $('#search-btn').style.display='flex';
   $('#overlay').classList.add('open');
   renderPorts($('#modal-body'));
 };
