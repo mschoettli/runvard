@@ -1,5 +1,6 @@
 from types import SimpleNamespace
 
+from modules import apps
 from modules import docker_mgr
 
 
@@ -89,6 +90,78 @@ services:
     assert result["ok"] is False
     assert [item["reason"] for item in result["conflicts"]] == ["duplicate", "duplicate"]
     assert [item["service"] for item in result["conflicts"]] == ["web", "api"]
+
+
+def test_portvard_compose_uses_host_network_and_port_env(monkeypatch, tmp_path):
+    monkeypatch.setattr(apps, "APPS_DIR", str(tmp_path))
+    monkeypatch.setattr(apps, "_port_is_available", lambda port: True)
+    app = next(a for a in apps.CATALOG if a["id"] == "portvard")
+
+    content = apps.build_compose(app)
+
+    assert "image: ghcr.io/mschoettli/portvard:latest" in content
+    assert "network_mode: host" in content
+    assert "ports:" not in content
+    assert "      - PORT=8766" in content
+    assert "      - SCAN_CIDRS=auto" in content
+    assert "      - PORT_RANGE=1-65535" in content
+    assert "      - NAME_SOURCES=dns,mdns,netbios" in content
+    assert apps._first_host_port_from_compose(content, 0) == 8766
+
+
+def test_portvard_compose_moves_port_when_default_is_occupied(monkeypatch, tmp_path):
+    monkeypatch.setattr(apps, "APPS_DIR", str(tmp_path))
+    monkeypatch.setattr(apps, "_port_is_available", lambda port: port != 8766)
+    app = next(a for a in apps.CATALOG if a["id"] == "portvard")
+
+    content = apps.build_compose(app)
+
+    assert "      - PORT=8767" in content
+    assert apps._first_host_port_from_compose(content, 0) == 8767
+
+
+def test_portvard_install_content_rewrites_occupied_host_port(monkeypatch, tmp_path):
+    monkeypatch.setattr(apps, "APPS_DIR", str(tmp_path))
+    monkeypatch.setattr(apps, "_port_is_available", lambda port: port != 8766)
+    app = next(a for a in apps.CATALOG if a["id"] == "portvard")
+    content = """
+services:
+  portvard:
+    image: ghcr.io/mschoettli/portvard:latest
+    network_mode: host
+    environment:
+      - PORT=8766
+"""
+
+    updated = apps._prepare_host_network_content(app, content)
+
+    assert "      - PORT=8767" in updated
+
+
+def test_portvard_is_exposed_in_app_catalog(monkeypatch, tmp_path):
+    monkeypatch.setattr(apps, "APPS_DIR", str(tmp_path))
+    monkeypatch.setattr(apps.docker_mgr, "list_compose_projects", lambda: [])
+    monkeypatch.setattr(apps, "_port_is_available", lambda port: True)
+
+    catalog = apps.get_catalog()
+    entry = next(a for a in catalog["apps"] if a["id"] == "portvard")
+
+    assert entry["name"] == "Ports"
+    assert entry["category"] == "Netzwerk"
+    assert entry["port"] == 8766
+    assert entry["installed"] is False
+
+
+def test_portvard_get_app_returns_external_image_compose(monkeypatch, tmp_path):
+    monkeypatch.setattr(apps, "APPS_DIR", str(tmp_path))
+    monkeypatch.setattr(apps, "_port_is_available", lambda port: True)
+
+    entry = apps.get_app("portvard")
+
+    assert entry["id"] == "portvard"
+    assert entry["port"] == 8766
+    assert "ghcr.io/mschoettli/portvard:latest" in entry["compose"]
+    assert "network_mode: host" in entry["compose"]
 
 
 def test_list_networks_marks_builtin_and_unused(monkeypatch):

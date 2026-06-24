@@ -39,7 +39,7 @@ CATEGORIES = [
 ]
 
 
-def _c(image, ports=None, volumes=None, env=None, extra=""):
+def _c(image, ports=None, volumes=None, env=None, extra="", network_mode=""):
     """Hilfsfunktion: baut ein minimales docker-compose.yml-Template."""
     return {
         "image": image,
@@ -47,6 +47,7 @@ def _c(image, ports=None, volumes=None, env=None, extra=""):
         "volumes": volumes or [],
         "env": env or {},
         "extra": extra,
+        "network_mode": network_mode,
     }
 
 
@@ -135,6 +136,18 @@ volumes:
      "tpl": _c("pihole/pihole:latest", ["8053:80/tcp", "53:53/tcp", "53:53/udp"],
                ["./etc-pihole:/etc/pihole", "./etc-dnsmasq.d:/etc/dnsmasq.d"],
                {"TZ": "Europe/Zurich", "WEBPASSWORD": "changeme"})},
+    {"id": "portvard", "name": "Ports", "icon": "network", "category": "Netzwerk",
+     "desc": "Netzwerkweite IP- und Port-Übersicht mit Vollscan",
+     "port": 8766,
+     "tpl": _c("ghcr.io/mschoettli/portvard:latest", [],
+               ["./data:/data"],
+               {
+                   "PORT": "8766",
+                   "SCAN_CIDRS": "auto",
+                   "PORT_RANGE": "1-65535",
+                   "NAME_SOURCES": "dns,mdns,netbios",
+               },
+               network_mode="host")},
     {"id": "adguard-home", "name": "AdGuard Home", "icon": "adguard-home", "category": "Netzwerk",
      "desc": "Netzwerkweite Werbe- & Tracking-Sperre", "port": 3000,
      "tpl": _c("adguard/adguardhome:latest", ["3000:3000", "53:53/tcp", "53:53/udp"],
@@ -592,6 +605,9 @@ def _host_ports_from_compose(content):
         port = _published_port(entry)
         if port:
             ports.add(port)
+    env_port = _environment_port_from_compose(content)
+    if env_port:
+        ports.add(env_port)
     return ports
 
 
@@ -600,7 +616,66 @@ def _first_host_port_from_compose(content, fallback=0):
         port = _published_port(entry)
         if port:
             return port
+    env_port = _environment_port_from_compose(content)
+    if env_port:
+        return env_port
     return fallback
+
+
+def _environment_port_from_compose(content):
+    if yaml is not None:
+        try:
+            data = yaml.safe_load(content) or {}
+        except Exception:
+            data = {}
+        services = data.get("services") if isinstance(data, dict) else {}
+        if isinstance(services, dict):
+            for service in services.values():
+                if not isinstance(service, dict):
+                    continue
+                env = service.get("environment") or {}
+                if isinstance(env, dict):
+                    value = env.get("PORT")
+                    try:
+                        return int(str(value))
+                    except (TypeError, ValueError):
+                        continue
+                if isinstance(env, list):
+                    for item in env:
+                        key, sep, value = str(item).partition("=")
+                        if sep and key == "PORT":
+                            try:
+                                return int(value)
+                            except ValueError:
+                                continue
+
+    in_env = False
+    env_indent = None
+    for raw in str(content or "").splitlines():
+        line = raw.split("#", 1)[0].rstrip()
+        if not line.strip():
+            continue
+        indent = len(line) - len(line.lstrip(" "))
+        stripped = line.strip().strip("\"'")
+        if stripped == "environment:":
+            in_env = True
+            env_indent = indent
+            continue
+        if in_env and indent <= (env_indent or 0):
+            in_env = False
+        if not in_env:
+            continue
+        item = stripped[2:].strip() if stripped.startswith("- ") else stripped
+        key, sep, value = item.partition("=")
+        if sep and key.strip() == "PORT":
+            try:
+                return int(value.strip().strip("\"'"))
+            except ValueError:
+                continue
+        match = re.match(r"^PORT:\s*['\"]?(\d+)['\"]?$", item)
+        if match:
+            return int(match.group(1))
+    return None
 
 
 def _port_is_available(port):
@@ -661,6 +736,50 @@ def _allocated_port_specs(app):
             reserved.add(host_port)
         specs.append(_replace_published_port(spec, host_port))
     return specs
+
+
+def _allocated_env(app):
+    t = app["tpl"]
+    env = dict(t["env"])
+    if t.get("network_mode") == "host" and "PORT" in env:
+        reserved = _reserved_host_ports(exclude_app_id=app["id"])
+        try:
+            preferred = int(str(env["PORT"]))
+        except (TypeError, ValueError):
+            preferred = int(app.get("port") or 0)
+        env["PORT"] = str(_next_available_host_port(preferred, reserved))
+    return env
+
+
+def _replace_environment_port(content, port):
+    updated = re.sub(
+        r"(^\s*-\s*PORT=)\d+(\s*$)",
+        rf"\g<1>{port}\2",
+        str(content or ""),
+        count=1,
+        flags=re.MULTILINE,
+    )
+    if updated != content:
+        return updated
+    updated = re.sub(
+        r"(^\s*PORT:\s*['\"]?)\d+(['\"]?\s*$)",
+        rf"\g<1>{port}\2",
+        str(content or ""),
+        count=1,
+        flags=re.MULTILINE,
+    )
+    return updated
+
+
+def _prepare_host_network_content(app, content):
+    if app["tpl"].get("network_mode") != "host":
+        return content
+    port = _environment_port_from_compose(content) or int(app.get("port") or 0)
+    reserved = _reserved_host_ports(exclude_app_id=app["id"])
+    if port in reserved or not _port_is_available(port):
+        port = _next_available_host_port(port, reserved)
+        content = _replace_environment_port(content, port)
+    return content
 
 
 def _read_compose(app_id):
@@ -754,6 +873,8 @@ def build_compose(app):
     lines = ["services:", f"  {app['id']}:", f"    image: {t['image']}",
              "    restart: unless-stopped",
              f"    container_name: {app['id']}"]
+    if t.get("network_mode"):
+        lines.append(f"    network_mode: {t['network_mode']}")
     if t["ports"]:
         lines.append("    ports:")
         for p in _allocated_port_specs(app):
@@ -762,9 +883,10 @@ def build_compose(app):
         lines.append("    volumes:")
         for v in t["volumes"]:
             lines.append(f"      - {v}")
-    if t["env"]:
+    env = _allocated_env(app)
+    if env:
         lines.append("    environment:")
-        for k, v in t["env"].items():
+        for k, v in env.items():
             lines.append(f"      - {k}={v}")
     if t["extra"]:
         lines.append(t["extra"])
@@ -961,6 +1083,7 @@ def install(app_id, content):
     app = next((a for a in CATALOG if a["id"] == app_id), None)
     if not app:
         raise ValueError("App nicht gefunden")
+    content = _prepare_host_network_content(app, content)
     job_id = f"{app_id}_{int(time.time())}"
     _install_jobs[job_id] = {
         "status": "preparing", "app_id": app_id, "app_name": app["name"],
@@ -1119,6 +1242,14 @@ def action(app_id, act):
     }
     if act not in cmds:
         raise ValueError("Unbekannte Aktion")
+    if act in ("start", "restart", "update"):
+        app = next((a for a in CATALOG if a["id"] == app_id), None)
+        if app:
+            content = _read_compose(app_id)
+            updated = _prepare_host_network_content(app, content)
+            if updated != content:
+                with open(_compose_file(app_id), "w") as f:
+                    f.write(updated)
     output = ""
     ok = True
     for cmd in cmds[act]:

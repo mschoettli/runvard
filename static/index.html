@@ -56,6 +56,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 .logo{font-size:15px;font-weight:700;letter-spacing:.04em;color:#fff;display:flex;align-items:center;gap:10px}
 .logo span{color:var(--text3);font-weight:400;font-size:13px;margin-left:12px}
 .topright{display:flex;align-items:center;gap:6px;justify-content:flex-end}.topbar-sep{width:1px;height:14px;background:rgba(255,255,255,.08);margin:0 4px}
+.ports-toplink{width:auto;min-width:48px;padding:0 10px;font-size:11px;font-weight:600;letter-spacing:.03em}
 .time{font-size:14px;color:var(--text2)}.uptime{font-size:12px;color:var(--text3)}
 .avatar-wrap{display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:8px;cursor:pointer;transition:background .15s;margin-left:6px}.avatar-wrap:hover{background:rgba(122,74,255,.08)}.avatar{width:30px;height:30px;border-radius:50%;background:rgba(122,74,255,.2);border:1.5px solid rgba(122,74,255,.4);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#9d7aff;flex-shrink:0}.avatar-info{display:flex;flex-direction:column;line-height:1.2}.avatar-name{font-size:12px;font-weight:600;color:var(--text)}.avatar-role{font-size:10px;color:var(--text3)}
 .user-menu-wrap{position:relative}
@@ -664,6 +665,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
     </div>
   </div>
   <div class="topright">
+    <button class="bg-btn-icon ports-toplink" onclick="openPortsApp()" title="Ports">Ports</button>
     <button class="bg-btn-icon" onclick="openBtop()" title="btop – System Monitor" style="font-size:11px;font-weight:600;letter-spacing:.03em">btop</button>
     <button class="bg-btn-icon" onclick="toggleBgPanel()" data-i18n-title="backgroundTitle" title="Hintergrund" style="font-size:14px">⬡</button>
     <div class="topbar-sep"></div>
@@ -11067,6 +11069,55 @@ window.appOpen=(id,port)=>{
   window.open(`http://${location.hostname}:${port}`,'_blank');
 };
 
+async function getPortvardApp(){
+  try{return await api('/apps/get?app_id=portvard');}
+  catch(e){
+    const data=await api('/apps/catalog');
+    appsCatalog=data.apps||appsCatalog;
+    appsCatalogCategories=data.categories||appsCatalogCategories;
+    return appById('portvard')||null;
+  }
+}
+async function waitForPortvardInstall(jobId){
+  for(let i=0;i<180;i++){
+    const s=await api('/apps/install-status?job_id='+encodeURIComponent(jobId));
+    if(s.status==='done'&&s.ok)return true;
+    if(s.status==='error'||s.ok===false){
+      throw new Error(appInstallStepText(s.step||'Installation failed',s.step_key));
+    }
+    await new Promise(resolve=>setTimeout(resolve,1500));
+  }
+  throw new Error('Installation timed out');
+}
+window.openPortsApp=async()=>{
+  try{
+    let app=await getPortvardApp();
+    if(!app){toast('Ports app not found','error');return;}
+    if(!app.installed){
+      toast('Installing Ports…');
+      const r=await post('/apps/install',{app_id:'portvard',content:app.compose});
+      if(!r.job_id)throw new Error('Installation did not start');
+      await waitForPortvardInstall(r.job_id);
+      toast('Ports installed');
+      app=await api('/apps/get?app_id=portvard');
+      loadDashboard();
+    }
+    if(!app.running){
+      toast('Starting Ports…');
+      const started=await post('/apps/action',{app_id:'portvard',action:'start'});
+      if(started&&started.ok===false){
+        const detail=(started.output||'').split('\n').map(x=>x.trim()).filter(Boolean).pop();
+        throw new Error(detail||'Ports did not start');
+      }
+      app=await api('/apps/get?app_id=portvard');
+      loadDashboard();
+    }
+    appOpen('portvard',app.port);
+  }catch(e){
+    toast('Error: '+e.message,'error');
+  }
+};
+
 window.appAddToDashboard=async id=>{
   try{
     const [a,d]=await Promise.all([
@@ -12299,7 +12350,7 @@ async function appInstallStart(draft){
         if(s.status==='done'||s.status==='error'){
           clearInterval(poller);_activeInstalls=Math.max(0,_activeInstalls-1);updateAppsBadge();
           if(barEl)barEl.style.width='100%';
-          if(s.ok){indicator.classList.add('done');if(stepEl)stepEl.textContent=appInstallStepText(s.step||'Done ✓',s.step_key||'done');toast(draft.app.name+' installed');dashAutoAdd(draft.app.id,draft.app.name,draft.app.icon,draft.app.port);}
+          if(s.ok){indicator.classList.add('done');if(stepEl)stepEl.textContent=appInstallStepText(s.step||'Done ✓',s.step_key||'done');toast(draft.app.name+' installed');let installed=draft.app;try{installed=await api('/apps/get?app_id='+encodeURIComponent(draft.app.id));}catch(e){}dashAutoAdd(draft.app.id,draft.app.name,draft.app.icon,installed.port||draft.app.port);}
           else{indicator.classList.add('error');indicator.title=s.output||appInstallStepText(s.step,s.step_key)||'';if(labelEl)labelEl.textContent=appUi('installFailed');toast(appInstallStepText(s.step,s.step_key)||appUi('installFailed'),'error');}
           setTimeout(()=>indicator.remove(),3000);
           renderApps($('#modal-body'));
