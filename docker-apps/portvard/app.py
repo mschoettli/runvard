@@ -182,6 +182,25 @@ def discover_host(ip):
     return None
 
 
+def discover_arp_hosts(cidrs):
+    found = {}
+    for cidr in cidrs:
+        if scan_cancel.is_set():
+            break
+        out = run_cmd(
+            ["arp-scan", "--retry=1", "--timeout=500", "--plain", cidr],
+            timeout=8,
+        )
+        for line in out.splitlines():
+            match = re.match(
+                r"^\s*(\d+\.\d+\.\d+\.\d+)\s+([0-9a-fA-F:]{17})\b",
+                line,
+            )
+            if match:
+                found[match.group(1)] = match.group(2).lower()
+    return found
+
+
 def resolve_dns(ip):
     try:
         return socket.gethostbyaddr(ip)[0]
@@ -235,7 +254,7 @@ def read_mac(ip):
     return ""
 
 
-def scan_host(ip, ports, known_alive=False, timeout=CONNECT_TIMEOUT):
+def scan_host(ip, ports, known_alive=False, timeout=CONNECT_TIMEOUT, known_mac=""):
     if scan_cancel.is_set():
         return None
     alive = known_alive or ping_host(ip)
@@ -252,7 +271,7 @@ def scan_host(ip, ports, known_alive=False, timeout=CONNECT_TIMEOUT):
         "ip": ip,
         "name": name,
         "name_source": source,
-        "mac": read_mac(ip),
+        "mac": known_mac or read_mac(ip),
         "scan_time": now_iso(),
         "open_ports": open_ports,
         "closed_or_filtered": max(0, len(ports) - len(open_ports)),
@@ -281,8 +300,13 @@ def scan_worker(port_spec=None, scan_mode="quick"):
             })
         devices = []
         scan_hosts = hosts
+        discovery_macs = {}
         if is_quick:
-            active_hosts = []
+            active_hosts = set()
+            discovery_macs = discover_arp_hosts(cidrs)
+            active_hosts.update(discovery_macs)
+            with state_lock:
+                state["message"] = f"{len(active_hosts)} Geraete per ARP gefunden"
             with ThreadPoolExecutor(max_workers=max(1, WORKERS)) as pool:
                 futures = {pool.submit(discover_host, ip): ip for ip in hosts}
                 for idx, future in enumerate(as_completed(futures), start=1):
@@ -290,7 +314,7 @@ def scan_worker(port_spec=None, scan_mode="quick"):
                         break
                     found = future.result()
                     if found:
-                        active_hosts.append(found)
+                        active_hosts.add(found)
                     with state_lock:
                         state["progress"] = idx
                         state["message"] = f"{idx}/{len(hosts)} Hosts gesucht, {len(active_hosts)} aktiv"
@@ -300,7 +324,16 @@ def scan_worker(port_spec=None, scan_mode="quick"):
                 state["total"] = len(scan_hosts)
                 state["message"] = f"{len(scan_hosts)} aktive Geraete, Ports werden geprueft"
         with ThreadPoolExecutor(max_workers=max(1, WORKERS)) as pool:
-            futures = {pool.submit(scan_host, ip, ports, is_quick, QUICK_CONNECT_TIMEOUT if is_quick else CONNECT_TIMEOUT): ip for ip in scan_hosts}
+            futures = {
+                pool.submit(
+                    scan_host,
+                    ip,
+                    ports,
+                    is_quick,
+                    QUICK_CONNECT_TIMEOUT if is_quick else CONNECT_TIMEOUT,
+                    discovery_macs.get(ip, ""),
+                ): ip for ip in scan_hosts
+            }
             for idx, future in enumerate(as_completed(futures), start=1):
                 if scan_cancel.is_set():
                     break

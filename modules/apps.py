@@ -150,7 +150,7 @@ volumes:
                },
                network_mode="host",
                extra="""    command: >
-      sh -c 'apt-get update && apt-get install -y --no-install-recommends iproute2 iputils-ping avahi-utils samba-common-bin && rm -rf /var/lib/apt/lists/* && python /app/app.py'""")},
+      sh -c 'apt-get update && apt-get install -y --no-install-recommends iproute2 iputils-ping arp-scan avahi-utils samba-common-bin && rm -rf /var/lib/apt/lists/* && python /app/app.py'""")},
     {"id": "adguard-home", "name": "AdGuard Home", "icon": "adguard-home", "category": "Netzwerk",
      "desc": "Netzwerkweite Werbe- & Tracking-Sperre", "port": 3000,
      "tpl": _c("adguard/adguardhome:latest", ["3000:3000", "53:53/tcp", "53:53/udp"],

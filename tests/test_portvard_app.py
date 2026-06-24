@@ -38,3 +38,17 @@ def test_iter_hosts_can_limit_large_networks():
     hosts = list(portvard.iter_hosts(["10.0.0.0/16"], max_hosts=3))
 
     assert hosts == ["10.0.0.1", "10.0.0.2", "10.0.0.3"]
+
+
+def test_arp_discovery_parses_ip_and_mac(monkeypatch):
+    portvard = _load_portvard()
+
+    def fake_run_cmd(args, timeout=3):
+        assert args[0] == "arp-scan"
+        return "192.168.1.20\taa:bb:cc:dd:ee:ff\tVendor\n"
+
+    monkeypatch.setattr(portvard, "run_cmd", fake_run_cmd)
+
+    assert portvard.discover_arp_hosts(["192.168.1.0/24"]) == {
+        "192.168.1.20": "aa:bb:cc:dd:ee:ff",
+    }
