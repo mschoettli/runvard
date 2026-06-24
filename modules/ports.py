@@ -4,6 +4,7 @@ import re
 import socket
 import subprocess
 from pathlib import Path
+from concurrent.futures import ThreadPoolExecutor
 
 try:
     import yaml
@@ -200,6 +201,14 @@ def parse_compose_ports(content, project_name, source, fallback_ips):
     return _parse_compose_ports_fallback(content, project_name, source, fallback_ips)
 
 
+def _tcp_reachable(ip, port, timeout=0.25):
+    try:
+        with socket.create_connection((str(ip), int(port)), timeout=timeout):
+            return True
+    except Exception:
+        return False
+
+
 def compose_files(apps_dir=None, compose_dir=None):
     app_root = Path(apps_dir or APPS_DIR)
     compose_root = Path(compose_dir or COMPOSE_DIR)
@@ -243,6 +252,15 @@ def list_ports(apps_dir=None, compose_dir=None):
             continue
         seen.add(key)
         unique.append(row)
+    if unique:
+        with ThreadPoolExecutor(max_workers=min(32, len(unique))) as pool:
+            checks = [
+                pool.submit(_tcp_reachable, row["ip"], row["port"])
+                if row.get("protocol", "tcp") == "tcp" else None
+                for row in unique
+            ]
+            for row, check in zip(unique, checks):
+                row["reachable"] = bool(check.result()) if check else False
     return {
         "ports": sorted(unique, key=lambda x: (x["ip"], x["port"], x["app"])),
         "ips": ips,

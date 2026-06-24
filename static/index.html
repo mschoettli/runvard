@@ -11076,12 +11076,12 @@ async function renderPorts(body){
     const rows=data.ports||[];
     const grouped=Array.from(rows.reduce((map,r)=>{
       const key=[r.app,r.port,r.protocol||'tcp'].join('|');
-      if(!map.has(key))map.set(key,{app:r.app,port:r.port,protocol:r.protocol||'tcp',ips:[]});
+      if(!map.has(key))map.set(key,{app:r.app,port:r.port,protocol:r.protocol||'tcp',endpoints:[]});
       const item=map.get(key);
-      if(!item.ips.includes(r.ip))item.ips.push(r.ip);
+      if(!item.endpoints.some(e=>e.ip===r.ip))item.endpoints.push({ip:r.ip,reachable:!!r.reachable});
       return map;
     },new Map()).values()).sort((a,b)=>a.app.localeCompare(b.app)||Number(a.port)-Number(b.port));
-    grouped.forEach(g=>g.ips.sort((a,b)=>a.localeCompare(b,undefined,{numeric:true})));
+    grouped.forEach(g=>g.endpoints.sort((a,b)=>a.ip.localeCompare(b.ip,undefined,{numeric:true})));
     const urlFor=(ip,port,proto)=>{
       const scheme=(Number(port)===443||Number(port)===8443||Number(port)===9443)?'https':'http';
       return `${scheme}://${ip}:${port}`;
@@ -11096,8 +11096,8 @@ async function renderPorts(body){
         <tbody>${grouped.map(r=>`
           <tr>
             <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.app)}</td>
-            <td class="mono" style="white-space:nowrap">${esc(r.port)}${r.protocol&&r.protocol!=='tcp'?'/'+esc(r.protocol):''}</td>
-            <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.ips.map(ip=>`<a class="mono" href="${esc(urlFor(ip,r.port,r.protocol))}" target="_blank" rel="noopener" style="color:var(--text);text-decoration:none;margin-right:12px">${esc(ip)}</a>`).join('')}</td>
+            <td class="mono" style="white-space:nowrap">${(()=>{const primary=r.endpoints.find(e=>e.reachable)||r.endpoints[0];const ok=r.endpoints.some(e=>e.reachable);return primary?`<a href="${esc(urlFor(primary.ip,r.port,r.protocol))}" target="_blank" rel="noopener" style="color:var(${ok?'--green':'--red'});text-decoration:none;font-weight:700">${esc(r.port)}${r.protocol&&r.protocol!=='tcp'?'/'+esc(r.protocol):''}</a>`:esc(r.port);})()}</td>
+            <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.endpoints.map(e=>`<a class="mono" href="${esc(urlFor(e.ip,r.port,r.protocol))}" target="_blank" rel="noopener" style="color:var(${e.reachable?'--text':'--red'});text-decoration:none;margin-right:12px">${esc(e.ip)}</a>`).join('')}</td>
           </tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">Keine von Runvard verwalteten Ports gefunden</div></td></tr>'}</tbody>
       </table>
       </div>`;

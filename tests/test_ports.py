@@ -88,6 +88,7 @@ services:
 """)
 
     monkeypatch.setattr(ports, "host_ips", lambda: ["192.168.1.10"])
+    monkeypatch.setattr(ports, "_tcp_reachable", lambda ip, port: port == 8096)
 
     rows = ports.list_ports(apps_dir, compose_dir)["ports"]
 
@@ -95,6 +96,7 @@ services:
         ("Jellyfin", 8096),
         ("Custom", 9000),
     ]
+    assert [row["reachable"] for row in rows] == [True, False]
 
 
 def test_list_ports_ignores_legacy_portvard_app(monkeypatch, tmp_path):
@@ -112,5 +114,6 @@ services:
 """)
 
     monkeypatch.setattr(ports, "host_ips", lambda: ["192.168.1.10"])
+    monkeypatch.setattr(ports, "_tcp_reachable", lambda ip, port: True)
 
     assert ports.list_ports(apps_dir, compose_dir)["ports"] == []
