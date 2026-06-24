@@ -1245,6 +1245,9 @@ const UI_PHRASES={
     "Scope":"Geltungsbereich",
     "System":"System",
     "Custom":"Benutzerdefiniert",
+    "Ports":"Ports",
+    "App name":"Name der App",
+    "No Runvard-managed ports found":"Keine von Runvard verwalteten Ports gefunden",
     "Down":"Inaktiv",
     "Download":"Herunterladen",
     "Download link (copy)":"Download-Link (kopieren)",
@@ -2242,6 +2245,9 @@ const UI_PHRASES={
     "Scope":"Portée",
     "System":"Système",
     "Custom":"Personnalisé",
+    "Ports":"Ports",
+    "App name":"Nom de l’application",
+    "No Runvard-managed ports found":"Aucun port géré par Runvard trouvé",
     "Down":"Inactif",
     "Download":"Télécharger",
     "Download link (copy)":"Lien de téléchargement (copier)",
@@ -3207,6 +3213,8 @@ const UI_PHRASES={
     "Scope":"Ambito",
     "System":"Sistema",
     "Custom":"Personalizzata",
+    "App name":"Nome app",
+    "No Runvard-managed ports found":"Nessuna porta gestita da Runvard trovata",
     "Down":"Inattivo",
     "Download":"Scarica",
     "Download link (copy)":"Link di download (copia)",
@@ -4171,6 +4179,8 @@ const UI_PHRASES={
     "Scope":"Ámbito",
     "System":"Sistema",
     "Custom":"Personalizada",
+    "App name":"Nombre de la app",
+    "No Runvard-managed ports found":"No se encontraron puertos gestionados por Runvard",
     "Down":"Inactivo",
     "Download":"Descargar",
     "Download link (copy)":"Enlace de descarga (copiar)",
@@ -5138,6 +5148,8 @@ const UI_PHRASES={
     "Scope":"Âmbito",
     "System":"Sistema",
     "Custom":"Personalizada",
+    "App name":"Nome da aplicação",
+    "No Runvard-managed ports found":"Não foram encontradas portas geridas pelo Runvard",
     "Down":"Inativo",
     "Download":"Transferir",
     "Download link (copy)":"Ligação de transferência (copiar)",
@@ -11090,19 +11102,21 @@ async function renderPorts(body){
       const scheme=(Number(port)===443||Number(port)===8443||Number(port)===9443)?'https':'http';
       return `${scheme}://${location.hostname}:${port}`;
     };
+    const appNameLabel=uiText('App name');
+    const emptyMessage=uiText('No Runvard-managed ports found');
     body.innerHTML=`
       <div class="toolbar" style="margin-bottom:14px;justify-content:flex-end">
         <button class="btn sm ghost" onclick="renderPorts($('#modal-body'))">↻ ${esc(uiText('Refresh'))}</button>
       </div>
       <div style="overflow:auto">
       <table style="table-layout:fixed;min-width:860px">
-        <thead><tr><th style="width:26%">Name der App</th><th style="width:110px">Port</th><th>IPs</th></tr></thead>
+        <thead><tr><th style="width:26%">${esc(appNameLabel)}</th><th style="width:110px">Port</th><th>IPs</th></tr></thead>
         <tbody>${grouped.map(r=>`
           <tr>
             <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(r.app)}</td>
             <td class="mono" style="white-space:nowrap">${(()=>{const ok=r.endpoints.some(e=>e.reachable);return `<a href="${esc(r.url||portUrlFor(r.port,r.protocol))}" target="_blank" rel="noopener" style="color:var(${ok?'--green':'--red'});text-decoration:none;font-weight:700">${esc(r.port)}${r.protocol&&r.protocol!=='tcp'?'/'+esc(r.protocol):''}</a>`;})()}</td>
             <td style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${r.endpoints.map(e=>`<a class="mono" href="${esc(urlFor(e.ip,r.port,r.protocol))}" target="_blank" rel="noopener" style="color:var(${e.reachable?'--text':'--red'});text-decoration:none;margin-right:12px">${esc(e.ip)}</a>`).join('')}</td>
-          </tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">Keine von Runvard verwalteten Ports gefunden</div></td></tr>'}</tbody>
+          </tr>`).join('')||`<tr><td colspan="3"><div class="empty-state">${esc(emptyMessage)}</div></td></tr>`}</tbody>
       </table>
       </div>`;
     translateRenderedText(body);
@@ -11113,9 +11127,10 @@ async function renderPorts(body){
   }
 }
 window.openPortsView=()=>{
-  currentTile={id:'ports',icon:'▦',name:'Ports'};
+  const title=uiText('Ports');
+  currentTile={id:'ports',icon:'▦',name:title};
   currentTab=null;
-  $('#modal-title').innerHTML='<span>▦</span> Ports';
+  $('#modal-title').innerHTML='<span>▦</span> '+esc(title);
   $('#modal-tabs').innerHTML='';
   resetSearch();
   $('#search-btn').style.display='flex';
