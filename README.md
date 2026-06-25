@@ -166,6 +166,12 @@ Recommended practices:
 
 Installation instructions are available in [INSTALLATION.md](INSTALLATION.md).
 
+## License
+
+runvard is free for private, personal, non-commercial use. Commercial, business,
+corporate, institutional, or revenue-generating use requires prior written
+permission. See [LICENSE](LICENSE) for details.
+
 ## In short
 
 runvard turns a Debian or Ubuntu server into a private control center for system
