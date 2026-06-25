@@ -874,7 +874,12 @@ function dangerTitle(action){return tr('dangerConfirmTitle');}
 function dangerMessage(meta){
   return `${tr('dangerConfirmMessage')}\n${meta.action}: ${meta.target}`;
 }
-function requestDangerConfirm(meta){
+async function requestDangerConfirm(meta){
+  if(consumeRecentUiConfirm()){
+    const r=await postRaw('/confirm-token',{action:meta.action,target:meta.target});
+    if(!r.token)throw new Error('No confirmation token returned');
+    return r.token;
+  }
   return new Promise((resolve,reject)=>{
     const phrase=meta.target||meta.action;
     typedConfirm(dangerTitle(meta.action),dangerMessage(meta),phrase,async()=>{
@@ -7033,7 +7038,8 @@ async function setExpertMode(enabled){
       'Enable Expert Mode',
       'Expert Mode reveals advanced system areas and actions that can change disks, services, users, packages, networking and diagnostics. Continue only if you know what you are changing.',
       'EXPERT',
-      ()=>setExpertModeConfirmed(true)
+      ()=>setExpertModeConfirmed(true),
+      false
     );
     return;
   }
@@ -7150,14 +7156,25 @@ $('#form-overlay').onclick=e=>{if(e.target.id==='form-overlay')closeForm();};
 
 // ═══ Bestätigungs-Modal (Punkt 4) ═══
 let confirmCb=null;
+let recentUiConfirmUntil=0;
+function markUiConfirmed(){recentUiConfirmUntil=Date.now()+3000;}
+function consumeRecentUiConfirm(){
+  const ok=Date.now()<recentUiConfirmUntil;
+  recentUiConfirmUntil=0;
+  return ok;
+}
 function confirmDelete(title,msg,cb){
   $('#confirm-title').textContent=uiText(title);
-  $('#confirm-msg').textContent=uiText(msg);
+  $('#confirm-msg').innerHTML=`${esc(uiText(msg))}<label class="typed-confirm-check" style="justify-content:flex-start;text-align:left"><input id="confirm-check" type="checkbox"> <span>${esc(tr('confirmCheckbox'))}</span></label>`;
   confirmCb=cb;
   $('#confirm-overlay').classList.add('open');
+  const check=$('#confirm-check'),ok=$('#confirm-ok');
+  ok.disabled=true;
+  check.onchange=()=>{ok.disabled=!check.checked;};
+  check.focus();
 }
-function closeConfirm(){$('#confirm-overlay').classList.remove('open');confirmCb=null;}
-$('#confirm-ok').onclick=()=>{const cb=confirmCb;closeConfirm();if(cb)cb();};
+function closeConfirm(){$('#confirm-overlay').classList.remove('open');confirmCb=null;$('#confirm-ok').disabled=false;}
+$('#confirm-ok').onclick=()=>{const cb=confirmCb;markUiConfirmed();closeConfirm();if(cb)cb();};
 $('#confirm-overlay').onclick=e=>{if(e.target.id==='confirm-overlay')closeConfirm();};
 
 function statusBadge(label,tone){
@@ -7197,7 +7214,7 @@ function viewIntro(title,copy,actionHtml){
   if(isExpertMode())return actionHtml?`<div class="nx-expert-actions nx-action-row">${actionHtml}</div>`:'';
   return `<div class="nx-view-intro"><div><h3>${esc(uiText(title))}</h3><p>${esc(uiText(copy))}</p></div><div class="nx-action-row">${actionHtml||''}</div></div>`;
 }
-function typedConfirm(title,msg,phrase,cb){
+function typedConfirm(title,msg,phrase,cb,coversDanger=true){
   $('#form-head').innerHTML=`<span>⚠</span> ${esc(uiText(title))}`;
   $('#form-body').innerHTML=`
     <p class="typed-confirm-copy">${esc(uiText(msg))}</p>
@@ -7213,7 +7230,7 @@ function typedConfirm(title,msg,phrase,cb){
   const inp=$('#typed-confirm-input'),ok=$('#typed-confirm-ok');
   inp.focus();
   inp.onchange=()=>{ok.disabled=!inp.checked;};
-  ok.onclick=()=>{closeForm();cb();};
+  ok.onclick=()=>{if(coversDanger)markUiConfirmed();closeForm();cb();};
 }
 
 // ═══ Suche im Modal (Punkt 5) ═══
