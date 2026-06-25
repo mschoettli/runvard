@@ -1,5 +1,9 @@
 # runvard
 
+runvard is currently in active development.
+
+The core features are already working, while several advanced features are still being built, improved, or tested.
+
 runvard is a web-based server control panel for Debian and Ubuntu systems.
 It brings monitoring, system administration, Docker, apps, storage, networking,
 security, backups, and maintenance into one private interface.
