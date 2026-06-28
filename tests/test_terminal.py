@@ -10,10 +10,12 @@ def test_persistent_terminal_uses_tmux_when_available(monkeypatch, tmp_path):
 
     session = terminal.TerminalSession(persistent=True)
 
-    assert session.command() == [
-        "tmux", "new-session", "-A", "-s", "runvard",
-        f"/bin/bash --rcfile {rcfile}",
-    ]
+    cmd = session.command()
+    assert cmd[:2] == ["/bin/bash", "-lc"]
+    assert "tmux new-session -d -s runvard" in cmd[2]
+    assert f"/bin/bash --rcfile {rcfile}" in cmd[2]
+    assert "tmux set-option -t runvard status off" in cmd[2]
+    assert "exec tmux attach-session -t runvard" in cmd[2]
     assert rcfile.exists()
     assert "history -a" in rcfile.read_text()
 

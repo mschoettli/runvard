@@ -68,10 +68,18 @@ class TerminalSession:
             return self.argv
         if self.persistent and shutil.which("tmux"):
             rcfile = ensure_terminal_bashrc()
-            return [
-                "tmux", "new-session", "-A", "-s", TMUX_SESSION,
-                f"{shlex.quote(self.shell)} --rcfile {shlex.quote(rcfile)}",
-            ]
+            shell_cmd = f"{shlex.quote(self.shell)} --rcfile {shlex.quote(rcfile)}"
+            script = "\n".join([
+                f"if ! tmux has-session -t {shlex.quote(TMUX_SESSION)} 2>/dev/null; then",
+                "  tmux new-session -d "
+                f"-s {shlex.quote(TMUX_SESSION)} "
+                f"-c {shlex.quote(self.cwd)} "
+                f"{shlex.quote(shell_cmd)}",
+                "fi",
+                f"tmux set-option -t {shlex.quote(TMUX_SESSION)} status off",
+                f"exec tmux attach-session -t {shlex.quote(TMUX_SESSION)}",
+            ])
+            return ["/bin/bash", "-lc", script]
         return [self.shell]
 
     def start(self):
