@@ -6985,6 +6985,7 @@ function applyLanguage(){
   translateRenderedText(document.body);
   updateClock();
   renderTiles();
+  updateDocumentTitle();
   if(currentTile)syncModalLanguage();
 }
 function setLanguage(code){
@@ -7376,12 +7377,17 @@ renderTiles();
 
 // Load live badge data
 let _systemUpdateBadgeNext=0,_systemUpdateBadgeHasUpdates=false;
+const RUNVARD_DOCUMENT_TITLE='runvard';
+function updateDocumentTitle(){
+  document.title=_systemUpdateBadgeHasUpdates?`${uiText('Update available')} · ${RUNVARD_DOCUMENT_TITLE}`:RUNVARD_DOCUMENT_TITLE;
+}
 function applySystemUpdateBadge(){
   const el=$('#badge-system');
   if(el){
     el.textContent='';
     el.className=_systemUpdateBadgeHasUpdates?'tile-badge red dot-only':'tile-badge';
   }
+  updateDocumentTitle();
   applySystemUpdateTabBadge();
 }
 function applySystemUpdateTabBadge(){
@@ -10312,6 +10318,10 @@ function pollUpdateJob(id,reboot){
       if(out)out.textContent=(res.stdout||'')+(res.stderr?('\n'+res.stderr):'')||uiText('(no output)');
       toast(res.ok===false?'Mit Fehlern beendet':'Updates installed',res.ok===false?'error':'success');
       if(btn){btn.disabled=false;btn.textContent='✓ '+uiText('Done');}
+      if(res.ok!==false){
+        _systemUpdateBadgeNext=0;
+        refreshSystemUpdateBadge().catch(()=>{});
+      }
       if(reboot){
         toast('Reboot starting…');
         try{
