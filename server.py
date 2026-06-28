@@ -2001,7 +2001,7 @@ async def ws_terminal(websocket: WebSocket):
             await websocket.close(code=1008)
             return
     await websocket.accept()
-    session = terminal.TerminalSession()
+    session = terminal.TerminalSession(persistent=True)
     try:
         session.start()
     except Exception as e:

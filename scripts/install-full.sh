@@ -478,16 +478,16 @@ export DEBIAN_FRONTEND=noninteractive
 
 PKGS=(
   python3 python3-pip python3-venv python3-dev gcc pkg-config
-  rsync curl ca-certificates git openssl sudo cron
+  rsync curl ca-certificates git openssl sudo cron tmux
   btop htop smartmontools mdadm parted lvm2 cryptsetup dosfstools
   e2fsprogs xfsprogs btrfs-progs zfsutils-linux
   samba nfs-kernel-server nfs-common cifs-utils
   docker.io
-  qemu-kvm libvirt-daemon-system libvirt-clients libvirt-dev virtinst
+  qemu-kvm qemu-utils libvirt-daemon-system libvirt-clients libvirt-dev virtinst
   open-iscsi
   ufw iptables iproute2 isc-dhcp-client
   unattended-upgrades tuned kdump-tools sosreport vsftpd
-  apparmor-utils power-profiles-daemon
+  apparmor-utils power-profiles-daemon powertop tlp acpid dnsmasq-base openssh-server
 )
 
 run_spin "$(t update_apt)" apt-get update -qq || warn "$(t apt_warn)"
