@@ -9267,7 +9267,10 @@ window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Pr
 window.composeEdit=async name=>{
   try{
     const c=await api('/docker/compose/get?name='+encodeURIComponent(name));
+    const diskData=await api('/system/disks').catch(()=>[]);
     const draft=appComposeProjectDraft(name,c);
+    draft.mounts=appInstallMounts(diskData);
+    draft.volumes.forEach(v=>{if(v.managed)v.mountpoint=appInstallBestMount(draft.mounts,appInstallVolumeRole(v));});
     appComposeFormOpen(draft,{
       title:'Compose: '+name,
       icon:'🐳',
@@ -12304,8 +12307,6 @@ function appInstallRenderStorageMap(){
   const d=_appInstallDraft;
   const el=$('#app-compose-storage-map');
   if(!d||!el)return;
-  const managed=d.volumes.filter(v=>v.managed);
-  if(!managed.length){el.innerHTML='';return;}
   const disks=(d.mounts||[]).map(m=>{
     const selected=m.mountpoint===_appInstallSelectedMount;
     const cls=`compose-disk-card${m.mountpoint==='/'?' system':''}${selected?' selected':''}`;
