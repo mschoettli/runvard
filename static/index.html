@@ -479,7 +479,21 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .compose-field input,.compose-field select{min-height:40px}
 .compose-port-row,.compose-env-row{display:grid;grid-template-columns:1fr;gap:8px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.075);border-radius:9px;padding:10px}
 .compose-volume-list{display:grid;gap:8px}
-.compose-volume-row{display:grid;gap:10px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.075);border-radius:9px;padding:12px}
+.compose-storage-map{display:grid;grid-template-columns:1fr;gap:10px;align-items:start}
+.compose-disk-list,.compose-volume-targets{display:grid;gap:8px;min-width:0}
+.compose-map-title{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.compose-disk-card{display:grid;gap:5px;min-width:0;text-align:left;background:rgba(255,255,255,.026);border:1px solid rgba(255,255,255,.08);border-radius:9px;padding:10px;color:var(--text);font:inherit;cursor:grab;transition:border-color .15s,background .15s,transform .15s}
+.compose-disk-card strong{font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.compose-disk-card span{font-size:11px;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.compose-disk-card:hover,.compose-disk-card.selected{border-color:rgba(34,211,238,.42);background:rgba(34,211,238,.075)}
+.compose-disk-card:active{cursor:grabbing;transform:scale(.99)}
+.compose-disk-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.compose-disk-meta{display:flex;gap:6px;align-items:center;min-width:0}
+.compose-disk-dot{width:8px;height:8px;border-radius:50%;background:#67e8f9;flex-shrink:0}
+.compose-disk-card.system .compose-disk-dot{background:#facc15}
+.compose-volume-row{display:grid;gap:10px;background:rgba(255,255,255,.025);border:1px solid rgba(255,255,255,.075);border-radius:9px;padding:12px;transition:border-color .15s,background .15s,box-shadow .15s}
+.compose-volume-row.drop-ready{border-color:rgba(34,211,238,.5);background:rgba(34,211,238,.07);box-shadow:0 0 0 1px rgba(34,211,238,.16)}
+.compose-volume-row.fixed{opacity:.82}
 .compose-volume-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;flex-wrap:wrap}
 .compose-volume-label{display:grid;gap:3px;min-width:0}
 .compose-volume-label strong{font-size:13px;color:var(--text)}
@@ -517,6 +531,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .compose-install-actions{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap;margin-top:2px}
 @media (min-width: 768px){
   .compose-field-grid,.compose-env-row,.compose-summary-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .compose-storage-map{grid-template-columns:minmax(180px,.75fr) minmax(0,1.6fr)}
   .compose-port-row{grid-template-columns:minmax(0,1fr) 32px minmax(0,1fr)}
   .compose-volume-fields{grid-template-columns:minmax(160px,.8fr) minmax(260px,1.4fr)}
   .compose-volume-source{grid-column:span 1}
@@ -12018,6 +12033,10 @@ window.vmDeleteConfirm=name=>typedConfirm('Delete virtual machine',`VM "${name}"
 let _appInstallDraft=null;
 let _appComposePortCheckTimer=null;
 let _appComposePortCheckSeq=0;
+let _appInstallSelectedMount='';
+function appInstallJsString(value){
+  return JSON.stringify(String(value??'')).replace(/</g,'\\u003c');
+}
 function appInstallSlug(value,fallback){
   const clean=String(value||'').trim().replace(/^[./]+/,'').replace(/[^A-Za-z0-9_.-]+/g,'-').replace(/^-+|-+$/g,'');
   return clean||fallback||'data';
@@ -12199,6 +12218,12 @@ function appInstallMountLabel(m){
   const detail=[m.device,m.fstype,fmtBytes(m.free||0)+' '+uiText('free')].filter(Boolean).join(' · ');
   return `${name} (${detail})`;
 }
+function appInstallMountName(m){
+  return m.mountpoint==='/'?uiText('System disk'):m.mountpoint;
+}
+function appInstallMountDetail(m){
+  return [m.device,m.fstype,fmtBytes(m.free||0)+' '+uiText('free')].filter(Boolean).join(' · ');
+}
 function appInstallVolumeComputedSource(draft,volume){
   if(!volume.managed)return volume.source;
   return appInstallJoin(appInstallMountRoot(volume.mountpoint,draft.app.id),volume.folder);
@@ -12275,14 +12300,33 @@ function appComposeSetMode(mode){
 }
 window.appComposeSetMode=appComposeSetMode;
 window.appComposeRefresh=()=>appInstallRefresh({source:'raw'});
+function appInstallRenderStorageMap(){
+  const d=_appInstallDraft;
+  const el=$('#app-compose-storage-map');
+  if(!d||!el)return;
+  const managed=d.volumes.filter(v=>v.managed);
+  if(!managed.length){el.innerHTML='';return;}
+  const disks=(d.mounts||[]).map(m=>{
+    const selected=m.mountpoint===_appInstallSelectedMount;
+    const cls=`compose-disk-card${m.mountpoint==='/'?' system':''}${selected?' selected':''}`;
+    return `<button type="button" class="${cls}" draggable="true" data-mount="${esc(m.mountpoint)}" onclick='appInstallSelectMount(${appInstallJsString(m.mountpoint)})' ondragstart='appInstallMountDragStart(event,${appInstallJsString(m.mountpoint)})'>
+      <span class="compose-disk-meta"><span class="compose-disk-dot"></span><strong>${esc(appInstallMountName(m))}</strong></span>
+      <span>${esc(appInstallMountDetail(m))}</span>
+    </button>`;
+  }).join('');
+  el.innerHTML=`<div class="compose-disk-list"><div class="compose-map-title">${esc(uiText('Mounted drives'))}</div>${disks}</div><div class="compose-volume-targets"><div class="compose-map-title">${esc(uiText('App volumes'))}</div><div class="compose-volume-list" id="app-compose-volumes"></div></div>`;
+  translateRenderedText(el);
+}
 function appInstallRenderVolumes(){
   const d=_appInstallDraft;if(!d)return;
+  appInstallRenderStorageMap();
   const el=$('#app-compose-volumes');if(!el)return;
   el.innerHTML=d.volumes.map((v,i)=>{
     const role=appInstallVolumeRole(v);
     const driveClass=!v.managed?'absolute':v.mountpoint==='/'?'system':'';
     const roleLabel=v.managed?(role==='large'?'Large data':'App state'):'Host path';
-    return `<div class="compose-volume-row">
+    const dropAttrs=v.managed?` onclick="appInstallApplySelectedMount(event,${i})" ondragover="appInstallVolumeDragOver(event)" ondragenter="appInstallVolumeDragEnter(event)" ondragleave="appInstallVolumeDragLeave(event)" ondrop="appInstallVolumeDrop(event,${i})"`:'';
+    return `<div class="compose-volume-row${v.managed?'':' fixed'}" data-volume-index="${i}"${dropAttrs}>
       <div class="compose-volume-heading">
         <div class="compose-volume-label"><strong>${esc(v.label)}</strong><span>${esc(roleLabel)}</span></div>
         <span class="compose-volume-badge">${esc(v.managed?appInstallMountLabel(d.mounts.find(m=>m.mountpoint===v.mountpoint)||{mountpoint:v.mountpoint}):'Fixed host path')}</span>
@@ -12367,10 +12411,43 @@ window.appInstallSetVolumeMount=(index,mountpoint)=>{
   if(!_appInstallDraft||!_appInstallDraft.volumes[index])return;
   appInstallRefresh();
   const volume=_appInstallDraft.volumes[index];
+  if(!volume.managed)return;
   volume.mountpoint=mountpoint;
   volume.sourceOverride=appInstallVolumeComputedSource(_appInstallDraft,volume);
   appInstallRenderVolumes();
   appInstallRefresh();
+};
+window.appInstallSelectMount=mountpoint=>{
+  _appInstallSelectedMount=mountpoint;
+  appInstallRenderVolumes();
+};
+window.appInstallApplySelectedMount=(event,index)=>{
+  if(event?.target?.closest?.('input,select,button,textarea,label'))return;
+  if(!_appInstallSelectedMount)return;
+  appInstallSetVolumeMount(index,_appInstallSelectedMount);
+};
+window.appInstallMountDragStart=(event,mountpoint)=>{
+  _appInstallSelectedMount=mountpoint;
+  event.dataTransfer?.setData('text/plain',mountpoint);
+  if(event.dataTransfer)event.dataTransfer.effectAllowed='copy';
+  appInstallRenderVolumes();
+};
+window.appInstallVolumeDragOver=event=>{
+  event.preventDefault();
+  if(event.dataTransfer)event.dataTransfer.dropEffect='copy';
+};
+window.appInstallVolumeDragEnter=event=>{
+  event.preventDefault();
+  event.currentTarget?.classList.add('drop-ready');
+};
+window.appInstallVolumeDragLeave=event=>{
+  event.currentTarget?.classList.remove('drop-ready');
+};
+window.appInstallVolumeDrop=(event,index)=>{
+  event.preventDefault();
+  event.currentTarget?.classList.remove('drop-ready');
+  const mountpoint=event.dataTransfer?.getData('text/plain')||_appInstallSelectedMount;
+  if(mountpoint)appInstallSetVolumeMount(index,mountpoint);
 };
 async function appInstallStart(draft){
   const content=appInstallCompose(draft);
@@ -12456,7 +12533,7 @@ function appComposeFormOpen(draft,options){
           <div class="compose-block"><div class="compose-key"><code>services:</code><span>Service</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label for="app-compose-service">Service name</label><input id="app-compose-service" value="${esc(draft.service)}" oninput="appInstallRefresh()"></div><div class="compose-field"><label for="app-compose-container">Container name</label><input id="app-compose-container" value="${esc(draft.container)}" oninput="appInstallRefresh()"></div></div></div></div>
           <div class="compose-block"><div class="compose-key"><code>image:</code><span>Runtime</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label for="app-compose-image">Image</label><input id="app-compose-image" value="${esc(draft.image)}" oninput="appInstallRefresh()"></div><div class="compose-field"><label for="app-compose-restart">Restart</label><select id="app-compose-restart" onchange="appInstallRefresh()">${['unless-stopped','always','on-failure','no'].map(x=>`<option value="${x}" ${x===draft.restart?'selected':''}>${x}</option>`).join('')}</select></div></div></div></div>
           <div class="compose-block"><div class="compose-key"><code>ports:</code><span>Network</span></div><div class="compose-block-body">${draft.ports.map((p,i)=>`<div class="compose-port-row"><div class="compose-field"><label for="app-port-host-${i}">Host port</label><input id="app-port-host-${i}" value="${esc(p.host)}" oninput="appInstallRefresh()"></div><div class="compose-arrow">to</div><div class="compose-field"><label for="app-port-container-${i}">Container port${p.proto?` / ${esc(p.proto)}`:''}</label><input id="app-port-container-${i}" value="${esc(p.container)}" oninput="appInstallRefresh()"></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No public ports</div>'}</div></div>
-          <div class="compose-block"><div class="compose-key"><code>volumes:</code><span>Storage</span></div><div class="compose-block-body"><div class="compose-volume-list" id="app-compose-volumes"></div></div></div>
+          <div class="compose-block"><div class="compose-key"><code>volumes:</code><span>Storage</span></div><div class="compose-block-body"><div class="compose-storage-map" id="app-compose-storage-map"></div></div></div>
           <div class="compose-block"><div class="compose-key"><code>environment:</code><span>Settings</span></div><div class="compose-block-body">${draft.env.map((e,i)=>`<div class="compose-env-row"><div class="compose-field"><span class="compose-label">Variable</span><div class="compose-env-key" id="app-env-key-${i}">${esc(e.key)}</div></div><div class="compose-field"><label for="app-env-value-${i}">Value</label><input id="app-env-value-${i}" value="${esc(e.value)}" oninput="appInstallRefresh()"></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No environment variables</div>'}</div></div>
           `}
         </div>
