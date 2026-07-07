@@ -6,6 +6,17 @@ import psutil
 
 _last_net = {"time": None, "sent": 0, "recv": 0}
 
+_PSEUDO_DISK_FSTYPES = {
+    "autofs", "binfmt_misc", "bpf", "cgroup", "cgroup2", "configfs",
+    "debugfs", "devpts", "devtmpfs", "efivarfs", "fusectl", "hugetlbfs",
+    "mqueue", "nsfs", "overlay", "proc", "pstore", "securityfs", "sysfs",
+    "tracefs", "tmpfs",
+}
+
+_PSEUDO_DISK_PREFIXES = (
+    "/dev", "/proc", "/sys", "/run/docker", "/var/lib/docker",
+)
+
 
 def get_stats():
     """Live-Stats für die Dashboard-Widgets."""
@@ -52,14 +63,26 @@ def get_stats():
 def get_disk_usage():
     """Übersicht aller gemounteten Partitionen."""
     disks = []
-    for part in psutil.disk_partitions(all=False):
+    seen = set()
+    for part in psutil.disk_partitions(all=True):
+        mountpoint = part.mountpoint
+        if not mountpoint or mountpoint in seen:
+            continue
+        fstype = (part.fstype or "").lower()
+        if fstype in _PSEUDO_DISK_FSTYPES:
+            continue
+        if mountpoint != "/" and mountpoint.startswith(_PSEUDO_DISK_PREFIXES):
+            continue
         try:
-            usage = psutil.disk_usage(part.mountpoint)
+            usage = psutil.disk_usage(mountpoint)
         except (PermissionError, OSError):
             continue
+        if usage.total <= 0:
+            continue
+        seen.add(mountpoint)
         disks.append({
             "device": part.device,
-            "mountpoint": part.mountpoint,
+            "mountpoint": mountpoint,
             "fstype": part.fstype,
             "total": usage.total,
             "used": usage.used,
