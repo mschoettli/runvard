@@ -12227,6 +12227,23 @@ function appInstallMountName(m){
 function appInstallMountDetail(m){
   return [m.device,m.fstype,fmtBytes(m.free||0)+' '+uiText('free')].filter(Boolean).join(' · ');
 }
+function appInstallReplaceRawVolume(draft,volume,previousSpec=''){
+  const lines=String(draft.rawContent||'').replace(/\r\n/g,'\n').split('\n');
+  const spec=appInstallVolumeSpec(draft,volume);
+  let replaced=false;
+  for(let i=0;i<lines.length;i++){
+    const trimmed=lines[i].trim();
+    if(!trimmed.startsWith('- '))continue;
+    const item=appInstallListItem(trimmed);
+    if(item!==volume.raw&&item!==previousSpec)continue;
+    const prefix=(lines[i].match(/^(\s*-\s*)/)||['','      - '])[1];
+    lines[i]=prefix+spec;
+    replaced=true;
+    break;
+  }
+  if(replaced)volume.raw=spec;
+  return lines.join('\n');
+}
 function appInstallVolumeComputedSource(draft,volume){
   if(!volume.managed)return volume.source;
   return appInstallJoin(appInstallMountRoot(volume.mountpoint,draft.app.id),volume.folder);
@@ -12410,11 +12427,19 @@ function appInstallRefresh(options={}){
 }
 window.appInstallSetVolumeMount=(index,mountpoint)=>{
   if(!_appInstallDraft||!_appInstallDraft.volumes[index])return;
-  appInstallRefresh();
+  if(!(_appInstallDraft.lockedCompose||_appInstallDraft.composeMode==='raw'))appInstallRefresh();
   const volume=_appInstallDraft.volumes[index];
   if(!volume.managed)return;
+  const previousSpec=appInstallVolumeSpec(_appInstallDraft,volume);
   volume.mountpoint=mountpoint;
   volume.sourceOverride=appInstallVolumeComputedSource(_appInstallDraft,volume);
+  if(_appInstallDraft.lockedCompose||_appInstallDraft.composeMode==='raw'){
+    _appInstallDraft.rawContent=appInstallReplaceRawVolume(_appInstallDraft,volume,previousSpec);
+    const raw=$('#app-compose-raw');if(raw)raw.value=_appInstallDraft.rawContent;
+    appInstallRenderVolumes();
+    appInstallRefresh({source:'raw',syncRawToForm:false});
+    return;
+  }
   appInstallRenderVolumes();
   appInstallRefresh();
 };
@@ -12522,13 +12547,13 @@ function appComposeFormOpen(draft,options){
           </div>
         </div>
         <div class="compose-port-alert" id="app-compose-port-alert" role="alert"></div>
+        ${advancedTemplate?`<div class="compose-block"><div class="compose-key"><code>volumes:</code><span>Storage</span></div><div class="compose-block-body"><div class="compose-storage-map" id="app-compose-storage-map"></div></div></div>`:''}
         <div class="compose-mode-panel" id="app-compose-form-panel"${formHidden}>
         <div class="compose-form-stack">
           ${advancedTemplate?`
           <div class="compose-block"><div class="compose-key"><code>services:</code><span>Service</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><span class="compose-label">Service name</span><input value="${esc(draft.service)}" readonly></div><div class="compose-field"><span class="compose-label">Container name</span><input value="${esc(draft.container)}" readonly></div></div></div></div>
           <div class="compose-block"><div class="compose-key"><code>image:</code><span>Runtime</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><span class="compose-label">Image</span><input value="${esc(draft.image)}" readonly></div><div class="compose-field"><span class="compose-label">Restart</span><input value="${esc(draft.restart)}" readonly></div></div></div></div>
           <div class="compose-block"><div class="compose-key"><code>ports:</code><span>Network</span></div><div class="compose-block-body">${draft.ports.map(p=>`<div class="compose-port-row"><div class="compose-field"><span class="compose-label">Host port</span><input value="${esc(p.host)}" readonly></div><div class="compose-arrow">to</div><div class="compose-field"><span class="compose-label">Container port${p.proto?` / ${esc(p.proto)}`:''}</span><input value="${esc(p.container)}" readonly></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No public ports</div>'}</div></div>
-          <div class="compose-block"><div class="compose-key"><code>volumes:</code><span>Storage</span></div><div class="compose-block-body"><div class="compose-volume-list">${appInstallRenderReadonlyVolumes(draft)}</div></div></div>
           <div class="compose-block"><div class="compose-key"><code>environment:</code><span>Settings</span></div><div class="compose-block-body">${draft.env.map(e=>`<div class="compose-env-row"><div class="compose-field"><span class="compose-label">Variable</span><div class="compose-env-key">${esc(e.key)}</div></div><div class="compose-field"><span class="compose-label">Value</span><input value="${esc(e.value)}" readonly></div></div>`).join('')||'<div class="empty-state" style="padding:16px">No environment variables</div>'}</div></div>
           `:`
           <div class="compose-block"><div class="compose-key"><code>services:</code><span>Service</span></div><div class="compose-block-body"><div class="compose-field-grid"><div class="compose-field"><label for="app-compose-service">Service name</label><input id="app-compose-service" value="${esc(draft.service)}" oninput="appInstallRefresh()"></div><div class="compose-field"><label for="app-compose-container">Container name</label><input id="app-compose-container" value="${esc(draft.container)}" oninput="appInstallRefresh()"></div></div></div></div>
@@ -12547,8 +12572,8 @@ function appComposeFormOpen(draft,options){
         <div class="compose-install-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="app-compose-go">${esc(uiText(options.primaryLabel||'Save'))}</button></div>
       </div>`;
   $('#form-overlay').classList.add('open');
-  if(!advancedTemplate)appInstallRenderVolumes();
-  appInstallRefresh();
+  appInstallRenderVolumes();
+  appInstallRefresh({source:initialMode==='raw'?'raw':'form',syncRawToForm:false});
   translateRenderedText($('#form-body'));
   $('#app-compose-go').onclick=async()=>{
     const btn=$('#app-compose-go');
