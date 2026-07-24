@@ -90,15 +90,72 @@ const TEXT={
     remember:'Angemeldet bleiben',
     submit:'Anmelden',
     signingIn:'Anmelden...',
-    insecure:'Unverschluesselte Verbindung - HTTPS empfohlen',
+    insecure:'Unverschlüsselte Verbindung – HTTPS empfohlen',
     tooMany:'Zu viele Versuche. Bitte kurz warten.',
     invalid:'Benutzername oder Passwort falsch.',
     failed:'Anmeldung fehlgeschlagen',
     connection:'Verbindung zum Server fehlgeschlagen.'
+  },
+  fr:{
+    title:'Connexion',
+    username:'Nom d’utilisateur',
+    password:'Mot de passe',
+    remember:'Rester connecté',
+    submit:'Se connecter',
+    signingIn:'Connexion…',
+    insecure:'Connexion non chiffrée – HTTPS recommandé',
+    tooMany:'Trop de tentatives. Veuillez patienter un instant.',
+    invalid:'Le nom d’utilisateur ou le mot de passe est incorrect.',
+    failed:'Échec de la connexion',
+    connection:'La connexion au serveur a échoué.'
+  },
+  it:{
+    title:'Accedi',
+    username:'Nome utente',
+    password:'Password',
+    remember:'Resta connesso',
+    submit:'Accedi',
+    signingIn:'Accesso…',
+    insecure:'Connessione non crittografata – HTTPS consigliato',
+    tooMany:'Troppi tentativi. Attendi un momento.',
+    invalid:'Nome utente o password non corretti.',
+    failed:'Accesso non riuscito',
+    connection:'Connessione al server non riuscita.'
+  },
+  es:{
+    title:'Iniciar sesión',
+    username:'Nombre de usuario',
+    password:'Contraseña',
+    remember:'Mantener la sesión iniciada',
+    submit:'Iniciar sesión',
+    signingIn:'Iniciando sesión…',
+    insecure:'Conexión sin cifrar – se recomienda HTTPS',
+    tooMany:'Demasiados intentos. Espera un momento.',
+    invalid:'El nombre de usuario o la contraseña son incorrectos.',
+    failed:'Error al iniciar sesión',
+    connection:'No se pudo conectar con el servidor.'
+  },
+  pt:{
+    title:'Iniciar sessão',
+    username:'Nome de utilizador',
+    password:'Palavra-passe',
+    remember:'Manter sessão iniciada',
+    submit:'Iniciar sessão',
+    signingIn:'A iniciar sessão…',
+    insecure:'Ligação não cifrada – HTTPS recomendado',
+    tooMany:'Demasiadas tentativas. Aguarde um momento.',
+    invalid:'O nome de utilizador ou a palavra-passe está incorreto.',
+    failed:'Falha ao iniciar sessão',
+    connection:'Falha na ligação ao servidor.'
   }
 };
 function lang(){
-  return DEFAULT_LANG==='de'?'de':'en';
+  const supported=Object.keys(TEXT);
+  try{
+    const saved=localStorage.getItem('runvard_language');
+    if(supported.includes(saved))return saved;
+  }catch(_){}
+  return supported.includes(DEFAULT_LANG)?DEFAULT_LANG:'en';
 }
 function t(key){
   return (TEXT[lang()]&&TEXT[lang()][key])||TEXT.en[key]||key;

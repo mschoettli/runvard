@@ -976,6 +976,16 @@ const I18N={
   es:{language:'Idioma',languageSettings:'Configuración de idioma',languageField:'Idioma de la interfaz',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Cerrar',search:'Buscar',searchPlaceholder:'Buscar...',loading:'Cargando...',error:'Error',logout:'Cerrar sesión',loginPage:'Página de inicio de sesión',runvardAccounts:'Cuentas runvard',background:'Fondo',backgroundTitle:'Fondo',presets:'Preajustes',uploadImage:'Subir imagen',dropImage:'Haz clic o suelta una imagen aquí',imageUrl:'URL de imagen',restoreDefault:'Restaurar valores predeterminados',addTile:'Añadir acceso directo',confirmDelete:'Confirmar eliminación',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo experto activado',expertOff:'Modo experto desactivado',loginEnabled:'Inicio de sesión activado. Se requerirá autenticación en la próxima visita.',loginDisabled:'Inicio de sesión desactivado',signedInAs:'Sesión iniciada como',loginDisabledHead:'El inicio de sesión está desactivado',daySuffix:'',confirmCheckbox:'Entiendo y quiero continuar.',dangerConfirmTitle:'Confirmación requerida',dangerConfirmMessage:'Esta acción cambia ajustes o datos del sistema. Confirma antes de que runvard continúe.',tileTerminal:'Terminal',tileFiles:'Archivos',tileStorage:'Almacenamiento',tileDocker:'Docker',tileVms:'Máquinas virtuales',tileBackup:'Copias de seguridad',tileMonitoring:'Supervisión',tileSystem:'Sistema',tileApps:'Aplicaciones',descShell:'Acceso shell',descFiles:'Explorar · Subir · Compartir',descStorage:'Discos · Pools · Estado',descDocker:'Contenedores · Compose',descVms:'Invitados · Almacenamiento',descBackup:'Tareas · Historial',descMonitoring:'Registros · Alertas · Auditoría',descSystem:'Resumen · Actualizaciones · Usuarios',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contenedores',tabCompose:'Compose',tabImages:'Imágenes',tabVolumes:'Volúmenes',tabMachines:'Máquinas virtuales',tabStoragePools:'Pools de almacenamiento',tabJobs:'Tareas',tabHistory:'Historial',tabLogs:'Registros',tabAlerts:'Alertas',tabAudit:'Auditoría',tabOverview:'Resumen',tabUpdates:'Actualizaciones',tabUsers:'Usuarios',tabNetwork:'Red',tabServices:'Servicios',tabShares:'Recursos compartidos',tabMaintenance:'Mantenimiento',tabAdvanced:'Avanzado',tabPower:'Energía'},
   pt:{language:'Idioma',languageSettings:'Definições de idioma',languageField:'Idioma da interface',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Fechar',search:'Pesquisar',searchPlaceholder:'Pesquisar...',loading:'A carregar...',error:'Erro',logout:'Terminar sessão',loginPage:'Página de início de sessão',runvardAccounts:'Contas runvard',background:'Fundo',backgroundTitle:'Fundo',presets:'Predefinições',uploadImage:'Carregar imagem',dropImage:'Clique ou largue uma imagem aqui',imageUrl:'URL da imagem',restoreDefault:'Restaurar predefinição',addTile:'Adicionar atalho',confirmDelete:'Confirmar eliminação',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo especialista ativado',expertOff:'Modo especialista desativado',loginEnabled:'Início de sessão ativado. Será necessária autenticação na próxima visita.',loginDisabled:'Início de sessão desativado',signedInAs:'Sessão iniciada como',loginDisabledHead:'Início de sessão desativado',daySuffix:'',confirmCheckbox:'Compreendo e quero continuar.',dangerConfirmTitle:'Confirmação necessária',dangerConfirmMessage:'Esta ação altera definições ou dados do sistema. Confirme antes de o runvard continuar.',tileTerminal:'Terminal',tileFiles:'Ficheiros',tileStorage:'Armazenamento',tileDocker:'Docker',tileVms:'Máquinas virtuais',tileBackup:'Cópias de segurança',tileMonitoring:'Monitorização',tileSystem:'Sistema',tileApps:'Aplicações',descShell:'Acesso shell',descFiles:'Navegar · Carregar · Partilhar',descStorage:'Discos · Pools · Estado',descDocker:'Contentores · Compose',descVms:'Convidados · Armazenamento',descBackup:'Tarefas · Histórico',descMonitoring:'Registos · Alertas · Auditoria',descSystem:'Visão geral · Atualizações · Utilizadores',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contentores',tabCompose:'Compose',tabImages:'Imagens',tabVolumes:'Volumes',tabMachines:'Máquinas virtuais',tabStoragePools:'Pools de armazenamento',tabJobs:'Tarefas',tabHistory:'Histórico',tabLogs:'Registos',tabAlerts:'Alertas',tabAudit:'Auditoria',tabOverview:'Visão geral',tabUpdates:'Atualizações',tabUsers:'Utilizadores',tabNetwork:'Rede',tabServices:'Serviços',tabShares:'Partilhas',tabMaintenance:'Manutenção',tabAdvanced:'Avançado',tabPower:'Energia'},
 };
+const I18N_COMPLETIONS={
+  de:{tileServers:'Server',descServers:'Verbundene runvard-Instanzen'},
+  fr:{tileServers:'Serveurs',descServers:'Instances runvard connectées'},
+  it:{tileServers:'Server',descServers:'Istanze runvard collegate'},
+  es:{tileServers:'Servidores',descServers:'Instancias de runvard conectadas'},
+  pt:{tileServers:'Servidores',descServers:'Instâncias runvard ligadas'},
+};
+for(const lang of Object.keys(I18N_COMPLETIONS)){
+  Object.assign(I18N[lang],I18N_COMPLETIONS[lang]);
+}
 function currentLanguage(){
   try{
     const lang=localStorage.getItem(LANGUAGE_KEY)||SERVER_DEFAULT_LANGUAGE||'en';
@@ -5870,6 +5880,251 @@ const UI_PHRASES={
     "🗑 Trash":"🗑 Lixo"},
 };
 
+const UI_PHRASE_COMPLETIONS={
+  de:{
+    "Role":"Rolle",
+    "Sent":"Gesendet",
+    "Received":"Empfangen",
+    "Packets":"Pakete"
+  },
+  fr:{
+    "App state":"État de l’application",
+    "Architecture":"Architecture",
+    "Attention":"Attention",
+    "Console":"Console",
+    "Container name":"Nom du conteneur",
+    "Container port":"Port du conteneur",
+    "Container target":"Cible du conteneur",
+    "Date":"Date",
+    "Description":"Description",
+    "Interface":"Interface",
+    "Interfaces":"Interfaces",
+    "Machines":"Machines",
+    "Network Details":"Détails du réseau",
+    "No environment variables":"Aucune variable d’environnement",
+    "No volumes in this template":"Aucun volume dans ce modèle",
+    "Search…":"Rechercher…",
+    "Unit (z. B. runvard)":"Unité (p. ex. runvard)",
+    "Service name":"Nom du service",
+    "btop – System Monitor":"btop – Moniteur système",
+    "Hardware (Disks/NICs)":"Matériel (disques/cartes réseau)",
+    "Shell (exec)":"Shell (exec)",
+    "Drive":"Disque",
+    "Fixed":"Fixe",
+    "Fixed host path":"Chemin hôte fixe",
+    "Generated docker-compose.yml":"Fichier docker-compose.yml généré",
+    "Host path":"Chemin hôte",
+    "Host port":"Port hôte",
+    "Host source":"Source hôte",
+    "Image":"Image",
+    "Large data":"Données volumineuses",
+    "Mode":"Mode",
+    "Value":"Valeur",
+    "Variable":"Variable",
+    "free":"libre",
+    "to":"à",
+    "Total":"Total",
+    "Type":"Type",
+    "Update did not start":"La mise à jour n’a pas démarré",
+    "Update finished. Reload now to use the new version.":"Mise à jour terminée. Rechargez maintenant pour utiliser la nouvelle version.",
+    "Update may still be finishing in the background.":"La mise à jour est peut-être encore en cours de finalisation en arrière-plan.",
+    "Update running":"Mise à jour en cours",
+    "Check manually":"Vérifier manuellement",
+    "Connection interrupted while the service restarts...":"Connexion interrompue pendant le redémarrage du service…",
+    "Polling ended. Reload when you want to check the new version.":"La vérification est terminée. Rechargez la page pour contrôler la nouvelle version.",
+    "Ready to reload":"Prêt à recharger",
+    "runvard may be restarting. Waiting for the update result.":"runvard redémarre peut-être. En attente du résultat de la mise à jour.",
+    "runvard update completed":"Mise à jour de runvard terminée",
+    "runvard update failed":"Échec de la mise à jour de runvard",
+    "runvard update finished.":"La mise à jour de runvard est terminée.",
+    "runvard update is still running.":"La mise à jour de runvard est toujours en cours.",
+    "runvard update started":"Mise à jour de runvard démarrée",
+    "Starting update job...":"Démarrage de la tâche de mise à jour…",
+    "Waiting for the new update log...":"En attente du nouveau journal de mise à jour…",
+    "Waiting for update job output.":"En attente de la sortie de la tâche de mise à jour.",
+    "Waiting for update output...":"En attente de la sortie de la mise à jour…",
+    "⏸ Pause":"⏸ Mettre en pause",
+    "Role":"Rôle",
+    "Sent":"Envoyé",
+    "Received":"Reçu",
+    "Packets":"Paquets"
+  },
+  it:{
+    "+ Account":"+ Account",
+    "+ Cron job":"+ Job cron",
+    "App state":"Stato dell’app",
+    "Console":"Console",
+    "Container name":"Nome container",
+    "Container port":"Porta container",
+    "Container target":"Destinazione container",
+    "Driver":"Driver",
+    "Filesystem":"File system",
+    "Filesystem (fs)":"File system (fs)",
+    "Linux (file manager)":"Linux (gestore file)",
+    "Network Details":"Dettagli rete",
+    "No environment variables":"Nessuna variabile d’ambiente",
+    "No volumes in this template":"Nessun volume in questo modello",
+    "Password":"Password",
+    "Report":"Rapporto",
+    "Search…":"Cerca…",
+    "Unit (z. B. runvard)":"Unità (ad es. runvard)",
+    "Service name":"Nome servizio",
+    "btop – System Monitor":"btop – Monitor di sistema",
+    "Hardware (Disks/NICs)":"Hardware (dischi/schede di rete)",
+    "Shell (exec)":"Shell (exec)",
+    "Drive":"Unità",
+    "Fixed":"Fisso",
+    "Fixed host path":"Percorso host fisso",
+    "Generated docker-compose.yml":"docker-compose.yml generato",
+    "Host path":"Percorso host",
+    "Host port":"Porta host",
+    "Host source":"Origine host",
+    "Large data":"Dati voluminosi",
+    "Mode":"Modalità",
+    "Value":"Valore",
+    "Variable":"Variabile",
+    "free":"libero",
+    "to":"a",
+    "Update did not start":"L’aggiornamento non è stato avviato",
+    "Update finished. Reload now to use the new version.":"Aggiornamento completato. Ricarica ora per usare la nuova versione.",
+    "Update may still be finishing in the background.":"L’aggiornamento potrebbe essere ancora in fase di completamento in background.",
+    "Update running":"Aggiornamento in corso",
+    "Uptime":"Tempo di attività",
+    "Check manually":"Controlla manualmente",
+    "Connection interrupted while the service restarts...":"Connessione interrotta durante il riavvio del servizio…",
+    "Polling ended. Reload when you want to check the new version.":"Verifica terminata. Ricarica la pagina per controllare la nuova versione.",
+    "Ready to reload":"Pronto per ricaricare",
+    "runvard may be restarting. Waiting for the update result.":"runvard potrebbe essere in fase di riavvio. In attesa del risultato dell’aggiornamento.",
+    "runvard update completed":"Aggiornamento di runvard completato",
+    "runvard update failed":"Aggiornamento di runvard non riuscito",
+    "runvard update finished.":"L’aggiornamento di runvard è terminato.",
+    "runvard update is still running.":"L’aggiornamento di runvard è ancora in corso.",
+    "runvard update started":"Aggiornamento di runvard avviato",
+    "Starting update job...":"Avvio dell’attività di aggiornamento…",
+    "Waiting for the new update log...":"In attesa del nuovo registro di aggiornamento…",
+    "Waiting for update job output.":"In attesa dell’output dell’attività di aggiornamento.",
+    "Waiting for update output...":"In attesa dell’output dell’aggiornamento…",
+    "Role":"Ruolo",
+    "Sent":"Inviati",
+    "Received":"Ricevuti",
+    "Packets":"Pacchetti"
+  },
+  es:{
+    "App state":"Estado de la aplicación",
+    "Container name":"Nombre del contenedor",
+    "Container port":"Puerto del contenedor",
+    "Container target":"Destino del contenedor",
+    "Error":"Error",
+    "Error (err)":"Error (err)",
+    "Error:":"Error:",
+    "Error: ":"Error: ",
+    "Interfaces":"Interfaces",
+    "Manual":"Manual",
+    "Network Details":"Detalles de red",
+    "No environment variables":"No hay variables de entorno",
+    "No volumes in this template":"No hay volúmenes en esta plantilla",
+    "Search…":"Buscar…",
+    "Unit (z. B. runvard)":"Unidad (p. ej., runvard)",
+    "Service name":"Nombre del servicio",
+    "btop – System Monitor":"btop – Monitor del sistema",
+    "Hardware (Disks/NICs)":"Hardware (discos/tarjetas de red)",
+    "Shell (exec)":"Shell (exec)",
+    "Drive":"Unidad",
+    "Fixed":"Fijo",
+    "Fixed host path":"Ruta fija del host",
+    "Generated docker-compose.yml":"docker-compose.yml generado",
+    "Host path":"Ruta del host",
+    "Host port":"Puerto del host",
+    "Host source":"Origen del host",
+    "Large data":"Datos voluminosos",
+    "Mode":"Modo",
+    "Value":"Valor",
+    "Variable":"Variable",
+    "free":"libre",
+    "to":"a",
+    "Total":"Total",
+    "Update did not start":"La actualización no se inició",
+    "Update finished. Reload now to use the new version.":"Actualización terminada. Recarga ahora para usar la nueva versión.",
+    "Update may still be finishing in the background.":"Es posible que la actualización aún esté terminando en segundo plano.",
+    "Update running":"Actualización en curso",
+    "Check manually":"Comprobar manualmente",
+    "Connection interrupted while the service restarts...":"Conexión interrumpida mientras se reinicia el servicio…",
+    "Polling ended. Reload when you want to check the new version.":"La comprobación ha terminado. Recarga la página para verificar la nueva versión.",
+    "Ready to reload":"Listo para recargar",
+    "runvard may be restarting. Waiting for the update result.":"Es posible que runvard se esté reiniciando. Esperando el resultado de la actualización.",
+    "runvard update completed":"Actualización de runvard completada",
+    "runvard update failed":"La actualización de runvard ha fallado",
+    "runvard update finished.":"La actualización de runvard ha terminado.",
+    "runvard update is still running.":"La actualización de runvard sigue en curso.",
+    "runvard update started":"Actualización de runvard iniciada",
+    "Starting update job...":"Iniciando la tarea de actualización…",
+    "Waiting for the new update log...":"Esperando el nuevo registro de actualización…",
+    "Waiting for update job output.":"Esperando la salida de la tarea de actualización.",
+    "Waiting for update output...":"Esperando la salida de la actualización…",
+    "Role":"Rol",
+    "Sent":"Enviado",
+    "Received":"Recibido",
+    "Packets":"Paquetes"
+  },
+  pt:{
+    "App state":"Estado da aplicação",
+    "Container name":"Nome do contentor",
+    "Container port":"Porta do contentor",
+    "Container target":"Destino do contentor",
+    "Interface":"Interface",
+    "Interfaces":"Interfaces",
+    "Manual":"Manual",
+    "Network Details":"Detalhes da rede",
+    "No environment variables":"Sem variáveis de ambiente",
+    "No volumes in this template":"Sem volumes neste modelo",
+    "Search…":"Pesquisar…",
+    "Unit (z. B. runvard)":"Unidade (por ex., runvard)",
+    "Service name":"Nome do serviço",
+    "btop – System Monitor":"btop – Monitor do sistema",
+    "Hardware (Disks/NICs)":"Hardware (discos/placas de rede)",
+    "Shell (exec)":"Shell (exec)",
+    "Drive":"Unidade",
+    "Fixed":"Fixo",
+    "Fixed host path":"Caminho fixo no anfitrião",
+    "Generated docker-compose.yml":"docker-compose.yml gerado",
+    "Host path":"Caminho no anfitrião",
+    "Host port":"Porta do anfitrião",
+    "Host source":"Origem no anfitrião",
+    "Large data":"Dados volumosos",
+    "Mode":"Modo",
+    "Value":"Valor",
+    "Variable":"Variável",
+    "free":"livre",
+    "to":"a",
+    "Total":"Total",
+    "Update did not start":"A atualização não foi iniciada",
+    "Update finished. Reload now to use the new version.":"Atualização concluída. Recarregue agora para usar a nova versão.",
+    "Update may still be finishing in the background.":"A atualização poderá ainda estar a terminar em segundo plano.",
+    "Update running":"Atualização em curso",
+    "Check manually":"Verificar manualmente",
+    "Connection interrupted while the service restarts...":"Ligação interrompida enquanto o serviço reinicia…",
+    "Polling ended. Reload when you want to check the new version.":"A verificação terminou. Recarregue a página para confirmar a nova versão.",
+    "Ready to reload":"Pronto para recarregar",
+    "runvard may be restarting. Waiting for the update result.":"O runvard poderá estar a reiniciar. A aguardar o resultado da atualização.",
+    "runvard update completed":"Atualização do runvard concluída",
+    "runvard update failed":"A atualização do runvard falhou",
+    "runvard update finished.":"A atualização do runvard terminou.",
+    "runvard update is still running.":"A atualização do runvard ainda está em curso.",
+    "runvard update started":"Atualização do runvard iniciada",
+    "Starting update job...":"A iniciar a tarefa de atualização…",
+    "Waiting for the new update log...":"A aguardar o novo registo de atualização…",
+    "Waiting for update job output.":"A aguardar a saída da tarefa de atualização.",
+    "Waiting for update output...":"A aguardar a saída da atualização…",
+    "Role":"Função",
+    "Sent":"Enviado",
+    "Received":"Recebido",
+    "Packets":"Pacotes"
+  }
+};
+for(const lang of Object.keys(UI_PHRASE_COMPLETIONS)){
+  Object.assign(UI_PHRASES[lang],UI_PHRASE_COMPLETIONS[lang]);
+}
+
 const STORAGE_PHRASES={
   de:{
     "No disks detected":"Keine Laufwerke erkannt",
@@ -6686,6 +6941,43 @@ const VM_PHRASES={
     "off":"desligada"
   }
 };
+const VM_PHRASE_COMPLETIONS={
+  fr:{
+    "+ Attach disk":"+ Attacher un disque",
+    "Attach disk:":"Attacher un disque :",
+    "Attach disk: ":"Attacher un disque : ",
+    "Detach disk":"Détacher le disque",
+    "Disk attached":"Disque attaché",
+    "Disk detached":"Disque détaché"
+  },
+  it:{
+    "+ Attach disk":"+ Collega disco",
+    "Attach disk:":"Collega disco:",
+    "Attach disk: ":"Collega disco: ",
+    "Detach disk":"Scollega disco",
+    "Disk attached":"Disco collegato",
+    "Disk detached":"Disco scollegato"
+  },
+  es:{
+    "+ Attach disk":"+ Conectar disco",
+    "Attach disk:":"Conectar disco:",
+    "Attach disk: ":"Conectar disco: ",
+    "Detach disk":"Desconectar disco",
+    "Disk attached":"Disco conectado",
+    "Disk detached":"Disco desconectado"
+  },
+  pt:{
+    "+ Attach disk":"+ Anexar disco",
+    "Attach disk:":"Anexar disco:",
+    "Attach disk: ":"Anexar disco: ",
+    "Detach disk":"Desanexar disco",
+    "Disk attached":"Disco anexado",
+    "Disk detached":"Disco desanexado"
+  }
+};
+for(const lang of Object.keys(VM_PHRASE_COMPLETIONS)){
+  Object.assign(VM_PHRASES[lang],VM_PHRASE_COMPLETIONS[lang]);
+}
 for(const lang of Object.keys(VM_PHRASES)){
   UI_PHRASES[lang]=Object.assign(UI_PHRASES[lang]||{},VM_PHRASES[lang]);
 }
@@ -7348,7 +7640,7 @@ window.acctAddForm=()=>openForm('Create account','👥',[
   {name:'role',label:'Rolle',type:'select',options:[{value:'readonly',label:'Read only'},{value:'admin',label:'Administrator'}]},
 ],async d=>{try{const r=await post('/accounts/add',d);if(r&&r.ok===false){toast(r.error||'Error','error');return;}closeForm();toast('Account created');renderAccounts();}catch(e){toast(e.message,'error');}});
 window.acctPass=username=>openForm('Change password: '+username,'⚿',[{name:'password',label:'New password',type:'password'}],async d=>{try{const r=await post('/accounts/password',{username,password:d.password});if(r&&r.ok===false){toast(r.error||'Error','error');return;}closeForm();toast('Password changed');}catch(e){toast(e.message,'error');}});
-window.acctRole=async(username,role)=>{try{const r=await post('/accounts/role',{username,role});if(r&&r.ok===false){toast(r.error||'Error','error');return;}toast('Rolle: '+(role==='admin'?'Admin':'Read only'));renderAccounts();}catch(e){toast(e.message,'error');}};
+window.acctRole=async(username,role)=>{try{const r=await post('/accounts/role',{username,role});if(r&&r.ok===false){toast(r.error||'Error','error');return;}toast(uiText('Role')+': '+(role==='admin'?'Admin':uiText('Read only')));renderAccounts();}catch(e){toast(e.message,'error');}};
 window.acctDel=username=>confirmDelete('Delete account',`Delete runvard account "${username}"?`,async()=>{try{await post('/accounts/delete',{username});toast('Account deleted');renderAccounts();}catch(e){toast(e.message,'error');}});
 
 loadAuthStatus();
@@ -7357,7 +7649,7 @@ loadAuthStatus();
 function makeSpark(id,color){return new Chart($(id),{type:'line',data:{labels:Array(30).fill(''),datasets:[{data:Array(30).fill(0),borderColor:color,borderWidth:1.5,fill:true,backgroundColor:color+'22',tension:.4,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false,min:0,max:100}},animation:false}});}
 const cpuSpark=makeSpark('#cpu-spark','#8b5cf6'),ramSpark=makeSpark('#ram-spark','#06b6d4'),netSpark=makeSpark('#net-spark','#22c55e');
 function pushData(c,v){c.data.datasets[0].data.shift();c.data.datasets[0].data.push(v);c.update('none');}
-async function poll(){try{const s=await api('/system/stats');$('#cpu-val').textContent=s.cpu.percent;$('#cpu-sub').textContent=`${s.cpu.cores} Kerne · ${s.cpu.freq||'?'} MHz`;pushData(cpuSpark,s.cpu.percent);$('#ram-val').textContent=(s.memory.used/1073741824).toFixed(1);$('#ram-sub').textContent=`${fmtBytes(s.memory.total)} · ${s.memory.percent}%`;pushData(ramSpark,s.memory.percent);const mb=(s.network.down_rate/1048576).toFixed(1);$('#net-val').textContent=mb;$('#net-sub').innerHTML=`▲ ${(s.network.up_rate/1048576).toFixed(1)} ▼ ${mb} MB/s`;pushData(netSpark,Math.min(100,s.network.down_rate/1048576*2));}catch(e){}}
+async function poll(){try{const s=await api('/system/stats');$('#cpu-val').textContent=s.cpu.percent;$('#cpu-sub').textContent=`${s.cpu.cores} ${uiText('cores')} · ${s.cpu.freq||'?'} MHz`;pushData(cpuSpark,s.cpu.percent);$('#ram-val').textContent=(s.memory.used/1073741824).toFixed(1);$('#ram-sub').textContent=`${fmtBytes(s.memory.total)} · ${s.memory.percent}%`;pushData(ramSpark,s.memory.percent);const mb=(s.network.down_rate/1048576).toFixed(1);$('#net-val').textContent=mb;$('#net-sub').innerHTML=`▲ ${(s.network.up_rate/1048576).toFixed(1)} ▼ ${mb} MB/s`;pushData(netSpark,Math.min(100,s.network.down_rate/1048576*2));}catch(e){}}
 api('/system/disks').then(d=>{if(d.length){const r=d.find(x=>x.mountpoint==='/')||d[0];$('#disk-val').textContent=r.percent;$('#disk-bar').style.width=r.percent+'%';$('#disk-sub').textContent=`${fmtBytes(r.used)} / ${fmtBytes(r.total)}`;}});
 poll();setInterval(poll,2000);
 let _badgeTick=0;setInterval(()=>{if(++_badgeTick%5===0)loadTileBadges();},2000);
@@ -7395,6 +7687,17 @@ const FED_I18N={
   es:{servers:'Servidores',setup:'Conectar instancias runvard',setupCopy:'Crea una federación aquí o únete a un servidor existente.',create:'Crear federación',join:'Unirse',refresh:'Actualizar',pair:'Código de emparejamiento',settings:'Ajustes',current:'Este servidor',open:'Abrir',revoke:'Revocar',online:'En línea',degraded:'Degradado',offline:'Sin conexión',incompatible:'Incompatible',unknown:'Esperando',last:'Último contacto',updates:'Actualizaciones',alerts:'Alertas',version:'Versión',expires:'Válido 10 minutos · un solo uso'},
   pt:{servers:'Servidores',setup:'Ligar instâncias runvard',setupCopy:'Crie uma federação aqui ou adira a um servidor existente.',create:'Criar federação',join:'Aderir',refresh:'Atualizar',pair:'Código de emparelhamento',settings:'Definições',current:'Este servidor',open:'Abrir',revoke:'Revogar',online:'Online',degraded:'Degradado',offline:'Offline',incompatible:'Incompatível',unknown:'A aguardar',last:'Último contacto',updates:'Atualizações',alerts:'Alertas',version:'Versão',expires:'Válido por 10 minutos · utilização única'},
 };
+const FED_FORM_I18N={
+  en:{displayName:'Display name',internalUrl:'Internal URL',browserUrl:'Browser URL',allowedNetworks:'Allowed private networks',existingInternalUrl:'Existing server internal URL',internalUrlHint:'Literal LAN/VPN IP and port, e.g. http://10.0.0.12:8080',browserUrlHint:'The URL users open; reverse-proxy hostnames are supported.',copy:'Copy',copied:'Copied',disk:'Disk'},
+  de:{displayName:'Anzeigename',internalUrl:'Interne URL',browserUrl:'Browser-URL',allowedNetworks:'Erlaubte private Netze',existingInternalUrl:'Interne URL des vorhandenen Servers',internalUrlHint:'Direkte LAN-/VPN-IP und Port, z. B. http://10.0.0.12:8080',browserUrlHint:'Die URL, die Benutzer öffnen; Reverse-Proxy-Hostnamen werden unterstützt.',copy:'Kopieren',copied:'Kopiert',disk:'Datenträger'},
+  fr:{displayName:'Nom affiché',internalUrl:'URL interne',browserUrl:'URL du navigateur',allowedNetworks:'Réseaux privés autorisés',existingInternalUrl:'URL interne du serveur existant',internalUrlHint:'Adresse IP LAN/VPN directe et port, p. ex. http://10.0.0.12:8080',browserUrlHint:'L’URL ouverte par les utilisateurs ; les noms d’hôte du proxy inverse sont pris en charge.',copy:'Copier',copied:'Copié',disk:'Disque'},
+  it:{displayName:'Nome visualizzato',internalUrl:'URL interno',browserUrl:'URL del browser',allowedNetworks:'Reti private consentite',existingInternalUrl:'URL interno del server esistente',internalUrlHint:'Indirizzo IP LAN/VPN diretto e porta, ad es. http://10.0.0.12:8080',browserUrlHint:'L’URL aperto dagli utenti; sono supportati i nomi host del reverse proxy.',copy:'Copia',copied:'Copiato',disk:'Disco'},
+  es:{displayName:'Nombre visible',internalUrl:'URL interna',browserUrl:'URL del navegador',allowedNetworks:'Redes privadas permitidas',existingInternalUrl:'URL interna del servidor existente',internalUrlHint:'IP LAN/VPN directa y puerto, p. ej., http://10.0.0.12:8080',browserUrlHint:'La URL que abren los usuarios; se admiten nombres de host de proxy inverso.',copy:'Copiar',copied:'Copiado',disk:'Disco'},
+  pt:{displayName:'Nome apresentado',internalUrl:'URL interno',browserUrl:'URL do navegador',allowedNetworks:'Redes privadas permitidas',existingInternalUrl:'URL interno do servidor existente',internalUrlHint:'IP LAN/VPN direto e porta, por ex., http://10.0.0.12:8080',browserUrlHint:'O URL aberto pelos utilizadores; são suportados nomes de anfitrião de proxy inverso.',copy:'Copiar',copied:'Copiado',disk:'Disco'},
+};
+for(const lang of Object.keys(FED_FORM_I18N)){
+  Object.assign(FED_I18N[lang],FED_FORM_I18N[lang]);
+}
 function fedText(key){return(FED_I18N[currentLanguage()]||FED_I18N.en)[key]||FED_I18N.en[key]||key;}
 function tileName(tile){return tile.id==='servers'?fedText('servers'):tr(tile.nameKey);}
 function tileDesc(tile){return tile.descKey?tr(tile.descKey):'';}
@@ -7566,10 +7869,10 @@ let _fedOverview=null;
 function fedDefaultName(){return ($('#hostname')?.textContent||'runvard').trim()||'runvard';}
 function fedSetupFields(){
   return [
-    {name:'name',label:'Display name',value:fedDefaultName()},
-    {name:'internal_url',label:'Internal URL',value:location.origin,hint:'Literal LAN/VPN IP and port, e.g. http://10.0.0.12:8080'},
-    {name:'browser_url',label:'Browser URL',value:location.origin,hint:'The URL users open; reverse-proxy hostnames are supported.'},
-    {name:'allowed_cidrs',label:'Allowed private networks',value:'10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,fd00::/8'},
+    {name:'name',label:fedText('displayName'),value:fedDefaultName()},
+    {name:'internal_url',label:fedText('internalUrl'),value:location.origin,hint:fedText('internalUrlHint')},
+    {name:'browser_url',label:fedText('browserUrl'),value:location.origin,hint:fedText('browserUrlHint')},
+    {name:'allowed_cidrs',label:fedText('allowedNetworks'),value:'10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,fd00::/8'},
   ];
 }
 async function renderServers(body){
@@ -7607,7 +7910,7 @@ function fedNodeHtml(node,admin){
     <div class="fed-metrics">
       ${metric((s.cpu_percent??'—')+(s.cpu_percent==null?'':'%'),'CPU')}
       ${metric((s.ram_percent??'—')+(s.ram_percent==null?'':'%'),'RAM')}
-      ${metric((s.disk_percent??'—')+(s.disk_percent==null?'':'%'),'Disk')}
+      ${metric((s.disk_percent??'—')+(s.disk_percent==null?'':'%'),fedText('disk'))}
       ${metric(s.docker?`${s.docker.running}/${s.docker.total}`:'—','Docker')}
       ${metric(s.vms?`${s.vms.running}/${s.vms.total}`:'—','VM')}
       ${metric(`${s.updates??'—'} / ${s.alerts??'—'}`,`${fedText('updates')} / ${fedText('alerts')}`)}
@@ -7624,7 +7927,7 @@ window.fedEnableForm=()=>openForm(fedText('create'),'⬡',fedSetupFields(),async
 });
 window.fedJoinForm=()=>{
   const fields=[
-    {name:'peer_url',label:'Existing server internal URL',placeholder:'http://10.0.0.11:8080'},
+    {name:'peer_url',label:fedText('existingInternalUrl'),placeholder:'http://10.0.0.11:8080'},
     {name:'code',label:'Pairing code'},
     ...fedSetupFields(),
   ];
@@ -7635,10 +7938,10 @@ window.fedJoinForm=()=>{
 window.fedSettingsForm=()=>{
   const s=_fedOverview?.settings||{};
   openForm(fedText('settings'),'⚙',[
-    {name:'name',label:'Display name',value:s.name||''},
-    {name:'internal_url',label:'Internal URL',value:s.internal_url||''},
-    {name:'browser_url',label:'Browser URL',value:s.browser_url||''},
-    {name:'allowed_cidrs',label:'Allowed private networks',value:(s.allowed_cidrs||[]).join(',')},
+    {name:'name',label:fedText('displayName'),value:s.name||''},
+    {name:'internal_url',label:fedText('internalUrl'),value:s.internal_url||''},
+    {name:'browser_url',label:fedText('browserUrl'),value:s.browser_url||''},
+    {name:'allowed_cidrs',label:fedText('allowedNetworks'),value:(s.allowed_cidrs||[]).join(',')},
   ],async d=>{try{await post('/federation/v1/admin/settings',d);closeForm();toast(tr('saved'));renderServers($('#modal-body'));}catch(e){toast(e.message,'error');}});
 };
 window.fedPairCode=async()=>{
@@ -7648,7 +7951,7 @@ window.fedPairCode=async()=>{
     $('#form-body').innerHTML=`<div class="form-field"><label>${esc(fedText('expires'))}</label>
       <input id="fed-pair-value" readonly value="${esc(r.code)}" style="font-family:'JetBrains Mono',monospace"></div>
       <div class="form-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('close'))}</button>
-      <button class="btn" onclick="navigator.clipboard.writeText($('#fed-pair-value').value);toast('Copied')">Copy</button></div>`;
+      <button class="btn" onclick="navigator.clipboard.writeText($('#fed-pair-value').value);toast(fedText('copied'))">${esc(fedText('copy'))}</button></div>`;
     $('#form-overlay').classList.add('open');
   }catch(e){toast(e.message,'error');}
 };
@@ -8151,7 +8454,7 @@ async function renderFiles(body){
           <td><div class="fi ${fi.cls}" style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px">${fi.icon}</div></td>
           <td class="${fi.ncls}">${esc(e.name)}</td>
           <td style="color:var(--text3);text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px">${e.is_dir?'—':fmtBytes(e.size)}</td>
-          <td style="color:var(--text3);font-size:11px">${new Date(e.modified*1000).toLocaleDateString('de-DE')}</td>
+          <td style="color:var(--text3);font-size:11px">${new Date(e.modified*1000).toLocaleDateString(localeCode())}</td>
         </tr>`;}).join('')}</tbody>
       </table>`}
       </div>
@@ -8866,7 +9169,7 @@ async function renderTrash(body){
       ${items.length?items.map(i=>`<tr>
         <td><span style="display:inline-flex;align-items:center;gap:8px"><span class="fi ${i.is_dir?'fi-folder':'fi-doc'}" style="width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px">${i.is_dir?'📁':'📄'}</span> ${esc(i.name)}</span></td>
         <td class="mono" style="font-size:11px;color:var(--text3)">${esc(i.original)}</td>
-        <td style="color:var(--text3)">${new Date(i.deleted*1000).toLocaleDateString('de-DE')}</td>
+        <td style="color:var(--text3)">${new Date(i.deleted*1000).toLocaleDateString(localeCode())}</td>
         <td><button class="btn sm ghost" onclick="restoreTrash('${i.id}','${esc(i.name)}')">↩ ${esc(uiText('Restore'))}</button></td>
       </tr>`).join(''):`<tr><td colspan="4" class="loading">${esc(uiText('Trash is empty'))}</td></tr>`}
       </tbody></table>
@@ -9643,7 +9946,7 @@ async function renderBackup(body,tab){
    <table><thead><tr><th>Job</th><th>Time</th><th>Dauer</th><th>Status</th></tr></thead><tbody>
    ${h.map(x=>`<tr>
      <td style="font-weight:500">${esc(x.name)}</td>
-     <td style="color:var(--text2);font-size:12px">${new Date(x.time*1000).toLocaleString('de-DE')}</td>
+     <td style="color:var(--text2);font-size:12px">${new Date(x.time*1000).toLocaleString(localeCode())}</td>
      <td style="color:var(--text2)">${x.duration}s</td>
      <td><span class="status-pill ${x.success?'run':'stop'}">${x.success?'OK':'Error'}</span></td>
    </tr>`).join('')||'<tr><td colspan="4"><div class="empty-state">No history</div></td></tr>'}</tbody></table>`;}
@@ -10092,7 +10395,7 @@ async function renderMonitoring(body,tab){
    body.innerHTML=`<div class="sec-hdr"><h3>Audit-Log</h3><span style="font-size:11px;color:var(--text3)">${(a.events||[]).length} entries</span></div>
    <table style="table-layout:fixed;width:100%"><thead><tr><th style="width:150px">${esc(uiText('Time'))}</th><th style="width:110px">${esc(uiText('User'))}</th><th>${esc(uiText('Action'))}</th><th style="width:70px">${esc(uiText('Status'))}</th><th style="width:120px">${esc(uiText('Remote'))}</th></tr></thead><tbody>
    ${(a.events||[]).map(x=>`<tr>
-     <td style="font-size:11px;color:var(--text2)">${new Date(x.time*1000).toLocaleString('de-DE')}</td>
+     <td style="font-size:11px;color:var(--text2)">${new Date(x.time*1000).toLocaleString(localeCode())}</td>
      <td style="font-weight:500">${esc(x.user)}</td>
      <td class="mono" style="font-size:11px;overflow:hidden;text-overflow:ellipsis">${esc(x.action)}</td>
      <td><span class="status-pill ${x.ok?'run':'stop'}" style="font-size:10px">${x.ok?'OK':'Error'}</span></td>
@@ -10103,7 +10406,7 @@ async function renderMonitoring(body,tab){
    body.innerHTML=`<div class="sec-hdr"><h3>Alert history</h3></div>
    <table><thead><tr><th>Time</th><th>Nachricht</th><th>Kanal</th></tr></thead><tbody>
    ${a.map(x=>`<tr>
-     <td style="font-size:12px;color:var(--text2)">${new Date(x.time*1000).toLocaleString('de-DE')}</td>
+     <td style="font-size:12px;color:var(--text2)">${new Date(x.time*1000).toLocaleString(localeCode())}</td>
      <td>${esc(x.message)}</td>
      <td><span style="background:var(--bg3);border:1px solid var(--border);padding:2px 8px;border-radius:20px;font-size:11px">${x.channel}</span></td>
    </tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">No alerts</div></td></tr>'}</tbody></table>`;
@@ -10302,7 +10605,7 @@ async function renderMaintenance(body){
       <table style="table-layout:fixed;width:100%"><thead><tr><th>Report</th><th style="width:90px">Size</th><th style="width:110px">Erstellt</th><th style="width:50px;text-align:right"></th></tr></thead><tbody>
       ${(sos.reports||[]).map(r=>`<tr>
         <td class="mono" style="font-size:11px;overflow:hidden;text-overflow:ellipsis">${esc(r.name)}</td>
-        <td>${fmtBytes(r.size)}</td><td style="color:var(--text3);font-size:11px">${new Date(r.mtime*1000).toLocaleString('de-DE')}</td>
+        <td>${fmtBytes(r.size)}</td><td style="color:var(--text3);font-size:11px">${new Date(r.mtime*1000).toLocaleString(localeCode())}</td>
         <td style="text-align:right"><button class="btn icon" title="Download" onclick="downloadFile('${esc(r.path)}')" style="width:26px;height:26px;font-size:12px">⬇</button></td>
       </tr>`).join('')||'<tr><td colspan="4"><div class="empty-state">No reports yet</div></td></tr>'}
       </tbody></table>`;
@@ -10709,7 +11012,7 @@ async function renderCpuDetail(body){
     ${histBlock('hist-cpu','CPU-Auslastung')}
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:20px">
       <div>
-        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">Kerne (${cpu.cores})</div>
+        <div style="font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;margin-bottom:12px">${esc(uiText('cores'))} (${cpu.cores})</div>
         ${cpu.per_core.map((c,i)=>`
           <div style="display:flex;align-items:center;gap:10px;margin-bottom:8px">
             <span style="font-size:11px;color:var(--text3);width:50px">Kern ${i}</span>
@@ -10820,8 +11123,8 @@ async function renderNetDetail(body){
         </div>
         <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:10px">
           ${[
-            {label:'▲ Gesendet',val:fmtBytes(i.bytes_sent),sub:i.packets_sent.toLocaleString()+' Pakete'},
-            {label:'▼ Empfangen',val:fmtBytes(i.bytes_recv),sub:i.packets_recv.toLocaleString()+' Pakete'},
+            {label:'▲ '+uiText('Sent'),val:fmtBytes(i.bytes_sent),sub:i.packets_sent.toLocaleString(localeCode())+' '+uiText('Packets')},
+            {label:'▼ '+uiText('Received'),val:fmtBytes(i.bytes_recv),sub:i.packets_recv.toLocaleString(localeCode())+' '+uiText('Packets')},
             {label:'Errors in',val:i.errin,sub:'',color:i.errin>0?'var(--red)':''},
             {label:'Errors out',val:i.errout,sub:'',color:i.errout>0?'var(--red)':''},
           ].map(s=>`<div style="background:rgba(255,255,255,.03);border-radius:8px;padding:10px">
@@ -10987,7 +11290,7 @@ const APP_DESC_ROWS=[
   ['seafile','Datei-Sync & -Sharing mit hoher Performance','High-performance file sync and sharing','Synchronisation et partage de fichiers performants','Sync e condivisione file ad alte prestazioni','Sincronización y compartición de archivos de alto rendimiento','Sincronização e partilha de ficheiros de alto desempenho'],
   ['kasm','Streamed Container-Desktops im Browser','Streamed container desktops in the browser','Bureaux conteneurisés diffusés dans le navigateur','Desktop container in streaming nel browser','Escritorios de contenedores en streaming en el navegador','Ambientes de trabalho em contentores no navegador'],
   ['guacamole','Clientloser Remote-Desktop-Zugriff (RDP/VNC/SSH)','Clientless remote desktop access (RDP/VNC/SSH)','Accès bureau distant sans client (RDP/VNC/SSH)','Accesso desktop remoto senza client (RDP/VNC/SSH)','Acceso remoto sin cliente (RDP/VNC/SSH)','Acesso remoto sem cliente (RDP/VNC/SSH)'],
-  ['wireguard-ui','Privatsphäre-freundliche Google-Suche','Privacy-friendly Google search','Recherche Google respectueuse de la vie privée','Ricerca Google rispettosa della privacy','Búsqueda de Google respetuosa con la privacidad','Pesquisa Google amiga da privacidade'],
+  ['wireguard-ui','Weboberfläche zur Verwaltung von WireGuard','Web interface for managing WireGuard','Interface web pour gérer WireGuard','Interfaccia web per gestire WireGuard','Interfaz web para gestionar WireGuard','Interface web para gerir o WireGuard'],
   ['searxng','Datenschutzfreundliche Meta-Suchmaschine','Privacy-friendly meta search engine','Méta-moteur de recherche respectueux de la vie privée','Meta-motore di ricerca rispettoso della privacy','Metabuscador respetuoso con la privacidad','Motor de metapesquisa amigo da privacidade'],
   ['changedetection','Webseiten auf Änderungen überwachen','Monitor websites for changes','Surveiller les changements de sites web','Monitora modifiche sui siti web','Supervisa cambios en sitios web','Monitoriza alterações em sites'],
   ['mealie2','Rezept-Manager mit Einkaufslisten','Recipe manager with shopping lists','Gestionnaire de recettes avec listes de courses','Gestore ricette con liste della spesa','Gestor de recetas con listas de compra','Gestor de receitas com listas de compras'],
