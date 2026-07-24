@@ -10,6 +10,8 @@ import hmac
 import hashlib
 import base64
 import time
+import html
+import requests
 
 from fastapi import FastAPI, Request, Depends, HTTPException, WebSocket, \
     WebSocketDisconnect, UploadFile, File, Form
@@ -23,6 +25,8 @@ from modules import (system, terminal, files, storage, docker_mgr, services,
                      system_mgr, apps, dashboard, metrics, accounts, audit,
                      ports)
 from modules import security_tokens
+from modules.federation import FederationManager
+from modules.federation.service import REDEEM_PATH, STATUS_PATH, SYNC_PATH
 
 app = FastAPI(title="runvard", docs_url=None, redoc_url=None)
 http_basic = HTTPBasic()
@@ -72,13 +76,27 @@ RUNVARD_LANG = os.environ.get("RUNVARD_LANG", "en")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ============ Auth: Session-Cookies + Login an/aus ============
-DATA_DIR = os.path.join(BASE_DIR, "data")
+DATA_DIR = os.environ.get("RUNVARD_DATA_DIR", os.path.join(BASE_DIR, "data"))
 os.makedirs(DATA_DIR, exist_ok=True)
 SECRET_FILE = os.path.join(DATA_DIR, "secret.key")
 AUTH_CFG_FILE = os.path.join(DATA_DIR, "auth.json")
 COOKIE_NAME = "runvard_session"
 SESSION_TTL = 8 * 3600              # 8 Stunden
 SESSION_TTL_REMEMBER = 30 * 86400   # 30 Tage
+
+FEDERATION = FederationManager(os.path.join(DATA_DIR, "federation"))
+
+
+@app.on_event("startup")
+def _start_federation_worker():
+    if FEDERATION.state.get("enabled") and \
+            os.environ.get("RUNVARD_FEDERATION_NO_WORKER") != "1":
+        FEDERATION.start()
+
+
+@app.on_event("shutdown")
+def _stop_federation_worker():
+    FEDERATION.stop()
 
 EXPERT_ONLY_PATHS = {
     "/api/monitoring/alerts",
@@ -317,6 +335,10 @@ def _danger_confirm_meta(path, form):
         "/api/sysmgr/unattended/set": ("sysmgr:unattended", "unattended-upgrades"),
         "/api/sysmgr/tuned/set": ("sysmgr:tuned", "profile"),
         "/api/dashboard/remove": ("dashboard:remove", "tile_id"),
+        "/api/federation/v1/admin/enable": ("federation:enable", "internal_url"),
+        "/api/federation/v1/admin/join": ("federation:join", "peer_url"),
+        "/api/federation/v1/admin/settings": ("federation:settings", "internal_url"),
+        "/api/federation/v1/admin/nodes/revoke": ("federation:revoke", "node_id"),
     }
     if path == "/api/auth/toggle":
         if str(form.get("enabled", "")) == "1":
@@ -1988,6 +2010,203 @@ def dashboard_update(tile_id: str = Form(...), name: str = Form(""),
     return dashboard.update_tile(tile_id, name or None, url or None,
                                  icon or None, host, show_url,
                                  accent, note)
+
+
+# ============ Multi-server federation ============
+
+def _federation_cidrs(value):
+    return [item.strip() for item in str(value or "").split(",") if item.strip()]
+
+
+@app.get("/api/federation/v1/admin/overview")
+def federation_overview(user: str = Depends(auth)):
+    return FEDERATION.overview()
+
+
+@app.post("/api/federation/v1/admin/enable")
+def federation_enable(
+    name: str = Form(...), internal_url: str = Form(...),
+    browser_url: str = Form(...), allowed_cidrs: str = Form(""),
+    user: str = Depends(confirmed_admin),
+):
+    try:
+        result = FEDERATION.enable(
+            name, internal_url, browser_url,
+            _federation_cidrs(allowed_cidrs) or None,
+        )
+        if os.environ.get("RUNVARD_FEDERATION_NO_WORKER") != "1":
+            FEDERATION.start()
+        return result
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.post("/api/federation/v1/admin/settings")
+def federation_settings(
+    name: str = Form(...), internal_url: str = Form(...),
+    browser_url: str = Form(...), allowed_cidrs: str = Form(""),
+    user: str = Depends(confirmed_admin),
+):
+    try:
+        return FEDERATION.update_settings(
+            name, internal_url, browser_url,
+            _federation_cidrs(allowed_cidrs) or None,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.post("/api/federation/v1/admin/pairing-code")
+def federation_pairing_code(user: str = Depends(require_admin)):
+    try:
+        return {"code": FEDERATION.issue_pairing_code(), "expires_in": 600}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.post("/api/federation/v1/admin/join")
+def federation_join(
+    peer_url: str = Form(...), code: str = Form(...),
+    name: str = Form(...), internal_url: str = Form(...),
+    browser_url: str = Form(...), allowed_cidrs: str = Form(""),
+    user: str = Depends(confirmed_admin),
+):
+    try:
+        result = FEDERATION.join(
+            peer_url, code, name, internal_url, browser_url,
+            _federation_cidrs(allowed_cidrs) or None,
+        )
+        if os.environ.get("RUNVARD_FEDERATION_NO_WORKER") != "1":
+            FEDERATION.start()
+        return result
+    except (ValueError, requests.RequestException) as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.post("/api/federation/v1/admin/nodes/revoke")
+def federation_revoke(
+    node_id: str = Form(...), user: str = Depends(confirmed_admin),
+):
+    try:
+        return FEDERATION.revoke(node_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.post("/api/federation/v1/admin/refresh")
+def federation_refresh(user: str = Depends(require_admin)):
+    return FEDERATION.refresh()
+
+
+@app.post("/api/federation/v1/peer/pair")
+async def federation_peer_pair(request: Request):
+    try:
+        payload = await request.json()
+        remote = request.client.host if request.client else "unknown"
+        return FEDERATION.accept_pair(payload, remote)
+    except ValueError as exc:
+        raise HTTPException(401, str(exc))
+
+
+@app.post("/api/federation/v1/peer/sync")
+async def federation_peer_sync(request: Request):
+    try:
+        payload = await request.json()
+        sender = FEDERATION.authenticate_peer(
+            request.headers, "POST", SYNC_PATH, payload,
+        )
+        return FEDERATION.signed_response(
+            FEDERATION.accept_sync(sender, payload),
+        )
+    except ValueError as exc:
+        raise HTTPException(401, str(exc))
+
+
+@app.get("/api/federation/v1/peer/status")
+def federation_peer_status(request: Request):
+    try:
+        FEDERATION.authenticate_peer(
+            request.headers, "GET", STATUS_PATH, None,
+        )
+        return FEDERATION.signed_response(FEDERATION.snapshot())
+    except ValueError as exc:
+        raise HTTPException(401, str(exc))
+
+
+@app.post("/api/federation/v1/peer/sso/redeem")
+async def federation_peer_sso_redeem(request: Request):
+    try:
+        payload = await request.json()
+        FEDERATION.authenticate_peer(
+            request.headers, "POST", REDEEM_PATH, payload,
+        )
+        return FEDERATION.signed_response(FEDERATION.redeem_sso(payload))
+    except ValueError as exc:
+        raise HTTPException(401, str(exc))
+
+
+@app.post("/api/federation/v1/sso/start", response_class=HTMLResponse)
+def federation_sso_start(
+    request: Request, node_id: str = Form(...), user: str = Depends(auth),
+):
+    parsed = _parse_token(request.cookies.get(COOKIE_NAME))
+    role = parsed[1] if parsed else "admin"
+    expert = bool(parsed[2]) if parsed else True
+    try:
+        target, ticket = FEDERATION.start_sso(
+            node_id, user, role, expert,
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+    nonce = secrets.token_urlsafe(18)
+    action = html.escape(
+        target + "/api/federation/v1/sso/accept", quote=True,
+    )
+    safe_ticket = html.escape(ticket, quote=True)
+    body = f"""<!doctype html><html><head><meta charset="utf-8">
+<meta name="referrer" content="no-referrer"><title>runvard</title></head>
+<body><p>Connecting to runvard…</p>
+<form id="handoff" method="post" action="{action}">
+<input type="hidden" name="ticket" value="{safe_ticket}"></form>
+<script nonce="{nonce}">document.getElementById('handoff').submit()</script>
+</body></html>"""
+    origin = html.escape(target, quote=True)
+    return HTMLResponse(body, headers={
+        "Cache-Control": "no-store, max-age=0",
+        "Pragma": "no-cache",
+        "Referrer-Policy": "no-referrer",
+        "Content-Security-Policy":
+            f"default-src 'none'; form-action {origin}; "
+            f"script-src 'nonce-{nonce}'; style-src 'unsafe-inline'; "
+            "base-uri 'none'; frame-ancestors 'none'",
+    })
+
+
+@app.post("/api/federation/v1/sso/accept")
+def federation_sso_accept(request: Request, ticket: str = Form(...)):
+    try:
+        claim = FEDERATION.accept_sso(ticket)
+    except (ValueError, requests.RequestException):
+        return HTMLResponse(
+            "<!doctype html><html><body><h1>Connection failed</h1>"
+            "<p>The one-time sign-in could not be verified. "
+            "Return to the source server or sign in normally.</p>"
+            "<a href='/'>Open runvard login</a></body></html>",
+            status_code=401,
+            headers={"Cache-Control": "no-store", "Referrer-Policy": "no-referrer"},
+        )
+    response = RedirectResponse("/", status_code=303)
+    response.set_cookie(
+        COOKIE_NAME,
+        make_token(
+            claim["username"], SESSION_TTL, claim["role"], claim["expert"],
+        ),
+        max_age=SESSION_TTL, httponly=True, samesite="strict",
+        secure=(request.url.scheme == "https"), path="/",
+    )
+    response.headers["Cache-Control"] = "no-store"
+    response.headers["Referrer-Policy"] = "no-referrer"
+    return response
 
 
 # ============ WebSocket Terminal ============

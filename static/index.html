@@ -113,6 +113,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 .modal-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.5);backdrop-filter:blur(8px);display:none;align-items:center;justify-content:center;padding:32px}
 .modal-overlay.open{display:flex}
 .modal{width:90vw;max-width:1000px;height:85vh;background:#0d0e1a;border:1px solid rgba(122,74,255,.2);border-radius:16px;overflow:hidden;display:flex;flex-direction:column;animation:modalIn .25s ease}
+.modal.servers-modal{height:auto;max-height:min(80vh,720px)}
+.modal.servers-modal .modal-body{flex:0 1 auto;max-height:620px}
 @keyframes modalIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
 .modal-head{display:flex;align-items:center;justify-content:space-between;padding:18px 28px;position:relative}
 .modal-title{font-size:16px;font-weight:600;display:flex;align-items:center;gap:10px}
@@ -610,6 +612,23 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .tile-edit-option input{width:auto}
 .tile-edit-actions{display:flex;justify-content:space-between;gap:10px;margin-top:20px}
 .tile-edit-actions-main{display:flex;gap:10px}
+.fed-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
+.fed-toolbar .fed-summary{font-size:11px;color:var(--text3);margin-right:auto}
+.fed-list{display:grid;gap:8px}
+.fed-node{display:grid;grid-template-columns:minmax(120px,1.2fr) minmax(280px,2fr) auto;align-items:center;gap:12px;padding:11px 12px;border:1px solid var(--border);border-radius:12px;background:var(--bg3)}
+.fed-node-main{min-width:0}.fed-node-name{display:flex;align-items:center;gap:7px;font-size:13px;font-weight:650;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fed-health{width:7px;height:7px;border-radius:50%;flex:0 0 7px;background:var(--text3)}
+.fed-health.online{background:var(--green);box-shadow:0 0 7px rgba(34,197,94,.45)}
+.fed-health.degraded{background:var(--yellow)}.fed-health.offline,.fed-health.incompatible{background:var(--red)}
+.fed-node-meta{font-size:9px;color:var(--text3);margin:4px 0 0 14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fed-metrics{display:grid;grid-template-columns:repeat(6,minmax(44px,1fr));gap:5px}
+.fed-metric{padding:5px 6px;border-radius:7px;background:rgba(255,255,255,.035);text-align:center;min-width:0}
+.fed-metric b{display:block;font:600 10px 'JetBrains Mono',monospace;color:var(--text);white-space:nowrap}
+.fed-metric span{display:block;margin-top:2px;font-size:8px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.fed-actions{display:flex;gap:6px}.fed-actions .btn{min-height:44px}
+.fed-setup{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.fed-setup-card{border:1px solid var(--border);border-radius:13px;background:var(--bg3);padding:16px}
+.fed-setup-card h3{font-size:14px;margin:0 0 6px}.fed-setup-card p{font-size:11px;color:var(--text3);line-height:1.5;margin:0 0 14px}
 @media (max-width: 640px){.tile-edit-grid{grid-template-columns:1fr}.tile-edit-actions{flex-direction:column}.tile-edit-actions-main{justify-content:flex-end}}
 .sortable-ghost{opacity:.3}
 .sortable-chosen{transform:scale(1.05)}
@@ -620,6 +639,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   .tiles,.dash-grid{grid-template-columns:repeat(3,1fr)}
   .modal-overlay{padding:10px}
   .modal{width:100vw;height:96vh;border-radius:12px}
+  .modal.servers-modal{height:auto;max-height:88vh}
   .modal-head{padding:14px 16px}
   .modal-tabs{padding:2px 16px 10px;overflow-x:auto;flex-wrap:nowrap}
   .modal-body{padding:16px}
@@ -637,6 +657,10 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   .top-progress{width:100%;max-width:320px}
   .top-progress-label{max-width:118px}
   .time{display:none}
+  .fed-setup{grid-template-columns:1fr}
+  .fed-node{grid-template-columns:1fr}
+  .fed-metrics{grid-template-columns:repeat(3,1fr)}
+  .fed-actions{justify-content:stretch}.fed-actions .btn{flex:1}
 }
 
 @keyframes runvard-shift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
@@ -855,6 +879,10 @@ function dangerConfirmMeta(p,d){
     '/sysmgr/unattended/set':['sysmgr:unattended','unattended-upgrades'],
     '/sysmgr/tuned/set':['sysmgr:tuned','profile'],
     '/dashboard/remove':['dashboard:remove','tile_id'],
+    '/federation/v1/admin/enable':['federation:enable','internal_url'],
+    '/federation/v1/admin/join':['federation:join','peer_url'],
+    '/federation/v1/admin/settings':['federation:settings','internal_url'],
+    '/federation/v1/admin/nodes/revoke':['federation:revoke','node_id'],
   };
   if(p==='/auth/toggle'&&String(d.enabled)==='1')return null;
   if(p==='/docker/action'&&d.action!=='remove')return null;
@@ -925,11 +953,12 @@ const I18N_BASE={
   dangerConfirmMessage:'This action changes system-relevant settings or data. Please confirm before runvard continues.',
   tileTerminal:'Terminal',tileFiles:'Files',tileStorage:'Storage',tileDocker:'Docker',
   tileVms:'Virtual machines',tileBackup:'Backup',tileMonitoring:'Monitoring',
-  tileSystem:'System',tileApps:'Apps',
+  tileSystem:'System',tileApps:'Apps',tileServers:'Servers',
   descShell:'Shell access',descFiles:'Browse · Upload · Share',
   descStorage:'Disks · Pools · Status',descDocker:'Containers · Compose',
   descVms:'Guests · Storage',descBackup:'Jobs · History',
   descMonitoring:'Logs · Alerts · Audit',descSystem:'Overview · Updates · Users',
+  descServers:'Connected runvard instances',
   tabDisks:'Disks',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',
   tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',
   tabContainer:'Containers',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',
@@ -7260,9 +7289,11 @@ api('/system/info').then(i=>{$('#hostname').textContent=i.hostname;const u=$('#t
 // ── Benutzer-Menü: Status, Login-Schalter, Abmelden ──
 function toggleUserMenu(e){e.stopPropagation();$('#user-menu').classList.toggle('open');}
 document.addEventListener('click',e=>{const m=$('#user-menu');if(m&&m.classList.contains('open')&&!e.target.closest('.user-menu-wrap'))m.classList.remove('open');});
+let currentAuthStatus={role:null,expert:false};
 async function loadAuthStatus(){
   try{
     const s=await api('/auth/status');
+    currentAuthStatus=s;
     const tu=$('#topbar-user'); if(tu) tu.textContent=s.user||tr('loginDisabled');
     const h=$('#um-head'); if(h) h.innerHTML=s.user?`${esc(tr('signedInAs'))} <strong>${esc(s.user)}</strong>`:tr('loginDisabledHead');
     const t=$('#um-login-toggle'); if(t) t.checked=!!s.login_enabled;
@@ -7341,6 +7372,7 @@ const TILES=[
  {id:'backup',nameKey:'tileBackup',icon:'☁️',color:'#2dd4bf',badge:'backup',descKey:'descBackup',tabs:['Jobs','History'],tabKeys:['tabJobs','tabHistory']},
  {id:'monitoring',nameKey:'tileMonitoring',icon:'📈',color:'#9ca3af',badge:'monitoring',descKey:'descMonitoring',tabs:['Logs','Alerts','Audit'],tabKeys:['tabLogs','tabAlerts','tabAudit']},
  {id:'system',nameKey:'tileSystem',icon:'🔧',color:'#9ca3af',badge:'system',descKey:'descSystem',tabs:['Overview','Updates','Users','Network','Services','Shares','Maintenance','Advanced','Power'],tabKeys:['tabOverview','tabUpdates','tabUsers','tabNetwork','tabServices','tabShares','tabMaintenance','tabAdvanced','tabPower']},
+ {id:'servers',nameKey:'tileServers',icon:'⬡',color:'#34d399',badge:'servers',descKey:'descServers'},
  {id:'apps',nameKey:'tileApps',icon:'🧩',color:'#f472b6',badge:'apps',descKey:''},
 ];
 const EXPERT_ONLY_TABS={
@@ -7355,7 +7387,16 @@ function isExpertOnlyTab(tileId,tab){
 function visibleTabs(tile){
   return (tile.tabs||[]).map((tab,index)=>({tab,index})).filter(x=>isExpertMode()||!isExpertOnlyTab(tile.id,x.tab));
 }
-function tileName(tile){return tr(tile.nameKey);}
+const FED_I18N={
+  en:{servers:'Servers',setup:'Connect runvard instances',setupCopy:'Create a federation here or join an existing server.',create:'Create federation',join:'Join federation',refresh:'Refresh',pair:'Pairing code',settings:'Settings',current:'This server',open:'Open',revoke:'Revoke',online:'Online',degraded:'Degraded',offline:'Offline',incompatible:'Incompatible',unknown:'Waiting',last:'Last contact',updates:'Updates',alerts:'Alerts',version:'Version',expires:'Valid for 10 minutes · single use'},
+  de:{servers:'Server',setup:'runvard-Instanzen verbinden',setupCopy:'Hier eine Föderation erstellen oder einem vorhandenen Server beitreten.',create:'Föderation erstellen',join:'Föderation beitreten',refresh:'Aktualisieren',pair:'Pairing-Code',settings:'Einstellungen',current:'Dieser Server',open:'Öffnen',revoke:'Entfernen',online:'Online',degraded:'Eingeschränkt',offline:'Offline',incompatible:'Inkompatibel',unknown:'Wartet',last:'Letzter Kontakt',updates:'Updates',alerts:'Hinweise',version:'Version',expires:'10 Minuten gültig · einmal verwendbar'},
+  fr:{servers:'Serveurs',setup:'Connecter des instances runvard',setupCopy:'Créez une fédération ici ou rejoignez un serveur existant.',create:'Créer la fédération',join:'Rejoindre',refresh:'Actualiser',pair:'Code de jumelage',settings:'Paramètres',current:'Ce serveur',open:'Ouvrir',revoke:'Révoquer',online:'En ligne',degraded:'Dégradé',offline:'Hors ligne',incompatible:'Incompatible',unknown:'En attente',last:'Dernier contact',updates:'Mises à jour',alerts:'Alertes',version:'Version',expires:'Valable 10 minutes · usage unique'},
+  it:{servers:'Server',setup:'Collega istanze runvard',setupCopy:'Crea una federazione qui o unisciti a un server esistente.',create:'Crea federazione',join:'Unisciti',refresh:'Aggiorna',pair:'Codice abbinamento',settings:'Impostazioni',current:'Questo server',open:'Apri',revoke:'Revoca',online:'Online',degraded:'Degradato',offline:'Offline',incompatible:'Incompatibile',unknown:'In attesa',last:'Ultimo contatto',updates:'Aggiornamenti',alerts:'Avvisi',version:'Versione',expires:'Valido 10 minuti · uso singolo'},
+  es:{servers:'Servidores',setup:'Conectar instancias runvard',setupCopy:'Crea una federación aquí o únete a un servidor existente.',create:'Crear federación',join:'Unirse',refresh:'Actualizar',pair:'Código de emparejamiento',settings:'Ajustes',current:'Este servidor',open:'Abrir',revoke:'Revocar',online:'En línea',degraded:'Degradado',offline:'Sin conexión',incompatible:'Incompatible',unknown:'Esperando',last:'Último contacto',updates:'Actualizaciones',alerts:'Alertas',version:'Versión',expires:'Válido 10 minutos · un solo uso'},
+  pt:{servers:'Servidores',setup:'Ligar instâncias runvard',setupCopy:'Crie uma federação aqui ou adira a um servidor existente.',create:'Criar federação',join:'Aderir',refresh:'Atualizar',pair:'Código de emparelhamento',settings:'Definições',current:'Este servidor',open:'Abrir',revoke:'Revogar',online:'Online',degraded:'Degradado',offline:'Offline',incompatible:'Incompatível',unknown:'A aguardar',last:'Último contacto',updates:'Atualizações',alerts:'Alertas',version:'Versão',expires:'Válido por 10 minutos · utilização única'},
+};
+function fedText(key){return(FED_I18N[currentLanguage()]||FED_I18N.en)[key]||FED_I18N.en[key]||key;}
+function tileName(tile){return tile.id==='servers'?fedText('servers'):tr(tile.nameKey);}
 function tileDesc(tile){return tile.descKey?tr(tile.descKey):'';}
 function tabLabel(tile,tab,index){return tile.tabKeys&&tile.tabKeys[index]?tr(tile.tabKeys[index]):tab;}
 function renderTiles(){
@@ -7451,6 +7492,15 @@ async function loadTileBadges(){
     }
   }catch(e){}
   try{await refreshSystemUpdateBadge();}catch(e){}
+  try{
+    const f=await api('/federation/v1/admin/overview');
+    const el=$('#badge-servers');
+    if(el){
+      el.textContent=f.enabled?`${f.online}/${f.total}`:'—';
+      const tone=!f.enabled?'gray':f.online===f.total?'green':f.online>0?'':'red';
+      el.className='tile-badge '+tone;
+    }
+  }catch(e){}
 }
 loadTileBadges();
 
@@ -7461,6 +7511,7 @@ loadTileBadges();
 function openModal(tile){
   const tabs=visibleTabs(tile);
   currentTile=tile;currentTab=tabs.length?tabs[0].tab:null;resetSearch();
+  document.querySelector('#overlay .modal')?.classList.toggle('servers-modal',tile.id==='servers');
   $('#modal-title').innerHTML=`<span>${tile.icon}</span> ${esc(tileName(tile))}`;
   const tabsEl=$('#modal-tabs');tabsEl.innerHTML='';
   const hasSearch=['services','docker','vms','system'].includes(tile.id);
@@ -7505,9 +7556,112 @@ async function renderTab(id,tab){const body=$('#modal-body');body.style.padding=
  else if(id==='shares')await renderShares(body,tab);
  else if(id==='monitoring')await renderMonitoring(body,tab);
  else if(id==='system')await renderSystem(body,tab);
+ else if(id==='servers')await renderServers(body);
  else if(id==='apps')await renderApps(body);
  translateRenderedText(body);
 }catch(e){body.innerHTML=`<div class="loading">${esc(tr('error'))}: ${esc(e.message)}</div>`;}}
+
+// ═══ Federation / Servers ═══
+let _fedOverview=null;
+function fedDefaultName(){return ($('#hostname')?.textContent||'runvard').trim()||'runvard';}
+function fedSetupFields(){
+  return [
+    {name:'name',label:'Display name',value:fedDefaultName()},
+    {name:'internal_url',label:'Internal URL',value:location.origin,hint:'Literal LAN/VPN IP and port, e.g. http://10.0.0.12:8080'},
+    {name:'browser_url',label:'Browser URL',value:location.origin,hint:'The URL users open; reverse-proxy hostnames are supported.'},
+    {name:'allowed_cidrs',label:'Allowed private networks',value:'10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,fd00::/8'},
+  ];
+}
+async function renderServers(body){
+  const f=await api('/federation/v1/admin/overview');
+  _fedOverview=f;
+  if(!f.enabled){
+    body.innerHTML=`
+      <div class="fed-setup">
+        <section class="fed-setup-card"><h3>${esc(fedText('create'))}</h3><p>${esc(fedText('setupCopy'))}</p>
+          <button class="btn" onclick="fedEnableForm()" ${currentAuthStatus.role!=='admin'?'disabled':''}>${esc(fedText('create'))}</button></section>
+        <section class="fed-setup-card"><h3>${esc(fedText('join'))}</h3><p>${esc(fedText('setupCopy'))}</p>
+          <button class="btn ghost" onclick="fedJoinForm()" ${currentAuthStatus.role!=='admin'?'disabled':''}>${esc(fedText('join'))}</button></section>
+      </div>`;
+    return;
+  }
+  const admin=currentAuthStatus.role==='admin';
+  body.innerHTML=`
+    <div class="fed-toolbar">
+      <span class="fed-summary">${f.online}/${f.total} ${esc(fedText('online').toLowerCase())}</span>
+      ${admin?`<button class="btn ghost sm" onclick="fedRefresh()">↻ ${esc(fedText('refresh'))}</button>
+      <button class="btn ghost sm" onclick="fedPairCode()">＋ ${esc(fedText('pair'))}</button>
+      <button class="btn ghost sm" onclick="fedSettingsForm()">⚙ ${esc(fedText('settings'))}</button>`:''}
+    </div>
+    <div class="fed-list">${(f.nodes||[]).map(node=>fedNodeHtml(node,admin)).join('')}</div>`;
+}
+function fedNodeHtml(node,admin){
+  const s=node.snapshot||{},health=node.health||'unknown';
+  const status=fedText(health)||health;
+  const last=node.current?fedText('current'):(node.last_contact?new Date(node.last_contact*1000).toLocaleString(localeCode()):'—');
+  const switchable=!node.current&&health==='online';
+  const metric=(value,label)=>`<div class="fed-metric"><b>${esc(String(value??'—'))}</b><span>${esc(label)}</span></div>`;
+  return `<article class="fed-node">
+    <div class="fed-node-main"><div class="fed-node-name"><span class="fed-health ${esc(health)}"></span>${esc(node.name||node.hostname||node.node_id)} ${node.current?`<span class="status-pill run">${esc(fedText('current'))}</span>`:''}</div>
+      <div class="fed-node-meta">${esc(status)} · ${esc(fedText('last'))}: ${esc(last)} · ${esc(node.browser_url||'')}</div></div>
+    <div class="fed-metrics">
+      ${metric((s.cpu_percent??'—')+(s.cpu_percent==null?'':'%'),'CPU')}
+      ${metric((s.ram_percent??'—')+(s.ram_percent==null?'':'%'),'RAM')}
+      ${metric((s.disk_percent??'—')+(s.disk_percent==null?'':'%'),'Disk')}
+      ${metric(s.docker?`${s.docker.running}/${s.docker.total}`:'—','Docker')}
+      ${metric(s.vms?`${s.vms.running}/${s.vms.total}`:'—','VM')}
+      ${metric(`${s.updates??'—'} / ${s.alerts??'—'}`,`${fedText('updates')} / ${fedText('alerts')}`)}
+    </div>
+    <div class="fed-actions">
+      ${node.current?`<span class="status-pill">${esc((s.version||node.runvard_version||'unknown').slice(0,12))}</span>`:
+      `<button class="btn sm" onclick="fedSwitch('${node.node_id}')" ${switchable?'':'disabled'}>${esc(fedText('open'))} ↗</button>
+      ${admin?`<button class="btn icon danger" title="${esc(fedText('revoke'))}" onclick="fedRevoke('${node.node_id}')">✕</button>`:''}`}
+    </div>
+  </article>`;
+}
+window.fedEnableForm=()=>openForm(fedText('create'),'⬡',fedSetupFields(),async d=>{
+  try{await post('/federation/v1/admin/enable',d);closeForm();toast(fedText('create'));renderServers($('#modal-body'));loadTileBadges();}catch(e){toast(e.message,'error');}
+});
+window.fedJoinForm=()=>{
+  const fields=[
+    {name:'peer_url',label:'Existing server internal URL',placeholder:'http://10.0.0.11:8080'},
+    {name:'code',label:'Pairing code'},
+    ...fedSetupFields(),
+  ];
+  openForm(fedText('join'),'⇄',fields,async d=>{
+    try{await post('/federation/v1/admin/join',d);closeForm();toast(fedText('join'));renderServers($('#modal-body'));loadTileBadges();}catch(e){toast(e.message,'error');}
+  });
+};
+window.fedSettingsForm=()=>{
+  const s=_fedOverview?.settings||{};
+  openForm(fedText('settings'),'⚙',[
+    {name:'name',label:'Display name',value:s.name||''},
+    {name:'internal_url',label:'Internal URL',value:s.internal_url||''},
+    {name:'browser_url',label:'Browser URL',value:s.browser_url||''},
+    {name:'allowed_cidrs',label:'Allowed private networks',value:(s.allowed_cidrs||[]).join(',')},
+  ],async d=>{try{await post('/federation/v1/admin/settings',d);closeForm();toast(tr('saved'));renderServers($('#modal-body'));}catch(e){toast(e.message,'error');}});
+};
+window.fedPairCode=async()=>{
+  try{
+    const r=await post('/federation/v1/admin/pairing-code',{});
+    $('#form-head').innerHTML=`<span>⇄</span> ${esc(fedText('pair'))}`;
+    $('#form-body').innerHTML=`<div class="form-field"><label>${esc(fedText('expires'))}</label>
+      <input id="fed-pair-value" readonly value="${esc(r.code)}" style="font-family:'JetBrains Mono',monospace"></div>
+      <div class="form-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('close'))}</button>
+      <button class="btn" onclick="navigator.clipboard.writeText($('#fed-pair-value').value);toast('Copied')">Copy</button></div>`;
+    $('#form-overlay').classList.add('open');
+  }catch(e){toast(e.message,'error');}
+};
+window.fedRefresh=async()=>{try{await post('/federation/v1/admin/refresh',{});await renderServers($('#modal-body'));loadTileBadges();}catch(e){toast(e.message,'error');}};
+window.fedSwitch=nodeId=>{
+  const form=document.createElement('form');
+  form.method='post';form.action='/api/federation/v1/sso/start';form.target='_blank';
+  const input=document.createElement('input');input.type='hidden';input.name='node_id';input.value=nodeId;
+  form.appendChild(input);document.body.appendChild(form);form.submit();form.remove();
+};
+window.fedRevoke=nodeId=>{const name=(_fedOverview?.nodes||[]).find(x=>x.node_id===nodeId)?.name||nodeId;typedConfirm(fedText('revoke'),`${fedText('revoke')}: ${name}`,name,async()=>{
+  try{await post('/federation/v1/admin/nodes/revoke',{node_id:nodeId});toast(fedText('revoke'));renderServers($('#modal-body'));loadTileBadges();}catch(e){toast(e.message,'error');}
+});};
 
 // ═══ Terminal ═══
 // Theme: kräftige, gut unterscheidbare ANSI-Farben passend zum runvard-Akzent

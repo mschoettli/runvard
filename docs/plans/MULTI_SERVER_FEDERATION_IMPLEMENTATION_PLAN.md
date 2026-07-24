@@ -2,7 +2,13 @@
 
 ## Status
 
-Ready for implementation.
+Implemented on 2026-07-24.
+
+The federation package, versioned APIs, dashboard tile, compact responsive
+modal, one-time pairing, signed peer synchronization, status polling,
+role-preserving SSO, installer integration, and automated verification are in
+place. `scripts/verify-federation.sh` runs the focused verification suite; the
+repository-wide suite passes as well.
 
 ## Scope
 

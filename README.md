@@ -41,6 +41,7 @@ runvard combines many common server administration tasks in one interface:
 - Inspect logs, alerts, and audit entries
 - Apply system updates and maintenance tasks
 - Manage virtual machines
+- Connect up to 20 runvard servers and switch between them in both directions
 - Organize services and links on a customizable dashboard
 
 ## Features
@@ -50,6 +51,20 @@ runvard combines many common server administration tasks in one interface:
 The dashboard is the main starting point in runvard. It shows important services,
 installed apps, Compose projects, and custom links as tiles. Ordering and visibility
 can be adjusted so frequently used services stay easy to reach.
+
+### Multi-server federation
+
+The Servers tile can connect up to 20 equal runvard instances over a private
+LAN or VPN. Pairing uses a ten-minute, single-use code. Every server remains
+independent, membership is synchronized automatically, and switching works in
+both directions.
+
+The compact server list shows availability plus CPU, RAM, disk, Docker, VM,
+update, alert, and version summaries. Opening an online server creates a
+short-lived, single-use sign-in handoff in a new tab while preserving the
+current admin or read-only role and Expert Mode. Internal peer URLs must use
+literal private IP addresses; separate browser URLs may later point at secured
+reverse-proxy hostnames.
 
 ### Languages
 
