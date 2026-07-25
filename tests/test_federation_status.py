@@ -9,6 +9,10 @@ def test_snapshot_is_bounded_and_subsystem_failures_are_isolated():
         stats=lambda: {
             "cpu": {"percent": 12.3},
             "memory": {"percent": 45.6},
+            "network": {
+                "down_rate": 8_388_608,
+                "up_rate": 2_097_152,
+            },
         },
         disks=lambda: [{"mountpoint": "/", "percent": 67.8}],
         containers=fail,
@@ -23,6 +27,8 @@ def test_snapshot_is_bounded_and_subsystem_failures_are_isolated():
 
     assert snapshot["cpu_percent"] == 12.3
     assert snapshot["ram_percent"] == 45.6
+    assert snapshot["network_down_rate"] == 8_388_608
+    assert snapshot["network_up_rate"] == 2_097_152
     assert snapshot["disk_percent"] == 67.8
     assert snapshot["docker"] == {"total": 0, "running": 0, "available": False}
     assert snapshot["vms"] == {"total": 3, "running": 2, "available": True}

@@ -612,6 +612,44 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .tile-edit-option input{width:auto}
 .tile-edit-actions{display:flex;justify-content:space-between;gap:10px;margin-top:20px}
 .tile-edit-actions-main{display:flex;gap:10px}
+
+/* ── Connected servers on dashboard ── */
+.connected-servers{--connected-server-card-height:7.25rem;width:100%;max-width:1200px;margin:0 auto;padding:0 1rem 1.75rem}
+.connected-servers[hidden]{display:none!important}
+.connected-servers-head{min-height:1.5rem;margin-bottom:.5rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem}
+.connected-servers-title{font-size:.6875rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.connected-servers-add{width:2.75rem;height:2.75rem;margin:-.625rem -.6875rem -.625rem 0;padding:0;border:0;background:transparent;color:var(--accent-light);display:flex;align-items:center;justify-content:center;cursor:pointer;opacity:1;transition:opacity .15s ease}
+.connected-servers-add span{width:1.375rem;height:1.375rem;border:.5px solid rgba(122,74,255,.3);border-radius:.4375rem;background:rgba(122,74,255,.12);display:flex;align-items:center;justify-content:center;font-size:.75rem;line-height:1}
+.connected-servers-add:hover span,.connected-servers-add:focus-visible span{background:rgba(122,74,255,.25);border-color:rgba(122,74,255,.5)}
+.connected-servers-add:focus-visible{opacity:1;outline:none}
+.connected-servers-list{display:grid;grid-template-columns:1fr;gap:1rem}
+.connected-server-card{height:var(--connected-server-card-height);min-width:0;padding:.75rem .875rem;background:var(--bg3);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;justify-content:space-between;gap:.625rem;cursor:pointer;transition:border-color .15s ease,background .15s ease,transform .15s ease;user-select:none;-webkit-user-select:none;overflow:hidden}
+.connected-server-card:hover,.connected-server-card:focus-visible{background:rgba(122,74,255,.07);border-color:rgba(122,74,255,.3);transform:translateY(-1px);outline:none}
+.connected-server-card.sortable-ghost{opacity:.3}
+.connected-server-card.sortable-chosen{transform:none}
+.connected-server-top{display:flex;align-items:center;gap:.5rem;min-width:0}
+.connected-server-name{min-width:0;display:flex;align-items:center;gap:.4375rem;font-size:.75rem;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.connected-server-name-text{overflow:hidden;text-overflow:ellipsis}
+.connected-server-health{width:.375rem;height:.375rem;border-radius:50%;flex:0 0 .375rem;background:var(--text3)}
+.connected-server-health.online{background:var(--green);box-shadow:0 0 6px rgba(34,197,94,.4)}
+.connected-server-health.degraded{background:var(--yellow)}
+.connected-server-health.offline,.connected-server-health.incompatible{background:var(--red)}
+.connected-server-card-actions{margin-left:auto;display:flex;align-items:center;gap:.5rem;flex:0 0 auto}
+.connected-server-update{min-width:1.125rem;height:1.125rem;padding:0 .3125rem;border-radius:.375rem;background:rgba(122,74,255,.24);color:#c4b5fd;font-size:.625rem;font-weight:700;display:flex;align-items:center;justify-content:center}
+.connected-server-external{width:.5625rem;height:.5625rem;color:var(--text3);display:block}
+.connected-server-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
+.connected-server-metric{min-width:0}
+.connected-server-metric-label{display:block;margin-bottom:.1875rem;font-size:.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
+.connected-server-metric-value{display:block;font:500 .6875rem 'JetBrains Mono',monospace;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.connected-server-sparkline{display:block;width:100%;height:.75rem;margin-top:.1875rem;overflow:visible}
+.connected-server-sparkline polyline{fill:none;stroke-width:1.25;vector-effect:non-scaling-stroke}
+.connected-server-metric.cpu .connected-server-sparkline polyline{stroke:#8b5cf6}
+.connected-server-metric.ram .connected-server-sparkline polyline{stroke:#06b6d4}
+.connected-server-metric.network .connected-server-sparkline polyline{stroke:#22c55e}
+.connected-server-card.is-offline .connected-server-sparkline polyline{stroke:var(--text3);stroke-dasharray:3 3}
+.connected-servers-more{width:100%;min-height:2.75rem;margin-top:.625rem;border:1px solid var(--border);border-radius:.625rem;background:rgba(255,255,255,.035);color:var(--text2);font-family:inherit;font-size:.75rem;cursor:pointer}
+.connected-servers:not(.is-expanded) .connected-server-card:nth-child(n+4){display:none}
+
 .fed-toolbar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:12px}
 .fed-toolbar .fed-summary{font-size:11px;color:var(--text3);margin-right:auto}
 .fed-list{display:grid;gap:8px}
@@ -633,6 +671,28 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .sortable-ghost{opacity:.3}
 .sortable-chosen{transform:scale(1.05)}
 
+@media (min-width: 761px){
+  .connected-servers{padding:0 1.75rem 1.75rem}
+  .connected-servers-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .connected-servers-more{display:none!important}
+  .connected-servers:not(.is-expanded) .connected-server-card:nth-child(n+4){display:flex}
+}
+
+@media (min-width: 1740px){
+  .dashboard-shell{position:relative}
+  .connected-servers{position:absolute;top:1.75rem;left:calc(50% + 38.375rem);width:min(20rem,calc(50vw - 40.125rem));max-width:none;margin:0;padding:0}
+  .connected-servers-list{grid-template-columns:1fr}
+}
+
+@media (hover:hover) and (pointer:fine){
+  .connected-servers-add{opacity:0}
+  .connected-servers:hover .connected-servers-add,.connected-servers:focus-within .connected-servers-add{opacity:1}
+}
+
+@media (prefers-reduced-motion:reduce){
+  .connected-server-card,.connected-servers-add{transition:none}
+}
+
 @media (max-width: 760px){
   .container{padding:16px}
   .widgets{grid-template-columns:1fr 1fr}
@@ -651,7 +711,9 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   .files-sidebar{border-right:0;border-bottom:.5px solid var(--border);padding:0 0 10px;margin-bottom:10px;display:grid;grid-template-columns:repeat(2,1fr)}
   .files-main{padding-left:0;overflow:visible}
   .files-scroll{overflow-x:hidden}
-  .topbar{grid-template-columns:1fr auto;padding:7px 12px}
+  .topbar{grid-template-columns:minmax(0,1fr) auto;padding:7px 12px}
+  .logo{min-width:0;overflow:hidden}
+  .logo #hostname{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .topright{grid-column:2;grid-row:1}
   .topbar-center{grid-column:1/-1;grid-row:2;width:100%;margin-top:2px}
   .top-progress{width:100%;max-width:320px}
@@ -708,6 +770,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
           <label class="um-switch"><input type="checkbox" id="um-expert-toggle" onchange="setExpertMode(this.checked)"><span class="um-slider"></span></label>
         </div>
         <button class="um-action" onclick="openLanguageModal()">🌐 <span data-i18n="language">Language</span></button>
+        <button class="um-action" onclick="openConnectedServersModal()">⬡ <span id="um-connected-servers-label">Connected servers</span></button>
         <button id="um-accounts" class="um-action" onclick="accountsManage()" style="display:none">👥 <span data-i18n="runvardAccounts">runvard-Konten</span></button>
         <button class="um-logout" onclick="doLogout()" data-i18n="logout">Sign out</button>
       </div>
@@ -715,6 +778,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   </div>
 </div>
 
+<div class="dashboard-shell">
 <div class="container">
   <div class="widgets">
     <div class="widget"><div class="widget-head"><div class="label">CPU</div><button class="widget-info-btn" onclick="openWidgetDetail('cpu')" title="CPU Details">⚡</button></div><div class="value"><span id="cpu-val">0</span><small>%</small></div><canvas id="cpu-spark"></canvas><div class="sub" id="cpu-sub">…</div></div>
@@ -730,6 +794,15 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
     </div>
     <div class="dash-grid" id="dash-grid"></div>
   </div>
+</div>
+<section class="connected-servers" id="connected-servers" aria-labelledby="connected-servers-title" hidden>
+  <div class="connected-servers-head">
+    <div class="connected-servers-title" id="connected-servers-title">Connected servers</div>
+    <button class="connected-servers-add" id="connected-servers-add" type="button" onclick="openConnectedServersModal()" aria-label="Connect server" title="Connect server"><span aria-hidden="true">+</span></button>
+  </div>
+  <div class="connected-servers-list" id="connected-servers-list"></div>
+  <button class="connected-servers-more" id="connected-servers-more" type="button" onclick="toggleConnectedServers()" hidden>Show more</button>
+</section>
 </div>
 
 <!-- Haupt-Modal -->
@@ -7308,6 +7381,7 @@ function applyLanguage(){
   translateRenderedText(document.body);
   updateClock();
   renderTiles();
+  syncConnectedServerLabels();
   updateDocumentTitle();
   if(currentTile)syncModalLanguage();
 }
@@ -7664,9 +7738,9 @@ const TILES=[
  {id:'backup',nameKey:'tileBackup',icon:'☁️',color:'#2dd4bf',badge:'backup',descKey:'descBackup',tabs:['Jobs','History'],tabKeys:['tabJobs','tabHistory']},
  {id:'monitoring',nameKey:'tileMonitoring',icon:'📈',color:'#9ca3af',badge:'monitoring',descKey:'descMonitoring',tabs:['Logs','Alerts','Audit'],tabKeys:['tabLogs','tabAlerts','tabAudit']},
  {id:'system',nameKey:'tileSystem',icon:'🔧',color:'#9ca3af',badge:'system',descKey:'descSystem',tabs:['Overview','Updates','Users','Network','Services','Shares','Maintenance','Advanced','Power'],tabKeys:['tabOverview','tabUpdates','tabUsers','tabNetwork','tabServices','tabShares','tabMaintenance','tabAdvanced','tabPower']},
- {id:'servers',nameKey:'tileServers',icon:'⬡',color:'#34d399',badge:'servers',descKey:'descServers'},
  {id:'apps',nameKey:'tileApps',icon:'🧩',color:'#f472b6',badge:'apps',descKey:''},
 ];
+const SERVER_ADMIN_TILE={id:'servers',nameKey:'tileServers',icon:'⬡',color:'#34d399',descKey:'descServers'};
 const EXPERT_ONLY_TABS={
   storage:new Set(['LUKS','ZFS/Btrfs','iSCSI','Swap','LVM']),
   vms:new Set(['Storage pools']),
@@ -7680,12 +7754,12 @@ function visibleTabs(tile){
   return (tile.tabs||[]).map((tab,index)=>({tab,index})).filter(x=>isExpertMode()||!isExpertOnlyTab(tile.id,x.tab));
 }
 const FED_I18N={
-  en:{servers:'Servers',setup:'Connect runvard instances',setupCopy:'Create a federation here or join an existing server.',create:'Create federation',join:'Join federation',refresh:'Refresh',pair:'Pairing code',settings:'Settings',current:'This server',open:'Open',revoke:'Revoke',online:'Online',degraded:'Degraded',offline:'Offline',incompatible:'Incompatible',unknown:'Waiting',last:'Last contact',updates:'Updates',alerts:'Alerts',version:'Version',expires:'Valid for 10 minutes · single use'},
-  de:{servers:'Server',setup:'runvard-Instanzen verbinden',setupCopy:'Hier eine Föderation erstellen oder einem vorhandenen Server beitreten.',create:'Föderation erstellen',join:'Föderation beitreten',refresh:'Aktualisieren',pair:'Pairing-Code',settings:'Einstellungen',current:'Dieser Server',open:'Öffnen',revoke:'Entfernen',online:'Online',degraded:'Eingeschränkt',offline:'Offline',incompatible:'Inkompatibel',unknown:'Wartet',last:'Letzter Kontakt',updates:'Updates',alerts:'Hinweise',version:'Version',expires:'10 Minuten gültig · einmal verwendbar'},
-  fr:{servers:'Serveurs',setup:'Connecter des instances runvard',setupCopy:'Créez une fédération ici ou rejoignez un serveur existant.',create:'Créer la fédération',join:'Rejoindre',refresh:'Actualiser',pair:'Code de jumelage',settings:'Paramètres',current:'Ce serveur',open:'Ouvrir',revoke:'Révoquer',online:'En ligne',degraded:'Dégradé',offline:'Hors ligne',incompatible:'Incompatible',unknown:'En attente',last:'Dernier contact',updates:'Mises à jour',alerts:'Alertes',version:'Version',expires:'Valable 10 minutes · usage unique'},
-  it:{servers:'Server',setup:'Collega istanze runvard',setupCopy:'Crea una federazione qui o unisciti a un server esistente.',create:'Crea federazione',join:'Unisciti',refresh:'Aggiorna',pair:'Codice abbinamento',settings:'Impostazioni',current:'Questo server',open:'Apri',revoke:'Revoca',online:'Online',degraded:'Degradato',offline:'Offline',incompatible:'Incompatibile',unknown:'In attesa',last:'Ultimo contatto',updates:'Aggiornamenti',alerts:'Avvisi',version:'Versione',expires:'Valido 10 minuti · uso singolo'},
-  es:{servers:'Servidores',setup:'Conectar instancias runvard',setupCopy:'Crea una federación aquí o únete a un servidor existente.',create:'Crear federación',join:'Unirse',refresh:'Actualizar',pair:'Código de emparejamiento',settings:'Ajustes',current:'Este servidor',open:'Abrir',revoke:'Revocar',online:'En línea',degraded:'Degradado',offline:'Sin conexión',incompatible:'Incompatible',unknown:'Esperando',last:'Último contacto',updates:'Actualizaciones',alerts:'Alertas',version:'Versión',expires:'Válido 10 minutos · un solo uso'},
-  pt:{servers:'Servidores',setup:'Ligar instâncias runvard',setupCopy:'Crie uma federação aqui ou adira a um servidor existente.',create:'Criar federação',join:'Aderir',refresh:'Atualizar',pair:'Código de emparelhamento',settings:'Definições',current:'Este servidor',open:'Abrir',revoke:'Revogar',online:'Online',degraded:'Degradado',offline:'Offline',incompatible:'Incompatível',unknown:'A aguardar',last:'Último contacto',updates:'Atualizações',alerts:'Alertas',version:'Versão',expires:'Válido por 10 minutos · utilização única'},
+  en:{connectedServers:'Connected servers',network:'Network',showMore:'Show more',showLess:'Show less',connectServer:'Connect server',openNewTab:'Open in new tab',servers:'Servers',setup:'Connect runvard instances',setupCopy:'Create a server group here or join an existing server.',create:'Create server group',join:'Join server group',refresh:'Refresh',pair:'Pairing code',settings:'Settings',current:'This server',open:'Open',revoke:'Revoke',online:'Online',degraded:'Degraded',offline:'Offline',incompatible:'Incompatible',unknown:'Waiting',last:'Last contact',updates:'Updates',alerts:'Alerts',version:'Version',expires:'Valid for 10 minutes · single use'},
+  de:{connectedServers:'Verbundene Server',network:'Netzwerk',showMore:'Mehr anzeigen',showLess:'Weniger anzeigen',connectServer:'Server verbinden',openNewTab:'In neuem Tab öffnen',servers:'Server',setup:'runvard-Instanzen verbinden',setupCopy:'Hier einen Serververbund erstellen oder einem vorhandenen Server beitreten.',create:'Serververbund erstellen',join:'Serververbund beitreten',refresh:'Aktualisieren',pair:'Pairing-Code',settings:'Einstellungen',current:'Dieser Server',open:'Öffnen',revoke:'Entfernen',online:'Online',degraded:'Eingeschränkt',offline:'Offline',incompatible:'Inkompatibel',unknown:'Wartet',last:'Letzter Kontakt',updates:'Updates',alerts:'Hinweise',version:'Version',expires:'10 Minuten gültig · einmal verwendbar'},
+  fr:{connectedServers:'Serveurs connectés',network:'Réseau',showMore:'Afficher plus',showLess:'Afficher moins',connectServer:'Connecter un serveur',openNewTab:'Ouvrir dans un nouvel onglet',servers:'Serveurs',setup:'Connecter des instances runvard',setupCopy:'Créez un groupe de serveurs ici ou rejoignez un serveur existant.',create:'Créer un groupe de serveurs',join:'Rejoindre le groupe',refresh:'Actualiser',pair:'Code de jumelage',settings:'Paramètres',current:'Ce serveur',open:'Ouvrir',revoke:'Révoquer',online:'En ligne',degraded:'Dégradé',offline:'Hors ligne',incompatible:'Incompatible',unknown:'En attente',last:'Dernier contact',updates:'Mises à jour',alerts:'Alertes',version:'Version',expires:'Valable 10 minutes · usage unique'},
+  it:{connectedServers:'Server collegati',network:'Rete',showMore:'Mostra altri',showLess:'Mostra meno',connectServer:'Collega server',openNewTab:'Apri in una nuova scheda',servers:'Server',setup:'Collega istanze runvard',setupCopy:'Crea qui un gruppo di server o unisciti a un server esistente.',create:'Crea gruppo di server',join:'Unisciti al gruppo',refresh:'Aggiorna',pair:'Codice abbinamento',settings:'Impostazioni',current:'Questo server',open:'Apri',revoke:'Revoca',online:'Online',degraded:'Degradato',offline:'Offline',incompatible:'Incompatibile',unknown:'In attesa',last:'Ultimo contatto',updates:'Aggiornamenti',alerts:'Avvisi',version:'Versione',expires:'Valido 10 minuti · uso singolo'},
+  es:{connectedServers:'Servidores conectados',network:'Red',showMore:'Mostrar más',showLess:'Mostrar menos',connectServer:'Conectar servidor',openNewTab:'Abrir en una pestaña nueva',servers:'Servidores',setup:'Conectar instancias runvard',setupCopy:'Crea aquí un grupo de servidores o únete a un servidor existente.',create:'Crear grupo de servidores',join:'Unirse al grupo',refresh:'Actualizar',pair:'Código de emparejamiento',settings:'Ajustes',current:'Este servidor',open:'Abrir',revoke:'Revocar',online:'En línea',degraded:'Degradado',offline:'Sin conexión',incompatible:'Incompatible',unknown:'Esperando',last:'Último contacto',updates:'Actualizaciones',alerts:'Alertas',version:'Versión',expires:'Válido 10 minutos · un solo uso'},
+  pt:{connectedServers:'Servidores ligados',network:'Rede',showMore:'Mostrar mais',showLess:'Mostrar menos',connectServer:'Ligar servidor',openNewTab:'Abrir num novo separador',servers:'Servidores',setup:'Ligar instâncias runvard',setupCopy:'Crie aqui um grupo de servidores ou adira a um servidor existente.',create:'Criar grupo de servidores',join:'Aderir ao grupo',refresh:'Atualizar',pair:'Código de emparelhamento',settings:'Definições',current:'Este servidor',open:'Abrir',revoke:'Revogar',online:'Online',degraded:'Degradado',offline:'Offline',incompatible:'Incompatível',unknown:'A aguardar',last:'Último contacto',updates:'Atualizações',alerts:'Alertas',version:'Versão',expires:'Válido por 10 minutos · utilização única'},
 };
 const FED_FORM_I18N={
   en:{displayName:'Display name',internalUrl:'Internal URL',browserUrl:'Browser URL',allowedNetworks:'Allowed private networks',existingInternalUrl:'Existing server internal URL',internalUrlHint:'Literal LAN/VPN IP and port, e.g. http://10.0.0.12:8080',browserUrlHint:'The URL users open; reverse-proxy hostnames are supported.',copy:'Copy',copied:'Copied',disk:'Disk'},
@@ -7699,6 +7773,207 @@ for(const lang of Object.keys(FED_FORM_I18N)){
   Object.assign(FED_I18N[lang],FED_FORM_I18N[lang]);
 }
 function fedText(key){return(FED_I18N[currentLanguage()]||FED_I18N.en)[key]||FED_I18N.en[key]||key;}
+var _connectedOverview=null;
+const CONNECTED_SERVER_ORDER_KEY='runvard_connected_server_order';
+const _connectedServerHistory=new Map();
+let _connectedSortable=null,_connectedServerDragging=false,_connectedResizeFrame=0;
+
+function syncConnectedServerLabels(){
+  const title=$('#connected-servers-title');
+  const add=$('#connected-servers-add');
+  const more=$('#connected-servers-more');
+  const menu=$('#um-connected-servers-label');
+  if(title)title.textContent=fedText('connectedServers');
+  if(menu)menu.textContent=fedText('connectedServers');
+  if(add){
+    add.title=fedText('connectServer');
+    add.setAttribute('aria-label',fedText('connectServer'));
+  }
+  if(more)more.textContent=$('#connected-servers')?.classList.contains('is-expanded')?fedText('showLess'):fedText('showMore');
+  if(_connectedOverview)renderConnectedServers(_connectedOverview);
+}
+
+function connectedServerOrderedNodes(nodes){
+  let saved=[];
+  try{saved=JSON.parse(localStorage.getItem(CONNECTED_SERVER_ORDER_KEY)||'[]');}catch(e){}
+  const rank=new Map(saved.map((id,index)=>[id,index]));
+  return [...nodes].sort((a,b)=>{
+    const ar=rank.has(a.node_id)?rank.get(a.node_id):Number.MAX_SAFE_INTEGER;
+    const br=rank.has(b.node_id)?rank.get(b.node_id):Number.MAX_SAFE_INTEGER;
+    return ar-br||String(a.name||a.hostname||'').localeCompare(String(b.name||b.hostname||''),localeCode());
+  });
+}
+
+function connectedServerHistory(node){
+  const key=node.node_id;
+  const snapshot=node.snapshot||{};
+  const history=_connectedServerHistory.get(key)||{cpu:[],ram:[],network:[],capturedAt:null};
+  const capturedAt=snapshot.captured_at??Date.now();
+  if(history.capturedAt!==capturedAt){
+    const append=(values,value)=>{
+      if(Number.isFinite(Number(value)))values.push(Number(value));
+      if(values.length>30)values.splice(0,values.length-30);
+    };
+    if(node.health==='online'||node.health==='degraded'){
+      append(history.cpu,snapshot.cpu_percent);
+      append(history.ram,snapshot.ram_percent);
+      append(history.network,snapshot.network_down_rate);
+    }
+    history.capturedAt=capturedAt;
+    _connectedServerHistory.set(key,history);
+  }
+  return history;
+}
+
+function connectedServerSparkline(values,offline=false){
+  const rows=(values||[]).filter(value=>Number.isFinite(Number(value))).map(Number);
+  if(offline||!rows.length)return '<svg class="connected-server-sparkline" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true"><polyline points="0,8 100,8"></polyline></svg>';
+  const min=Math.min(...rows),max=Math.max(...rows),range=Math.max(1,max-min);
+  const points=rows.length===1
+    ?'0,6 100,6'
+    :rows.map((value,index)=>`${(index/(rows.length-1)*100).toFixed(1)},${(10-((value-min)/range)*8).toFixed(1)}`).join(' ');
+  return `<svg class="connected-server-sparkline" viewBox="0 0 100 12" preserveAspectRatio="none" aria-hidden="true"><polyline points="${points}"></polyline></svg>`;
+}
+
+function connectedServerMetricHtml(kind,label,value,values,offline){
+  return `<div class="connected-server-metric ${kind}"><span class="connected-server-metric-label">${esc(label)}</span><span class="connected-server-metric-value">${esc(value)}</span>${connectedServerSparkline(values,offline)}</div>`;
+}
+
+function connectedServerRenderKey(node){
+  const snapshot=node.snapshot||{};
+  return encodeURIComponent(JSON.stringify([
+    currentLanguage(),node.name,node.hostname,node.health,snapshot.captured_at,
+    snapshot.cpu_percent,snapshot.ram_percent,snapshot.network_down_rate,
+    snapshot.updates,
+  ]));
+}
+
+function connectedServerCardHtml(node){
+  const snapshot=node.snapshot||{},history=connectedServerHistory(node);
+  const offline=!['online','degraded'].includes(node.health);
+  const percent=value=>offline||value==null?'—':`${Number(value).toFixed(1)}%`;
+  const network=offline||snapshot.network_down_rate==null?'—':`${(Number(snapshot.network_down_rate)/1048576).toFixed(1)} MB/s`;
+  const updates=Number(snapshot.updates)||0;
+  const name=node.name||node.hostname||node.node_id;
+  const status=fedText(node.health||'unknown');
+  const aria=`${name}, ${status}, ${fedText('openNewTab')}`;
+  return `<article class="connected-server-card${offline?' is-offline':''}" data-node-id="${esc(node.node_id)}" data-render-key="${connectedServerRenderKey(node)}" role="link" tabindex="0" aria-label="${esc(aria)}" onclick="connectedServerOpen('${esc(node.node_id)}')" onkeydown="connectedServerKey(event,'${esc(node.node_id)}')">
+    <div class="connected-server-top">
+      <div class="connected-server-name"><span class="connected-server-health ${esc(node.health||'unknown')}" aria-hidden="true"></span><span class="connected-server-name-text">${esc(name)}</span></div>
+      <div class="connected-server-card-actions">${updates>0?`<span class="connected-server-update" title="${esc(fedText('updates'))}">${updates}</span>`:''}<svg class="connected-server-external" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2H2.8A1.8 1.8 0 0 0 1 3.8v5.4A1.8 1.8 0 0 0 2.8 11h5.4A1.8 1.8 0 0 0 10 9.2V7.5M7 1h4v4M11 1 5.5 6.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+    </div>
+    <div class="connected-server-metrics">
+      ${connectedServerMetricHtml('cpu','CPU',percent(snapshot.cpu_percent),history.cpu,offline)}
+      ${connectedServerMetricHtml('ram','RAM',percent(snapshot.ram_percent),history.ram,offline)}
+      ${connectedServerMetricHtml('network',fedText('network'),network,history.network,offline)}
+    </div>
+  </article>`;
+}
+
+function alignConnectedServerCards(){
+  const section=$('#connected-servers'),widgets=document.querySelector('.widgets');
+  if(!section||section.hidden||!widgets)return;
+  if(!window.matchMedia('(min-width: 1740px)').matches){
+    section.style.removeProperty('--connected-server-card-height');
+    return;
+  }
+  const first=section.querySelector('.connected-server-card');
+  if(!first)return;
+  const height=Math.max(112,Math.round(widgets.getBoundingClientRect().bottom-first.getBoundingClientRect().top));
+  section.style.setProperty('--connected-server-card-height',`${height}px`);
+}
+
+function initConnectedServerSorting(list){
+  if(_connectedSortable){_connectedSortable.destroy();_connectedSortable=null;}
+  if(typeof Sortable==='undefined'||list.children.length<2)return;
+  _connectedSortable=Sortable.create(list,{
+    animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',
+    delay:400,delayOnTouchOnly:true,touchStartThreshold:5,
+    onStart:()=>{_connectedServerDragging=true;},
+    onEnd:()=>{
+      const order=[...list.querySelectorAll('.connected-server-card')].map(card=>card.dataset.nodeId);
+      try{localStorage.setItem(CONNECTED_SERVER_ORDER_KEY,JSON.stringify(order));}catch(e){}
+      setTimeout(()=>{_connectedServerDragging=false;},0);
+    },
+  });
+}
+
+function renderConnectedServers(overview){
+  _connectedOverview=overview;
+  const section=$('#connected-servers'),list=$('#connected-servers-list'),more=$('#connected-servers-more');
+  if(!section||!list||!more)return;
+  const remoteNodes=(overview.nodes||[]).filter(node=>!node.current);
+  section.hidden=remoteNodes.length===0;
+  if(section.hidden){
+    list.innerHTML='';
+    if(_connectedSortable){_connectedSortable.destroy();_connectedSortable=null;}
+    return;
+  }
+  const nodes=connectedServerOrderedNodes(remoteNodes);
+  const existingCards=new Map([...list.querySelectorAll('.connected-server-card')].map(card=>[card.dataset.nodeId,card]));
+  let structureChanged=false;
+  nodes.forEach((node,index)=>{
+    const template=document.createElement('template');
+    template.innerHTML=connectedServerCardHtml(node).trim();
+    const fresh=template.content.firstElementChild;
+    let card=existingCards.get(node.node_id);
+    if(!card){
+      card=fresh;
+      structureChanged=true;
+    }else if(card.dataset.renderKey!==fresh.dataset.renderKey){
+      const focused=document.activeElement===card;
+      card.className=fresh.className;
+      card.dataset.renderKey=fresh.dataset.renderKey;
+      card.setAttribute('aria-label',fresh.getAttribute('aria-label'));
+      card.innerHTML=fresh.innerHTML;
+      if(focused)card.focus();
+    }
+    const current=list.children[index];
+    if(current!==card){
+      list.insertBefore(card,current||null);
+      structureChanged=true;
+    }
+    existingCards.delete(node.node_id);
+  });
+  existingCards.forEach(card=>{card.remove();structureChanged=true;});
+  more.hidden=nodes.length<=3;
+  more.textContent=section.classList.contains('is-expanded')?fedText('showLess'):fedText('showMore');
+  if(structureChanged)initConnectedServerSorting(list);
+  cancelAnimationFrame(_connectedResizeFrame);
+  _connectedResizeFrame=requestAnimationFrame(alignConnectedServerCards);
+}
+
+async function loadConnectedServers(){
+  try{renderConnectedServers(await api('/federation/v1/admin/overview'));}catch(e){}
+}
+
+window.toggleConnectedServers=()=>{
+  const section=$('#connected-servers'),more=$('#connected-servers-more');
+  if(!section||!more)return;
+  section.classList.toggle('is-expanded');
+  more.textContent=section.classList.contains('is-expanded')?fedText('showLess'):fedText('showMore');
+};
+window.connectedServerOpen=nodeId=>{
+  if(_connectedServerDragging)return;
+  const node=(_connectedOverview?.nodes||[]).find(item=>item.node_id===nodeId);
+  if(!node)return;
+  if(!['online','degraded'].includes(node.health)){toast(fedText(node.health||'offline'),'error');return;}
+  fedSwitch(node.node_id);
+};
+window.connectedServerKey=(event,nodeId)=>{
+  if(event.key!=='Enter'&&event.key!==' ')return;
+  event.preventDefault();
+  connectedServerOpen(nodeId);
+};
+window.openConnectedServersModal=()=>{
+  $('#user-menu')?.classList.remove('open');
+  openModal(SERVER_ADMIN_TILE);
+};
+window.addEventListener('resize',()=>{
+  cancelAnimationFrame(_connectedResizeFrame);
+  _connectedResizeFrame=requestAnimationFrame(alignConnectedServerCards);
+});
+
 function tileName(tile){return tile.id==='servers'?fedText('servers'):tr(tile.nameKey);}
 function tileDesc(tile){return tile.descKey?tr(tile.descKey):'';}
 function tabLabel(tile,tab,index){return tile.tabKeys&&tile.tabKeys[index]?tr(tile.tabKeys[index]):tab;}
@@ -7720,6 +7995,8 @@ function renderTiles(){
   });
 }
 renderTiles();
+loadConnectedServers();
+setInterval(loadConnectedServers,10000);
 
 // Load live badge data
 let _systemUpdateBadgeNext=0,_systemUpdateBadgeHasUpdates=false;
@@ -7795,15 +8072,6 @@ async function loadTileBadges(){
     }
   }catch(e){}
   try{await refreshSystemUpdateBadge();}catch(e){}
-  try{
-    const f=await api('/federation/v1/admin/overview');
-    const el=$('#badge-servers');
-    if(el){
-      el.textContent=f.enabled?`${f.online}/${f.total}`:'—';
-      const tone=!f.enabled?'gray':f.online===f.total?'green':f.online>0?'':'red';
-      el.className='tile-badge '+tone;
-    }
-  }catch(e){}
 }
 loadTileBadges();
 

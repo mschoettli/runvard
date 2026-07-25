@@ -40,10 +40,13 @@ def build_snapshot(
     version_value = str(_safe(version, "") or "")[:12]
     memory = host.get("memory") or {}
     cpu = host.get("cpu") or {}
+    network = host.get("network") or {}
     return {
         "captured_at": int(time.time() if now is None else now),
         "cpu_percent": round(float(cpu.get("percent") or 0), 1),
         "ram_percent": round(float(memory.get("percent") or 0), 1),
+        "network_down_rate": round(float(network.get("down_rate") or 0), 1),
+        "network_up_rate": round(float(network.get("up_rate") or 0), 1),
         "disk_percent": round(float(root.get("percent") or 0), 1),
         "docker": {
             "total": len(container_rows),
