@@ -9,6 +9,7 @@ Update-Check:      alle 12h im Hintergrund (Cache in apps_updates.json)
 import os
 import json
 import re
+import secrets
 import socket
 import time
 import subprocess
@@ -193,6 +194,16 @@ volumes:
      "tpl": _c("ghcr.io/paperless-ngx/paperless-ngx:latest", ["8000:8000"],
                ["./data:/usr/src/paperless/data", "./media:/usr/src/paperless/media",
                 "./consume:/usr/src/paperless/consume"])},
+    {"id": "papervard", "name": "Papervard", "icon": "/static/papervard.svg",
+     "category": "Produktivität",
+     "desc": "Lokales Dokumentenarchiv für Familien und kleine Teams", "port": 3000,
+     "first_party": True,
+     "compose_builder": "papervard",
+     "managed_directories": ["config", "data"],
+     "preflight_ports": True,
+     "install_timeout": 900,
+     "tpl": _c("ghcr.io/mschoettli/papervard:latest", ["3000:3000", "8081:80"],
+               ["./config:/config", "./data:/data"])},
     {"id": "joplin-server", "name": "Joplin Server", "icon": "joplin", "category": "Produktivität",
      "desc": "Synchronisierungs-Server für Joplin-Notizen", "port": 22300,
      "tpl": _c("joplin/server:latest", ["22300:22300"], [],
@@ -862,7 +873,7 @@ def _fallback_down(app_id):
     return {"ok": not hard_fail, "output": output}
 
 
-def build_compose(app):
+def _build_standard_compose(app):
     """
     Build a docker-compose.yml file from an app template.
 
@@ -902,6 +913,159 @@ def build_compose(app):
     return "\n".join(lines) + "\n"
 
 
+def _allocated_named_ports(app, preferred_ports):
+    reserved = _reserved_host_ports(exclude_app_id=app["id"])
+    result = {}
+    for name, preferred in preferred_ports.items():
+        port = _next_available_host_port(preferred, reserved)
+        result[name] = port
+        reserved.add(port)
+    return result
+
+
+def _papervard_install_draft(app):
+    ports = _allocated_named_ports(app, {"web": 3000, "onlyoffice": 8081})
+    postgres_password = secrets.token_urlsafe(32)
+    admin_password = secrets.token_urlsafe(32)
+    onlyoffice_secret = secrets.token_urlsafe(32)
+    compose = f"""name: papervard
+
+services:
+  papervard:
+    image: ghcr.io/mschoettli/papervard:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+      tika:
+        condition: service_healthy
+      onlyoffice:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://papervard:{postgres_password}@db:5432/papervard?schema=public
+      PAPERVARD_DATA_PATH: /data
+      PAPERVARD_CONFIG_PATH: /config
+      PAPERVARD_INTERNAL_URL: http://papervard:3000
+      TIKA_URL: http://tika:9998
+      ONLYOFFICE_INTERNAL_URL: http://onlyoffice
+      ONLYOFFICE_JWT_SECRET: {onlyoffice_secret}
+      NEXT_PUBLIC_ONLYOFFICE_URL: auto:{ports["onlyoffice"]}
+      AUTH_COOKIE_SECURE: "false"
+      OCR_LANGUAGES: deu+eng+fra+ita+spa
+      TZ: Europe/Zurich
+      AUTH_SECRET: ""
+      PAPERVARD_SIGNING_SECRET: ""
+      DICOM_FIELD_KEY: ""
+      SEED_ADMIN_EMAIL: admin@papervard.local
+      SEED_ADMIN_PASSWORD: {admin_password}
+      PAPERVARD_UPDATE_MODE: external
+      GITHUB_REPOSITORY: mschoettli/papervard
+      GITHUB_BRANCH: main
+    ports:
+      - "{ports["web"]}:3000"
+    volumes:
+      - ./config:/config
+      - ./data:/data
+    command: ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && npm run db:seed && node server.js"]
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 10s
+      timeout: 5s
+      retries: 30
+
+  worker:
+    image: ghcr.io/mschoettli/papervard:latest
+    restart: unless-stopped
+    depends_on:
+      papervard:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://papervard:{postgres_password}@db:5432/papervard?schema=public
+      PAPERVARD_DATA_PATH: /data
+      PAPERVARD_CONFIG_PATH: /config
+      PAPERVARD_INTERNAL_URL: http://papervard:3000
+      TIKA_URL: http://tika:9998
+      ONLYOFFICE_INTERNAL_URL: http://onlyoffice
+      ONLYOFFICE_JWT_SECRET: {onlyoffice_secret}
+      AUTH_SECRET: ""
+      PAPERVARD_SIGNING_SECRET: ""
+      DICOM_FIELD_KEY: ""
+      WORKER_IDLE_DELAY_MS: "1000"
+      SMB_SYNC_ENABLED: "true"
+      SMB_SYNC_INTERVAL_MS: "5000"
+      TZ: Europe/Zurich
+    volumes:
+      - ./config:/config
+      - ./data:/data
+    command: ["npm", "run", "worker"]
+
+  db:
+    image: pgvector/pgvector:pg16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: papervard
+      POSTGRES_USER: papervard
+      POSTGRES_PASSWORD: {postgres_password}
+      PGDATA: /papervard-data/postgres
+    volumes:
+      - ./data:/papervard-data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U papervard -d papervard"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  tika:
+    image: apache/tika:3.3.1.0-full
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:9998/version || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+
+  onlyoffice:
+    image: onlyoffice/documentserver:9.4.0.1
+    restart: unless-stopped
+    environment:
+      JWT_ENABLED: "true"
+      JWT_SECRET: {onlyoffice_secret}
+      JWT_HEADER: AuthorizationJwt
+      ALLOW_PRIVATE_IP_ADDRESS: "true"
+      TZ: Europe/Zurich
+    ports:
+      - "{ports["onlyoffice"]}:80"
+    healthcheck:
+      test: ["CMD-SHELL", "curl -fsS http://127.0.0.1/healthcheck || exit 1"]
+      interval: 15s
+      timeout: 10s
+      retries: 30
+      start_period: 60s
+"""
+    return compose, {
+        "credentials": [
+            {"label": "Admin email", "value": "admin@papervard.local"},
+            {"label": "Initial admin password", "value": admin_password, "secret": True},
+        ],
+        "notes": [
+            "Save the initial admin password before installing.",
+            "SMB can be added later with Runvard's host share management.",
+            "Back up both the config and data directories together.",
+        ],
+    }
+
+
+def _app_install_draft(app):
+    if app.get("compose_builder") == "papervard":
+        return _papervard_install_draft(app)
+    return _build_standard_compose(app), None
+
+
+def build_compose(app):
+    """Build a docker-compose.yml file from an app template."""
+    return _app_install_draft(app)[0]
+
+
 # ──────────────────────────────────────────────────────────────────────────
 #  Katalog & Status
 # ──────────────────────────────────────────────────────────────────────────
@@ -916,6 +1080,13 @@ def _compose_file(app_id):
 
 def is_installed(app_id):
     return os.path.isfile(_compose_file(app_id))
+
+
+def _icon_url(app):
+    icon = str(app.get("icon") or "")
+    if icon.startswith(("http://", "https://", "/")):
+        return icon
+    return f"{ICON_BASE}/{icon}.svg"
 
 
 def _running(app_id):
@@ -964,6 +1135,7 @@ def _compose_app_entry(project, running=False, port=0, compose=""):
         "category": "Compose",
         "desc": "Custom Docker Compose project",
         "port": port,
+        "first_party": False,
         "installed": True,
         "running": running,
         "update_available": False,
@@ -992,10 +1164,11 @@ def get_catalog():
             "id": app["id"],
             "type": "app",
             "name": app["name"],
-            "icon": f"{ICON_BASE}/{app['icon']}.svg",
+            "icon": _icon_url(app),
             "category": app["category"],
             "desc": app["desc"],
             "port": port,
+            "first_party": bool(app.get("first_party")),
             "installed": installed,
             "running": running,
             "update_available": app["id"] in updates,
@@ -1046,19 +1219,28 @@ def get_app(app_id):
     app = next((a for a in CATALOG if a["id"] == app_id), None)
     if not app:
         raise ValueError("App nicht gefunden")
-    compose = _read_compose(app_id) if is_installed(app_id) else build_compose(app)
-    return {
+    installed = is_installed(app_id)
+    if installed:
+        compose = _read_compose(app_id)
+        install_info = None
+    else:
+        compose, install_info = _app_install_draft(app)
+    result = {
         "id": app["id"],
         "type": "app",
         "name": app["name"],
-        "icon": f"{ICON_BASE}/{app['icon']}.svg",
+        "icon": _icon_url(app),
         "category": app["category"],
         "desc": app["desc"],
         "port": _first_host_port_from_compose(compose, app["port"]),
-        "installed": is_installed(app["id"]),
+        "first_party": bool(app.get("first_party")),
+        "installed": installed,
         "running": _running(app["id"]),
         "compose": compose,
     }
+    if install_info:
+        result["install_info"] = install_info
+    return result
 
 
 # ──────────────────────────────────────────────────────────────────────────
@@ -1094,6 +1276,16 @@ def install(app_id, content):
         raise ValueError("App nicht gefunden")
     content = _normalize_app_compose(app, content)
     content = _prepare_host_network_content(app, content)
+    if app.get("preflight_ports"):
+        port_check = docker_mgr.check_compose_ports(app_id, content)
+        if not port_check.get("ok"):
+            ports = sorted({
+                int(conflict["port"])
+                for conflict in port_check.get("conflicts", [])
+                if conflict.get("port") is not None
+            })
+            detail = ", ".join(str(port) for port in ports) or "unknown"
+            raise ValueError(f"One or more Compose ports are already in use: {detail}")
     job_id = f"{app_id}_{int(time.time())}"
     _install_jobs[job_id] = {
         "status": "preparing", "app_id": app_id, "app_name": app["name"],
@@ -1104,6 +1296,8 @@ def install(app_id, content):
     def run():
         path = _app_dir(app_id)
         os.makedirs(path, exist_ok=True)
+        for directory in app.get("managed_directories", []):
+            os.makedirs(os.path.join(path, directory), exist_ok=True)
         with open(_compose_file(app_id), "w") as f:
             f.write(content)
         job = _install_jobs[job_id]
@@ -1137,7 +1331,8 @@ def install(app_id, content):
             if uses_build:
                 up_cmd.insert(3, "--build")
             r = subprocess.run(up_cmd,
-                               cwd=path, capture_output=True, text=True, timeout=300)
+                               cwd=path, capture_output=True, text=True,
+                               timeout=int(app.get("install_timeout", 300)))
             job["output"] += r.stdout + r.stderr
             job["ok"] = r.returncode == 0
             job["status"] = "done" if r.returncode == 0 else "error"

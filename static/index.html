@@ -11024,15 +11024,35 @@ window.powerLogindForm=async()=>{
 window.powerInstallPackage=async name=>{try{toast('Installation started…');const r=await post('/sysmgr/packages/install',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Installing – wait a moment, then reopen the tab');}catch(e){toast('Error: '+e.message,'error');}};
 
 // Updates installieren (Hintergrund-Job + Polling)
+function setUpdateButtonState(state){
+  const btn=$('#upd-go');
+  if(!btn)return null;
+  if(state==='running'){
+    btn.disabled=true;
+    btn.textContent=uiText('Installing…');
+    return btn;
+  }
+  if(state==='done'){
+    btn.disabled=true;
+    btn.removeAttribute('onclick');
+    btn.onclick=null;
+    btn.textContent='✓ '+uiText('Done');
+    return btn;
+  }
+  btn.disabled=false;
+  btn.setAttribute('onclick','updatesInstall()');
+  btn.textContent=uiText('⬇ Install updates');
+  return btn;
+}
 window.updatesInstall=async()=>{
   const reboot=$('#upd-reboot')?.checked;
-  const btn=$('#upd-go'); if(btn){btn.disabled=true;btn.textContent=uiText('Installing…');}
+  setUpdateButtonState('running');
   const out=$('#upd-out'); if(out){out.style.display='block';out.textContent=uiText('Starting apt-get upgrade …');}
   try{
     const r=await post('/sysmgr/updates/apply',{});
-    if(!r||!r.job_id){toast('Start fehlgeschlagen','error');if(btn){btn.disabled=false;btn.textContent=uiText('⬇ Install updates');}return;}
+    if(!r||!r.job_id){toast('Start fehlgeschlagen','error');setUpdateButtonState('ready');return;}
     pollUpdateJob(r.job_id,reboot);
-  }catch(e){toast('Error: '+e.message,'error');if(btn){btn.disabled=false;btn.textContent=uiText('⬇ Install updates');}}
+  }catch(e){toast('Error: '+e.message,'error');setUpdateButtonState('ready');}
 };
 function pollUpdateJob(id,reboot){
   const out=$('#upd-out');
@@ -11041,13 +11061,13 @@ function pollUpdateJob(id,reboot){
     try{j=await api('/sysmgr/updates/job?id='+encodeURIComponent(id));}
     catch(e){if(out)out.textContent+='\n[Statusabfrage fehlgeschlagen]';return;}
     if(j.status==='running'){if(out)out.textContent=uiText('apt-get upgrade is running … (may take a few minutes)');setTimeout(tick,2500);return;}
-    const btn=$('#upd-go');
     if(j.status==='succeeded'){
       const res=j.result||{};
       if(out)out.textContent=(res.stdout||'')+(res.stderr?('\n'+res.stderr):'')||uiText('(no output)');
       toast(res.ok===false?'Mit Fehlern beendet':'Updates installed',res.ok===false?'error':'success');
-      if(btn){btn.disabled=false;btn.textContent='✓ '+uiText('Done');}
-      if(res.ok!==false){
+      if(res.ok===false)setUpdateButtonState('ready');
+      else {
+        setUpdateButtonState('done');
         _systemUpdateBadgeNext=0;
         refreshSystemUpdateBadge().catch(()=>{});
       }
@@ -11061,7 +11081,7 @@ function pollUpdateJob(id,reboot){
     } else {
       if(out)out.textContent='Error: '+(j.error||'unbekannt');
       toast('Update fehlgeschlagen','error');
-      if(btn){btn.disabled=false;btn.textContent=uiText('⬇ Install updates');}
+      setUpdateButtonState('ready');
     }
   };
   tick();
@@ -11404,7 +11424,7 @@ async function renderNetDetail(body){
   loadHistoryChart('hist-net',[{field:'net_down',label:'▼ Download',color:'#22c55e'},{field:'net_up',label:'▲ Upload',color:'#eab308'}],{scale:v=>+(v/1048576).toFixed(2),ytick:v=>v+' MB/s'});
 }
 // ═══ Apps (App-Store) ═══
-let appsCatalog=[], appsActiveCat='all', appsSearch='', _activeInstalls=0;
+let appsCatalog=[], appsActiveCat='all', appsSearch='', appsSort='default', _activeInstalls=0;
 let appsCatalogCategories=[];
 const appPendingActions=new Map();
 
@@ -11413,6 +11433,9 @@ const APP_UI={
   searchApps:{de:'Apps suchen...',en:'Search apps...',fr:'Rechercher des apps...',it:'Cerca app...',es:'Buscar apps...',pt:'Pesquisar apps...'},
   apps:{de:'Apps',en:'apps',fr:'apps',it:'app',es:'apps',pt:'apps'},
   installed:{de:'installiert',en:'installed',fr:'installées',it:'installate',es:'instaladas',pt:'instaladas'},
+  sortApps:{de:'Apps sortieren',en:'Sort apps',fr:'Trier les apps',it:'Ordina le app',es:'Ordenar apps',pt:'Ordenar apps'},
+  myAppsFirst:{de:'Meine Apps zuerst',en:'My apps first',fr:'Mes apps d’abord',it:'Le mie app prima',es:'Mis apps primero',pt:'As minhas apps primeiro'},
+  installedFirst:{de:'Installierte zuerst',en:'Installed first',fr:'Installées d’abord',it:'Installate prima',es:'Instaladas primero',pt:'Instaladas primeiro'},
   update:{de:'Update',en:'update',fr:'mise à jour',it:'aggiornamento',es:'actualización',pt:'atualização'},
   updates:{de:'Updates',en:'updates',fr:'mises à jour',it:'aggiornamenti',es:'actualizaciones',pt:'atualizações'},
   checkUpdates:{de:'Updates prüfen',en:'Check updates',fr:'Vérifier les mises à jour',it:'Controlla aggiornamenti',es:'Buscar actualizaciones',pt:'Verificar atualizações'},
@@ -11478,6 +11501,7 @@ const APP_DESC_ROWS=[
   ['nextcloud','Eigene private Cloud für Dateien & mehr','Your own private cloud for files and more','Votre cloud privé pour les fichiers et plus encore','Cloud privato per file e altro','Tu nube privada para archivos y más','A sua nuvem privada para ficheiros e mais'],
   ['vaultwarden','Bitwarden-kompatibler Passwort-Manager','Bitwarden-compatible password manager','Gestionnaire de mots de passe compatible Bitwarden','Gestore password compatibile con Bitwarden','Gestor de contraseñas compatible con Bitwarden','Gestor de palavras-passe compatível com Bitwarden'],
   ['paperless-ngx','Digitales Dokumenten-Management','Digital document management','Gestion numérique de documents','Gestione documentale digitale','Gestión documental digital','Gestão documental digital'],
+  ['papervard','Lokales Dokumentenarchiv für Familien und kleine Teams','Local document archive for families and small teams','Archive local de documents pour familles et petites équipes','Archivio documentale locale per famiglie e piccoli team','Archivo local de documentos para familias y equipos pequeños','Arquivo local de documentos para famílias e pequenas equipas'],
   ['joplin-server','Synchronisierungs-Server für Joplin-Notizen','Sync server for Joplin notes','Serveur de synchronisation pour notes Joplin','Server di sincronizzazione per note Joplin','Servidor de sincronización para notas de Joplin','Servidor de sincronização para notas Joplin'],
   ['trilium','Hierarchische Notiz-App für Wissensbasen','Hierarchical notes app for knowledge bases','App de notes hiérarchiques pour bases de connaissances','App di note gerarchiche per basi di conoscenza','App de notas jerárquicas para bases de conocimiento','App de notas hierárquicas para bases de conhecimento'],
   ['affine','Open-Source-Alternative zu Notion & Miro','Open-source alternative to Notion and Miro','Alternative open source à Notion et Miro','Alternativa open source a Notion e Miro','Alternativa open source a Notion y Miro','Alternativa open source ao Notion e Miro'],
@@ -11605,6 +11629,17 @@ function appIsCompose(app){
 function appById(id){
   return appsCatalog.find(a=>a.id===id);
 }
+function sortAppsCatalog(items){
+  return items.map((app,index)=>({app,index})).sort((a,b)=>{
+    const firstParty=Number(Boolean(b.app.first_party))-Number(Boolean(a.app.first_party));
+    if(firstParty)return firstParty;
+    if(appsSort==='installed'){
+      const installed=Number(Boolean(b.app.installed))-Number(Boolean(a.app.installed));
+      if(installed)return installed;
+    }
+    return a.index-b.index;
+  }).map(item=>item.app);
+}
 function appPendingLabel(action){
   return appUi(({up:'starting',start:'starting',stop:'stopping',down:'stopping',restart:'restarting',update:'updating'})[action]||'starting');
 }
@@ -11709,10 +11744,10 @@ async function renderApps(body){
 
 function renderAppsView(body,categories){
   const q=appsSearch.toLowerCase();
-  const filtered=appsCatalog.filter(a=>{
+  const filtered=sortAppsCatalog(appsCatalog.filter(a=>{
     const catOk=appsActiveCat==='all'||appCategoryKey(a.category)===appsActiveCat;
     return catOk&&appMatchesSearch(a,q);
-  });
+  }));
   const installedCount=appsCatalog.filter(a=>a.installed).length;
   const updateCount=appsCatalog.filter(a=>a.update_available).length;
   const categoryKeys=appCategoryKeys(categories||appsCatalogCategories);
@@ -11721,7 +11756,11 @@ function renderAppsView(body,categories){
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <input id="apps-search" class="nx-search" placeholder="${esc(appUi('searchApps'))}" value="${esc(appsSearch)}" style="flex:1;min-width:160px;max-width:280px" oninput="appsDoSearch(this.value)">
       <span style="font-size:11px;color:var(--text3)">${appsCatalog.length} ${esc(appUi('apps'))} · ${installedCount} ${esc(appUi('installed'))}${updateCount?` · <span style="color:#fbbf24">${updateCount} ${esc(appUi(updateCount>1?'updates':'update'))}</span>`:''}</span>
-      <button class="btn ghost sm" style="margin-left:auto" onclick="appsCheckUpdates()" title="${esc(appUi('checkUpdates'))}">↻ ${esc(appUi('checkUpdates'))}</button>
+      <select id="apps-sort" value="${esc(appsSort)}" onchange="appsSetSort(this.value)" aria-label="${esc(appUi('sortApps'))}" title="${esc(appUi('sortApps'))}" style="width:auto;min-width:170px;margin-left:auto">
+        <option value="default"${appsSort==='default'?' selected':''}>${esc(appUi('myAppsFirst'))}</option>
+        <option value="installed"${appsSort==='installed'?' selected':''}>${esc(appUi('installedFirst'))}</option>
+      </select>
+      <button class="btn ghost sm" onclick="appsCheckUpdates()" title="${esc(appUi('checkUpdates'))}">↻ ${esc(appUi('checkUpdates'))}</button>
     </div>
     <div class="apps-cats" id="apps-cats">
       ${categoryKeys.map(c=>`<div class="apps-cat${c===appsActiveCat?' active':''}" onclick="appsSetCat('${esc(c)}')">${esc(appCategoryLabel(c))}</div>`).join('')}
@@ -11788,12 +11827,16 @@ function appCardHtml(a){
 }
 
 window.appsSetCat=cat=>{appsActiveCat=appCategoryKey(cat);renderAppsView($('#modal-body'));};
+window.appsSetSort=value=>{
+  appsSort=value==='installed'?'installed':'default';
+  renderAppsView($('#modal-body'),appsCatalogCategories);
+};
 window.appsDoSearch=v=>{appsSearch=v;const grid=$('#apps-grid');if(!grid)return;
   const q=v.toLowerCase();
-  const filtered=appsCatalog.filter(a=>{
+  const filtered=sortAppsCatalog(appsCatalog.filter(a=>{
     const catOk=appsActiveCat==='all'||appCategoryKey(a.category)===appsActiveCat;
     return catOk&&appMatchesSearch(a,q);
-  });
+  }));
   grid.innerHTML=filtered.length?filtered.map(appCardHtml).join(''):`<div class="empty-state" style="grid-column:1/-1">${esc(appUi('noAppsFound'))}</div>`;
   translateRenderedText(grid);
 };
@@ -13178,6 +13221,9 @@ function appComposeIconHtml(a){
 }
 function appComposeFormOpen(draft,options){
   const a=draft.app||{};
+  const installInfo=draft.app.install_info||{};
+  const installCredentials=Array.isArray(installInfo.credentials)?installInfo.credentials:[];
+  const installNotes=Array.isArray(installInfo.notes)?installInfo.notes:[];
   const formCard=document.querySelector('#form-overlay .form-card');
   if(formCard)formCard.classList.add('compose-install-card');
   $('#form-head').innerHTML=`<span>${esc(options.icon||'🧩')}</span> ${esc(options.title)}`;
@@ -13194,6 +13240,7 @@ function appComposeFormOpen(draft,options){
           <div class="compose-install-title"><h3>${esc(a.name)}</h3><p>${esc(options.description||localizedAppDesc(a)||appUi('installDefault'))}</p></div>
           <div class="compose-install-badges"><span class="compose-install-badge">Docker ready</span><span class="compose-install-badge info">Compose</span></div>
         </div>
+        ${installCredentials.length?`<div class="compose-block"><div class="compose-key"><code>login</code><span>${esc(uiText('Initial credentials'))}</span></div><div class="compose-block-body"><div class="compose-form-stack">${installCredentials.map(credential=>`<div class="compose-field"><span class="compose-label">${esc(credential.label||'Initial admin password')}</span><div style="display:flex;gap:8px"><input value="${esc(credential.value||'')}" readonly aria-label="${esc(credential.label||'Initial admin password')}"><button type="button" class="btn ghost sm" data-copy="${esc(credential.value||'')}" onclick="appCopyInstallValue(this.dataset.copy)">${esc(uiText('Copy'))}</button></div></div>`).join('')}</div>${installNotes.length?`<ul style="margin:14px 0 0;padding-left:20px;color:var(--text2);font-size:12px">${installNotes.map(note=>`<li>${esc(note)}</li>`).join('')}</ul>`:''}</div></div>`:''}
         <div class="service-summary">
           <div class="compose-summary-title"><strong>${esc(uiText(advancedTemplate?'Advanced Compose template':'Compose service setup'))}</strong><span class="compose-install-badge info">${esc(uiText(advancedTemplate?'kept unchanged':'live preview'))}</span></div>
           <div class="compose-summary-grid"><div class="compose-summary-cell"><span>${esc(uiText('Project'))}</span><strong id="app-compose-project">${esc(draft.service)}</strong></div><div class="compose-summary-cell"><span>${esc(uiText('Storage'))}</span><strong>${draft.volumes.length} volume${draft.volumes.length===1?'':'s'}</strong></div></div>
@@ -13244,6 +13291,14 @@ function appComposeFormOpen(draft,options){
   };
   requestAnimationFrame(()=>initialMode==='raw'?$('#app-compose-raw')?.focus():$('#app-compose-service')?.focus());
 }
+window.appCopyInstallValue=async value=>{
+  try{
+    await navigator.clipboard.writeText(String(value||''));
+    toast(uiText('Copied'));
+  }catch(e){
+    toast(uiText('Copy failed'),'error');
+  }
+};
 function appComposeProjectDraft(name,composeData={}){
   const draft=appInstallParseCompose(composeData.content||'');
   draft.app={id:'compose:'+name,name,icon:'🐳',desc:'Custom Docker Compose project'};

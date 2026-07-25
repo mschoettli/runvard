@@ -1917,7 +1917,7 @@ def apps_catalog(user: str = Depends(auth)):
 
 
 @app.get("/api/apps/get")
-def apps_get(app_id: str, user: str = Depends(auth)):
+def apps_get(app_id: str, user: str = Depends(require_admin)):
     try:
         return apps.get_app(app_id)
     except Exception as e:
