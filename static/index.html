@@ -8114,7 +8114,6 @@ function syncModalLanguage(){
 }
 function openTileById(id){const t=TILES.find(x=>x.id===id);if(t)openModal(t);}
 function closeModal(){$('#overlay').classList.remove('open');if(termWs){termWs.close();termWs=null;}if(typeof window._termDispose==='function'){try{window._termDispose();}catch(e){}}if(typeof _dockerStatsTimer!=='undefined'&&_dockerStatsTimer){clearInterval(_dockerStatsTimer);_dockerStatsTimer=null;}if(typeof destroyHistChart==='function')destroyHistChart();}
-$('#overlay').onclick=e=>{if(e.target.id==='overlay')closeModal();};
 
 async function renderTab(id,tab){const body=$('#modal-body');body.style.padding='';body.style.overflow='';body.style.display='';body.style.flexDirection='';body.innerHTML=`<div class="loading">${esc(tr('loading'))}</div>`;try{
  if(tab&&isExpertOnlyTab(id,tab)&&!isExpertMode())throw new Error(uiText('Expert mode required'));
