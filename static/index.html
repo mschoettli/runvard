@@ -151,6 +151,11 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 .form-overlay.open{display:flex}
 .form-card{width:480px;max-width:95vw;max-height:90vh;overflow:auto;background:#0d0e1a;border:1px solid rgba(122,74,255,.2);border-radius:14px;animation:modalIn .2s ease}
 .form-head{padding:18px 28px;border-bottom:.5px solid var(--border);font-size:15px;font-weight:600;display:flex;align-items:center;gap:8px}
+.form-head-title{display:flex;align-items:center;gap:.5rem;min-width:0;flex:1}
+.server-form-nav{width:2.75rem;height:2.75rem;flex:0 0 2.75rem;border:0;border-radius:.625rem;background:transparent;color:var(--text2);display:inline-flex;align-items:center;justify-content:center;cursor:pointer;transition:background .15s,color .15s}
+.server-form-nav:hover,.server-form-nav:focus-visible{background:var(--glass);color:var(--text);outline:1px solid var(--border-accent)}
+.server-form-nav svg{width:1rem;height:1rem;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.server-form-nav[hidden]{display:none}
 .form-body{padding:24px 28px}
 .form-body p{font-size:12px;line-height:1.5;color:var(--text2)}
 .form-field{margin-bottom:16px}
@@ -158,6 +163,8 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 .form-field .hint{font-size:11px;color:var(--text3);margin-top:4px}
 .expert-mode .form-field .hint{display:none}
 .form-actions{display:flex;gap:10px;justify-content:flex-end;margin-top:20px}
+.form-section-heading{margin:1.5rem 0 .75rem;padding-top:1rem;border-top:1px solid var(--border);color:var(--text3);font-size:.6875rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.form-section-heading:first-child{margin-top:0;padding-top:0;border-top:0}
 .typed-confirm-copy{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px}
 .typed-confirm-check{display:flex;gap:10px;align-items:flex-start;font-size:12px;color:var(--text);line-height:1.45;margin:12px 0}
 .typed-confirm-check input{margin-top:2px}
@@ -667,12 +674,30 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .fed-setup{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .fed-setup-card{border:1px solid var(--border);border-radius:13px;background:var(--bg3);padding:16px}
 .fed-setup-card h3{font-size:14px;margin:0 0 6px}.fed-setup-card p{font-size:11px;color:var(--text3);line-height:1.5;margin:0 0 14px}
-.server-type-grid{display:grid;grid-template-columns:1fr;gap:.625rem}
-.server-type-choice{min-height:4.5rem;padding:.875rem;border:1px solid var(--border);border-radius:.75rem;background:var(--bg3);color:var(--text);font-family:inherit;text-align:left;cursor:pointer;display:grid;grid-template-columns:2rem minmax(0,1fr);gap:.75rem;align-items:center;transition:background .15s,border-color .15s}
+.server-type-trusted{display:grid}
+.server-type-divider{display:flex;align-items:center;gap:.75rem;margin:1rem 0 .75rem;color:var(--text3);font-size:.6875rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.server-type-divider::after{content:'';height:1px;flex:1;background:var(--border)}
+.server-type-external-grid{display:grid;grid-template-columns:1fr;gap:.625rem}
+.server-type-choice{min-height:4.75rem;padding:.875rem;border:1px solid var(--border);border-radius:.75rem;background:var(--bg3);color:var(--text);font-family:inherit;text-align:left;cursor:pointer;display:grid;grid-template-columns:2.25rem minmax(0,1fr);gap:.75rem;align-items:center;transition:background .15s,border-color .15s,transform .15s}
 .server-type-choice:hover,.server-type-choice:focus-visible{background:rgba(122,74,255,.08);border-color:var(--border-accent);outline:none}
-.server-type-choice-icon{width:2rem;height:2rem;border-radius:.5625rem;background:rgba(122,74,255,.13);display:flex;align-items:center;justify-content:center;font-size:1rem}
-.server-type-choice strong{display:block;font-size:.8125rem}
-.server-type-choice span{display:block;margin-top:.1875rem;font-size:.6875rem;color:var(--text3);line-height:1.35}
+.server-type-choice:active{transform:scale(.985)}
+.server-type-choice.is-trusted{background:linear-gradient(90deg,rgba(122,74,255,.12),rgba(122,74,255,.035));border-color:rgba(122,74,255,.28)}
+.server-type-choice-icon{width:2.25rem;height:2.25rem;border-radius:.625rem;background:rgba(122,74,255,.13);color:var(--accent-light);display:flex;align-items:center;justify-content:center}
+.server-type-choice-svg{width:1.125rem;height:1.125rem;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.server-type-choice-copy{display:block;min-width:0}
+.server-type-choice-copy strong{display:block;color:var(--text);font-size:.8125rem;font-weight:600}
+.server-type-choice-copy>span{display:block;margin-top:.1875rem;font-size:.6875rem;color:var(--text2);line-height:1.4}
+.server-type-picker-card{height:auto}
+.external-server-form-card{overflow:hidden;display:flex;flex-direction:column}
+.external-server-form-card .form-head{flex:0 0 auto}
+.external-server-form-card .form-body{min-height:0;overflow:auto;padding-bottom:0}
+.external-server-form-card .form-field input,.external-server-form-card .form-field textarea{min-height:2.75rem}
+.external-server-form-card .form-actions{position:sticky;bottom:0;z-index:2;flex-wrap:wrap;margin:1.25rem -1.75rem 0;padding:.875rem 1.75rem 1.25rem;background:linear-gradient(180deg,rgba(13,14,26,.9),#0d0e1a 25%);border-top:1px solid var(--border)}
+.external-server-form-card .form-actions .btn{min-height:2.75rem}
+.external-connection-result{flex:0 0 100%;margin:0 0 .25rem;padding:.625rem .75rem;border-radius:.625rem;font-size:.75rem;line-height:1.4;background:rgba(255,255,255,.035);color:var(--text2);border:1px solid var(--border)}
+.external-connection-result.testing{color:var(--text2)}
+.external-connection-result.success{color:#86efac;border-color:rgba(34,197,94,.28);background:rgba(34,197,94,.08)}
+.external-connection-result.error{color:#fca5a5;border-color:rgba(239,68,68,.28);background:rgba(239,68,68,.08)}
 .external-server-section{margin-top:1.25rem}
 .external-server-section-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.625rem}
 .external-server-section-title{font-size:.6875rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
@@ -680,12 +705,17 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .external-server-admin{display:grid;grid-template-columns:minmax(0,1fr);gap:.75rem;padding:.75rem;border:1px solid var(--border);border-radius:.75rem;background:var(--bg3)}
 .external-server-admin-main{min-width:0}
 .external-server-admin-name{display:flex;align-items:center;gap:.4375rem;font-size:.8125rem;font-weight:600;color:var(--text)}
+.external-server-health-text{margin-left:.125rem;color:var(--text2);font-size:.6875rem;font-weight:500}
 .external-server-admin-meta{margin:.25rem 0 0 .8125rem;font-size:.6875rem;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .external-server-admin-actions{display:flex;gap:.375rem;align-items:center;flex-wrap:wrap}
 .external-server-empty{padding:1rem;border:1px dashed var(--border);border-radius:.75rem;color:var(--text3);font-size:.75rem;text-align:center}
 @media (max-width: 640px){.tile-edit-grid{grid-template-columns:1fr}.tile-edit-actions{flex-direction:column}.tile-edit-actions-main{justify-content:flex-end}}
 .sortable-ghost{opacity:.3}
 .sortable-chosen{transform:scale(1.05)}
+
+@media (min-width: 640px){
+  .server-type-external-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
 
 @media (min-width: 761px){
   .connected-servers{padding:0 1.75rem 1.75rem}
@@ -708,7 +738,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 }
 
 @media (prefers-reduced-motion:reduce){
-  .connected-server-card,.connected-servers-add{transition:none}
+  .connected-server-card,.connected-servers-add,.server-type-choice,.form-card,.modal{transition:none;animation:none}
 }
 
 @media (max-width: 760px){
@@ -741,6 +771,9 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   .fed-node{grid-template-columns:1fr}
   .fed-metrics{grid-template-columns:repeat(3,1fr)}
   .fed-actions{justify-content:stretch}.fed-actions .btn{flex:1}
+  .external-server-admin-actions .btn{min-height:2.75rem}
+  .external-server-admin-actions .btn.icon{width:2.75rem;height:2.75rem}
+  .modal.servers-modal .modal-close{width:2.75rem;height:2.75rem}
 }
 
 @keyframes runvard-shift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
@@ -7531,12 +7564,60 @@ function failTopProgress(label){
 
 // ═══ Formular-Modal ═══
 let formSubmitFn=null;
-function openForm(title,icon,fields,onSubmit){
+let formReturnFocus=null;
+function resetFormCardClasses(){
   const formCard=document.querySelector('#form-overlay .form-card');
-  if(formCard)formCard.classList.remove('compose-install-card','tile-edit-card');
+  if(formCard)formCard.classList.remove(
+    'compose-install-card','tile-edit-card',
+    'server-type-picker-card','external-server-form-card',
+  );
+  return formCard;
+}
+function formOverlayFocusable(){
+  return [...document.querySelectorAll(
+    '#form-overlay button:not([disabled]):not([hidden]),'
+    +'#form-overlay input:not([disabled]):not([hidden]),'
+    +'#form-overlay select:not([disabled]):not([hidden]),'
+    +'#form-overlay textarea:not([disabled]):not([hidden])',
+  )].filter(element=>element.offsetParent!==null);
+}
+function openFormOverlay(focusSelector){
+  const overlay=$('#form-overlay');
+  if(!overlay.classList.contains('open')){
+    formReturnFocus=document.activeElement;
+  }
+  overlay.classList.add('open');
+  requestAnimationFrame(()=>{
+    const target=(focusSelector&&overlay.querySelector(focusSelector))
+      ||formOverlayFocusable()[0];
+    target?.focus();
+  });
+}
+function formOverlayKeydown(event){
+  if(!$('#form-overlay').classList.contains('open'))return;
+  if(event.key==='Escape'){
+    event.preventDefault();
+    closeForm();
+    return;
+  }
+  if(event.key!=='Tab')return;
+  const focusable=formOverlayFocusable();
+  if(!focusable.length)return;
+  const first=focusable[0],last=focusable[focusable.length-1];
+  if(event.shiftKey&&document.activeElement===first){
+    event.preventDefault();last.focus();
+  }else if(!event.shiftKey&&document.activeElement===last){
+    event.preventDefault();first.focus();
+  }
+}
+function openForm(title,icon,fields,onSubmit){
+  resetFormCardClasses();
   $('#form-head').innerHTML=`<span>${icon}</span> ${esc(uiText(title))}`;
   const body=$('#form-body');
   body.innerHTML=fields.map(f=>{
+    if(f.type==='section'){
+      return `<div class="form-section-heading">${esc(uiText(f.label))}</div>`;
+    }
     let inp='';
     if(f.type==='select') inp=`<select id="f_${f.name}">${(f.options||[]).map(o=>{const value=o.value??o;return`<option value="${esc(value)}" ${String(value)===String(f.value??'')?'selected':''}>${esc(uiText(o.label??o))}</option>`;}).join('')}</select>`;
     else if(f.type==='textarea') inp=`<textarea id="f_${f.name}" rows="${f.rows||6}" placeholder="${esc(uiText(f.placeholder||''))}" style="font-family:'JetBrains Mono',monospace">${esc(f.value||'')}</textarea>`;
@@ -7549,8 +7630,9 @@ function openForm(title,icon,fields,onSubmit){
     else inp=`<input id="f_${f.name}" type="${f.type||'text'}" value="${esc(f.value||'')}" placeholder="${esc(uiText(f.placeholder||''))}">`;
     const cond=f.showWhen?` data-show-when="${esc(f.showWhen)}" data-show-value="${esc(String(f.showValue??'true'))}"`:'';
     if(f.type==='checkbox') return `<div class="form-field" id="field_${esc(f.name)}"${cond}>${inp}${f.hint?`<div class="hint">${esc(uiText(f.hint))}</div>`:''}</div>`;
-    return `<div class="form-field" id="field_${esc(f.name)}"${cond}><label>${esc(uiText(f.label))}</label>${inp}${f.hint?`<div class="hint">${esc(uiText(f.hint))}</div>`:''}</div>`;
+    return `<div class="form-field" id="field_${esc(f.name)}"${cond}><label for="f_${f.name}">${esc(uiText(f.label))}</label>${inp}${f.hint?`<div class="hint">${esc(uiText(f.hint))}</div>`:''}</div>`;
   }).join('')+`<div class="form-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="form-go">${esc(tr('save'))}</button></div>`;
+  const valueFields=fields.filter(f=>f.type!=='section');
   const syncFormConditions=()=>{
     body.querySelectorAll('[data-show-when]').forEach(row=>{
       const ctrl=$('#f_'+row.dataset.showWhen);
@@ -7559,17 +7641,24 @@ function openForm(title,icon,fields,onSubmit){
       row.hidden=!visible;
     });
   };
-  fields.forEach(f=>{
+  valueFields.forEach(f=>{
     const el=$('#f_'+f.name);
     if(el)el.addEventListener(f.type==='checkbox'||f.type==='checkbox-group'?'change':'input',syncFormConditions);
   });
   syncFormConditions();
-  formSubmitFn=()=>{const d={};fields.forEach(f=>{const el=$('#f_'+f.name);if(el)d[f.name]=f.type==='checkbox'?el.checked:f.type==='checkbox-group'?Array.from(body.querySelectorAll(`input[name="f_${CSS.escape(f.name)}"]:checked`)).map(x=>x.value).join(','):el.value;});onSubmit(d);};
+  formSubmitFn=()=>{const d={};valueFields.forEach(f=>{const el=$('#f_'+f.name);if(el)d[f.name]=f.type==='checkbox'?el.checked:f.type==='checkbox-group'?Array.from(body.querySelectorAll(`input[name="f_${CSS.escape(f.name)}"]:checked`)).map(x=>x.value).join(','):el.value;});onSubmit(d);};
   $('#form-go').onclick=formSubmitFn;
-  $('#form-overlay').classList.add('open');
+  openFormOverlay('input:not([type="checkbox"]),select,textarea');
 }
-function closeForm(){const formCard=document.querySelector('#form-overlay .form-card');if(formCard)formCard.classList.remove('compose-install-card','tile-edit-card');$('#form-overlay').classList.remove('open');}
+function closeForm(){
+  resetFormCardClasses();
+  $('#form-overlay').classList.remove('open');
+  const returnFocus=formReturnFocus;
+  formReturnFocus=null;
+  if(returnFocus?.isConnected)requestAnimationFrame(()=>returnFocus.focus());
+}
 $('#form-overlay').onclick=e=>{if(e.target.id==='form-overlay')closeForm();};
+document.addEventListener('keydown',formOverlayKeydown);
 
 // ═══ Bestätigungs-Modal (Punkt 4) ═══
 let confirmCb=null;
@@ -7810,6 +7899,17 @@ const EXTERNAL_SERVER_I18N={
     errorAuthentication:'Authentication failed.',
     errorCertificate:'TLS certificate validation failed.',
     errorUnreachable:'Server is unreachable.',
+    statusAndLinks:'Status and links',
+    runvardAccessDescription:'Full access and automatic sign-in',
+    proxmoxStatusDescription:'Status via Proxmox API',
+    linuxStatusDescription:'Status via SSH',
+    windowsStatusDescription:'Status via WinRM',
+    genericStatusDescription:'Availability check and administration link',
+    general:'General',statusConnection:'Status connection',
+    credentials:'Credentials',testingConnection:'Testing connection…',
+    back:'Back',
+    createServerGroupCopy:'Create a new trusted group of runvard servers.',
+    joinServerGroupCopy:'Connect this runvard instance to an existing server group.',
   },
   de:{
     runvardInstance:'runvard-Instanz',proxmox:'Proxmox',linux:'Linux',
@@ -7832,6 +7932,17 @@ const EXTERNAL_SERVER_I18N={
     errorAuthentication:'Anmeldung fehlgeschlagen.',
     errorCertificate:'Prüfung des TLS-Zertifikats fehlgeschlagen.',
     errorUnreachable:'Server ist nicht erreichbar.',
+    statusAndLinks:'Status und Links',
+    runvardAccessDescription:'Vollzugriff und automatische Anmeldung',
+    proxmoxStatusDescription:'Status über die Proxmox-API',
+    linuxStatusDescription:'Status über SSH',
+    windowsStatusDescription:'Status über WinRM',
+    genericStatusDescription:'Erreichbarkeitsprüfung und Verwaltungslink',
+    general:'Allgemein',statusConnection:'Statusverbindung',
+    credentials:'Zugangsdaten',testingConnection:'Verbindung wird getestet…',
+    back:'Zurück',
+    createServerGroupCopy:'Einen neuen vertrauenswürdigen Verbund aus runvard-Servern erstellen.',
+    joinServerGroupCopy:'Diese runvard-Instanz mit einem vorhandenen Serververbund verbinden.',
   },
   fr:{
     runvardInstance:'Instance runvard',proxmox:'Proxmox',linux:'Linux',
@@ -7854,6 +7965,17 @@ const EXTERNAL_SERVER_I18N={
     errorAuthentication:'Échec de l’authentification.',
     errorCertificate:'Échec de la validation du certificat TLS.',
     errorUnreachable:'Le serveur est inaccessible.',
+    statusAndLinks:'État et liens',
+    runvardAccessDescription:'Accès complet et connexion automatique',
+    proxmoxStatusDescription:'État via l’API Proxmox',
+    linuxStatusDescription:'État via SSH',
+    windowsStatusDescription:'État via WinRM',
+    genericStatusDescription:'Contrôle de disponibilité et lien d’administration',
+    general:'Général',statusConnection:'Connexion d’état',
+    credentials:'Identifiants',testingConnection:'Test de la connexion…',
+    back:'Retour',
+    createServerGroupCopy:'Créer un nouveau groupe approuvé de serveurs runvard.',
+    joinServerGroupCopy:'Connecter cette instance runvard à un groupe de serveurs existant.',
   },
   it:{
     runvardInstance:'Istanza runvard',proxmox:'Proxmox',linux:'Linux',
@@ -7876,6 +7998,17 @@ const EXTERNAL_SERVER_I18N={
     errorAuthentication:'Autenticazione non riuscita.',
     errorCertificate:'Verifica del certificato TLS non riuscita.',
     errorUnreachable:'Il server non è raggiungibile.',
+    statusAndLinks:'Stato e collegamenti',
+    runvardAccessDescription:'Accesso completo e autenticazione automatica',
+    proxmoxStatusDescription:'Stato tramite API Proxmox',
+    linuxStatusDescription:'Stato tramite SSH',
+    windowsStatusDescription:'Stato tramite WinRM',
+    genericStatusDescription:'Verifica disponibilità e collegamento di amministrazione',
+    general:'Generale',statusConnection:'Connessione di stato',
+    credentials:'Credenziali',testingConnection:'Verifica della connessione…',
+    back:'Indietro',
+    createServerGroupCopy:'Crea un nuovo gruppo attendibile di server runvard.',
+    joinServerGroupCopy:'Collega questa istanza runvard a un gruppo di server esistente.',
   },
   es:{
     runvardInstance:'Instancia runvard',proxmox:'Proxmox',linux:'Linux',
@@ -7898,6 +8031,17 @@ const EXTERNAL_SERVER_I18N={
     errorAuthentication:'Error de autenticación.',
     errorCertificate:'Error al validar el certificado TLS.',
     errorUnreachable:'No se puede acceder al servidor.',
+    statusAndLinks:'Estado y enlaces',
+    runvardAccessDescription:'Acceso completo e inicio de sesión automático',
+    proxmoxStatusDescription:'Estado mediante la API de Proxmox',
+    linuxStatusDescription:'Estado mediante SSH',
+    windowsStatusDescription:'Estado mediante WinRM',
+    genericStatusDescription:'Comprobación de disponibilidad y enlace de administración',
+    general:'General',statusConnection:'Conexión de estado',
+    credentials:'Credenciales',testingConnection:'Probando la conexión…',
+    back:'Volver',
+    createServerGroupCopy:'Crea un nuevo grupo de confianza de servidores runvard.',
+    joinServerGroupCopy:'Conecta esta instancia runvard a un grupo de servidores existente.',
   },
   pt:{
     runvardInstance:'Instância runvard',proxmox:'Proxmox',linux:'Linux',
@@ -7920,6 +8064,17 @@ const EXTERNAL_SERVER_I18N={
     errorAuthentication:'Falha na autenticação.',
     errorCertificate:'Falha na validação do certificado TLS.',
     errorUnreachable:'O servidor está inacessível.',
+    statusAndLinks:'Estado e ligações',
+    runvardAccessDescription:'Acesso completo e início de sessão automático',
+    proxmoxStatusDescription:'Estado através da API Proxmox',
+    linuxStatusDescription:'Estado através de SSH',
+    windowsStatusDescription:'Estado através de WinRM',
+    genericStatusDescription:'Verificação de disponibilidade e ligação de administração',
+    general:'Geral',statusConnection:'Ligação de estado',
+    credentials:'Credenciais',testingConnection:'A testar a ligação…',
+    back:'Voltar',
+    createServerGroupCopy:'Crie um novo grupo fidedigno de servidores runvard.',
+    joinServerGroupCopy:'Ligue esta instância runvard a um grupo de servidores existente.',
   },
 };
 for(const lang of Object.keys(FED_FORM_I18N)){
@@ -8154,25 +8309,52 @@ function safeExternalServerUrl(value){
     return ['http:','https:'].includes(target.protocol)?target.href:null;
   }catch(e){return null;}
 }
+function serverTypeIcon(kind){
+  const icons={
+    add:'<path d="M12 5v14M5 12h14"/>',
+    runvard:'<path d="M12 2.5 20 7v10l-8 4.5L4 17V7z"/><path d="M8.5 9.5 12 7.5l3.5 2v5L12 16.5l-3.5-2z"/>',
+    proxmox:'<rect x="3.5" y="4" width="7" height="6" rx="1"/><rect x="13.5" y="14" width="7" height="6" rx="1"/><path d="m10.5 7 3 2.5M13.5 17l-3-2.5"/>',
+    linux:'<rect x="3" y="4" width="18" height="16" rx="2"/><path d="m7 9 3 3-3 3m5 0h5"/>',
+    windows:'<path d="M3.5 4.5h7v7h-7zm10 0h7v7h-7zm-10 10h7v5h-7zm10 0h7v5h-7z"/>',
+    generic:'<path d="M9.5 14.5 14.5 9M7.2 17.8l-1 1a3.5 3.5 0 0 1-5-5l4-4a3.5 3.5 0 0 1 5 0M16.8 6.2l1-1a3.5 3.5 0 0 1 5 5l-4 4a3.5 3.5 0 0 1-5 0"/>',
+  };
+  return `<svg class="server-type-choice-svg" viewBox="0 0 24 24" aria-hidden="true">${icons[kind]||icons.add}</svg>`;
+}
+function serverFormHeaderHtml(title,kind,{back=false}={}){
+  return `<button id="server-form-back" class="server-form-nav" type="button" ${back?'':'hidden'} title="${esc(fedText('back'))}" aria-label="${esc(fedText('back'))}" onclick="externalServerFormBack()">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m10 3-5 5 5 5"/></svg>
+    </button>
+    <div class="form-head-title"><span class="server-type-choice-icon">${serverTypeIcon(kind||'runvard')}</span><span>${esc(title)}</span></div>
+    <button id="server-form-close" class="server-form-nav" type="button" title="${esc(tr('close'))}" aria-label="${esc(tr('close'))}" onclick="closeForm()">
+      <svg viewBox="0 0 16 16" aria-hidden="true"><path d="m4 4 8 8m0-8-8 8"/></svg>
+    </button>`;
+}
+function serverTypeChoiceHtml([kind,label,description],trusted=false){
+  return `<button class="server-type-choice${trusted?' is-trusted':''}" type="button" onclick="externalServerTypeSelect('${kind}')">
+    <span class="server-type-choice-icon">${serverTypeIcon(kind)}</span>
+    <span class="server-type-choice-copy"><strong>${esc(fedText(label))}</strong><span>${esc(fedText(description))}</span></span>
+  </button>`;
+}
 window.openServerTypePicker=()=>{
-  $('#form-head').innerHTML=`<span>＋</span> ${esc(fedText('connectServer'))}`;
   const choices=[
-    ['runvard','⬡','runvardInstance','setup'],
-    ['proxmox','P','proxmox','externalServer'],
-    ['linux','L','linux','externalServer'],
-    ['windows','W','windows','externalServer'],
-    ['generic','↗','generic','externalServer'],
+    ['runvard','runvardInstance','runvardAccessDescription'],
+    ['proxmox','proxmox','proxmoxStatusDescription'],
+    ['linux','linux','linuxStatusDescription'],
+    ['windows','windows','windowsStatusDescription'],
+    ['generic','generic','genericStatusDescription'],
   ];
-  $('#form-body').innerHTML=`<div class="server-type-grid">${choices.map(([kind,icon,label,description])=>`
-    <button class="server-type-choice" type="button" onclick="externalServerTypeSelect('${kind}')">
-      <span class="server-type-choice-icon" aria-hidden="true">${esc(icon)}</span>
-      <span><strong>${esc(fedText(label))}</strong><span>${esc(fedText(description))}</span></span>
-    </button>`).join('')}</div>`;
-  $('#form-overlay').classList.add('open');
+  const formCard=resetFormCardClasses();
+  formCard?.classList.add('server-type-picker-card');
+  $('#form-head').innerHTML=serverFormHeaderHtml(fedText('connectServer'),'add');
+  $('#form-body').innerHTML=`
+    <div class="server-type-trusted">${serverTypeChoiceHtml(choices[0],true)}</div>
+    <div class="server-type-divider"><span>${esc(fedText('statusAndLinks'))}</span></div>
+    <div class="server-type-external-grid">${choices.slice(1).map(choice=>serverTypeChoiceHtml(choice)).join('')}</div>`;
+  openFormOverlay('.server-type-choice');
 };
+window.externalServerFormBack=()=>openServerTypePicker();
 window.externalServerTypeSelect=kind=>{
-  closeForm();
-  if(kind==='runvard'){openConnectedServersModal();return;}
+  if(kind==='runvard'){closeForm();openConnectedServersModal();return;}
   externalServerForm(kind);
 };
 window.addEventListener('resize',()=>{
@@ -8358,9 +8540,9 @@ async function renderServers(body){
   _externalAdminServers=Array.isArray(external)?external:(external.nodes||[]);
   const federationHtml=!f.enabled?`
       <div class="fed-setup">
-        <section class="fed-setup-card"><h3>${esc(fedText('create'))}</h3><p>${esc(fedText('setupCopy'))}</p>
+        <section class="fed-setup-card"><h3>${esc(fedText('create'))}</h3><p>${esc(fedText('createServerGroupCopy'))}</p>
           <button class="btn" onclick="fedEnableForm()" ${currentAuthStatus.role!=='admin'?'disabled':''}>${esc(fedText('create'))}</button></section>
-        <section class="fed-setup-card"><h3>${esc(fedText('join'))}</h3><p>${esc(fedText('setupCopy'))}</p>
+        <section class="fed-setup-card"><h3>${esc(fedText('join'))}</h3><p>${esc(fedText('joinServerGroupCopy'))}</p>
           <button class="btn ghost" onclick="fedJoinForm()" ${currentAuthStatus.role!=='admin'?'disabled':''}>${esc(fedText('join'))}</button></section>
       </div>`:`
     <div class="fed-toolbar">
@@ -8376,8 +8558,8 @@ async function renderServers(body){
 function externalServerAdminSection(rows,admin){
   return `<section class="external-server-section">
     <div class="external-server-section-head">
-      <div class="external-server-section-title">${esc(fedText('externalServer'))}</div>
-      ${admin?`<button class="btn ghost sm" onclick="openServerTypePicker()">＋ ${esc(fedText('addExternal'))}</button>`:''}
+      <div class="external-server-section-title">${esc(fedText('statusAndLinks'))}</div>
+      ${admin?`<button class="btn ghost sm" onclick="openServerTypePicker()" aria-label="${esc(fedText('addExternal'))}">＋ ${esc(fedText('addExternal'))}</button>`:''}
     </div>
     <div class="external-server-list">${rows.length
       ?rows.map(row=>externalServerAdminHtml(row,admin)).join('')
@@ -8389,50 +8571,61 @@ function externalServerAdminSection(rows,admin){
 function externalServerAdminHtml(row,admin){
   const status=row.status||row;
   const health=status.health||'unknown';
+  const healthText=fedText(health);
   const kind=fedText(row.kind)||row.kind||fedText('externalServer');
   const url=row.admin_url||row.browser_url||'';
   const enabled=row.enabled!==false;
+  const toggleLabel=fedText(enabled?'disable':'enable');
   return `<article class="external-server-admin">
     <div class="external-server-admin-main">
-      <div class="external-server-admin-name"><span class="fed-health ${esc(health)}"></span>${esc(row.name||'—')}</div>
+      <div class="external-server-admin-name"><span class="fed-health ${esc(health)}" aria-hidden="true"></span><span>${esc(row.name||'—')}</span><span class="external-server-health-text">${esc(healthText)}</span></div>
       <div class="external-server-admin-meta">${esc(kind)} · ${esc(url)}</div>
     </div>
     ${admin?`<div class="external-server-admin-actions">
-      <button class="btn ghost sm" onclick="externalServerRefresh('${esc(row.server_id||row.external_id)}')">↻</button>
-      <button class="btn ghost sm" onclick="externalServerToggle('${esc(row.server_id||row.external_id)}',${enabled?'false':'true'})">${esc(fedText(enabled?'disable':'enable'))}</button>
-      <button class="btn ghost sm" onclick="externalServerEdit('${esc(row.server_id||row.external_id)}')">${esc(fedText('editServer'))}</button>
-      <button class="btn icon danger" title="${esc(fedText('deleteServer'))}" onclick="externalServerDelete('${esc(row.server_id||row.external_id)}')">✕</button>
+      <button class="btn icon" title="${esc(fedText('refreshStatus'))}" aria-label="${esc(fedText('refreshStatus'))}" onclick="externalServerRefresh('${esc(row.server_id||row.external_id)}')">↻</button>
+      <button class="btn ghost sm" title="${esc(toggleLabel)}" aria-label="${esc(toggleLabel)}" onclick="externalServerToggle('${esc(row.server_id||row.external_id)}',${enabled?'false':'true'})">${esc(toggleLabel)}</button>
+      <button class="btn ghost sm" title="${esc(fedText('editServer'))}" aria-label="${esc(fedText('editServer'))}" onclick="externalServerEdit('${esc(row.server_id||row.external_id)}')">${esc(fedText('editServer'))}</button>
+      <button class="btn icon danger" title="${esc(fedText('deleteServer'))}" aria-label="${esc(fedText('deleteServer'))}" onclick="externalServerDelete('${esc(row.server_id||row.external_id)}')">✕</button>
     </div>`:''}
   </article>`;
 }
 
 function externalServerFields(kind,row={}){
   const fields=[
+    {type:'section',label:fedText('general')},
     {name:'name',label:fedText('displayName'),value:row.name||''},
     {name:'admin_url',label:fedText('adminUrl'),value:row.admin_url||'',placeholder:'https://server.example.test'},
+    {type:'section',label:fedText('statusConnection')},
   ];
   if(kind==='linux')fields.push(
     {name:'host',label:fedText('host'),value:row.host||'',placeholder:'10.0.0.21'},
     {name:'port',label:fedText('port'),type:'number',value:row.port||22},
-    {name:'username',label:fedText('username'),value:row.username||''},
     {name:'host_key',label:fedText('hostKey'),value:row.host_key||'',placeholder:'SHA256:…',hint:fedText('hostKeyHint')},
-    {name:'private_key',label:fedText('privateKey'),type:'textarea',rows:6,hint:row.server_id?fedText('leaveBlank'):''},
-    {name:'passphrase',label:fedText('passphrase'),type:'password'},
   );
   else fields.push(
     {name:'status_url',label:fedText('statusUrl'),value:row.status_url||'',placeholder:kind==='windows'?'https://10.0.0.40:5986/wsman':kind==='proxmox'?'https://10.0.0.10:8006':'https://10.0.0.30:8443/health'},
   );
   if(kind==='proxmox')fields.push(
     {name:'node',label:fedText('nodeOptional'),value:row.node||''},
+  );
+  if(kind!=='linux')fields.push(
+    {name:'verify_tls',label:fedText('verifyTls'),type:'checkbox',value:row.verify_tls!==false},
+  );
+  if(kind!=='generic')fields.push(
+    {type:'section',label:fedText('credentials')},
+  );
+  if(kind==='linux')fields.push(
+    {name:'username',label:fedText('username'),value:row.username||''},
+    {name:'private_key',label:fedText('privateKey'),type:'textarea',rows:6,hint:row.server_id?fedText('leaveBlank'):''},
+    {name:'passphrase',label:fedText('passphrase'),type:'password'},
+  );
+  if(kind==='proxmox')fields.push(
     {name:'token_id',label:fedText('tokenId'),hint:row.server_id?fedText('leaveBlank'):''},
     {name:'token_secret',label:fedText('tokenSecret'),type:'password'},
   );
   if(kind==='windows')fields.push(
     {name:'username',label:fedText('username'),value:row.username||''},
     {name:'password',label:fedText('password'),type:'password',hint:row.server_id?fedText('leaveBlank'):''},
-  );
-  if(kind!=='linux')fields.push(
-    {name:'verify_tls',label:fedText('verifyTls'),type:'checkbox',value:row.verify_tls!==false},
   );
   fields.push({name:'enabled',label:fedText('enabled'),type:'checkbox',value:row.enabled!==false});
   return fields;
@@ -8441,35 +8634,60 @@ function externalServerFields(kind,row={}){
 function externalFormValues(fields){
   const values={};
   for(const field of fields){
+    if(field.type==='section')continue;
     const input=$('#f_'+field.name);
     if(input)values[field.name]=field.type==='checkbox'?input.checked:input.value;
   }
   return values;
 }
 
+function externalServerFormTitle(kind,row){
+  return `${fedText(row.server_id?'editServer':'connectServer')}: ${fedText(kind)}`;
+}
 window.externalServerForm=(kind,row={})=>{
   const fields=externalServerFields(kind,row);
+  let resultElement=null;
+  const showResult=(state,message)=>{
+    if(!resultElement)return;
+    resultElement.hidden=false;
+    resultElement.className=`external-connection-result ${state}`;
+    resultElement.textContent=message;
+  };
   const save=async values=>{
     const path=row.server_id?'/external-servers/v1/admin/update':'/external-servers/v1/admin/create';
     const payload={...values,kind};
     if(row.server_id)payload.server_id=row.server_id;
+    const saveButton=$('#form-go');
+    if(saveButton)saveButton.disabled=true;
     try{
       await post(path,payload);
       closeForm();
       toast(tr('saved'),'success');
       await renderServers($('#modal-body'));
       await loadConnectedServers();
-    }catch(e){toast(externalServerErrorText(e.message),'error');}
+    }catch(e){showResult('error',externalServerErrorText(e.message));}
+    finally{if(saveButton)saveButton.disabled=false;}
   };
-  openForm(row.server_id?fedText('editServer'):fedText('addExternal'),'＋',fields,save);
+  openForm(externalServerFormTitle(kind,row),'',fields,save);
+  const formCard=document.querySelector('#form-overlay .form-card');
+  formCard?.classList.add('external-server-form-card');
+  $('#form-head').innerHTML=serverFormHeaderHtml(externalServerFormTitle(kind,row),kind,{back:true});
+  const actions=$('#form-body .form-actions');
+  resultElement=document.createElement('div');
+  resultElement.id='external-connection-result';
+  resultElement.className='external-connection-result';
+  resultElement.hidden=true;
+  resultElement.setAttribute('aria-live','polite');
+  actions?.prepend(resultElement);
   const test=document.createElement('button');
   test.type='button';test.className='btn ghost';test.textContent=fedText('testConnection');
   test.onclick=async()=>{
     test.disabled=true;
+    showResult('testing',fedText('testingConnection'));
     try{
       await post('/external-servers/v1/admin/test',{...externalFormValues(fields),kind,server_id:row.server_id||''});
-      toast(fedText('connectionOk'),'success');
-    }catch(e){toast(externalServerErrorText(e.message),'error');}
+      showResult('success',fedText('connectionOk'));
+    }catch(e){showResult('error',externalServerErrorText(e.message));}
     finally{test.disabled=false;}
   };
   $('#form-go')?.parentElement?.insertBefore(test,$('#form-go'));

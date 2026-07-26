@@ -73,6 +73,68 @@ def test_add_button_offers_runvard_and_external_server_types():
     assert "externalServerTypeSelect('${kind}')" in INDEX
 
 
+def test_server_type_picker_separates_trusted_runvard_from_status_links():
+    assert "server-type-trusted" in INDEX
+    assert "server-type-divider" in INDEX
+    assert "server-type-external-grid" in INDEX
+    assert "runvardAccessDescription" in INDEX
+    assert "statusAndLinks" in INDEX
+    for key in (
+        "proxmoxStatusDescription",
+        "linuxStatusDescription",
+        "windowsStatusDescription",
+        "genericStatusDescription",
+    ):
+        assert key in INDEX
+
+
+def test_server_type_picker_uses_readable_copy_and_one_icon_language():
+    assert ".server-type-choice-copy strong{" in INDEX
+    assert "color:var(--text)" in INDEX[
+        INDEX.index(".server-type-choice-copy strong{"):
+        INDEX.index("}", INDEX.index(".server-type-choice-copy strong{"))
+    ]
+    assert ".server-type-choice-copy>span{" in INDEX
+    assert ".server-type-choice span{" not in INDEX
+    assert "function serverTypeIcon(kind)" in INDEX
+    assert 'class="server-type-choice-svg"' in INDEX
+
+
+def test_server_forms_have_visible_navigation_and_keyboard_escape():
+    assert 'id="server-form-back"' in INDEX
+    assert 'id="server-form-close"' in INDEX
+    assert "externalServerFormBack" in INDEX
+    assert "event.key==='Escape'" in INDEX
+    assert "document.addEventListener('keydown',formOverlayKeydown)" in INDEX
+    assert "formOverlayFocusable" in INDEX
+    assert "formReturnFocus" in INDEX
+
+
+def test_external_form_keeps_type_context_and_groups_related_fields():
+    assert "externalServerFormTitle" in INDEX
+    assert "fedText(kind)" in INDEX
+    assert "{type:'section',label:fedText('general')}" in INDEX
+    assert "{type:'section',label:fedText('statusConnection')}" in INDEX
+    assert "{type:'section',label:fedText('credentials')}" in INDEX
+    assert 'class="form-section-heading"' in INDEX
+    assert '<label for="f_${f.name}">' in INDEX
+
+
+def test_connection_test_has_persistent_inline_state():
+    assert "external-connection-result" in INDEX
+    assert "testingConnection" in INDEX
+    assert "connectionOk" in INDEX
+    assert "aria-live" in INDEX
+
+
+def test_external_admin_rows_expose_status_and_label_icon_actions():
+    assert "external-server-health-text" in INDEX
+    for key in ("refreshStatus", "editServer", "deleteServer"):
+        assert f"fedText('{key}')" in INDEX
+    assert "fedText(enabled?'disable':'enable')" in INDEX
+    assert 'aria-label="${esc(fedText(' in INDEX
+
+
 def test_external_server_admin_supports_all_lifecycle_actions():
     assert "externalServerForm" in INDEX
     assert "'/external-servers/v1/admin/create'" in INDEX
@@ -108,3 +170,43 @@ def test_mobile_topbar_can_shrink_without_horizontal_overflow():
     assert ".topbar{grid-template-columns:minmax(0,1fr) auto" in INDEX
     assert ".logo{min-width:0;overflow:hidden}" in INDEX
     assert ".logo #hostname{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}" in INDEX
+
+
+def test_external_server_form_is_scrollable_with_touch_sized_sticky_actions():
+    assert ".external-server-form-card{" in INDEX
+    assert "overflow:hidden" in INDEX[
+        INDEX.index(".external-server-form-card{"):
+        INDEX.index("}", INDEX.index(".external-server-form-card{"))
+    ]
+    assert ".external-server-form-card .form-body{" in INDEX
+    assert ".external-server-form-card .form-actions{" in INDEX
+    assert "position:sticky" in INDEX
+    assert "min-height:2.75rem" in INDEX
+
+
+def test_mobile_server_admin_actions_have_touch_sized_targets():
+    assert ".external-server-admin-actions .btn{min-height:2.75rem}" in INDEX
+    assert ".external-server-admin-actions .btn.icon{width:2.75rem;height:2.75rem}" in INDEX
+    assert ".modal.servers-modal .modal-close{width:2.75rem;height:2.75rem}" in INDEX
+
+
+def test_new_modal_copy_exists_for_every_supported_language():
+    external_start = INDEX.index("const EXTERNAL_SERVER_I18N")
+    for language in ("en", "de", "fr", "it", "es", "pt"):
+        marker = f"{language}:{{"
+        start = INDEX.index(marker, external_start)
+        end = INDEX.index("},", start)
+        locale = INDEX[start:end]
+        for key in (
+            "statusAndLinks",
+            "runvardAccessDescription",
+            "proxmoxStatusDescription",
+            "linuxStatusDescription",
+            "windowsStatusDescription",
+            "genericStatusDescription",
+            "general",
+            "statusConnection",
+            "credentials",
+            "testingConnection",
+        ):
+            assert f"{key}:" in locale
