@@ -208,86 +208,24 @@ def test_new_modal_copy_exists_for_every_supported_language():
             "statusConnection",
             "credentials",
             "testingConnection",
-            "informationAbout",
-            "setupGuide",
-            "guideRequirements",
-            "guideCredentials",
-            "guideConnection",
-            "guideFields",
-            "guideSecurity",
-            "configureServer",
-            "copyCommand",
-            "officialDocs",
         ):
             assert f"{key}:" in locale
 
 
-def test_external_server_choices_have_separate_information_actions():
-    assert "server-type-choice-wrap" in INDEX
-    assert "server-type-info" in INDEX
-    assert "externalServerGuideLabel" in INDEX
-    assert "openExternalServerGuide(kind)" in INDEX
-    assert "</button><button" in INDEX
-    assert "informationAbout" in INDEX
-
-
-def test_external_server_guides_cover_setup_credentials_and_field_mapping():
-    assert "const SERVER_GUIDE_I18N" in INDEX
-    assert "window.openExternalServerGuide=kind=>" in INDEX
-    assert "server-guide-step" in INDEX
-    assert "server-guide-fields" in INDEX
-    assert "server-guide-security" in INDEX
-    assert "externalServerForm(kind)" in INDEX
+def test_external_server_choices_have_no_information_actions_or_guide_modals():
     for marker in (
-        "pveum user token add",
-        "ssh-keygen -t ed25519",
-        "winrm quickconfig -transport:https",
-        "/health",
+        "server-type-choice-wrap",
+        "server-type-info",
+        "server-guide",
+        "SERVER_GUIDE_I18N",
+        "SERVER_GUIDE_COMMANDS",
+        "SERVER_GUIDE_SOURCES",
+        "externalServerGuideLabel",
+        "externalServerInfo",
+        "openExternalServerGuide",
+        "copyServerGuideCommand",
+        "informationAbout",
+        "setupGuide",
+        "officialDocs",
     ):
-        assert marker in INDEX
-
-
-def test_external_server_guides_are_translated_for_every_supported_language():
-    guide_start = INDEX.index("const SERVER_GUIDE_I18N")
-    for language in ("en", "de", "fr", "it", "es", "pt"):
-        marker = f"{language}:{{"
-        start = INDEX.index(marker, guide_start)
-        end = INDEX.index("\n  },", start)
-        locale = INDEX[start:end]
-        for kind in ("proxmox", "linux", "windows", "generic"):
-            kind_start = locale.index(f"{kind}:{{")
-            next_kind = min(
-                (
-                    locale.find(f"{candidate}:{{", kind_start + 1)
-                    for candidate in ("proxmox", "linux", "windows", "generic")
-                    if locale.find(f"{candidate}:{{", kind_start + 1) >= 0
-                ),
-                default=len(locale),
-            )
-            guide = locale[kind_start:next_kind]
-            for key in (
-                "intro",
-                "requirements",
-                "credentials",
-                "connection",
-                "fields",
-                "security",
-            ):
-                assert f"{key}:" in guide
-
-
-def test_server_information_view_is_scrollable_and_touch_accessible():
-    assert ".server-type-info{" in INDEX
-    info_css = INDEX[
-        INDEX.index(".server-type-info{"):
-        INDEX.index("}", INDEX.index(".server-type-info{"))
-    ]
-    assert "width:2.75rem" in info_css
-    assert "height:2.75rem" in info_css
-    assert ".server-guide-card{" in INDEX
-    assert ".server-guide-body{" in INDEX
-    assert "overflow:auto" in INDEX[
-        INDEX.index(".server-guide-body{"):
-        INDEX.index("}", INDEX.index(".server-guide-body{"))
-    ]
-    assert "aria-labelledby=\"server-guide-title\"" in INDEX
+        assert marker not in INDEX
