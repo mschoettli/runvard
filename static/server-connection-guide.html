@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Server connection guide · runvard</title>
+<link rel="icon" type="image/png" href="/static/runvard-icon.png">
+<style>
+:root{
+  --bg:#070810;--panel:#0d0e1a;--panel2:#111321;--panel3:#17182a;
+  --text:#f2f1ff;--text2:#aaa8bb;--text3:#6f6d80;
+  --accent:#7a4aff;--accent2:#a78bfa;--cyan:#22d3ee;--green:#4ade80;
+  --amber:#fbbf24;--red:#fb7185;--border:rgba(255,255,255,.1);
+  --border-accent:rgba(122,74,255,.5);--radius:1rem;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{
+  margin:0;min-height:100vh;background:
+    radial-gradient(circle at 82% 4%,rgba(34,211,238,.08),transparent 24rem),
+    radial-gradient(circle at 12% 28%,rgba(122,74,255,.12),transparent 28rem),
+    var(--bg);
+  color:var(--text);font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+  font-size:1rem;line-height:1.55;
+}
+button,select{font:inherit}
+a{color:inherit}
+.topbar{
+  position:sticky;top:0;z-index:20;min-height:4rem;padding:.625rem 1rem;
+  border-bottom:1px solid var(--border);background:rgba(7,8,16,.88);
+  backdrop-filter:blur(1rem);display:flex;align-items:center;justify-content:space-between;gap:1rem;
+}
+.brand{display:flex;align-items:center;gap:.75rem;text-decoration:none;font-weight:750;letter-spacing:.04em}
+.brand-mark{width:2.5rem;height:2.5rem;border:1px solid var(--border-accent);border-radius:.75rem;background:rgba(122,74,255,.14);color:var(--accent2);display:grid;place-items:center}
+.brand-mark svg{width:1.25rem;height:1.25rem;fill:none;stroke:currentColor;stroke-width:1.6}
+.language{display:flex;align-items:center;gap:.5rem;color:var(--text2);font-size:.875rem}
+.language select{min-height:2.75rem;padding:0 2rem 0 .75rem;border:1px solid var(--border);border-radius:.625rem;background:var(--panel2);color:var(--text)}
+.page{width:min(76rem,100%);margin:0 auto;padding:2rem 1rem 4rem}
+.hero{max-width:54rem;padding:1rem 0 2rem}
+.eyebrow{margin:0 0 .625rem;color:var(--accent2);font-size:.75rem;font-weight:700;letter-spacing:.12em;text-transform:uppercase}
+h1{margin:0;font-size:clamp(2rem,8vw,4.25rem);line-height:1.02;letter-spacing:-.045em}
+.hero-copy{max-width:45rem;margin:1rem 0 0;color:var(--text2);font-size:1rem}
+.notice{margin-top:1.5rem;padding:1rem;border:1px solid rgba(251,191,36,.28);border-radius:.875rem;background:rgba(251,191,36,.07);display:grid;grid-template-columns:1.75rem minmax(0,1fr);gap:.75rem}
+.notice-icon{width:1.75rem;height:1.75rem;border-radius:.5rem;background:rgba(251,191,36,.13);color:var(--amber);display:grid;place-items:center;font-weight:800}
+.notice strong{display:block;font-size:.875rem}.notice p{margin:.25rem 0 0;color:var(--text2);font-size:.875rem}
+.layout{display:grid;grid-template-columns:minmax(0,1fr);gap:1.25rem}
+.guide-nav{position:sticky;top:4.75rem;z-index:10;margin:0 -.25rem;padding:.25rem;overflow-x:auto;display:flex;gap:.5rem;scrollbar-width:none}
+.guide-nav::-webkit-scrollbar{display:none}
+.guide-nav a{min-height:2.75rem;padding:0 .875rem;border:1px solid var(--border);border-radius:.625rem;background:rgba(13,14,26,.92);color:var(--text2);font-size:.8125rem;font-weight:650;text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center}
+.guide-nav a:hover,.guide-nav a:focus-visible,.guide-nav a.active{border-color:var(--border-accent);background:rgba(122,74,255,.12);color:var(--text);outline:none}
+.guides{display:grid;gap:1rem;min-width:0}
+.guide-card{scroll-margin-top:8rem;border:1px solid var(--border);border-radius:var(--radius);background:linear-gradient(150deg,rgba(17,19,33,.96),rgba(10,11,21,.96));overflow:hidden}
+.guide-head{padding:1.25rem;border-bottom:1px solid var(--border);display:grid;grid-template-columns:2.75rem minmax(0,1fr);gap:.875rem;align-items:center}
+.guide-icon{width:2.75rem;height:2.75rem;border-radius:.75rem;background:rgba(122,74,255,.15);color:var(--accent2);display:grid;place-items:center;font-weight:800}
+.guide-head h2{margin:0;font-size:1.25rem;line-height:1.2}.guide-head p{margin:.25rem 0 0;color:var(--text2);font-size:.875rem}
+.guide-body{padding:1.25rem;display:grid;gap:1.5rem}
+.section-title{margin:0 0 .75rem;color:var(--text3);font-size:.75rem;font-weight:750;letter-spacing:.1em;text-transform:uppercase}
+.steps{display:grid;gap:.625rem;counter-reset:steps}
+.step{counter-increment:steps;display:grid;grid-template-columns:2rem minmax(0,1fr);gap:.75rem;padding:.875rem;border:1px solid var(--border);border-radius:.75rem;background:rgba(255,255,255,.025)}
+.step::before{content:counter(steps);width:2rem;height:2rem;border-radius:.5rem;background:rgba(122,74,255,.13);color:var(--accent2);font:700 .75rem/2rem ui-monospace,SFMono-Regular,Consolas,monospace;text-align:center}
+.step h3{margin:.125rem 0 .25rem;font-size:.9375rem}.step p{margin:0;color:var(--text2);font-size:.875rem}
+.field-list,.check-list{margin:0;padding:0;list-style:none;display:grid;gap:.5rem}
+.field-list li,.check-list li{padding:.6875rem .75rem;border-radius:.625rem;background:rgba(255,255,255,.025);color:var(--text2);font-size:.875rem}
+.field-list strong{color:var(--text);font-weight:650}
+.check-list li{display:grid;grid-template-columns:1.25rem minmax(0,1fr);gap:.5rem}
+.check-list li::before{content:'✓';color:var(--green);font-weight:800}
+.command-list{display:grid;gap:.625rem}
+.command{border:1px solid var(--border);border-radius:.75rem;background:#080912;overflow:hidden}
+.command-meta{min-height:2.25rem;padding:.375rem .5rem .375rem .75rem;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:.75rem;color:var(--text3);font-size:.75rem}
+.command-copy{min-width:2.75rem;min-height:2.75rem;padding:0 .75rem;border:0;border-radius:.5rem;background:transparent;color:var(--text2);cursor:pointer}
+.command-copy:hover,.command-copy:focus-visible{background:rgba(122,74,255,.14);color:var(--text);outline:none}
+.command pre{margin:0;padding:.875rem;overflow:auto;color:#c4b5fd;font:500 .8125rem/1.55 ui-monospace,SFMono-Regular,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.security{padding:.875rem;border:1px solid rgba(251,113,133,.22);border-radius:.75rem;background:rgba(251,113,133,.055)}
+.security p{margin:0;color:var(--text2);font-size:.875rem}
+.guide-source{min-height:2.75rem;width:max-content;max-width:100%;color:var(--cyan);font-size:.8125rem;font-weight:650;text-decoration:none;display:inline-flex;align-items:center;gap:.25rem}
+.guide-source:hover,.guide-source:focus-visible{text-decoration:underline;outline:none}
+.copy-status{position:fixed;left:50%;bottom:1.25rem;z-index:30;max-width:calc(100vw - 2rem);padding:.75rem 1rem;border:1px solid var(--border-accent);border-radius:.75rem;background:#17122b;color:var(--text);font-size:.875rem;box-shadow:0 1rem 3rem rgba(0,0,0,.4);transform:translate(-50%,calc(100% + 3rem));opacity:0;transition:.2s}
+.copy-status.show{transform:translate(-50%,0);opacity:1}
+.footer{padding-top:2rem;color:var(--text3);font-size:.8125rem;text-align:center}
+@media (min-width:48rem){
+  .page{padding:3rem 2rem 5rem}
+  .layout{grid-template-columns:12rem minmax(0,1fr);gap:2rem;align-items:start}
+  .guide-nav{top:5.25rem;margin:0;padding:0;overflow:visible;flex-direction:column}
+  .guide-nav a{width:100%}
+  .guide-card{scroll-margin-top:5.5rem}
+  .guide-head,.guide-body{padding:1.5rem}
+  .steps{grid-template-columns:repeat(2,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){html{scroll-behavior:auto}.copy-status{transition:none}}
+</style>
+</head>
+<body>
+<header class="topbar">
+  <a class="brand" href="/" aria-label="runvard">
+    <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="M12 3 20 7.5v9L12 21l-8-4.5v-9L12 3Zm0 4-4.5 2.5v5L12 17l4.5-2.5v-5L12 7Z"/></svg></span>
+    <span>RUNVARD</span>
+  </a>
+  <label class="language" for="guide-language">
+    <span data-t="language">Language</span>
+    <select id="guide-language">
+      <option value="en">English</option><option value="de">Deutsch</option>
+      <option value="fr">Français</option><option value="it">Italiano</option>
+      <option value="es">Español</option><option value="pt">Português</option>
+    </select>
+  </label>
+</header>
+
+<div class="page">
+  <section class="hero" aria-labelledby="guide-title">
+    <p class="eyebrow" data-t="kicker">Connection manual</p>
+    <h1 id="guide-title" data-t="title">Connect servers safely.</h1>
+    <p class="hero-copy" data-t="intro">Choose a server type, prepare the read-only access, verify it from the runvard host, and then map the values to the connection form.</p>
+    <div class="notice">
+      <span class="notice-icon" aria-hidden="true">!</span>
+      <div><strong data-t="noticeTitle">Protect credentials</strong><p data-t="noticeText">Never paste tokens, passwords, or private keys into this page or a screenshot. Commands use placeholders that you must replace locally.</p></div>
+    </div>
+  </section>
+
+  <div class="layout">
+    <nav class="guide-nav" aria-label="Server types">
+      <a href="#guide-runvard" data-nav="runvard">runvard</a>
+      <a href="#guide-proxmox" data-nav="proxmox">Proxmox</a>
+      <a href="#guide-linux" data-nav="linux">Linux / OMV</a>
+      <a href="#guide-windows" data-nav="windows">Windows</a>
+      <a href="#guide-generic" data-nav="generic">Other</a>
+    </nav>
+
+    <main id="guide-content">
+      <div class="guides">
+        <article class="guide-card" id="guide-runvard" data-guide="runvard"></article>
+        <article class="guide-card" id="guide-proxmox" data-guide="proxmox"></article>
+        <article class="guide-card" id="guide-linux" data-guide="linux"></article>
+        <article class="guide-card" id="guide-windows" data-guide="windows"></article>
+        <article class="guide-card" id="guide-generic" data-guide="generic"></article>
+      </div>
+    </main>
+  </div>
+  <footer class="footer" data-t="footer">Commands are templates. Verify addresses, permissions, certificates, and fingerprints before saving.</footer>
+</div>
+<div class="copy-status" id="copy-status" role="status" aria-live="polite" aria-atomic="true"></div>
+<noscript>
+  <p class="footer">JavaScript is required to render the translated connection instructions. See the
+    <a href="https://github.com/mschoettli/runvard/blob/main/docs/EXTERNAL_SERVER_SETUP.md">server setup documentation</a>.
+  </p>
+</noscript>
+
+<script>
+const LANGUAGE_KEY='runvard_language';
+const SECTION_ORDER=['runvard','proxmox','linux','windows','generic'];
+const SOURCES={
+  runvard:'https://github.com/mschoettli/runvard/blob/main/docs/MULTI_SERVER_FEDERATION.md',
+  proxmox:'https://pve.proxmox.com/pve-docs/pveum.1.html',
+  linux:'https://docs.openmediavault.org/en/stable/administration/services/ssh.html',
+  windows:'https://learn.microsoft.com/windows/win32/winrm/installation-and-configuration-for-windows-remote-management',
+  generic:'https://developer.mozilla.org/docs/Web/HTTP/Status',
+};
+const COMMANDS={
+  runvard:[
+    {on:'runvardHost',value:"curl -sS -o /dev/null -w 'HTTP %{http_code}\\n' http://RUNVARD-IP:8080/api/auth/status"},
+  ],
+  proxmox:[
+    {on:'proxmoxShell',value:'pveum user add runvard-monitor@pve'},
+    {on:'proxmoxShell',value:'pveum acl modify / -user runvard-monitor@pve -role PVEAuditor'},
+    {on:'proxmoxShell',value:'pveum user token add runvard-monitor@pve runvard -privsep 1'},
+    {on:'proxmoxShell',value:"pveum acl modify / -token 'runvard-monitor@pve!runvard' -role PVEAuditor"},
+    {on:'runvardHost',value:"curl -k -sS -o /dev/null -w 'HTTP %{http_code}\\n' https://PROXMOX-IP:8006/api2/json/nodes"},
+    {on:'runvardHost',value:'set +H'},
+    {on:'runvardHost',value:"read -s -p 'Token secret: ' TOKEN_SECRET; echo"},
+    {on:'runvardHost',value:"curl -k -sS -o /dev/null -w 'HTTP %{http_code}\\n' -H \"Authorization: PVEAPIToken=runvard-monitor@pve!runvard=$TOKEN_SECRET\" https://PROXMOX-IP:8006/api2/json/nodes"},
+    {on:'runvardHost',value:'unset TOKEN_SECRET'},
+  ],
+  linux:[
+    {on:'runvardHost',value:'ssh-keygen -t ed25519 -f /root/runvard-monitor -C runvard-monitor'},
+    {on:'runvardHost',value:'ssh-copy-id -i /root/runvard-monitor.pub runvard-monitor@LINUX-IP'},
+    {on:'runvardHost',value:"ssh -o IdentitiesOnly=yes -o PasswordAuthentication=no -i /root/runvard-monitor runvard-monitor@LINUX-IP 'echo KEY_OK'"},
+    {on:'targetConsole',value:'ssh-keygen -lf /etc/ssh/ssh_host_ed25519_key.pub -E sha256'},
+    {on:'runvardHost',value:'ssh-keyscan -t ed25519 -p 22 LINUX-IP 2>/dev/null | ssh-keygen -lf - -E sha256'},
+    {on:'runvardHost',value:'cat /root/runvard-monitor'},
+  ],
+  windows:[
+    {on:'windowsAdmin',value:'Enable-PSRemoting -Force'},
+    {on:'windowsAdmin',value:'Add-LocalGroupMember -Group "Remote Management Users" -Member "runvard-monitor"'},
+    {on:'windowsAdmin',value:"$cert = Get-ChildItem Cert:\\LocalMachine\\My | Where-Object { $_.Subject -like '*WINDOWS-HOST*' } | Select-Object -First 1"},
+    {on:'windowsAdmin',value:"New-WSManInstance winrm/config/Listener -SelectorSet @{Transport='HTTPS';Address='*'} -ValueSet @{Hostname='WINDOWS-HOST';CertificateThumbprint=$cert.Thumbprint}"},
+    {on:'windowsAdmin',value:'New-NetFirewallRule -DisplayName "WinRM HTTPS from runvard" -Direction Inbound -Protocol TCP -LocalPort 5986 -RemoteAddress RUNVARD-IP -Action Allow'},
+    {on:'windowsAdmin',value:'winrm enumerate winrm/config/listener'},
+    {on:'runvardHost',value:'nc -vz WINDOWS-IP 5986'},
+  ],
+  generic:[
+    {on:'runvardHost',value:"curl --fail --silent --show-error -o /dev/null -w 'HTTP %{http_code}\\n' https://SERVER-IP:PORT/health"},
+  ],
+};
+
+const GUIDE_I18N={
+  en:{
+    language:'Language',kicker:'Connection manual',title:'Connect servers safely.',
+    intro:'Choose a server type, prepare the read-only access, verify it from the runvard host, and then map the values to the connection form.',
+    noticeTitle:'Protect credentials',noticeText:'Never paste tokens, passwords, or private keys into this page or a screenshot. Commands use placeholders that you must replace locally.',
+    steps:'Setup',fields:'Fields in runvard',checks:'Expected checks',security:'Security',commands:'Commands',copy:'Copy',copied:'Command copied',source:'Official documentation',
+    footer:'Commands are templates. Verify addresses, permissions, certificates, and fingerprints before saving.',
+    runvardHost:'On the runvard host',proxmoxShell:'In the Proxmox shell',targetConsole:'On the target console',windowsAdmin:'In Windows PowerShell as administrator',
+    sections:{
+      runvard:{title:'runvard instance',summary:'Trusted two-way connection with automatic sign-in and full runvard access.',
+        steps:[['Prepare both addresses','Use a literal private LAN or VPN IP and port as the internal URL. The browser URL may use your reverse-proxy hostname.'],['Create or use a server group','On the first instance open Server and create a server group. If it already exists, generate a pairing code instead.'],['Join from the second instance','Choose runvard instance, enter the existing internal URL, the single-use pairing code, and the second server’s own URLs.'],['Verify both directions','Open each server from the other instance. Each switch opens a new tab and redeems a short-lived signed SSO ticket.']],
+        fields:['Existing server internal URL: direct private address of the first instance.','Pairing code: generated on the existing instance; valid for ten minutes and one use.','Internal URL: this instance’s direct LAN or VPN address.','Browser URL: the address opened by users, including a later reverse proxy.','Allowed private networks: CIDRs that may participate in the group.'],
+        checks:['The reachability command returns HTTP 200.','Both servers show online after pairing.','Switching works from server A to B and from B to A.'],
+        security:'Only pair instances you administer. Internal URLs reject public addresses and redirects; browser URLs never carry credentials.'},
+      proxmox:{title:'Proxmox',summary:'Read-only status through the native Proxmox VE HTTPS API.',
+        steps:[['Create the monitoring identity','Create runvard-monitor@pve and grant PVEAuditor on /. Do not use root@pam.'],['Create a separated token','Create token runvard with privilege separation enabled and grant the token PVEAuditor. Save its secret when Proxmox shows it once.'],['Test from the runvard host','Replace PROXMOX-IP. HTTP 401 without a token proves reachability; HTTP 200 with the hidden secret proves credentials and permissions.'],['Enter the API values','Use HTTPS on port 8006. Leave the node empty for the first test so runvard selects an online node.']],
+        fields:['Administration URL: address opened by the card.','Internal status URL: https://PROXMOX-IP:8006 without /api2/json.','API token ID: runvard-monitor@pve!runvard.','API token secret: the new secret, never the token ID.','Proxmox node: optional for the initial connection.','TLS verification: disable only temporarily for the default untrusted certificate.'],
+        checks:['HTTP 401 without Authorization means the API is reachable.','HTTP 200 with the token means ID, secret, and ACLs are correct.','Runvard’s connection test returns CPU, RAM, network, and update capabilities.'],
+        security:'Keep PVEAuditor and privilege separation. Restrict TCP 8006 to the management network, trust the Proxmox CA, and rotate any exposed token.'},
+      linux:{title:'Linux / OpenMediaVault',summary:'CPU, RAM, network, and update status through fixed read-only SSH commands.',
+        steps:[['Create a monitoring user','Use an unprivileged runvard-monitor account. In OMV, select a real shell and add the user to _ssh, but not sudo or openmediavault-admin.'],['Install a dedicated public key','Generate the key on the runvard host and install only the .pub key on the target. Runvard stores the matching private key.'],['Verify key-only login','The strict SSH test must print KEY_OK without asking for a password.'],['Pin the host identity','Compare the SHA256 host-key fingerprint from the target console with the scan from the runvard host.']],
+        fields:['Administration URL: OMV or server web interface.','Internal IP address: literal private target IP.','Port: SSH port, normally 22.','SSH host key fingerprint: complete SHA256:… value.','Username: runvard-monitor.','Private SSH key: complete private key block; never the .pub file.','Key passphrase: only when the private key is encrypted.'],
+        checks:['KEY_OK appears with password authentication disabled.','The two independently obtained fingerprints match exactly.','The connection test reads /proc and reports supported update checks.'],
+        security:'Never use root, password authentication, or a personal administrator key. Never publish the private key in a screenshot; rotate it immediately if exposed.'},
+      windows:{title:'Windows Server',summary:'Status through fixed CIM and PowerShell queries over WinRM HTTPS.',
+        steps:[['Create a restricted account','Create runvard-monitor and add it to Remote Management Users. Grant only the CIM, network, and update read rights required by your policy.'],['Install a trusted server certificate','The certificate must be valid for Server Authentication and its CN or SAN must match WINDOWS-HOST.'],['Create the HTTPS listener','Create WinRM’s HTTPS listener with the certificate thumbprint and restrict TCP 5986 to the runvard host.'],['Test and enter the endpoint','Confirm the listener and network port before using https://WINDOWS-IP:5986/wsman.']],
+        fields:['Administration URL: browser link for Windows management.','Internal status URL: complete HTTPS WinRM endpoint ending in /wsman.','Username: SERVER\\user, DOMAIN\\user, or user@domain.','Password: dedicated monitoring password.','TLS verification: keep enabled with a trusted certificate.'],
+        checks:['The listener lists Transport = HTTPS and Port = 5986.','The runvard host reaches TCP 5986.','Runvard’s test reads CPU, memory, adapter traffic, and the update count.'],
+        security:'Never enable unencrypted WinRM for this connection. Match the certificate name, restrict the firewall source, and do not use a domain administrator.'},
+      generic:{title:'Other server / link',summary:'Availability check for a small HTTP(S) endpoint plus a separate administration link.',
+        steps:[['Provide a health endpoint','Use a lightweight GET endpoint such as /health, /status, or /ping that returns a successful status without changing state.'],['Test from the runvard host','Use the literal private server IP and explicit port. Redirects are not followed.'],['Enter both URLs','The status URL is private and machine-facing; the administration URL is the link users open.']],
+        fields:['Administration URL: web interface or reverse-proxy address opened from the card.','Internal status URL: literal private IP, port, and health path.','TLS verification: keep enabled when the endpoint uses HTTPS.'],
+        checks:['Curl returns a 2xx HTTP status.','The response is small and requires no secret in the URL.','The card reports availability; detailed metrics remain unavailable.'],
+        security:'Never put API keys, passwords, cookies, or tokens in either URL. Restrict the health endpoint to the management network.'},
+    }
+  },
+  de:{
+    language:'Sprache',kicker:'Verbindungsanleitung',title:'Server sicher verbinden.',
+    intro:'Wähle den Servertyp, richte den lesenden Zugang ein, prüfe ihn vom runvard-Host und übertrage danach die Werte in das Verbindungsformular.',
+    noticeTitle:'Zugangsdaten schützen',noticeText:'Füge Tokens, Passwörter oder private Schlüssel niemals in diese Seite oder einen Screenshot ein. Ersetze die Platzhalter nur lokal.',
+    steps:'Einrichtung',fields:'Felder in runvard',checks:'Erwartete Prüfungen',security:'Sicherheit',commands:'Befehle',copy:'Kopieren',copied:'Befehl kopiert',source:'Offizielle Dokumentation',
+    footer:'Die Befehle sind Vorlagen. Prüfe Adressen, Berechtigungen, Zertifikate und Fingerabdrücke vor dem Speichern.',
+    runvardHost:'Auf dem runvard-Host',proxmoxShell:'In der Proxmox-Shell',targetConsole:'Auf der Zielserver-Konsole',windowsAdmin:'In Windows PowerShell als Administrator',
+    sections:{
+      runvard:{title:'runvard-Instanz',summary:'Vertrauenswürdige Verbindung in beide Richtungen mit automatischer Anmeldung und vollem runvard-Zugriff.',
+        steps:[['Beide Adressen vorbereiten','Verwende für die interne URL eine direkte private LAN- oder VPN-IP mit Port. Die Browser-URL darf den Reverse-Proxy-Namen verwenden.'],['Serververbund erstellen oder verwenden','Öffne auf der ersten Instanz Server und erstelle einen Serververbund. Besteht er bereits, erzeuge dort einen Pairing-Code.'],['Zweite Instanz beitreten lassen','Wähle runvard-Instanz und trage die bestehende interne URL, den einmaligen Pairing-Code und die eigenen URLs des zweiten Servers ein.'],['Beide Richtungen prüfen','Öffne jeden Server von der jeweils anderen Instanz. Der Wechsel öffnet einen neuen Tab und verwendet ein kurzlebiges signiertes SSO-Ticket.']],
+        fields:['Interne URL des vorhandenen Servers: direkte private Adresse der ersten Instanz.','Pairing-Code: auf der bestehenden Instanz erzeugt; zehn Minuten und einmal gültig.','Interne URL: direkte LAN- oder VPN-Adresse dieser Instanz.','Browser-URL: Adresse für Benutzer, einschließlich späterem Reverse Proxy.','Erlaubte private Netze: CIDRs, die am Verbund teilnehmen dürfen.'],
+        checks:['Der Erreichbarkeitstest liefert HTTP 200.','Nach dem Pairing werden beide Server als online angezeigt.','Der Wechsel funktioniert von A nach B und von B nach A.'],
+        security:'Verbinde nur Instanzen, die du administrierst. Interne URLs lehnen öffentliche Adressen und Weiterleitungen ab; Browser-URLs enthalten keine Zugangsdaten.'},
+      proxmox:{title:'Proxmox',summary:'Rein lesender Status über die native Proxmox-VE-HTTPS-API.',
+        steps:[['Monitoring-Identität erstellen','Erstelle runvard-monitor@pve und erteile PVEAuditor auf /. Verwende nicht root@pam.'],['Getrenntes Token erstellen','Erstelle das Token runvard mit aktivierter Privilege Separation und erteile auch dem Token PVEAuditor. Speichere das einmal angezeigte Secret.'],['Vom runvard-Host testen','Ersetze PROXMOX-IP. HTTP 401 ohne Token beweist die Erreichbarkeit; HTTP 200 mit verdeckt eingegebenem Secret bestätigt Zugang und Rechte.'],['API-Werte eintragen','Verwende HTTPS auf Port 8006. Lasse den Node beim ersten Test leer, damit runvard einen erreichbaren Node auswählt.']],
+        fields:['Verwaltungs-URL: Adresse, welche die Kachel öffnet.','Interne Status-URL: https://PROXMOX-IP:8006 ohne /api2/json.','API-Token-ID: runvard-monitor@pve!runvard.','API-Token-Secret: das neue Secret, nicht die Token-ID.','Proxmox-Node: bei der ersten Verbindung optional.','TLS-Prüfung: nur beim standardmässigen nicht vertrauenswürdigen Zertifikat vorübergehend ausschalten.'],
+        checks:['HTTP 401 ohne Authorization bedeutet: API erreichbar.','HTTP 200 mit Token bedeutet: ID, Secret und ACLs stimmen.','Der Runvard-Test meldet CPU-, RAM-, Netzwerk- und Update-Fähigkeiten.'],
+        security:'Behalte PVEAuditor und Privilege Separation. Beschränke TCP 8006 auf das Verwaltungsnetz, vertraue der Proxmox-CA und rotiere offengelegte Tokens.'},
+      linux:{title:'Linux / OpenMediaVault',summary:'CPU-, RAM-, Netzwerk- und Update-Status über fest definierte lesende SSH-Befehle.',
+        steps:[['Monitoring-Benutzer erstellen','Verwende ein unprivilegiertes Konto runvard-monitor. In OMV wählst du eine echte Shell und die Gruppe _ssh, aber weder sudo noch openmediavault-admin.'],['Eigenen öffentlichen Schlüssel installieren','Erzeuge den Schlüssel auf dem runvard-Host und installiere nur die .pub-Datei auf dem Ziel. Runvard erhält den passenden privaten Schlüssel.'],['Anmeldung nur mit Schlüssel prüfen','Der strikte SSH-Test muss KEY_OK ausgeben, ohne nach einem Passwort zu fragen.'],['Host-Identität festhalten','Vergleiche den SHA256-Hostschlüssel-Fingerabdruck der Zielkonsole mit dem Scan vom runvard-Host.']],
+        fields:['Verwaltungs-URL: OMV- oder Server-Weboberfläche.','Interne IP-Adresse: private IP des Zielservers.','Port: SSH-Port, normalerweise 22.','SSH-Hostschlüssel-Fingerabdruck: vollständiger SHA256:…-Wert.','Benutzername: runvard-monitor.','Privater SSH-Schlüssel: vollständiger privater Block, niemals die .pub-Datei.','Schlüssel-Passphrase: nur bei verschlüsseltem privatem Schlüssel.'],
+        checks:['KEY_OK erscheint bei deaktivierter Passwortanmeldung.','Die zwei unabhängig ermittelten Fingerabdrücke stimmen exakt überein.','Der Verbindungstest liest /proc und meldet unterstützte Update-Prüfungen.'],
+        security:'Verwende weder root, Passwortanmeldung noch einen persönlichen Administratorschlüssel. Veröffentliche den privaten Schlüssel nie in einem Screenshot und rotiere ihn bei Offenlegung sofort.'},
+      windows:{title:'Windows Server',summary:'Status über feste CIM- und PowerShell-Abfragen via WinRM HTTPS.',
+        steps:[['Eingeschränktes Konto erstellen','Erstelle runvard-monitor und füge es zu Remote Management Users hinzu. Vergib nur die laut Richtlinie nötigen CIM-, Netzwerk- und Update-Leserechte.'],['Vertrauenswürdiges Serverzertifikat installieren','Das Zertifikat benötigt Server Authentication; CN oder SAN muss exakt zu WINDOWS-HOST passen.'],['HTTPS-Listener erstellen','Erstelle den WinRM-HTTPS-Listener mit dem Zertifikat-Fingerabdruck und erlaube TCP 5986 nur vom runvard-Host.'],['Endpunkt testen und eintragen','Kontrolliere Listener und Port vor der Eingabe von https://WINDOWS-IP:5986/wsman.']],
+        fields:['Verwaltungs-URL: Browser-Link zur Windows-Verwaltung.','Interne Status-URL: vollständiger HTTPS-WinRM-Endpunkt mit /wsman.','Benutzername: SERVER\\Benutzer, DOMÄNE\\Benutzer oder benutzer@domäne.','Passwort: eigenes Monitoring-Passwort.','TLS-Prüfung: mit vertrauenswürdigem Zertifikat aktiviert lassen.'],
+        checks:['Der Listener zeigt Transport = HTTPS und Port = 5986.','Der runvard-Host erreicht TCP 5986.','Der Runvard-Test liest CPU, RAM, Netzwerkverkehr und Update-Anzahl.'],
+        security:'Aktiviere für diese Verbindung niemals unverschlüsseltes WinRM. Prüfe den Zertifikatsnamen, begrenze die Firewall-Quelle und verwende keinen Domänenadministrator.'},
+      generic:{title:'Anderer Server / Link',summary:'Erreichbarkeitsprüfung eines kleinen HTTP(S)-Endpunkts plus separatem Verwaltungslink.',
+        steps:[['Health-Endpunkt bereitstellen','Verwende einen kleinen GET-Endpunkt wie /health, /status oder /ping, der erfolgreich antwortet und nichts verändert.'],['Vom runvard-Host testen','Nutze die private Server-IP und einen expliziten Port. Weiterleitungen werden nicht verfolgt.'],['Beide URLs eintragen','Die Status-URL ist intern und maschinenbezogen; die Verwaltungs-URL ist der Link für Benutzer.']],
+        fields:['Verwaltungs-URL: Weboberfläche oder Reverse-Proxy-Adresse, welche die Kachel öffnet.','Interne Status-URL: private IP, Port und Health-Pfad.','TLS-Prüfung: bei HTTPS aktiviert lassen.'],
+        checks:['Curl liefert einen 2xx-HTTP-Status.','Die Antwort ist klein und benötigt kein Geheimnis in der URL.','Die Kachel meldet Erreichbarkeit; Detailmetriken bleiben nicht verfügbar.'],
+        security:'Füge niemals API-Schlüssel, Passwörter, Cookies oder Tokens in eine URL ein. Beschränke den Health-Endpunkt auf das Verwaltungsnetz.'},
+    }
+  },
+};
+
+const COMMON_TRANSLATIONS={
+  fr:{language:'Langue',kicker:'Manuel de connexion',title:'Connectez les serveurs en toute sécurité.',intro:'Préparez un accès en lecture seule, testez-le depuis l’hôte runvard, puis reportez les valeurs dans le formulaire.',noticeTitle:'Protégez les identifiants',noticeText:'Ne collez jamais de jetons, mots de passe ou clés privées dans cette page ou une capture d’écran.',steps:'Configuration',fields:'Champs dans runvard',checks:'Contrôles attendus',security:'Sécurité',commands:'Commandes',copy:'Copier',copied:'Commande copiée',source:'Documentation officielle',footer:'Les commandes sont des modèles. Vérifiez les adresses, droits, certificats et empreintes avant d’enregistrer.',runvardHost:'Sur l’hôte runvard',proxmoxShell:'Dans le shell Proxmox',targetConsole:'Sur la console cible',windowsAdmin:'Dans Windows PowerShell en administrateur'},
+  it:{language:'Lingua',kicker:'Manuale di connessione',title:'Collega i server in sicurezza.',intro:'Prepara l’accesso in sola lettura, verificalo dall’host runvard e inserisci i valori nel modulo.',noticeTitle:'Proteggi le credenziali',noticeText:'Non incollare mai token, password o chiavi private in questa pagina o in uno screenshot.',steps:'Configurazione',fields:'Campi in runvard',checks:'Controlli previsti',security:'Sicurezza',commands:'Comandi',copy:'Copia',copied:'Comando copiato',source:'Documentazione ufficiale',footer:'I comandi sono modelli. Verifica indirizzi, permessi, certificati e impronte prima di salvare.',runvardHost:'Sull’host runvard',proxmoxShell:'Nella shell Proxmox',targetConsole:'Sulla console di destinazione',windowsAdmin:'In Windows PowerShell come amministratore'},
+  es:{language:'Idioma',kicker:'Manual de conexión',title:'Conecta servidores de forma segura.',intro:'Prepara el acceso de solo lectura, pruébalo desde el host runvard e introduce los valores en el formulario.',noticeTitle:'Protege las credenciales',noticeText:'Nunca pegues tokens, contraseñas o claves privadas en esta página ni en una captura.',steps:'Configuración',fields:'Campos en runvard',checks:'Comprobaciones esperadas',security:'Seguridad',commands:'Comandos',copy:'Copiar',copied:'Comando copiado',source:'Documentación oficial',footer:'Los comandos son plantillas. Verifica direcciones, permisos, certificados y huellas antes de guardar.',runvardHost:'En el host runvard',proxmoxShell:'En la consola de Proxmox',targetConsole:'En la consola de destino',windowsAdmin:'En Windows PowerShell como administrador'},
+  pt:{language:'Idioma',kicker:'Manual de ligação',title:'Ligue servidores em segurança.',intro:'Prepare o acesso só de leitura, teste-o no anfitrião runvard e introduza os valores no formulário.',noticeTitle:'Proteja as credenciais',noticeText:'Nunca cole tokens, palavras-passe ou chaves privadas nesta página nem numa captura de ecrã.',steps:'Configuração',fields:'Campos no runvard',checks:'Verificações esperadas',security:'Segurança',commands:'Comandos',copy:'Copiar',copied:'Comando copiado',source:'Documentação oficial',footer:'Os comandos são modelos. Verifique endereços, permissões, certificados e impressões antes de guardar.',runvardHost:'No anfitrião runvard',proxmoxShell:'Na shell do Proxmox',targetConsole:'Na consola de destino',windowsAdmin:'No Windows PowerShell como administrador'},
+};
+const SECTION_TRANSLATIONS={
+  fr:{runvard:['Instance runvard','Connexion approuvée dans les deux sens avec connexion automatique.'],proxmox:['Proxmox','État en lecture seule via l’API HTTPS native.'],linux:['Linux / OpenMediaVault','État CPU, mémoire, réseau et mises à jour via SSH.'],windows:['Windows Server','État via WinRM HTTPS et requêtes fixes.'],generic:['Autre serveur / lien','Disponibilité HTTP(S) et lien d’administration séparé.']},
+  it:{runvard:['Istanza runvard','Connessione attendibile bidirezionale con accesso automatico.'],proxmox:['Proxmox','Stato in sola lettura tramite API HTTPS nativa.'],linux:['Linux / OpenMediaVault','Stato CPU, memoria, rete e aggiornamenti tramite SSH.'],windows:['Windows Server','Stato tramite WinRM HTTPS e query fisse.'],generic:['Altro server / collegamento','Disponibilità HTTP(S) e collegamento di amministrazione separato.']},
+  es:{runvard:['Instancia runvard','Conexión bidireccional de confianza con inicio automático.'],proxmox:['Proxmox','Estado de solo lectura mediante la API HTTPS nativa.'],linux:['Linux / OpenMediaVault','Estado de CPU, memoria, red y actualizaciones mediante SSH.'],windows:['Windows Server','Estado mediante WinRM HTTPS y consultas fijas.'],generic:['Otro servidor / enlace','Disponibilidad HTTP(S) y enlace de administración separado.']},
+  pt:{runvard:['Instância runvard','Ligação fidedigna bidirecional com início automático.'],proxmox:['Proxmox','Estado só de leitura através da API HTTPS nativa.'],linux:['Linux / OpenMediaVault','Estado de CPU, memória, rede e atualizações através de SSH.'],windows:['Windows Server','Estado através de WinRM HTTPS e consultas fixas.'],generic:['Outro servidor / ligação','Disponibilidade HTTP(S) e ligação de administração separada.']},
+};
+const DETAIL_TRANSLATIONS={
+  fr:{
+    runvard:{
+      steps:[['Préparer les deux adresses','Utilisez une IP privée LAN ou VPN avec port pour l’URL interne. L’URL du navigateur peut utiliser le nom du proxy inverse.'],['Créer ou utiliser un groupe','Sur la première instance, ouvrez Serveur et créez un groupe. S’il existe déjà, générez un code de jumelage.'],['Rejoindre depuis la seconde instance','Choisissez Instance runvard, puis saisissez l’URL interne existante, le code à usage unique et les URL propres au second serveur.'],['Vérifier les deux directions','Ouvrez chaque serveur depuis l’autre instance. Le changement ouvre un nouvel onglet avec un ticket SSO signé et éphémère.']],
+      fields:['URL interne du serveur existant : adresse privée directe de la première instance.','Code de jumelage : généré sur l’instance existante, valable dix minutes et une seule fois.','URL interne : adresse LAN ou VPN directe de cette instance.','URL du navigateur : adresse ouverte par les utilisateurs, proxy inverse compris.','Réseaux privés autorisés : CIDR admis dans le groupe.'],
+      checks:['Le test d’accessibilité renvoie HTTP 200.','Les deux serveurs apparaissent en ligne après le jumelage.','Le changement fonctionne de A vers B et de B vers A.'],
+      security:'Ne jumelez que des instances que vous administrez. Les URL internes refusent les adresses publiques et les redirections ; les URL du navigateur ne contiennent aucun identifiant.'
+    },
+    proxmox:{
+      steps:[['Créer l’identité de surveillance','Créez runvard-monitor@pve et accordez PVEAuditor sur /. N’utilisez pas root@pam.'],['Créer un jeton séparé','Créez le jeton runvard avec la séparation des privilèges et accordez-lui PVEAuditor. Enregistrez le secret affiché une seule fois.'],['Tester depuis l’hôte runvard','Remplacez PROXMOX-IP. HTTP 401 sans jeton prouve l’accès ; HTTP 200 avec le secret masqué confirme les droits.'],['Saisir les valeurs API','Utilisez HTTPS sur le port 8006. Laissez le nœud vide au premier test afin que runvard en choisisse un en ligne.']],
+      fields:['URL d’administration : adresse ouverte par la carte.','URL d’état interne : https://PROXMOX-IP:8006 sans /api2/json.','ID du jeton API : runvard-monitor@pve!runvard.','Secret du jeton API : le nouveau secret, jamais l’ID.','Nœud Proxmox : facultatif pour la première connexion.','Vérification TLS : désactivez-la temporairement uniquement pour le certificat par défaut non approuvé.'],
+      checks:['HTTP 401 sans Authorization signifie que l’API est accessible.','HTTP 200 avec le jeton confirme l’ID, le secret et les ACL.','Le test runvard détecte le processeur, la mémoire, le réseau et les mises à jour.'],
+      security:'Conservez PVEAuditor et la séparation des privilèges. Limitez TCP 8006 au réseau d’administration, approuvez l’autorité Proxmox et renouvelez tout jeton exposé.'
+    },
+    linux:{
+      steps:[['Créer un utilisateur de surveillance','Utilisez le compte non privilégié runvard-monitor. Dans OMV, choisissez un vrai shell et le groupe _ssh, sans sudo ni openmediavault-admin.'],['Installer une clé publique dédiée','Générez la clé sur l’hôte runvard et installez uniquement le fichier .pub sur la cible. Runvard conserve la clé privée correspondante.'],['Vérifier la connexion par clé uniquement','Le test SSH strict doit afficher KEY_OK sans demander de mot de passe.'],['Épingler l’identité de l’hôte','Comparez l’empreinte SHA256 obtenue sur la console cible avec celle analysée depuis l’hôte runvard.']],
+      fields:['URL d’administration : interface Web OMV ou du serveur.','Adresse IP interne : IP privée littérale de la cible.','Port : port SSH, normalement 22.','Empreinte de clé d’hôte SSH : valeur SHA256:… complète.','Nom d’utilisateur : runvard-monitor.','Clé SSH privée : bloc privé complet, jamais le fichier .pub.','Phrase secrète : uniquement si la clé privée est chiffrée.'],
+      checks:['KEY_OK apparaît avec l’authentification par mot de passe désactivée.','Les deux empreintes obtenues indépendamment sont identiques.','Le test lit /proc et signale les contrôles de mises à jour pris en charge.'],
+      security:'N’utilisez ni root, ni mot de passe, ni clé d’administrateur personnelle. Ne publiez jamais la clé privée dans une capture et renouvelez-la immédiatement si elle est exposée.'
+    },
+    windows:{
+      steps:[['Créer un compte restreint','Créez runvard-monitor et ajoutez-le à Remote Management Users. Accordez uniquement les droits de lecture CIM, réseau et mises à jour nécessaires.'],['Installer un certificat serveur approuvé','Le certificat doit autoriser Server Authentication et son CN ou SAN doit correspondre exactement à WINDOWS-HOST.'],['Créer l’écouteur HTTPS','Créez l’écouteur WinRM HTTPS avec l’empreinte du certificat et limitez TCP 5986 à l’hôte runvard.'],['Tester et saisir le point de terminaison','Vérifiez l’écouteur et le port avant d’utiliser https://WINDOWS-IP:5986/wsman.']],
+      fields:['URL d’administration : lien du navigateur vers la gestion Windows.','URL d’état interne : point WinRM HTTPS complet terminé par /wsman.','Nom d’utilisateur : SERVEUR\\utilisateur, DOMAINE\\utilisateur ou utilisateur@domaine.','Mot de passe : mot de passe dédié à la surveillance.','Vérification TLS : laissez-la active avec un certificat approuvé.'],
+      checks:['L’écouteur affiche Transport = HTTPS et Port = 5986.','L’hôte runvard atteint le port TCP 5986.','Le test lit le processeur, la mémoire, le trafic réseau et le nombre de mises à jour.'],
+      security:'N’activez jamais WinRM non chiffré pour cette connexion. Vérifiez le nom du certificat, limitez la source du pare-feu et n’utilisez pas un administrateur de domaine.'
+    },
+    generic:{
+      steps:[['Fournir un point de santé','Utilisez un petit point GET tel que /health, /status ou /ping, qui réussit sans modifier l’état.'],['Tester depuis l’hôte runvard','Utilisez l’IP privée littérale et un port explicite. Les redirections ne sont pas suivies.'],['Saisir les deux URL','L’URL d’état est privée et destinée à la machine ; l’URL d’administration est ouverte par les utilisateurs.']],
+      fields:['URL d’administration : interface Web ou adresse du proxy inverse ouverte par la carte.','URL d’état interne : IP privée, port et chemin de santé.','Vérification TLS : laissez-la active avec HTTPS.'],
+      checks:['Curl renvoie un état HTTP 2xx.','La réponse est petite et ne nécessite aucun secret dans l’URL.','La carte indique la disponibilité ; les métriques détaillées restent indisponibles.'],
+      security:'Ne placez jamais de clé API, mot de passe, cookie ou jeton dans une URL. Limitez le point de santé au réseau d’administration.'
+    }
+  },
+  it:{
+    runvard:{
+      steps:[['Prepara entrambi gli indirizzi','Per l’URL interno usa un IP privato LAN o VPN con porta. L’URL del browser può usare il nome del reverse proxy.'],['Crea o usa un gruppo','Sulla prima istanza apri Server e crea un gruppo. Se esiste già, genera un codice di abbinamento.'],['Unisci la seconda istanza','Scegli Istanza runvard e inserisci l’URL interno esistente, il codice monouso e gli URL propri del secondo server.'],['Verifica entrambe le direzioni','Apri ogni server dall’altra istanza. Il cambio apre una nuova scheda con un ticket SSO firmato e di breve durata.']],
+      fields:['URL interno del server esistente: indirizzo privato diretto della prima istanza.','Codice di abbinamento: generato sull’istanza esistente, valido dieci minuti e una sola volta.','URL interno: indirizzo LAN o VPN diretto di questa istanza.','URL del browser: indirizzo aperto dagli utenti, incluso il reverse proxy.','Reti private consentite: CIDR ammessi nel gruppo.'],
+      checks:['Il test di raggiungibilità restituisce HTTP 200.','Entrambi i server risultano online dopo l’abbinamento.','Il cambio funziona da A a B e da B ad A.'],
+      security:'Abbina solo istanze che amministri. Gli URL interni rifiutano indirizzi pubblici e reindirizzamenti; gli URL del browser non contengono credenziali.'
+    },
+    proxmox:{
+      steps:[['Crea l’identità di monitoraggio','Crea runvard-monitor@pve e assegna PVEAuditor su /. Non usare root@pam.'],['Crea un token separato','Crea il token runvard con separazione dei privilegi e assegna PVEAuditor anche al token. Salva il segreto mostrato una sola volta.'],['Prova dall’host runvard','Sostituisci PROXMOX-IP. HTTP 401 senza token dimostra la raggiungibilità; HTTP 200 con il segreto nascosto conferma accesso e permessi.'],['Inserisci i valori API','Usa HTTPS sulla porta 8006. Lascia vuoto il nodo al primo test affinché runvard ne scelga uno online.']],
+      fields:['URL di amministrazione: indirizzo aperto dalla scheda.','URL di stato interno: https://PROXMOX-IP:8006 senza /api2/json.','ID token API: runvard-monitor@pve!runvard.','Segreto token API: il nuovo segreto, mai l’ID.','Nodo Proxmox: facoltativo per la prima connessione.','Verifica TLS: disattivala temporaneamente solo per il certificato predefinito non attendibile.'],
+      checks:['HTTP 401 senza Authorization indica che l’API è raggiungibile.','HTTP 200 con il token conferma ID, segreto e ACL.','Il test runvard rileva CPU, memoria, rete e aggiornamenti.'],
+      security:'Mantieni PVEAuditor e la separazione dei privilegi. Limita TCP 8006 alla rete di gestione, considera attendibile la CA Proxmox e ruota i token esposti.'
+    },
+    linux:{
+      steps:[['Crea un utente di monitoraggio','Usa l’account non privilegiato runvard-monitor. In OMV scegli una shell reale e il gruppo _ssh, senza sudo né openmediavault-admin.'],['Installa una chiave pubblica dedicata','Genera la chiave sull’host runvard e installa solo il file .pub sulla destinazione. Runvard conserva la chiave privata corrispondente.'],['Verifica l’accesso solo con chiave','Il test SSH rigoroso deve mostrare KEY_OK senza chiedere una password.'],['Fissa l’identità dell’host','Confronta l’impronta SHA256 dalla console di destinazione con quella rilevata dall’host runvard.']],
+      fields:['URL di amministrazione: interfaccia Web OMV o del server.','Indirizzo IP interno: IP privato letterale della destinazione.','Porta: porta SSH, normalmente 22.','Impronta chiave host SSH: valore SHA256:… completo.','Nome utente: runvard-monitor.','Chiave SSH privata: blocco privato completo, mai il file .pub.','Passphrase: solo se la chiave privata è cifrata.'],
+      checks:['KEY_OK appare con l’autenticazione tramite password disattivata.','Le due impronte ottenute indipendentemente coincidono.','Il test legge /proc e segnala i controlli aggiornamenti supportati.'],
+      security:'Non usare root, password o una chiave personale di amministrazione. Non pubblicare mai la chiave privata in uno screenshot e ruotala subito se esposta.'
+    },
+    windows:{
+      steps:[['Crea un account limitato','Crea runvard-monitor e aggiungilo a Remote Management Users. Concedi solo i diritti di lettura CIM, rete e aggiornamenti necessari.'],['Installa un certificato server attendibile','Il certificato deve includere Server Authentication e CN o SAN deve corrispondere esattamente a WINDOWS-HOST.'],['Crea il listener HTTPS','Crea il listener WinRM HTTPS con l’impronta del certificato e limita TCP 5986 all’host runvard.'],['Prova e inserisci l’endpoint','Verifica listener e porta prima di usare https://WINDOWS-IP:5986/wsman.']],
+      fields:['URL di amministrazione: collegamento del browser alla gestione Windows.','URL di stato interno: endpoint WinRM HTTPS completo con /wsman.','Nome utente: SERVER\\utente, DOMINIO\\utente o utente@dominio.','Password: password dedicata al monitoraggio.','Verifica TLS: mantienila attiva con un certificato attendibile.'],
+      checks:['Il listener mostra Transport = HTTPS e Port = 5986.','L’host runvard raggiunge TCP 5986.','Il test legge CPU, memoria, traffico di rete e numero di aggiornamenti.'],
+      security:'Non abilitare mai WinRM non cifrato per questa connessione. Verifica il nome del certificato, limita la sorgente firewall e non usare un amministratore di dominio.'
+    },
+    generic:{
+      steps:[['Fornisci un endpoint di salute','Usa un piccolo endpoint GET come /health, /status o /ping che risponda correttamente senza modificare lo stato.'],['Prova dall’host runvard','Usa l’IP privato letterale e una porta esplicita. I reindirizzamenti non vengono seguiti.'],['Inserisci entrambi gli URL','L’URL di stato è privato e destinato alla macchina; l’URL di amministrazione viene aperto dagli utenti.']],
+      fields:['URL di amministrazione: interfaccia Web o indirizzo del reverse proxy aperto dalla scheda.','URL di stato interno: IP privato, porta e percorso di salute.','Verifica TLS: mantienila attiva con HTTPS.'],
+      checks:['Curl restituisce uno stato HTTP 2xx.','La risposta è piccola e non richiede segreti nell’URL.','La scheda mostra la disponibilità; le metriche dettagliate restano assenti.'],
+      security:'Non inserire mai chiavi API, password, cookie o token in un URL. Limita l’endpoint di salute alla rete di gestione.'
+    }
+  },
+  es:{
+    runvard:{
+      steps:[['Prepara ambas direcciones','Usa una IP privada LAN o VPN con puerto para la URL interna. La URL del navegador puede usar el nombre del proxy inverso.'],['Crea o usa un grupo','En la primera instancia abre Servidor y crea un grupo. Si ya existe, genera un código de emparejamiento.'],['Une la segunda instancia','Elige Instancia runvard e introduce la URL interna existente, el código de un solo uso y las URLs propias del segundo servidor.'],['Comprueba ambas direcciones','Abre cada servidor desde la otra instancia. El cambio abre una pestaña nueva con un ticket SSO firmado y de corta duración.']],
+      fields:['URL interna del servidor existente: dirección privada directa de la primera instancia.','Código de emparejamiento: generado en la instancia existente, válido diez minutos y una sola vez.','URL interna: dirección LAN o VPN directa de esta instancia.','URL del navegador: dirección abierta por los usuarios, incluido el proxy inverso.','Redes privadas permitidas: CIDR admitidos en el grupo.'],
+      checks:['La prueba de acceso devuelve HTTP 200.','Ambos servidores aparecen en línea tras el emparejamiento.','El cambio funciona de A a B y de B a A.'],
+      security:'Empareja solo instancias que administres. Las URLs internas rechazan direcciones públicas y redirecciones; las URLs del navegador no contienen credenciales.'
+    },
+    proxmox:{
+      steps:[['Crea la identidad de monitorización','Crea runvard-monitor@pve y asigna PVEAuditor en /. No uses root@pam.'],['Crea un token separado','Crea el token runvard con separación de privilegios y asigna PVEAuditor también al token. Guarda el secreto mostrado una sola vez.'],['Prueba desde el host runvard','Sustituye PROXMOX-IP. HTTP 401 sin token demuestra acceso; HTTP 200 con el secreto oculto confirma credenciales y permisos.'],['Introduce los valores de API','Usa HTTPS en el puerto 8006. Deja el nodo vacío en la primera prueba para que runvard elija uno en línea.']],
+      fields:['URL de administración: dirección abierta por la tarjeta.','URL de estado interna: https://PROXMOX-IP:8006 sin /api2/json.','ID del token API: runvard-monitor@pve!runvard.','Secreto del token API: el secreto nuevo, nunca el ID.','Nodo Proxmox: opcional para la primera conexión.','Verificación TLS: desactívala temporalmente solo para el certificado predeterminado no confiable.'],
+      checks:['HTTP 401 sin Authorization indica que la API es accesible.','HTTP 200 con el token confirma ID, secreto y ACL.','La prueba runvard detecta CPU, memoria, red y actualizaciones.'],
+      security:'Mantén PVEAuditor y la separación de privilegios. Limita TCP 8006 a la red de gestión, confía en la CA de Proxmox y rota los tokens expuestos.'
+    },
+    linux:{
+      steps:[['Crea un usuario de monitorización','Usa la cuenta sin privilegios runvard-monitor. En OMV elige una shell real y el grupo _ssh, sin sudo ni openmediavault-admin.'],['Instala una clave pública dedicada','Genera la clave en el host runvard e instala solo el archivo .pub en el destino. Runvard conserva la clave privada correspondiente.'],['Comprueba el acceso solo con clave','La prueba SSH estricta debe mostrar KEY_OK sin pedir contraseña.'],['Fija la identidad del host','Compara la huella SHA256 de la consola del destino con la obtenida desde el host runvard.']],
+      fields:['URL de administración: interfaz Web de OMV o del servidor.','Dirección IP interna: IP privada literal del destino.','Puerto: puerto SSH, normalmente 22.','Huella de clave de host SSH: valor SHA256:… completo.','Nombre de usuario: runvard-monitor.','Clave SSH privada: bloque privado completo, nunca el archivo .pub.','Frase de clave: solo si la clave privada está cifrada.'],
+      checks:['KEY_OK aparece con la autenticación por contraseña desactivada.','Las dos huellas obtenidas independientemente coinciden.','La prueba lee /proc e informa de las comprobaciones de actualizaciones compatibles.'],
+      security:'No uses root, contraseñas ni una clave personal de administrador. Nunca publiques la clave privada en una captura y rótala de inmediato si queda expuesta.'
+    },
+    windows:{
+      steps:[['Crea una cuenta restringida','Crea runvard-monitor y añádela a Remote Management Users. Concede solo los permisos de lectura CIM, red y actualizaciones necesarios.'],['Instala un certificado de servidor confiable','El certificado debe incluir Server Authentication y su CN o SAN debe coincidir exactamente con WINDOWS-HOST.'],['Crea el listener HTTPS','Crea el listener WinRM HTTPS con la huella del certificado y limita TCP 5986 al host runvard.'],['Prueba e introduce el endpoint','Comprueba listener y puerto antes de usar https://WINDOWS-IP:5986/wsman.']],
+      fields:['URL de administración: enlace del navegador a la gestión de Windows.','URL de estado interna: endpoint WinRM HTTPS completo terminado en /wsman.','Nombre de usuario: SERVIDOR\\usuario, DOMINIO\\usuario o usuario@dominio.','Contraseña: contraseña dedicada de monitorización.','Verificación TLS: mantenla activa con un certificado confiable.'],
+      checks:['El listener muestra Transport = HTTPS y Port = 5986.','El host runvard alcanza TCP 5986.','La prueba lee CPU, memoria, tráfico de red y número de actualizaciones.'],
+      security:'No habilites nunca WinRM sin cifrar para esta conexión. Comprueba el nombre del certificado, limita el origen del firewall y no uses un administrador de dominio.'
+    },
+    generic:{
+      steps:[['Proporciona un endpoint de salud','Usa un pequeño endpoint GET como /health, /status o /ping que responda correctamente sin cambiar el estado.'],['Prueba desde el host runvard','Usa la IP privada literal y un puerto explícito. No se siguen redirecciones.'],['Introduce ambas URLs','La URL de estado es privada y para la máquina; la URL de administración la abren los usuarios.']],
+      fields:['URL de administración: interfaz Web o dirección del proxy inverso abierta por la tarjeta.','URL de estado interna: IP privada, puerto y ruta de salud.','Verificación TLS: mantenla activa con HTTPS.'],
+      checks:['Curl devuelve un estado HTTP 2xx.','La respuesta es pequeña y no necesita secretos en la URL.','La tarjeta indica disponibilidad; las métricas detalladas no están disponibles.'],
+      security:'Nunca pongas claves API, contraseñas, cookies o tokens en una URL. Limita el endpoint de salud a la red de gestión.'
+    }
+  },
+  pt:{
+    runvard:{
+      steps:[['Prepare os dois endereços','Use um IP privado LAN ou VPN com porta para o URL interno. O URL do navegador pode usar o nome do proxy inverso.'],['Crie ou use um grupo','Na primeira instância abra Servidor e crie um grupo. Se já existir, gere um código de emparelhamento.'],['Associe a segunda instância','Escolha Instância runvard e introduza o URL interno existente, o código de utilização única e os URLs próprios do segundo servidor.'],['Confirme as duas direções','Abra cada servidor a partir da outra instância. A mudança abre um novo separador com um bilhete SSO assinado e de curta duração.']],
+      fields:['URL interno do servidor existente: endereço privado direto da primeira instância.','Código de emparelhamento: gerado na instância existente, válido dez minutos e uma vez.','URL interno: endereço LAN ou VPN direto desta instância.','URL do navegador: endereço aberto pelos utilizadores, incluindo o proxy inverso.','Redes privadas permitidas: CIDR admitidos no grupo.'],
+      checks:['O teste de acessibilidade devolve HTTP 200.','Ambos os servidores aparecem online após o emparelhamento.','A mudança funciona de A para B e de B para A.'],
+      security:'Emparelhe apenas instâncias que administra. Os URLs internos rejeitam endereços públicos e redirecionamentos; os URLs do navegador não contêm credenciais.'
+    },
+    proxmox:{
+      steps:[['Crie a identidade de monitorização','Crie runvard-monitor@pve e atribua PVEAuditor em /. Não use root@pam.'],['Crie um token separado','Crie o token runvard com separação de privilégios e atribua PVEAuditor também ao token. Guarde o segredo apresentado uma só vez.'],['Teste no anfitrião runvard','Substitua PROXMOX-IP. HTTP 401 sem token comprova o acesso; HTTP 200 com o segredo oculto confirma credenciais e permissões.'],['Introduza os valores da API','Use HTTPS na porta 8006. Deixe o nó vazio no primeiro teste para o runvard escolher um nó online.']],
+      fields:['URL de administração: endereço aberto pelo cartão.','URL de estado interno: https://PROXMOX-IP:8006 sem /api2/json.','ID do token da API: runvard-monitor@pve!runvard.','Segredo do token da API: o novo segredo, nunca o ID.','Nó Proxmox: opcional para a primeira ligação.','Verificação TLS: desative temporariamente apenas para o certificado predefinido não fidedigno.'],
+      checks:['HTTP 401 sem Authorization significa que a API está acessível.','HTTP 200 com o token confirma ID, segredo e ACL.','O teste runvard deteta CPU, memória, rede e atualizações.'],
+      security:'Mantenha PVEAuditor e a separação de privilégios. Limite TCP 8006 à rede de gestão, confie na CA do Proxmox e altere tokens expostos.'
+    },
+    linux:{
+      steps:[['Crie um utilizador de monitorização','Use a conta sem privilégios runvard-monitor. No OMV escolha uma shell real e o grupo _ssh, sem sudo nem openmediavault-admin.'],['Instale uma chave pública dedicada','Gere a chave no anfitrião runvard e instale apenas o ficheiro .pub no destino. O runvard guarda a chave privada correspondente.'],['Confirme o acesso apenas por chave','O teste SSH rigoroso deve mostrar KEY_OK sem pedir uma palavra-passe.'],['Fixe a identidade do anfitrião','Compare a impressão SHA256 da consola de destino com a obtida a partir do anfitrião runvard.']],
+      fields:['URL de administração: interface Web do OMV ou servidor.','Endereço IP interno: IP privado literal do destino.','Porta: porta SSH, normalmente 22.','Impressão da chave SSH do anfitrião: valor SHA256:… completo.','Nome de utilizador: runvard-monitor.','Chave SSH privada: bloco privado completo, nunca o ficheiro .pub.','Frase secreta: apenas se a chave privada estiver cifrada.'],
+      checks:['KEY_OK aparece com a autenticação por palavra-passe desativada.','As duas impressões obtidas independentemente coincidem.','O teste lê /proc e apresenta as verificações de atualizações suportadas.'],
+      security:'Não use root, palavras-passe nem uma chave pessoal de administrador. Nunca publique a chave privada numa captura e altere-a imediatamente se for exposta.'
+    },
+    windows:{
+      steps:[['Crie uma conta restrita','Crie runvard-monitor e adicione-a a Remote Management Users. Conceda apenas os direitos de leitura CIM, rede e atualizações necessários.'],['Instale um certificado de servidor fidedigno','O certificado deve incluir Server Authentication e o CN ou SAN tem de corresponder exatamente a WINDOWS-HOST.'],['Crie o listener HTTPS','Crie o listener WinRM HTTPS com a impressão do certificado e limite TCP 5986 ao anfitrião runvard.'],['Teste e introduza o endpoint','Confirme listener e porta antes de usar https://WINDOWS-IP:5986/wsman.']],
+      fields:['URL de administração: ligação do navegador à gestão do Windows.','URL de estado interno: endpoint WinRM HTTPS completo terminado em /wsman.','Nome de utilizador: SERVIDOR\\utilizador, DOMÍNIO\\utilizador ou utilizador@domínio.','Palavra-passe: palavra-passe dedicada à monitorização.','Verificação TLS: mantenha ativa com um certificado fidedigno.'],
+      checks:['O listener mostra Transport = HTTPS e Port = 5986.','O anfitrião runvard alcança TCP 5986.','O teste lê CPU, memória, tráfego de rede e número de atualizações.'],
+      security:'Nunca ative WinRM não cifrado para esta ligação. Confirme o nome do certificado, limite a origem na firewall e não use um administrador de domínio.'
+    },
+    generic:{
+      steps:[['Disponibilize um endpoint de saúde','Use um pequeno endpoint GET como /health, /status ou /ping que responda com sucesso sem alterar o estado.'],['Teste no anfitrião runvard','Use o IP privado literal e uma porta explícita. Os redirecionamentos não são seguidos.'],['Introduza ambos os URLs','O URL de estado é privado e destinado à máquina; o URL de administração é aberto pelos utilizadores.']],
+      fields:['URL de administração: interface Web ou endereço do proxy inverso aberto pelo cartão.','URL de estado interno: IP privado, porta e caminho de saúde.','Verificação TLS: mantenha ativa com HTTPS.'],
+      checks:['Curl devolve um estado HTTP 2xx.','A resposta é pequena e não exige segredos no URL.','O cartão indica disponibilidade; as métricas detalhadas ficam indisponíveis.'],
+      security:'Nunca coloque chaves API, palavras-passe, cookies ou tokens num URL. Limite o endpoint de saúde à rede de gestão.'
+    }
+  }
+};
+for(const lang of Object.keys(COMMON_TRANSLATIONS)){
+  GUIDE_I18N[lang]={...GUIDE_I18N.en,...COMMON_TRANSLATIONS[lang],sections:{}};
+  for(const kind of SECTION_ORDER){
+    const [title,summary]=SECTION_TRANSLATIONS[lang][kind];
+    GUIDE_I18N[lang].sections[kind]={
+      ...GUIDE_I18N.en.sections[kind],
+      ...DETAIL_TRANSLATIONS[lang][kind],
+      title,summary,
+    };
+  }
+}
+
+function esc(value){
+  return String(value??'').replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]));
+}
+function selectedLanguage(){
+  const query=new URLSearchParams(location.search).get('lang');
+  if(GUIDE_I18N[query])return query;
+  try{const saved=localStorage.getItem(LANGUAGE_KEY);if(GUIDE_I18N[saved])return saved;}catch(_){}
+  return'en';
+}
+function commandHtml(command,text){
+  return `<div class="command">
+    <div class="command-meta"><span>${esc(text[command.on]||text.runvardHost)}</span>
+      <button class="command-copy" type="button" data-copy-command="${esc(command.value)}" aria-label="${esc(text.copy)}">${esc(text.copy)}</button>
+    </div><pre><code>${esc(command.value)}</code></pre>
+  </div>`;
+}
+function guideHtml(kind,text){
+  const guide=text.sections[kind];
+  const steps=guide.steps.map(([title,copy])=>`<div class="step"><div><h3>${esc(title)}</h3><p>${esc(copy)}</p></div></div>`).join('');
+  const fields=guide.fields.map(item=>{
+    const split=item.indexOf(':');
+    return split>0?`<li><strong>${esc(item.slice(0,split))}:</strong>${esc(item.slice(split+1))}</li>`:`<li>${esc(item)}</li>`;
+  }).join('');
+  const checks=guide.checks.map(item=>`<li>${esc(item)}</li>`).join('');
+  const commands=(COMMANDS[kind]||[]).map(command=>commandHtml(command,text)).join('');
+  const source=SOURCES[kind];
+  return `<header class="guide-head"><span class="guide-icon" aria-hidden="true">${esc({runvard:'⬡',proxmox:'P',linux:'>_',windows:'⊞',generic:'↗'}[kind])}</span>
+    <div><h2>${esc(guide.title)}</h2><p>${esc(guide.summary)}</p></div></header>
+    <div class="guide-body">
+      <section><h3 class="section-title">${esc(text.steps)}</h3><div class="steps">${steps}</div></section>
+      <section><h3 class="section-title">${esc(text.commands)}</h3><div class="command-list">${commands}</div></section>
+      <section><h3 class="section-title">${esc(text.fields)}</h3><ul class="field-list">${fields}</ul></section>
+      <section><h3 class="section-title">${esc(text.checks)}</h3><ul class="check-list">${checks}</ul></section>
+      <section class="security"><h3 class="section-title">${esc(text.security)}</h3><p>${esc(guide.security)}</p></section>
+      <a class="guide-source" href="${esc(source)}" target="_blank" rel="noopener noreferrer">${esc(text.source)} <span aria-hidden="true">↗</span></a>
+    </div>`;
+}
+function render(language){
+  const text=GUIDE_I18N[language]||GUIDE_I18N.en;
+  document.documentElement.lang=language;
+  document.title=`${text.title} · runvard`;
+  document.querySelectorAll('[data-t]').forEach(node=>{node.textContent=text[node.dataset.t]||GUIDE_I18N.en[node.dataset.t]||node.textContent;});
+  SECTION_ORDER.forEach(kind=>{
+    const article=document.querySelector(`[data-guide="${kind}"]`);
+    article.innerHTML=guideHtml(kind,text);
+    const nav=document.querySelector(`[data-nav="${kind}"]`);
+    if(nav)nav.textContent=text.sections[kind].title;
+  });
+  const select=document.querySelector('#guide-language');
+  select.value=language;
+}
+async function copyCommand(value){
+  try{await navigator.clipboard.writeText(value);}
+  catch(_){
+    const area=document.createElement('textarea');
+    area.value=value;area.setAttribute('readonly','');area.style.position='fixed';area.style.opacity='0';
+    document.body.appendChild(area);area.select();document.execCommand('copy');area.remove();
+  }
+  const language=selectedLanguage();
+  const status=document.querySelector('#copy-status');
+  status.textContent=(GUIDE_I18N[language]||GUIDE_I18N.en).copied;
+  status.classList.add('show');
+  clearTimeout(copyCommand.timer);
+  copyCommand.timer=setTimeout(()=>status.classList.remove('show'),1800);
+}
+document.addEventListener('click',event=>{
+  const button=event.target.closest('[data-copy-command]');
+  if(button)copyCommand(button.dataset.copyCommand);
+});
+document.querySelector('#guide-language').addEventListener('change',event=>{
+  const language=event.target.value;
+  try{localStorage.setItem(LANGUAGE_KEY,language);}catch(_){}
+  const url=new URL(location.href);url.searchParams.set('lang',language);history.replaceState({},'',url);
+  render(language);
+});
+const observer=new IntersectionObserver(entries=>{
+  const visible=entries.filter(entry=>entry.isIntersecting).sort((a,b)=>b.intersectionRatio-a.intersectionRatio)[0];
+  if(!visible)return;
+  document.querySelectorAll('.guide-nav a').forEach(link=>link.classList.toggle('active',link.hash===`#${visible.target.id}`));
+},{rootMargin:'-20% 0px -65%',threshold:[0,.25,.75]});
+document.querySelectorAll('.guide-card').forEach(card=>observer.observe(card));
+render(selectedLanguage());
+</script>
+</body>
+</html>

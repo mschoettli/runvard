@@ -88,6 +88,19 @@ def test_server_type_picker_separates_trusted_runvard_from_status_links():
         assert key in INDEX
 
 
+def test_server_type_picker_opens_connection_guide_in_a_protected_new_tab():
+    assert 'class="server-connection-guide-link"' in INDEX
+    assert 'href="/static/server-connection-guide.html"' in INDEX
+    assert 'target="_blank"' in INDEX
+    assert 'rel="noopener noreferrer"' in INDEX
+
+    external_start = INDEX.index("const EXTERNAL_SERVER_I18N")
+    for language in ("en", "de", "fr", "it", "es", "pt"):
+        start = INDEX.index(f"{language}:{{", external_start)
+        end = INDEX.index("},", start)
+        assert "connectionGuide:" in INDEX[start:end]
+
+
 def test_server_type_picker_uses_readable_copy_and_one_icon_language():
     assert ".server-type-choice-copy strong{" in INDEX
     assert "color:var(--text)" in INDEX[

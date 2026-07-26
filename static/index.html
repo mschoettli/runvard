@@ -676,7 +676,9 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .fed-setup-card h3{font-size:14px;margin:0 0 6px}.fed-setup-card p{font-size:11px;color:var(--text3);line-height:1.5;margin:0 0 14px}
 .server-type-trusted{display:grid}
 .server-type-divider{display:flex;align-items:center;gap:.75rem;margin:1rem 0 .75rem;color:var(--text3);font-size:.6875rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
-.server-type-divider::after{content:'';height:1px;flex:1;background:var(--border)}
+.server-type-divider-line{height:1px;flex:1;background:var(--border)}
+.server-connection-guide-link{min-height:2.75rem;padding:0 .25rem;border-radius:.5rem;color:var(--text2);font-size:.6875rem;font-weight:600;letter-spacing:0;text-transform:none;text-decoration:none;white-space:nowrap;display:inline-flex;align-items:center;gap:.25rem}
+.server-connection-guide-link:hover,.server-connection-guide-link:focus-visible{color:var(--accent-light);background:rgba(122,74,255,.08);outline:none}
 .server-type-external-grid{display:grid;grid-template-columns:1fr;gap:.625rem}
 .server-type-choice{min-height:4.75rem;padding:.875rem;border:1px solid var(--border);border-radius:.75rem;background:var(--bg3);color:var(--text);font-family:inherit;text-align:left;cursor:pointer;display:grid;grid-template-columns:2.25rem minmax(0,1fr);gap:.75rem;align-items:center;transition:background .15s,border-color .15s,transform .15s}
 .server-type-choice:hover,.server-type-choice:focus-visible{background:rgba(122,74,255,.08);border-color:var(--border-accent);outline:none}
@@ -7899,7 +7901,7 @@ const EXTERNAL_SERVER_I18N={
     errorAuthentication:'Authentication failed.',
     errorCertificate:'TLS certificate validation failed.',
     errorUnreachable:'Server is unreachable.',
-    statusAndLinks:'Status and links',
+    statusAndLinks:'Status and links',connectionGuide:'Connection guide',
     runvardAccessDescription:'Full access and automatic sign-in',
     proxmoxStatusDescription:'Status via Proxmox API',
     linuxStatusDescription:'Status via SSH',
@@ -7932,7 +7934,7 @@ const EXTERNAL_SERVER_I18N={
     errorAuthentication:'Anmeldung fehlgeschlagen.',
     errorCertificate:'Prüfung des TLS-Zertifikats fehlgeschlagen.',
     errorUnreachable:'Server ist nicht erreichbar.',
-    statusAndLinks:'Status und Links',
+    statusAndLinks:'Status und Links',connectionGuide:'Anleitung',
     runvardAccessDescription:'Vollzugriff und automatische Anmeldung',
     proxmoxStatusDescription:'Status über die Proxmox-API',
     linuxStatusDescription:'Status über SSH',
@@ -7965,7 +7967,7 @@ const EXTERNAL_SERVER_I18N={
     errorAuthentication:'Échec de l’authentification.',
     errorCertificate:'Échec de la validation du certificat TLS.',
     errorUnreachable:'Le serveur est inaccessible.',
-    statusAndLinks:'État et liens',
+    statusAndLinks:'État et liens',connectionGuide:'Guide de connexion',
     runvardAccessDescription:'Accès complet et connexion automatique',
     proxmoxStatusDescription:'État via l’API Proxmox',
     linuxStatusDescription:'État via SSH',
@@ -7998,7 +8000,7 @@ const EXTERNAL_SERVER_I18N={
     errorAuthentication:'Autenticazione non riuscita.',
     errorCertificate:'Verifica del certificato TLS non riuscita.',
     errorUnreachable:'Il server non è raggiungibile.',
-    statusAndLinks:'Stato e collegamenti',
+    statusAndLinks:'Stato e collegamenti',connectionGuide:'Guida al collegamento',
     runvardAccessDescription:'Accesso completo e autenticazione automatica',
     proxmoxStatusDescription:'Stato tramite API Proxmox',
     linuxStatusDescription:'Stato tramite SSH',
@@ -8031,7 +8033,7 @@ const EXTERNAL_SERVER_I18N={
     errorAuthentication:'Error de autenticación.',
     errorCertificate:'Error al validar el certificado TLS.',
     errorUnreachable:'No se puede acceder al servidor.',
-    statusAndLinks:'Estado y enlaces',
+    statusAndLinks:'Estado y enlaces',connectionGuide:'Guía de conexión',
     runvardAccessDescription:'Acceso completo e inicio de sesión automático',
     proxmoxStatusDescription:'Estado mediante la API de Proxmox',
     linuxStatusDescription:'Estado mediante SSH',
@@ -8064,7 +8066,7 @@ const EXTERNAL_SERVER_I18N={
     errorAuthentication:'Falha na autenticação.',
     errorCertificate:'Falha na validação do certificado TLS.',
     errorUnreachable:'O servidor está inacessível.',
-    statusAndLinks:'Estado e ligações',
+    statusAndLinks:'Estado e ligações',connectionGuide:'Guia de ligação',
     runvardAccessDescription:'Acesso completo e início de sessão automático',
     proxmoxStatusDescription:'Estado através da API Proxmox',
     linuxStatusDescription:'Estado através de SSH',
@@ -8333,7 +8335,11 @@ window.openServerTypePicker=()=>{
   $('#form-head').innerHTML=serverFormHeaderHtml(fedText('connectServer'),'add');
   $('#form-body').innerHTML=`
     <div class="server-type-trusted">${serverTypeChoiceHtml(choices[0],true)}</div>
-    <div class="server-type-divider"><span>${esc(fedText('statusAndLinks'))}</span></div>
+    <div class="server-type-divider">
+      <span>${esc(fedText('statusAndLinks'))}</span>
+      <span class="server-type-divider-line" aria-hidden="true"></span>
+      <a class="server-connection-guide-link" href="/static/server-connection-guide.html" target="_blank" rel="noopener noreferrer">${esc(fedText('connectionGuide'))}<span aria-hidden="true">↗</span></a>
+    </div>
     <div class="server-type-external-grid">${choices.slice(1).map(choice=>serverTypeChoiceHtml(choice)).join('')}</div>`;
   openFormOverlay('.server-type-choice');
 };
