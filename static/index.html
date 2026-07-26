@@ -678,7 +678,9 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .server-type-divider{display:flex;align-items:center;gap:.75rem;margin:1rem 0 .75rem;color:var(--text3);font-size:.6875rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
 .server-type-divider::after{content:'';height:1px;flex:1;background:var(--border)}
 .server-type-external-grid{display:grid;grid-template-columns:1fr;gap:.625rem}
+.server-type-choice-wrap{position:relative;min-width:0}
 .server-type-choice{min-height:4.75rem;padding:.875rem;border:1px solid var(--border);border-radius:.75rem;background:var(--bg3);color:var(--text);font-family:inherit;text-align:left;cursor:pointer;display:grid;grid-template-columns:2.25rem minmax(0,1fr);gap:.75rem;align-items:center;transition:background .15s,border-color .15s,transform .15s}
+.server-type-choice-wrap .server-type-choice{width:100%;padding-right:3.5rem}
 .server-type-choice:hover,.server-type-choice:focus-visible{background:rgba(122,74,255,.08);border-color:var(--border-accent);outline:none}
 .server-type-choice:active{transform:scale(.985)}
 .server-type-choice.is-trusted{background:linear-gradient(90deg,rgba(122,74,255,.12),rgba(122,74,255,.035));border-color:rgba(122,74,255,.28)}
@@ -687,7 +689,35 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .server-type-choice-copy{display:block;min-width:0}
 .server-type-choice-copy strong{display:block;color:var(--text);font-size:.8125rem;font-weight:600}
 .server-type-choice-copy>span{display:block;margin-top:.1875rem;font-size:.6875rem;color:var(--text2);line-height:1.4}
+.server-type-info{position:absolute;z-index:2;top:.25rem;right:.25rem;width:2.75rem;height:2.75rem;padding:0;border:0;border-radius:.625rem;background:transparent;color:var(--text3);font-family:inherit;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.server-type-info::before{content:'i';width:1.375rem;height:1.375rem;border:1px solid currentColor;border-radius:50%;font:700 .6875rem/1.25rem 'JetBrains Mono',monospace;text-align:center;transition:color .15s,background .15s,border-color .15s}
+.server-type-info:hover,.server-type-info:focus-visible{color:var(--accent-light);outline:none}
+.server-type-info:hover::before,.server-type-info:focus-visible::before{background:rgba(122,74,255,.14);border-color:var(--accent-light)}
 .server-type-picker-card{height:auto}
+.server-guide-card{width:min(42rem,95vw);max-height:min(48rem,90vh);overflow:hidden;display:flex;flex-direction:column}
+.server-guide-card .form-head{flex:0 0 auto}
+.server-guide-body{min-height:0;overflow:auto;padding-top:1.25rem}
+.server-guide-content{display:contents}
+.server-guide-intro{margin:0 0 1.25rem!important;color:var(--text2)!important;font-size:.8125rem!important;line-height:1.6!important}
+.server-guide-section{margin-top:1.25rem}
+.server-guide-section:first-of-type{margin-top:0}
+.server-guide-section h3{margin:0 0 .625rem;color:var(--text3);font-size:.6875rem;font-weight:600;letter-spacing:.08em;text-transform:uppercase}
+.server-guide-section p{margin:0!important;color:var(--text2)!important;font-size:.75rem!important;line-height:1.6!important}
+.server-guide-steps{display:grid;gap:.625rem}
+.server-guide-step{display:grid;grid-template-columns:1.75rem minmax(0,1fr);gap:.625rem;padding:.75rem;border:1px solid var(--border);border-radius:.75rem;background:var(--bg3)}
+.server-guide-step-number{width:1.75rem;height:1.75rem;border-radius:.5rem;background:rgba(122,74,255,.14);color:var(--accent-light);font:600 .6875rem/1.75rem 'JetBrains Mono',monospace;text-align:center}
+.server-guide-step h4{margin:.125rem 0 .25rem;color:var(--text);font-size:.8125rem;font-weight:600}
+.server-guide-commands{display:grid;gap:.375rem;margin-top:.75rem}
+.server-guide-command{display:grid;grid-template-columns:minmax(0,1fr) 2.75rem;align-items:stretch;border:1px solid var(--border);border-radius:.625rem;background:#090a13;overflow:hidden}
+.server-guide-command code{min-width:0;padding:.6875rem .75rem;color:#c4b5fd;font:500 .6875rem/1.5 'JetBrains Mono',monospace;white-space:pre-wrap;overflow-wrap:anywhere}
+.server-guide-command button{width:2.75rem;min-height:2.75rem;padding:0;border:0;border-left:1px solid var(--border);background:transparent;color:var(--text3);font-family:inherit;cursor:pointer}
+.server-guide-command button:hover,.server-guide-command button:focus-visible{background:rgba(122,74,255,.12);color:var(--text);outline:none}
+.server-guide-fields{padding:.75rem;border:1px solid rgba(6,182,212,.22);border-radius:.75rem;background:rgba(6,182,212,.06)}
+.server-guide-security{padding:.75rem;border:1px solid rgba(245,158,11,.22);border-radius:.75rem;background:rgba(245,158,11,.06)}
+.server-guide-actions{flex:0 0 auto;display:flex;align-items:center;justify-content:flex-end;gap:.625rem;flex-wrap:wrap;margin:0;padding:.875rem 1.75rem 1.25rem;background:#0d0e1a;border-top:1px solid var(--border)}
+.server-guide-actions .btn{min-height:2.75rem}
+.server-guide-source{min-height:2.75rem;margin-right:auto;color:var(--text2);font-size:.6875rem;text-decoration:none;display:inline-flex;align-items:center}
+.server-guide-source:hover,.server-guide-source:focus-visible{color:var(--accent-light);outline:none;text-decoration:underline}
 .external-server-form-card{overflow:hidden;display:flex;flex-direction:column}
 .external-server-form-card .form-head{flex:0 0 auto}
 .external-server-form-card .form-body{min-height:0;overflow:auto;padding-bottom:0}
@@ -738,7 +768,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 }
 
 @media (prefers-reduced-motion:reduce){
-  .connected-server-card,.connected-servers-add,.server-type-choice,.form-card,.modal{transition:none;animation:none}
+  .connected-server-card,.connected-servers-add,.server-type-choice,.server-type-info::before,.form-card,.modal{transition:none;animation:none}
 }
 
 @media (max-width: 760px){
@@ -7569,8 +7599,13 @@ function resetFormCardClasses(){
   const formCard=document.querySelector('#form-overlay .form-card');
   if(formCard)formCard.classList.remove(
     'compose-install-card','tile-edit-card',
-    'server-type-picker-card','external-server-form-card',
+    'server-type-picker-card','external-server-form-card','server-guide-card',
   );
+  formCard?.querySelector(':scope > .server-guide-actions')?.remove();
+  const formBody=$('#form-body');
+  formBody?.classList.remove('server-guide-body');
+  formBody?.removeAttribute('role');
+  formBody?.removeAttribute('aria-labelledby');
   return formCard;
 }
 function formOverlayFocusable(){
@@ -7910,6 +7945,11 @@ const EXTERNAL_SERVER_I18N={
     back:'Back',
     createServerGroupCopy:'Create a new trusted group of runvard servers.',
     joinServerGroupCopy:'Connect this runvard instance to an existing server group.',
+    informationAbout:'Information about {server}',setupGuide:'Setup guide',
+    guideRequirements:'Requirements',guideCredentials:'Create access',
+    guideConnection:'Test connection',guideFields:'Fields in runvard',
+    guideSecurity:'Security',configureServer:'Configure server',
+    copyCommand:'Copy command',officialDocs:'Official documentation',
   },
   de:{
     runvardInstance:'runvard-Instanz',proxmox:'Proxmox',linux:'Linux',
@@ -7943,6 +7983,11 @@ const EXTERNAL_SERVER_I18N={
     back:'Zurück',
     createServerGroupCopy:'Einen neuen vertrauenswürdigen Verbund aus runvard-Servern erstellen.',
     joinServerGroupCopy:'Diese runvard-Instanz mit einem vorhandenen Serververbund verbinden.',
+    informationAbout:'Informationen zu {server}',setupGuide:'Einrichtungsanleitung',
+    guideRequirements:'Voraussetzungen',guideCredentials:'Zugang einrichten',
+    guideConnection:'Verbindung prüfen',guideFields:'Felder in runvard',
+    guideSecurity:'Sicherheit',configureServer:'Server konfigurieren',
+    copyCommand:'Befehl kopieren',officialDocs:'Offizielle Dokumentation',
   },
   fr:{
     runvardInstance:'Instance runvard',proxmox:'Proxmox',linux:'Linux',
@@ -7976,6 +8021,11 @@ const EXTERNAL_SERVER_I18N={
     back:'Retour',
     createServerGroupCopy:'Créer un nouveau groupe approuvé de serveurs runvard.',
     joinServerGroupCopy:'Connecter cette instance runvard à un groupe de serveurs existant.',
+    informationAbout:'Informations sur {server}',setupGuide:'Guide de configuration',
+    guideRequirements:'Prérequis',guideCredentials:'Créer l’accès',
+    guideConnection:'Tester la connexion',guideFields:'Champs dans runvard',
+    guideSecurity:'Sécurité',configureServer:'Configurer le serveur',
+    copyCommand:'Copier la commande',officialDocs:'Documentation officielle',
   },
   it:{
     runvardInstance:'Istanza runvard',proxmox:'Proxmox',linux:'Linux',
@@ -8009,6 +8059,11 @@ const EXTERNAL_SERVER_I18N={
     back:'Indietro',
     createServerGroupCopy:'Crea un nuovo gruppo attendibile di server runvard.',
     joinServerGroupCopy:'Collega questa istanza runvard a un gruppo di server esistente.',
+    informationAbout:'Informazioni su {server}',setupGuide:'Guida alla configurazione',
+    guideRequirements:'Requisiti',guideCredentials:'Crea accesso',
+    guideConnection:'Verifica la connessione',guideFields:'Campi in runvard',
+    guideSecurity:'Sicurezza',configureServer:'Configura server',
+    copyCommand:'Copia comando',officialDocs:'Documentazione ufficiale',
   },
   es:{
     runvardInstance:'Instancia runvard',proxmox:'Proxmox',linux:'Linux',
@@ -8042,6 +8097,11 @@ const EXTERNAL_SERVER_I18N={
     back:'Volver',
     createServerGroupCopy:'Crea un nuevo grupo de confianza de servidores runvard.',
     joinServerGroupCopy:'Conecta esta instancia runvard a un grupo de servidores existente.',
+    informationAbout:'Información sobre {server}',setupGuide:'Guía de configuración',
+    guideRequirements:'Requisitos',guideCredentials:'Crear acceso',
+    guideConnection:'Probar la conexión',guideFields:'Campos en runvard',
+    guideSecurity:'Seguridad',configureServer:'Configurar servidor',
+    copyCommand:'Copiar comando',officialDocs:'Documentación oficial',
   },
   pt:{
     runvardInstance:'Instância runvard',proxmox:'Proxmox',linux:'Linux',
@@ -8075,7 +8135,245 @@ const EXTERNAL_SERVER_I18N={
     back:'Voltar',
     createServerGroupCopy:'Crie um novo grupo fidedigno de servidores runvard.',
     joinServerGroupCopy:'Ligue esta instância runvard a um grupo de servidores existente.',
+    informationAbout:'Informações sobre {server}',setupGuide:'Guia de configuração',
+    guideRequirements:'Requisitos',guideCredentials:'Criar acesso',
+    guideConnection:'Testar a ligação',guideFields:'Campos no runvard',
+    guideSecurity:'Segurança',configureServer:'Configurar servidor',
+    copyCommand:'Copiar comando',officialDocs:'Documentação oficial',
   },
+};
+const SERVER_GUIDE_I18N={
+  en:{
+    proxmox:{
+      intro:'runvard reads CPU, memory, network, and update data through the native Proxmox VE API. The connection is read-only and cannot start, stop, or change guests.',
+      requirements:'The Proxmox API must be reachable from the runvard host through a private IP, normally on TCP port 8006. Use a valid TLS certificate or install your private CA on the runvard host.',
+      credentials:'In Datacenter › Permissions, create the user runvard-monitor@pve and grant PVEAuditor at /. Then create the separated API token runvard for this user. Save the secret immediately because Proxmox displays it only once.',
+      connection:'The commands below perform the same setup in the Proxmox shell. Both the user and the separated token receive PVEAuditor because token permissions are always a subset of the user permissions.',
+      fields:'Administration URL opens the Proxmox web interface. Internal status URL is the API base, for example https://10.0.0.20:8006. Token ID is runvard-monitor@pve!runvard; enter the displayed secret separately. The node name is optional.',
+      security:'Do not use root@pam or a full-access token. Keep privilege separation and TLS verification enabled, restrict port 8006 to the management network, and revoke the token if its secret is exposed.',
+    },
+    linux:{
+      intro:'runvard connects through SSH and executes only fixed read-only commands for CPU, memory, network, and available package updates. No command can be supplied through the browser.',
+      requirements:'The target needs an SSH server reachable through a private IP. A dedicated unprivileged account must be able to read /proc and run the package manager simulation used for the update count.',
+      credentials:'Generate a dedicated Ed25519 key pair, add only its public key to the monitoring account, and paste the matching private key into runvard. Do not reuse a personal administrator key.',
+      connection:'Determine the host-key fingerprint from a trusted console and compare it with the fingerprint returned for the intended IP. Enter exactly the SHA256:… value so runvard rejects a changed or unexpected host key.',
+      fields:'Internal IP address and port identify SSH. Username is the monitoring account. Private SSH key is the complete private key; passphrase is required only when the key is encrypted. Administration URL is opened separately in the browser.',
+      security:'Keep the account unprivileged, limit SSH access to the runvard host in the firewall, protect the private key with a passphrase, and never use root or password authentication for this connection.',
+    },
+    windows:{
+      intro:'runvard uses WinRM over HTTPS for fixed PowerShell and CIM status queries. It reads CPU, memory, adapter traffic, and the Windows Update count without accepting arbitrary scripts from the browser.',
+      requirements:'Install a computer certificate with Server Authentication in the local computer store. Its CN or SAN must match the address used by runvard. Permit TCP 5986 from the runvard host only.',
+      credentials:'Create a dedicated local or domain monitoring account and add it to Remote Management Users. Grant only the additional CIM/WMI read rights required by your server policy; do not use a Domain Administrator account.',
+      connection:'Create the HTTPS listener and verify it with the commands below. The endpoint entered in runvard normally ends with :5986/wsman, for example https://10.0.0.30:5986/wsman.',
+      fields:'Internal status URL is the complete WinRM HTTPS endpoint. Username may be SERVER\\user, DOMAIN\\user, or user@domain. Enter its password and leave TLS verification enabled. Administration URL is only the browser link.',
+      security:'Unencrypted WinRM is rejected. Keep the certificate trusted and current, restrict the firewall rule to the runvard host, and rotate the monitoring password according to your server policy.',
+    },
+    generic:{
+      intro:'This option checks whether an HTTP or HTTPS endpoint responds successfully and opens a separate administration link. It does not parse CPU, memory, network, or update data.',
+      requirements:'Provide a lightweight private health endpoint that accepts GET and returns a successful status code. Redirects are not followed. The endpoint must be reachable from the runvard host.',
+      credentials:'The generic check does not send API keys, cookies, or passwords. Use an endpoint that can be safely reached from the management network without secrets in its URL.',
+      connection:'Test the health endpoint from the runvard host. A path such as /health, /status, or /ping is suitable when it returns a small response and performs no state-changing action.',
+      fields:'Internal status URL is the private health endpoint, for example https://10.0.0.50:8443/health. Administration URL is the address opened from the card and may use your later reverse-proxy hostname.',
+      security:'Never place credentials or tokens in either URL. Restrict the health endpoint to the management network, prefer HTTPS, and expose only the minimum information required for availability checking.',
+    },
+  },
+  de:{
+    proxmox:{
+      intro:'runvard liest CPU-, RAM-, Netzwerk- und Update-Daten über die native Proxmox-VE-API. Die Verbindung ist rein lesend und kann Gäste weder starten, stoppen noch verändern.',
+      requirements:'Die Proxmox-API muss vom runvard-Host über eine private IP erreichbar sein, normalerweise über TCP-Port 8006. Verwende ein gültiges TLS-Zertifikat oder installiere deine private CA auf dem runvard-Host.',
+      credentials:'Erstelle unter Rechenzentrum › Berechtigungen den Benutzer runvard-monitor@pve und erteile PVEAuditor auf /. Erstelle danach für diesen Benutzer das getrennte API-Token runvard. Speichere das Secret sofort, da Proxmox es nur einmal anzeigt.',
+      connection:'Die folgenden Befehle führen dieselbe Einrichtung in der Proxmox-Shell aus. Benutzer und getrenntes Token erhalten PVEAuditor, weil Token-Berechtigungen immer eine Teilmenge der Benutzerrechte sind.',
+      fields:'Die Verwaltungs-URL öffnet die Proxmox-Oberfläche. Die interne Status-URL ist die API-Basis, zum Beispiel https://10.0.0.20:8006. Die Token-ID lautet runvard-monitor@pve!runvard; das angezeigte Secret kommt ins separate Feld. Der Node-Name ist optional.',
+      security:'Verwende weder root@pam noch ein Token mit Vollzugriff. Lasse Privilege Separation und TLS-Prüfung aktiv, beschränke Port 8006 auf das Verwaltungsnetz und widerrufe das Token, falls das Secret offengelegt wurde.',
+    },
+    linux:{
+      intro:'runvard verbindet sich per SSH und führt ausschließlich fest definierte Lesebefehle für CPU, RAM, Netzwerk und verfügbare Paketupdates aus. Über den Browser können keine Befehle übergeben werden.',
+      requirements:'Auf dem Ziel muss ein SSH-Server über eine private IP erreichbar sein. Ein eigener unprivilegierter Benutzer muss /proc lesen und die Simulation des Paketmanagers für die Update-Anzahl ausführen können.',
+      credentials:'Erzeuge ein eigenes Ed25519-Schlüsselpaar, hinterlege nur den öffentlichen Schlüssel beim Monitoring-Benutzer und füge den passenden privaten Schlüssel in runvard ein. Verwende keinen persönlichen Administratorschlüssel.',
+      connection:'Ermittle den Hostschlüssel-Fingerabdruck über eine vertrauenswürdige Konsole und vergleiche ihn mit dem Fingerabdruck der vorgesehenen IP. Trage exakt den Wert SHA256:… ein, damit runvard einen veränderten oder unerwarteten Hostschlüssel ablehnt.',
+      fields:'Interne IP-Adresse und Port bestimmen die SSH-Verbindung. Benutzername ist das Monitoring-Konto. Der private SSH-Schlüssel muss vollständig eingefügt werden; die Passphrase ist nur bei einem verschlüsselten Schlüssel nötig. Die Verwaltungs-URL wird separat im Browser geöffnet.',
+      security:'Halte das Konto unprivilegiert, erlaube SSH in der Firewall nur vom runvard-Host, schütze den privaten Schlüssel mit einer Passphrase und verwende weder root noch Passwortanmeldung für diese Verbindung.',
+    },
+    windows:{
+      intro:'runvard verwendet WinRM über HTTPS für fest definierte PowerShell- und CIM-Statusabfragen. Gelesen werden CPU, RAM, Netzwerkverkehr und Windows-Updates; beliebige Skripte aus dem Browser werden nicht akzeptiert.',
+      requirements:'Installiere im Zertifikatsspeicher des lokalen Computers ein Zertifikat mit Serverauthentifizierung. CN oder SAN muss zur von runvard verwendeten Adresse passen. Erlaube TCP 5986 ausschließlich vom runvard-Host.',
+      credentials:'Erstelle ein eigenes lokales oder Domänen-Monitoringkonto und füge es zu Remote Management Users hinzu. Vergib nur die durch deine Serverrichtlinie zusätzlich nötigen CIM-/WMI-Leserechte; verwende keinen Domänenadministrator.',
+      connection:'Erstelle den HTTPS-Listener und kontrolliere ihn mit den folgenden Befehlen. Der in runvard eingetragene Endpunkt endet normalerweise auf :5986/wsman, zum Beispiel https://10.0.0.30:5986/wsman.',
+      fields:'Die interne Status-URL ist der vollständige WinRM-HTTPS-Endpunkt. Als Benutzer sind SERVER\\Benutzer, DOMÄNE\\Benutzer oder benutzer@domäne möglich. Trage das Passwort ein und lasse die TLS-Prüfung aktiv. Die Verwaltungs-URL ist nur der Browser-Link.',
+      security:'Unverschlüsseltes WinRM wird abgelehnt. Halte das Zertifikat vertrauenswürdig und aktuell, beschränke die Firewall-Regel auf den runvard-Host und rotiere das Monitoring-Passwort gemäß deiner Serverrichtlinie.',
+    },
+    generic:{
+      intro:'Diese Option prüft, ob ein HTTP- oder HTTPS-Endpunkt erfolgreich antwortet, und öffnet einen separaten Verwaltungslink. CPU-, RAM-, Netzwerk- und Update-Daten werden nicht ausgewertet.',
+      requirements:'Stelle einen kleinen privaten Health-Endpunkt bereit, der GET akzeptiert und einen erfolgreichen Statuscode liefert. Weiterleitungen werden nicht verfolgt. Der Endpunkt muss vom runvard-Host erreichbar sein.',
+      credentials:'Die allgemeine Prüfung sendet keine API-Schlüssel, Cookies oder Passwörter. Verwende einen Endpunkt, der aus dem Verwaltungsnetz sicher und ohne Geheimnisse in der URL erreichbar ist.',
+      connection:'Teste den Health-Endpunkt vom runvard-Host. Ein Pfad wie /health, /status oder /ping eignet sich, wenn er nur eine kleine Antwort liefert und keine Zustandsänderung ausführt.',
+      fields:'Die interne Status-URL ist der private Health-Endpunkt, zum Beispiel https://10.0.0.50:8443/health. Die Verwaltungs-URL wird beim Klick auf die Kachel geöffnet und darf deinen späteren Reverse-Proxy-Hostnamen verwenden.',
+      security:'Füge niemals Zugangsdaten oder Tokens in eine URL ein. Beschränke den Health-Endpunkt auf das Verwaltungsnetz, bevorzuge HTTPS und gib nur die für die Erreichbarkeitsprüfung nötigen Informationen aus.',
+    },
+  },
+  fr:{
+    proxmox:{
+      intro:'runvard lit le processeur, la mémoire, le réseau et les mises à jour via l’API native de Proxmox VE. La connexion est en lecture seule et ne peut ni démarrer, ni arrêter, ni modifier les invités.',
+      requirements:'L’API Proxmox doit être accessible depuis l’hôte runvard via une IP privée, normalement sur le port TCP 8006. Utilisez un certificat TLS valide ou installez votre autorité privée sur l’hôte runvard.',
+      credentials:'Dans Datacenter › Permissions, créez l’utilisateur runvard-monitor@pve et accordez PVEAuditor sur /. Créez ensuite le jeton API séparé runvard pour cet utilisateur. Enregistrez immédiatement le secret, car Proxmox ne l’affiche qu’une fois.',
+      connection:'Les commandes ci-dessous effectuent la même configuration dans le shell Proxmox. L’utilisateur et le jeton séparé reçoivent PVEAuditor, car les droits du jeton sont toujours un sous-ensemble de ceux de l’utilisateur.',
+      fields:'L’URL d’administration ouvre l’interface Proxmox. L’URL d’état interne est la base de l’API, par exemple https://10.0.0.20:8006. L’ID du jeton est runvard-monitor@pve!runvard et le secret affiché va dans le champ séparé. Le nom du nœud est facultatif.',
+      security:'N’utilisez pas root@pam ni un jeton avec accès complet. Conservez la séparation des privilèges et la vérification TLS, limitez le port 8006 au réseau d’administration et révoquez le jeton si son secret est exposé.',
+    },
+    linux:{
+      intro:'runvard se connecte par SSH et exécute uniquement des commandes de lecture prédéfinies pour le processeur, la mémoire, le réseau et les mises à jour disponibles. Aucune commande ne peut être fournie par le navigateur.',
+      requirements:'Un serveur SSH doit être accessible sur une IP privée. Un compte dédié non privilégié doit pouvoir lire /proc et lancer la simulation du gestionnaire de paquets utilisée pour compter les mises à jour.',
+      credentials:'Générez une paire de clés Ed25519 dédiée, ajoutez uniquement sa clé publique au compte de surveillance et collez la clé privée correspondante dans runvard. Ne réutilisez pas une clé d’administration personnelle.',
+      connection:'Déterminez l’empreinte de la clé d’hôte depuis une console fiable et comparez-la à celle de l’IP prévue. Saisissez exactement la valeur SHA256:… afin que runvard refuse une clé d’hôte modifiée ou inattendue.',
+      fields:'L’adresse IP interne et le port définissent SSH. Le nom d’utilisateur est le compte de surveillance. La clé SSH privée doit être complète ; la phrase secrète est nécessaire uniquement si la clé est chiffrée. L’URL d’administration est ouverte séparément.',
+      security:'Gardez le compte non privilégié, limitez SSH à l’hôte runvard dans le pare-feu, protégez la clé privée par une phrase secrète et n’utilisez ni root ni une authentification par mot de passe.',
+    },
+    windows:{
+      intro:'runvard utilise WinRM sur HTTPS pour des requêtes PowerShell et CIM prédéfinies. Il lit le processeur, la mémoire, le trafic réseau et les mises à jour Windows sans accepter de scripts arbitraires du navigateur.',
+      requirements:'Installez dans le magasin de l’ordinateur local un certificat avec authentification serveur. Son CN ou SAN doit correspondre à l’adresse utilisée par runvard. Autorisez le port TCP 5986 uniquement depuis l’hôte runvard.',
+      credentials:'Créez un compte de surveillance local ou de domaine et ajoutez-le à Remote Management Users. Accordez uniquement les droits de lecture CIM/WMI supplémentaires requis par votre politique ; n’utilisez pas un administrateur de domaine.',
+      connection:'Créez l’écouteur HTTPS et vérifiez-le avec les commandes ci-dessous. Le point de terminaison saisi dans runvard se termine normalement par :5986/wsman, par exemple https://10.0.0.30:5986/wsman.',
+      fields:'L’URL d’état interne est le point de terminaison WinRM HTTPS complet. Le nom peut être SERVEUR\\utilisateur, DOMAINE\\utilisateur ou utilisateur@domaine. Saisissez le mot de passe et conservez la vérification TLS. L’URL d’administration est seulement le lien du navigateur.',
+      security:'WinRM non chiffré est refusé. Maintenez le certificat valide et approuvé, limitez la règle de pare-feu à l’hôte runvard et renouvelez le mot de passe selon votre politique serveur.',
+    },
+    generic:{
+      intro:'Cette option vérifie qu’un point de terminaison HTTP ou HTTPS répond avec succès et ouvre un lien d’administration séparé. Elle n’analyse ni le processeur, ni la mémoire, ni le réseau, ni les mises à jour.',
+      requirements:'Fournissez un point de santé privé léger acceptant GET et renvoyant un code de succès. Les redirections ne sont pas suivies. Le point doit être accessible depuis l’hôte runvard.',
+      credentials:'La vérification générique n’envoie ni clés API, ni cookies, ni mots de passe. Utilisez un point accessible en toute sécurité depuis le réseau d’administration sans secret dans son URL.',
+      connection:'Testez le point de santé depuis l’hôte runvard. Un chemin comme /health, /status ou /ping convient s’il renvoie une petite réponse sans modifier l’état.',
+      fields:'L’URL d’état interne est le point de santé privé, par exemple https://10.0.0.50:8443/health. L’URL d’administration est ouverte depuis la carte et peut utiliser le futur nom d’hôte de votre proxy inverse.',
+      security:'Ne placez jamais d’identifiants ou de jetons dans une URL. Limitez le point de santé au réseau d’administration, préférez HTTPS et n’exposez que les informations nécessaires au contrôle de disponibilité.',
+    },
+  },
+  it:{
+    proxmox:{
+      intro:'runvard legge CPU, memoria, rete e aggiornamenti tramite l’API nativa di Proxmox VE. La connessione è di sola lettura e non può avviare, arrestare o modificare gli ospiti.',
+      requirements:'L’API Proxmox deve essere raggiungibile dall’host runvard tramite un IP privato, normalmente sulla porta TCP 8006. Usa un certificato TLS valido oppure installa la CA privata sull’host runvard.',
+      credentials:'In Datacenter › Permissions crea l’utente runvard-monitor@pve e assegna PVEAuditor su /. Poi crea per questo utente il token API separato runvard. Salva subito il segreto perché Proxmox lo mostra una sola volta.',
+      connection:'I comandi seguenti eseguono la stessa configurazione nella shell Proxmox. Sia l’utente sia il token separato ricevono PVEAuditor perché i permessi del token sono sempre un sottoinsieme di quelli dell’utente.',
+      fields:'L’URL di amministrazione apre Proxmox. L’URL di stato interno è la base API, ad esempio https://10.0.0.20:8006. L’ID token è runvard-monitor@pve!runvard; inserisci il segreto visualizzato nel campo separato. Il nome del nodo è facoltativo.',
+      security:'Non usare root@pam o un token con accesso completo. Mantieni attive la separazione dei privilegi e la verifica TLS, limita la porta 8006 alla rete di gestione e revoca il token se il segreto viene esposto.',
+    },
+    linux:{
+      intro:'runvard si collega tramite SSH ed esegue solo comandi di lettura predefiniti per CPU, memoria, rete e aggiornamenti disponibili. Dal browser non è possibile fornire comandi.',
+      requirements:'Il server SSH deve essere raggiungibile tramite un IP privato. Un account dedicato non privilegiato deve poter leggere /proc ed eseguire la simulazione del gestore pacchetti usata per contare gli aggiornamenti.',
+      credentials:'Genera una coppia di chiavi Ed25519 dedicata, aggiungi solo la chiave pubblica all’account di monitoraggio e incolla in runvard la chiave privata corrispondente. Non riutilizzare una chiave personale di amministrazione.',
+      connection:'Ricava l’impronta della chiave host da una console affidabile e confrontala con quella dell’IP previsto. Inserisci esattamente il valore SHA256:… affinché runvard rifiuti una chiave host cambiata o inattesa.',
+      fields:'Indirizzo IP interno e porta identificano SSH. Il nome utente è l’account di monitoraggio. La chiave SSH privata deve essere completa; la passphrase serve solo se è cifrata. L’URL di amministrazione viene aperto separatamente nel browser.',
+      security:'Mantieni l’account non privilegiato, limita SSH all’host runvard nel firewall, proteggi la chiave privata con una passphrase e non usare root o autenticazione con password.',
+    },
+    windows:{
+      intro:'runvard usa WinRM su HTTPS per query PowerShell e CIM predefinite. Legge CPU, memoria, traffico di rete e aggiornamenti Windows senza accettare script arbitrari dal browser.',
+      requirements:'Installa nell’archivio del computer locale un certificato con autenticazione server. Il CN o SAN deve corrispondere all’indirizzo usato da runvard. Consenti TCP 5986 solo dall’host runvard.',
+      credentials:'Crea un account di monitoraggio locale o di dominio e aggiungilo a Remote Management Users. Concedi solo gli ulteriori diritti di lettura CIM/WMI richiesti dalla tua policy; non usare un amministratore di dominio.',
+      connection:'Crea il listener HTTPS e verificalo con i comandi seguenti. L’endpoint inserito in runvard termina normalmente con :5986/wsman, ad esempio https://10.0.0.30:5986/wsman.',
+      fields:'L’URL di stato interno è l’endpoint WinRM HTTPS completo. Il nome può essere SERVER\\utente, DOMINIO\\utente o utente@dominio. Inserisci la password e mantieni la verifica TLS. L’URL di amministrazione è solo il collegamento del browser.',
+      security:'WinRM non cifrato viene rifiutato. Mantieni il certificato attendibile e aggiornato, limita la regola firewall all’host runvard e ruota la password secondo la policy del server.',
+    },
+    generic:{
+      intro:'Questa opzione verifica che un endpoint HTTP o HTTPS risponda correttamente e apre un collegamento di amministrazione separato. Non interpreta CPU, memoria, rete o aggiornamenti.',
+      requirements:'Fornisci un endpoint di salute privato e leggero che accetti GET e restituisca un codice di successo. I reindirizzamenti non vengono seguiti. L’endpoint deve essere raggiungibile dall’host runvard.',
+      credentials:'Il controllo generico non invia chiavi API, cookie o password. Usa un endpoint raggiungibile in sicurezza dalla rete di gestione senza segreti nell’URL.',
+      connection:'Prova l’endpoint di salute dall’host runvard. Un percorso come /health, /status o /ping è adatto se restituisce una risposta piccola senza cambiare lo stato.',
+      fields:'L’URL di stato interno è l’endpoint di salute privato, ad esempio https://10.0.0.50:8443/health. L’URL di amministrazione viene aperto dalla scheda e può usare il futuro nome host del reverse proxy.',
+      security:'Non inserire mai credenziali o token negli URL. Limita l’endpoint alla rete di gestione, preferisci HTTPS ed esponi solo le informazioni necessarie al controllo della disponibilità.',
+    },
+  },
+  es:{
+    proxmox:{
+      intro:'runvard lee CPU, memoria, red y actualizaciones mediante la API nativa de Proxmox VE. La conexión es de solo lectura y no puede iniciar, detener ni modificar invitados.',
+      requirements:'La API de Proxmox debe ser accesible desde el host runvard mediante una IP privada, normalmente por el puerto TCP 8006. Usa un certificado TLS válido o instala tu CA privada en el host runvard.',
+      credentials:'En Datacenter › Permissions crea el usuario runvard-monitor@pve y asigna PVEAuditor en /. Después crea para ese usuario el token API separado runvard. Guarda el secreto de inmediato porque Proxmox solo lo muestra una vez.',
+      connection:'Los comandos siguientes realizan la misma configuración en la consola de Proxmox. Tanto el usuario como el token separado reciben PVEAuditor porque los permisos del token siempre son un subconjunto de los del usuario.',
+      fields:'La URL de administración abre Proxmox. La URL de estado interna es la base de la API, por ejemplo https://10.0.0.20:8006. El ID del token es runvard-monitor@pve!runvard; introduce el secreto mostrado por separado. El nombre del nodo es opcional.',
+      security:'No uses root@pam ni un token con acceso completo. Mantén la separación de privilegios y la verificación TLS, limita el puerto 8006 a la red de gestión y revoca el token si se expone su secreto.',
+    },
+    linux:{
+      intro:'runvard se conecta por SSH y ejecuta únicamente comandos de lectura predefinidos para CPU, memoria, red y actualizaciones disponibles. No se pueden proporcionar comandos desde el navegador.',
+      requirements:'El servidor SSH debe ser accesible mediante una IP privada. Una cuenta dedicada sin privilegios debe poder leer /proc y ejecutar la simulación del gestor de paquetes usada para contar actualizaciones.',
+      credentials:'Genera un par de claves Ed25519 dedicado, añade solo la clave pública a la cuenta de monitorización y pega la clave privada correspondiente en runvard. No reutilices una clave personal de administración.',
+      connection:'Obtén la huella de la clave del host desde una consola fiable y compárala con la de la IP prevista. Introduce exactamente el valor SHA256:… para que runvard rechace una clave modificada o inesperada.',
+      fields:'La dirección IP interna y el puerto identifican SSH. El usuario es la cuenta de monitorización. La clave SSH privada debe estar completa; la frase solo es necesaria si está cifrada. La URL de administración se abre por separado.',
+      security:'Mantén la cuenta sin privilegios, limita SSH al host runvard en el cortafuegos, protege la clave privada con una frase y no uses root ni autenticación por contraseña.',
+    },
+    windows:{
+      intro:'runvard usa WinRM sobre HTTPS para consultas PowerShell y CIM predefinidas. Lee CPU, memoria, tráfico de red y actualizaciones de Windows sin aceptar scripts arbitrarios del navegador.',
+      requirements:'Instala en el almacén del equipo local un certificado con autenticación de servidor. Su CN o SAN debe coincidir con la dirección usada por runvard. Permite TCP 5986 solo desde el host runvard.',
+      credentials:'Crea una cuenta de monitorización local o de dominio y añádela a Remote Management Users. Concede únicamente los derechos de lectura CIM/WMI adicionales que requiera tu política; no uses un administrador de dominio.',
+      connection:'Crea el listener HTTPS y verifícalo con los comandos siguientes. El endpoint introducido en runvard suele terminar en :5986/wsman, por ejemplo https://10.0.0.30:5986/wsman.',
+      fields:'La URL de estado interna es el endpoint WinRM HTTPS completo. El usuario puede ser SERVIDOR\\usuario, DOMINIO\\usuario o usuario@dominio. Introduce la contraseña y mantén TLS activo. La URL de administración es solo el enlace del navegador.',
+      security:'WinRM sin cifrar se rechaza. Mantén el certificado válido y de confianza, limita la regla del cortafuegos al host runvard y rota la contraseña según la política del servidor.',
+    },
+    generic:{
+      intro:'Esta opción comprueba que un endpoint HTTP o HTTPS responda correctamente y abre un enlace de administración separado. No interpreta CPU, memoria, red ni actualizaciones.',
+      requirements:'Proporciona un endpoint de salud privado y ligero que acepte GET y devuelva un código correcto. No se siguen redirecciones. El endpoint debe ser accesible desde el host runvard.',
+      credentials:'La comprobación genérica no envía claves API, cookies ni contraseñas. Usa un endpoint accesible de forma segura desde la red de gestión sin secretos en la URL.',
+      connection:'Prueba el endpoint desde el host runvard. Una ruta como /health, /status o /ping es adecuada si devuelve una respuesta pequeña sin cambiar el estado.',
+      fields:'La URL de estado interna es el endpoint privado, por ejemplo https://10.0.0.50:8443/health. La URL de administración se abre desde la tarjeta y puede usar el futuro nombre de host del proxy inverso.',
+      security:'Nunca pongas credenciales ni tokens en las URL. Limita el endpoint a la red de gestión, prefiere HTTPS y expón solo la información necesaria para comprobar disponibilidad.',
+    },
+  },
+  pt:{
+    proxmox:{
+      intro:'O runvard lê CPU, memória, rede e atualizações através da API nativa do Proxmox VE. A ligação é apenas de leitura e não pode iniciar, parar ou alterar máquinas convidadas.',
+      requirements:'A API do Proxmox deve estar acessível a partir do anfitrião runvard através de um IP privado, normalmente na porta TCP 8006. Use um certificado TLS válido ou instale a sua CA privada no anfitrião runvard.',
+      credentials:'Em Datacenter › Permissions crie o utilizador runvard-monitor@pve e atribua PVEAuditor em /. Depois crie o token API separado runvard para esse utilizador. Guarde o segredo de imediato porque o Proxmox só o apresenta uma vez.',
+      connection:'Os comandos abaixo fazem a mesma configuração na shell do Proxmox. Tanto o utilizador como o token separado recebem PVEAuditor porque as permissões do token são sempre um subconjunto das permissões do utilizador.',
+      fields:'O URL de administração abre o Proxmox. O URL de estado interno é a base da API, por exemplo https://10.0.0.20:8006. O ID do token é runvard-monitor@pve!runvard; introduza o segredo apresentado no campo separado. O nome do nó é opcional.',
+      security:'Não use root@pam nem um token com acesso total. Mantenha a separação de privilégios e a verificação TLS, limite a porta 8006 à rede de gestão e revogue o token se o segredo for exposto.',
+    },
+    linux:{
+      intro:'O runvard liga-se por SSH e executa apenas comandos fixos de leitura para CPU, memória, rede e atualizações disponíveis. Não é possível fornecer comandos através do navegador.',
+      requirements:'O servidor SSH deve estar acessível através de um IP privado. Uma conta dedicada sem privilégios deve poder ler /proc e executar a simulação do gestor de pacotes usada para contar atualizações.',
+      credentials:'Gere um par de chaves Ed25519 dedicado, adicione apenas a chave pública à conta de monitorização e cole a chave privada correspondente no runvard. Não reutilize uma chave pessoal de administração.',
+      connection:'Obtenha a impressão digital da chave do anfitrião numa consola fidedigna e compare-a com a do IP previsto. Introduza exatamente o valor SHA256:… para o runvard rejeitar uma chave alterada ou inesperada.',
+      fields:'O endereço IP interno e a porta identificam o SSH. O utilizador é a conta de monitorização. A chave SSH privada deve estar completa; a frase secreta só é necessária se estiver cifrada. O URL de administração abre separadamente.',
+      security:'Mantenha a conta sem privilégios, limite o SSH ao anfitrião runvard na firewall, proteja a chave privada com uma frase secreta e não use root nem autenticação por palavra-passe.',
+    },
+    windows:{
+      intro:'O runvard usa WinRM através de HTTPS para consultas PowerShell e CIM predefinidas. Lê CPU, memória, tráfego de rede e atualizações do Windows sem aceitar scripts arbitrários do navegador.',
+      requirements:'Instale no arquivo do computador local um certificado com autenticação de servidor. O CN ou SAN deve corresponder ao endereço usado pelo runvard. Permita TCP 5986 apenas a partir do anfitrião runvard.',
+      credentials:'Crie uma conta de monitorização local ou de domínio e adicione-a a Remote Management Users. Conceda apenas os direitos de leitura CIM/WMI adicionais exigidos pela sua política; não use um administrador de domínio.',
+      connection:'Crie o listener HTTPS e confirme-o com os comandos abaixo. O endpoint introduzido no runvard termina normalmente em :5986/wsman, por exemplo https://10.0.0.30:5986/wsman.',
+      fields:'O URL de estado interno é o endpoint WinRM HTTPS completo. O utilizador pode ser SERVIDOR\\utilizador, DOMÍNIO\\utilizador ou utilizador@domínio. Introduza a palavra-passe e mantenha TLS ativo. O URL de administração é apenas o link do navegador.',
+      security:'WinRM sem encriptação é rejeitado. Mantenha o certificado válido e fidedigno, limite a regra da firewall ao anfitrião runvard e altere a palavra-passe segundo a política do servidor.',
+    },
+    generic:{
+      intro:'Esta opção confirma que um endpoint HTTP ou HTTPS responde com sucesso e abre uma ligação de administração separada. Não interpreta CPU, memória, rede ou atualizações.',
+      requirements:'Disponibilize um endpoint de saúde privado e leve que aceite GET e devolva um código de sucesso. Os redirecionamentos não são seguidos. O endpoint deve estar acessível a partir do anfitrião runvard.',
+      credentials:'A verificação genérica não envia chaves API, cookies ou palavras-passe. Use um endpoint acessível em segurança a partir da rede de gestão sem segredos no URL.',
+      connection:'Teste o endpoint a partir do anfitrião runvard. Um caminho como /health, /status ou /ping é adequado se devolver uma resposta pequena sem alterar o estado.',
+      fields:'O URL de estado interno é o endpoint privado, por exemplo https://10.0.0.50:8443/health. O URL de administração abre a partir do cartão e pode usar o futuro nome de anfitrião do proxy inverso.',
+      security:'Nunca coloque credenciais ou tokens nos URLs. Limite o endpoint à rede de gestão, prefira HTTPS e exponha apenas a informação necessária para confirmar a disponibilidade.',
+    },
+  },
+};
+const SERVER_GUIDE_COMMANDS={
+  proxmox:[
+    'pveum user add runvard-monitor@pve',
+    'pveum acl modify / -user runvard-monitor@pve -role PVEAuditor',
+    'pveum user token add runvard-monitor@pve runvard -privsep 1',
+    "pveum acl modify / -token 'runvard-monitor@pve!runvard' -role PVEAuditor",
+  ],
+  linux:[
+    'ssh-keygen -t ed25519 -f runvard-monitor -C runvard-monitor',
+    'ssh-copy-id -i runvard-monitor.pub runvard-monitor@10.0.0.21',
+    'ssh-keyscan -p 22 10.0.0.21 | ssh-keygen -lf - -E sha256',
+  ],
+  windows:[
+    'winrm quickconfig -transport:https',
+    'winrm enumerate winrm/config/listener',
+    'Add-LocalGroupMember -Group "Remote Management Users" -Member "runvard-monitor"',
+  ],
+  generic:[
+    'curl --fail --silent --show-error https://10.0.0.50:8443/health',
+  ],
+};
+const SERVER_GUIDE_SOURCES={
+  proxmox:'https://pve.proxmox.com/pve-docs/pveum.1.html',
+  linux:'https://man.openbsd.org/ssh-keygen',
+  windows:'https://learn.microsoft.com/windows/win32/winrm/installation-and-configuration-for-windows-remote-management',
+  generic:'https://developer.mozilla.org/docs/Web/HTTP/Status',
 };
 for(const lang of Object.keys(FED_FORM_I18N)){
   Object.assign(FED_I18N[lang],FED_FORM_I18N[lang],EXTERNAL_SERVER_I18N[lang]);
@@ -8330,10 +8628,83 @@ function serverFormHeaderHtml(title,kind,{back=false}={}){
     </button>`;
 }
 function serverTypeChoiceHtml([kind,label,description],trusted=false){
-  return `<button class="server-type-choice${trusted?' is-trusted':''}" type="button" onclick="externalServerTypeSelect('${kind}')">
+  const choice=`<button class="server-type-choice${trusted?' is-trusted':''}" type="button" onclick="externalServerTypeSelect('${kind}')">
     <span class="server-type-choice-icon">${serverTypeIcon(kind)}</span>
     <span class="server-type-choice-copy"><strong>${esc(fedText(label))}</strong><span>${esc(fedText(description))}</span></span>
   </button>`;
+  if(trusted)return choice;
+  return `<div class="server-type-choice-wrap">${choice}<button class="server-type-info" type="button" title="${esc(externalServerGuideLabel(kind))}" aria-label="${esc(externalServerGuideLabel(kind))}" onclick="externalServerInfo('${kind}')"></button></div>`;
+}
+function externalServerGuideLabel(kind){
+  return fedText('informationAbout').replace('{server}',fedText(kind));
+}
+function serverGuideCopyButton(command){
+  return `<div class="server-guide-command"><code>${esc(command)}</code><button type="button" data-command="${esc(command)}" onclick="copyServerGuideCommand(this)" title="${esc(fedText('copyCommand'))}" aria-label="${esc(fedText('copyCommand'))}">⧉</button></div>`;
+}
+window.copyServerGuideCommand=async button=>{
+  const command=button?.dataset.command||'';
+  try{
+    await navigator.clipboard.writeText(command);
+  }catch(e){
+    const input=document.createElement('textarea');
+    input.value=command;input.setAttribute('readonly','');
+    document.body.appendChild(input);input.select();
+    document.execCommand('copy');input.remove();
+  }
+  toast(fedText('copied'),'success');
+};
+window.externalServerInfo=kind=>openExternalServerGuide(kind);
+window.openExternalServerGuide=kind=>{
+  if(!['proxmox','linux','windows','generic'].includes(kind))return;
+  const language=currentLanguage();
+  const guide=(SERVER_GUIDE_I18N[language]||SERVER_GUIDE_I18N.en)[kind];
+  const commands=SERVER_GUIDE_COMMANDS[kind]||[];
+  const source=SERVER_GUIDE_SOURCES[kind];
+  const formCard=resetFormCardClasses();
+  formCard?.classList.add('server-guide-card');
+  const title=`${fedText('setupGuide')}: ${fedText(kind)}`;
+  $('#form-head').innerHTML=serverFormHeaderHtml(title,kind,{back:true});
+  $('#form-head .form-head-title')?.setAttribute('id','server-guide-title');
+  const body=$('#form-body');
+  body.classList.add('server-guide-body');
+  body.setAttribute('role','document');
+  body.setAttribute('aria-labelledby',"server-guide-title");
+  body.innerHTML=`
+    <article class="server-guide-content" aria-labelledby="server-guide-title">
+    <p class="server-guide-intro">${esc(guide.intro)}</p>
+    <section class="server-guide-section" aria-labelledby="server-guide-requirements">
+      <h3 id="server-guide-requirements">${esc(fedText('guideRequirements'))}</h3>
+      <p>${esc(guide.requirements)}</p>
+    </section>
+    <div class="server-guide-section server-guide-steps">
+      <section class="server-guide-step" aria-labelledby="server-guide-credentials">
+        <span class="server-guide-step-number" aria-hidden="true">1</span>
+        <div><h4 id="server-guide-credentials">${esc(fedText('guideCredentials'))}</h4><p>${esc(guide.credentials)}</p></div>
+      </section>
+      <section class="server-guide-step" aria-labelledby="server-guide-connection">
+        <span class="server-guide-step-number" aria-hidden="true">2</span>
+        <div><h4 id="server-guide-connection">${esc(fedText('guideConnection'))}</h4><p>${esc(guide.connection)}</p>
+          <div class="server-guide-commands">${commands.map(serverGuideCopyButton).join('')}</div>
+        </div>
+      </section>
+      <section class="server-guide-step server-guide-fields" aria-labelledby="server-guide-fields">
+        <span class="server-guide-step-number" aria-hidden="true">3</span>
+        <div><h4 id="server-guide-fields">${esc(fedText('guideFields'))}</h4><p>${esc(guide.fields)}</p></div>
+      </section>
+    </div>
+    <section class="server-guide-section server-guide-security" aria-labelledby="server-guide-security">
+      <h3 id="server-guide-security">${esc(fedText('guideSecurity'))}</h3>
+      <p>${esc(guide.security)}</p>
+    </section>
+    </article>`;
+  const actions=document.createElement('div');
+  actions.className='server-guide-actions';
+  actions.innerHTML=`
+    <a class="server-guide-source" href="${esc(source)}" target="_blank" rel="noopener noreferrer">${esc(fedText('officialDocs'))} ↗</a>
+    <button class="btn ghost" type="button" onclick="openServerTypePicker()">${esc(fedText('back'))}</button>
+    <button class="btn" type="button" onclick="externalServerForm('${kind}')">${esc(fedText('configureServer'))}</button>`;
+  formCard?.appendChild(actions);
+  openFormOverlay('#server-form-back');
 }
 window.openServerTypePicker=()=>{
   const choices=[
