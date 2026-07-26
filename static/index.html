@@ -12180,21 +12180,18 @@ window.dashCompose=async id=>{
     const t=dashTiles.find(x=>x.id===id)||appById(id);
     const isCompose=appIsCompose(t)||String(id||'').startsWith('compose:');
     const project=isCompose?dashComposeProject(t||{id}):id;
-    const appId=isCompose?'compose:'+project:id;
-    const a=isCompose?await api('/apps/get?app_id='+encodeURIComponent(appId)):await api('/apps/get?app_id='+encodeURIComponent(id));
-    const c=isCompose?await api('/docker/compose/get?name='+encodeURIComponent(project)):{content:a.compose||''};
-    const draft=await appComposeDraft(appId,c.content||a.compose||'',c);
+    if(isCompose)return composeEdit(project);
+    const a=await api('/apps/get?app_id='+encodeURIComponent(id));
+    const draft=await appComposeDraft(id,a.compose||'');
     appComposeFormOpen(draft,{
-      title:'Compose: '+(a.name||project),
+      title:'Compose: '+a.name,
       icon:'✎',
       description:localizedAppDesc(a)||a.desc||'Docker Compose',
       primaryLabel:'Save',
-      env:isCompose,
+      env:false,
       onSubmit:async currentDraft=>{
         const content=appInstallCompose(currentDraft);
-        const r=isCompose
-          ? await post('/docker/compose/save',{name:project,content,env_enabled:currentDraft.envFileEnabled?'1':'0',env_content:currentDraft.envFileContent||''})
-          : await post('/apps/save-compose',{app_id:id,content});
+        const r=await post('/apps/save-compose',{app_id:id,content});
         requireOk(r,'Could not save Compose file');
         closeForm();toast(uiText('Saved'));
         const body=$('#modal-body');if(body&&currentTile?.id==='apps')renderApps(body);
