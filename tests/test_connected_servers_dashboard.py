@@ -163,6 +163,11 @@ def test_connected_server_layout_keeps_equal_compact_cards():
     assert "--connected-server-card-height:6.5rem" in INDEX
     assert "alignConnectedServerCards" not in INDEX
     assert "grid-template-columns:repeat(3,minmax(0,1fr))" in INDEX
+    wide_layout = INDEX[
+        INDEX.index("@media (min-width: 1740px)"):
+        INDEX.index("@media (hover:hover)", INDEX.index("@media (min-width: 1740px)"))
+    ]
+    assert ".widgets{margin-bottom:.75rem}" in wide_layout
 
 
 def test_connected_server_labels_exist_for_every_supported_language():
