@@ -667,6 +667,22 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .fed-setup{display:grid;grid-template-columns:1fr 1fr;gap:10px}
 .fed-setup-card{border:1px solid var(--border);border-radius:13px;background:var(--bg3);padding:16px}
 .fed-setup-card h3{font-size:14px;margin:0 0 6px}.fed-setup-card p{font-size:11px;color:var(--text3);line-height:1.5;margin:0 0 14px}
+.server-type-grid{display:grid;grid-template-columns:1fr;gap:.625rem}
+.server-type-choice{min-height:4.5rem;padding:.875rem;border:1px solid var(--border);border-radius:.75rem;background:var(--bg3);color:var(--text);font-family:inherit;text-align:left;cursor:pointer;display:grid;grid-template-columns:2rem minmax(0,1fr);gap:.75rem;align-items:center;transition:background .15s,border-color .15s}
+.server-type-choice:hover,.server-type-choice:focus-visible{background:rgba(122,74,255,.08);border-color:var(--border-accent);outline:none}
+.server-type-choice-icon{width:2rem;height:2rem;border-radius:.5625rem;background:rgba(122,74,255,.13);display:flex;align-items:center;justify-content:center;font-size:1rem}
+.server-type-choice strong{display:block;font-size:.8125rem}
+.server-type-choice span{display:block;margin-top:.1875rem;font-size:.6875rem;color:var(--text3);line-height:1.35}
+.external-server-section{margin-top:1.25rem}
+.external-server-section-head{display:flex;align-items:center;justify-content:space-between;gap:.75rem;margin-bottom:.625rem}
+.external-server-section-title{font-size:.6875rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.external-server-list{display:grid;gap:.5rem}
+.external-server-admin{display:grid;grid-template-columns:minmax(0,1fr);gap:.75rem;padding:.75rem;border:1px solid var(--border);border-radius:.75rem;background:var(--bg3)}
+.external-server-admin-main{min-width:0}
+.external-server-admin-name{display:flex;align-items:center;gap:.4375rem;font-size:.8125rem;font-weight:600;color:var(--text)}
+.external-server-admin-meta{margin:.25rem 0 0 .8125rem;font-size:.6875rem;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.external-server-admin-actions{display:flex;gap:.375rem;align-items:center;flex-wrap:wrap}
+.external-server-empty{padding:1rem;border:1px dashed var(--border);border-radius:.75rem;color:var(--text3);font-size:.75rem;text-align:center}
 @media (max-width: 640px){.tile-edit-grid{grid-template-columns:1fr}.tile-edit-actions{flex-direction:column}.tile-edit-actions-main{justify-content:flex-end}}
 .sortable-ghost{opacity:.3}
 .sortable-chosen{transform:scale(1.05)}
@@ -676,6 +692,8 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   .connected-servers-list{grid-template-columns:repeat(2,minmax(0,1fr))}
   .connected-servers-more{display:none!important}
   .connected-servers:not(.is-expanded) .connected-server-card:nth-child(n+4){display:flex}
+  .server-type-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .external-server-admin{grid-template-columns:minmax(0,1fr) auto;align-items:center}
 }
 
 @media (min-width: 1740px){
@@ -798,7 +816,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 <section class="connected-servers" id="connected-servers" aria-labelledby="connected-servers-title" hidden>
   <div class="connected-servers-head">
     <div class="connected-servers-title" id="connected-servers-title">Connected servers</div>
-    <button class="connected-servers-add" id="connected-servers-add" type="button" onclick="openConnectedServersModal()" aria-label="Connect server" title="Connect server"><span aria-hidden="true">+</span></button>
+    <button class="connected-servers-add" id="connected-servers-add" type="button" onclick="openServerTypePicker()" aria-label="Connect server" title="Connect server"><span aria-hidden="true">+</span></button>
   </div>
   <div class="connected-servers-list" id="connected-servers-list"></div>
   <button class="connected-servers-more" id="connected-servers-more" type="button" onclick="toggleConnectedServers()" hidden>Show more</button>
@@ -956,6 +974,7 @@ function dangerConfirmMeta(p,d){
     '/federation/v1/admin/join':['federation:join','peer_url'],
     '/federation/v1/admin/settings':['federation:settings','internal_url'],
     '/federation/v1/admin/nodes/revoke':['federation:revoke','node_id'],
+    '/external-servers/v1/admin/delete':['external-server:delete','server_id'],
   };
   if(p==='/auth/toggle'&&String(d.enabled)==='1')return null;
   if(p==='/docker/action'&&d.action!=='remove')return null;
@@ -7754,12 +7773,12 @@ function visibleTabs(tile){
   return (tile.tabs||[]).map((tab,index)=>({tab,index})).filter(x=>isExpertMode()||!isExpertOnlyTab(tile.id,x.tab));
 }
 const FED_I18N={
-  en:{connectedServers:'Connected servers',network:'Network',showMore:'Show more',showLess:'Show less',connectServer:'Connect server',openNewTab:'Open in new tab',servers:'Servers',setup:'Connect runvard instances',setupCopy:'Create a server group here or join an existing server.',create:'Create server group',join:'Join server group',refresh:'Refresh',pair:'Pairing code',settings:'Settings',current:'This server',open:'Open',revoke:'Revoke',online:'Online',degraded:'Degraded',offline:'Offline',incompatible:'Incompatible',unknown:'Waiting',last:'Last contact',updates:'Updates',alerts:'Alerts',version:'Version',expires:'Valid for 10 minutes · single use'},
-  de:{connectedServers:'Verbundene Server',network:'Netzwerk',showMore:'Mehr anzeigen',showLess:'Weniger anzeigen',connectServer:'Server verbinden',openNewTab:'In neuem Tab öffnen',servers:'Server',setup:'runvard-Instanzen verbinden',setupCopy:'Hier einen Serververbund erstellen oder einem vorhandenen Server beitreten.',create:'Serververbund erstellen',join:'Serververbund beitreten',refresh:'Aktualisieren',pair:'Pairing-Code',settings:'Einstellungen',current:'Dieser Server',open:'Öffnen',revoke:'Entfernen',online:'Online',degraded:'Eingeschränkt',offline:'Offline',incompatible:'Inkompatibel',unknown:'Wartet',last:'Letzter Kontakt',updates:'Updates',alerts:'Hinweise',version:'Version',expires:'10 Minuten gültig · einmal verwendbar'},
-  fr:{connectedServers:'Serveurs connectés',network:'Réseau',showMore:'Afficher plus',showLess:'Afficher moins',connectServer:'Connecter un serveur',openNewTab:'Ouvrir dans un nouvel onglet',servers:'Serveurs',setup:'Connecter des instances runvard',setupCopy:'Créez un groupe de serveurs ici ou rejoignez un serveur existant.',create:'Créer un groupe de serveurs',join:'Rejoindre le groupe',refresh:'Actualiser',pair:'Code de jumelage',settings:'Paramètres',current:'Ce serveur',open:'Ouvrir',revoke:'Révoquer',online:'En ligne',degraded:'Dégradé',offline:'Hors ligne',incompatible:'Incompatible',unknown:'En attente',last:'Dernier contact',updates:'Mises à jour',alerts:'Alertes',version:'Version',expires:'Valable 10 minutes · usage unique'},
-  it:{connectedServers:'Server collegati',network:'Rete',showMore:'Mostra altri',showLess:'Mostra meno',connectServer:'Collega server',openNewTab:'Apri in una nuova scheda',servers:'Server',setup:'Collega istanze runvard',setupCopy:'Crea qui un gruppo di server o unisciti a un server esistente.',create:'Crea gruppo di server',join:'Unisciti al gruppo',refresh:'Aggiorna',pair:'Codice abbinamento',settings:'Impostazioni',current:'Questo server',open:'Apri',revoke:'Revoca',online:'Online',degraded:'Degradato',offline:'Offline',incompatible:'Incompatibile',unknown:'In attesa',last:'Ultimo contatto',updates:'Aggiornamenti',alerts:'Avvisi',version:'Versione',expires:'Valido 10 minuti · uso singolo'},
-  es:{connectedServers:'Servidores conectados',network:'Red',showMore:'Mostrar más',showLess:'Mostrar menos',connectServer:'Conectar servidor',openNewTab:'Abrir en una pestaña nueva',servers:'Servidores',setup:'Conectar instancias runvard',setupCopy:'Crea aquí un grupo de servidores o únete a un servidor existente.',create:'Crear grupo de servidores',join:'Unirse al grupo',refresh:'Actualizar',pair:'Código de emparejamiento',settings:'Ajustes',current:'Este servidor',open:'Abrir',revoke:'Revocar',online:'En línea',degraded:'Degradado',offline:'Sin conexión',incompatible:'Incompatible',unknown:'Esperando',last:'Último contacto',updates:'Actualizaciones',alerts:'Alertas',version:'Versión',expires:'Válido 10 minutos · un solo uso'},
-  pt:{connectedServers:'Servidores ligados',network:'Rede',showMore:'Mostrar mais',showLess:'Mostrar menos',connectServer:'Ligar servidor',openNewTab:'Abrir num novo separador',servers:'Servidores',setup:'Ligar instâncias runvard',setupCopy:'Crie aqui um grupo de servidores ou adira a um servidor existente.',create:'Criar grupo de servidores',join:'Aderir ao grupo',refresh:'Atualizar',pair:'Código de emparelhamento',settings:'Definições',current:'Este servidor',open:'Abrir',revoke:'Revogar',online:'Online',degraded:'Degradado',offline:'Offline',incompatible:'Incompatível',unknown:'A aguardar',last:'Último contacto',updates:'Atualizações',alerts:'Alertas',version:'Versão',expires:'Válido por 10 minutos · utilização única'},
+  en:{connectedServers:'Connected servers',network:'Network',showMore:'Show more',showLess:'Show less',connectServer:'Connect server',openNewTab:'Open in new tab',servers:'Servers',externalServer:'External server',serverType:'Server type',testConnection:'Test connection',setup:'Connect runvard instances',setupCopy:'Create a server group here or join an existing server.',create:'Create server group',join:'Join server group',refresh:'Refresh',pair:'Pairing code',settings:'Settings',current:'This server',open:'Open',revoke:'Revoke',online:'Online',degraded:'Degraded',offline:'Offline',incompatible:'Incompatible',unknown:'Waiting',last:'Last contact',updates:'Updates',alerts:'Alerts',version:'Version',expires:'Valid for 10 minutes · single use'},
+  de:{connectedServers:'Verbundene Server',network:'Netzwerk',showMore:'Mehr anzeigen',showLess:'Weniger anzeigen',connectServer:'Server verbinden',openNewTab:'In neuem Tab öffnen',servers:'Server',externalServer:'Externer Server',serverType:'Servertyp',testConnection:'Verbindung testen',setup:'runvard-Instanzen verbinden',setupCopy:'Hier einen Serververbund erstellen oder einem vorhandenen Server beitreten.',create:'Serververbund erstellen',join:'Serververbund beitreten',refresh:'Aktualisieren',pair:'Pairing-Code',settings:'Einstellungen',current:'Dieser Server',open:'Öffnen',revoke:'Entfernen',online:'Online',degraded:'Eingeschränkt',offline:'Offline',incompatible:'Inkompatibel',unknown:'Wartet',last:'Letzter Kontakt',updates:'Updates',alerts:'Hinweise',version:'Version',expires:'10 Minuten gültig · einmal verwendbar'},
+  fr:{connectedServers:'Serveurs connectés',network:'Réseau',showMore:'Afficher plus',showLess:'Afficher moins',connectServer:'Connecter un serveur',openNewTab:'Ouvrir dans un nouvel onglet',servers:'Serveurs',externalServer:'Serveur externe',serverType:'Type de serveur',testConnection:'Tester la connexion',setup:'Connecter des instances runvard',setupCopy:'Créez un groupe de serveurs ici ou rejoignez un serveur existant.',create:'Créer un groupe de serveurs',join:'Rejoindre le groupe',refresh:'Actualiser',pair:'Code de jumelage',settings:'Paramètres',current:'Ce serveur',open:'Ouvrir',revoke:'Révoquer',online:'En ligne',degraded:'Dégradé',offline:'Hors ligne',incompatible:'Incompatible',unknown:'En attente',last:'Dernier contact',updates:'Mises à jour',alerts:'Alertes',version:'Version',expires:'Valable 10 minutes · usage unique'},
+  it:{connectedServers:'Server collegati',network:'Rete',showMore:'Mostra altri',showLess:'Mostra meno',connectServer:'Collega server',openNewTab:'Apri in una nuova scheda',servers:'Server',externalServer:'Server esterno',serverType:'Tipo di server',testConnection:'Verifica connessione',setup:'Collega istanze runvard',setupCopy:'Crea qui un gruppo di server o unisciti a un server esistente.',create:'Crea gruppo di server',join:'Unisciti al gruppo',refresh:'Aggiorna',pair:'Codice abbinamento',settings:'Impostazioni',current:'Questo server',open:'Apri',revoke:'Revoca',online:'Online',degraded:'Degradato',offline:'Offline',incompatible:'Incompatibile',unknown:'In attesa',last:'Ultimo contatto',updates:'Aggiornamenti',alerts:'Avvisi',version:'Versione',expires:'Valido 10 minuti · uso singolo'},
+  es:{connectedServers:'Servidores conectados',network:'Red',showMore:'Mostrar más',showLess:'Mostrar menos',connectServer:'Conectar servidor',openNewTab:'Abrir en una pestaña nueva',servers:'Servidores',externalServer:'Servidor externo',serverType:'Tipo de servidor',testConnection:'Probar conexión',setup:'Conectar instancias runvard',setupCopy:'Crea aquí un grupo de servidores o únete a un servidor existente.',create:'Crear grupo de servidores',join:'Unirse al grupo',refresh:'Actualizar',pair:'Código de emparejamiento',settings:'Ajustes',current:'Este servidor',open:'Abrir',revoke:'Revocar',online:'En línea',degraded:'Degradado',offline:'Sin conexión',incompatible:'Incompatible',unknown:'Esperando',last:'Último contacto',updates:'Actualizaciones',alerts:'Alertas',version:'Versión',expires:'Válido 10 minutos · un solo uso'},
+  pt:{connectedServers:'Servidores ligados',network:'Rede',showMore:'Mostrar mais',showLess:'Mostrar menos',connectServer:'Ligar servidor',openNewTab:'Abrir num novo separador',servers:'Servidores',externalServer:'Servidor externo',serverType:'Tipo de servidor',testConnection:'Testar ligação',setup:'Ligar instâncias runvard',setupCopy:'Crie aqui um grupo de servidores ou adira a um servidor existente.',create:'Criar grupo de servidores',join:'Aderir ao grupo',refresh:'Atualizar',pair:'Código de emparelhamento',settings:'Definições',current:'Este servidor',open:'Abrir',revoke:'Revogar',online:'Online',degraded:'Degradado',offline:'Offline',incompatible:'Incompatível',unknown:'A aguardar',last:'Último contacto',updates:'Atualizações',alerts:'Alertas',version:'Versão',expires:'Válido por 10 minutos · utilização única'},
 };
 const FED_FORM_I18N={
   en:{displayName:'Display name',internalUrl:'Internal URL',browserUrl:'Browser URL',allowedNetworks:'Allowed private networks',existingInternalUrl:'Existing server internal URL',internalUrlHint:'Literal LAN/VPN IP and port, e.g. http://10.0.0.12:8080',browserUrlHint:'The URL users open; reverse-proxy hostnames are supported.',copy:'Copy',copied:'Copied',disk:'Disk'},
@@ -7769,11 +7788,153 @@ const FED_FORM_I18N={
   es:{displayName:'Nombre visible',internalUrl:'URL interna',browserUrl:'URL del navegador',allowedNetworks:'Redes privadas permitidas',existingInternalUrl:'URL interna del servidor existente',internalUrlHint:'IP LAN/VPN directa y puerto, p. ej., http://10.0.0.12:8080',browserUrlHint:'La URL que abren los usuarios; se admiten nombres de host de proxy inverso.',copy:'Copiar',copied:'Copiado',disk:'Disco'},
   pt:{displayName:'Nome apresentado',internalUrl:'URL interno',browserUrl:'URL do navegador',allowedNetworks:'Redes privadas permitidas',existingInternalUrl:'URL interno do servidor existente',internalUrlHint:'IP LAN/VPN direto e porta, por ex., http://10.0.0.12:8080',browserUrlHint:'O URL aberto pelos utilizadores; são suportados nomes de anfitrião de proxy inverso.',copy:'Copiar',copied:'Copiado',disk:'Disco'},
 };
+const EXTERNAL_SERVER_I18N={
+  en:{
+    runvardInstance:'runvard instance',proxmox:'Proxmox',linux:'Linux',
+    windows:'Windows Server',generic:'Other server / link',
+    adminUrl:'Administration URL',statusUrl:'Internal status URL',
+    host:'Internal IP address',port:'Port',username:'Username',
+    hostKey:'SSH host key fingerprint',
+    hostKeyHint:'Required SHA256 fingerprint, e.g. SHA256:…',
+    privateKey:'Private SSH key',passphrase:'Key passphrase',
+    tokenId:'API token ID',tokenSecret:'API token secret',
+    nodeOptional:'Proxmox node (optional)',password:'Password',
+    verifyTls:'Verify TLS certificate',enabled:'Enabled',
+    addExternal:'Add external server',editServer:'Edit server',
+    deleteServer:'Remove server',refreshStatus:'Refresh status',
+    connectionOk:'Connection successful',
+    noExternalServers:'No external servers configured.',
+    leaveBlank:'Leave secret fields blank to keep the saved credentials.',
+    enable:'Enable',disable:'Disable',
+    errorTimeout:'Connection timed out.',
+    errorAuthentication:'Authentication failed.',
+    errorCertificate:'TLS certificate validation failed.',
+    errorUnreachable:'Server is unreachable.',
+  },
+  de:{
+    runvardInstance:'runvard-Instanz',proxmox:'Proxmox',linux:'Linux',
+    windows:'Windows Server',generic:'Anderer Server / Link',
+    adminUrl:'Verwaltungs-URL',statusUrl:'Interne Status-URL',
+    host:'Interne IP-Adresse',port:'Port',username:'Benutzername',
+    hostKey:'SSH-Hostschlüssel-Fingerabdruck',
+    hostKeyHint:'Erforderlicher SHA256-Fingerabdruck, z. B. SHA256:…',
+    privateKey:'Privater SSH-Schlüssel',passphrase:'Schlüssel-Passphrase',
+    tokenId:'API-Token-ID',tokenSecret:'API-Token-Secret',
+    nodeOptional:'Proxmox-Node (optional)',password:'Passwort',
+    verifyTls:'TLS-Zertifikat prüfen',enabled:'Aktiv',
+    addExternal:'Externen Server hinzufügen',editServer:'Server bearbeiten',
+    deleteServer:'Server entfernen',refreshStatus:'Status aktualisieren',
+    connectionOk:'Verbindung erfolgreich',
+    noExternalServers:'Keine externen Server konfiguriert.',
+    leaveBlank:'Secret-Felder leer lassen, um gespeicherte Zugangsdaten beizubehalten.',
+    enable:'Aktivieren',disable:'Deaktivieren',
+    errorTimeout:'Zeitüberschreitung bei der Verbindung.',
+    errorAuthentication:'Anmeldung fehlgeschlagen.',
+    errorCertificate:'Prüfung des TLS-Zertifikats fehlgeschlagen.',
+    errorUnreachable:'Server ist nicht erreichbar.',
+  },
+  fr:{
+    runvardInstance:'Instance runvard',proxmox:'Proxmox',linux:'Linux',
+    windows:'Windows Server',generic:'Autre serveur / lien',
+    adminUrl:'URL d’administration',statusUrl:'URL d’état interne',
+    host:'Adresse IP interne',port:'Port',username:'Nom d’utilisateur',
+    hostKey:'Empreinte de clé d’hôte SSH',
+    hostKeyHint:'Empreinte SHA256 requise, p. ex. SHA256:…',
+    privateKey:'Clé SSH privée',passphrase:'Phrase secrète de la clé',
+    tokenId:'ID du jeton API',tokenSecret:'Secret du jeton API',
+    nodeOptional:'Nœud Proxmox (facultatif)',password:'Mot de passe',
+    verifyTls:'Vérifier le certificat TLS',enabled:'Activé',
+    addExternal:'Ajouter un serveur externe',editServer:'Modifier le serveur',
+    deleteServer:'Supprimer le serveur',refreshStatus:'Actualiser l’état',
+    connectionOk:'Connexion réussie',
+    noExternalServers:'Aucun serveur externe configuré.',
+    leaveBlank:'Laissez les champs secrets vides pour conserver les identifiants enregistrés.',
+    enable:'Activer',disable:'Désactiver',
+    errorTimeout:'Délai de connexion dépassé.',
+    errorAuthentication:'Échec de l’authentification.',
+    errorCertificate:'Échec de la validation du certificat TLS.',
+    errorUnreachable:'Le serveur est inaccessible.',
+  },
+  it:{
+    runvardInstance:'Istanza runvard',proxmox:'Proxmox',linux:'Linux',
+    windows:'Windows Server',generic:'Altro server / collegamento',
+    adminUrl:'URL di amministrazione',statusUrl:'URL di stato interno',
+    host:'Indirizzo IP interno',port:'Porta',username:'Nome utente',
+    hostKey:'Impronta chiave host SSH',
+    hostKeyHint:'Impronta SHA256 obbligatoria, ad es. SHA256:…',
+    privateKey:'Chiave SSH privata',passphrase:'Passphrase della chiave',
+    tokenId:'ID token API',tokenSecret:'Segreto token API',
+    nodeOptional:'Nodo Proxmox (facoltativo)',password:'Password',
+    verifyTls:'Verifica certificato TLS',enabled:'Attivo',
+    addExternal:'Aggiungi server esterno',editServer:'Modifica server',
+    deleteServer:'Rimuovi server',refreshStatus:'Aggiorna stato',
+    connectionOk:'Connessione riuscita',
+    noExternalServers:'Nessun server esterno configurato.',
+    leaveBlank:'Lascia vuoti i campi segreti per mantenere le credenziali salvate.',
+    enable:'Attiva',disable:'Disattiva',
+    errorTimeout:'Tempo di connessione scaduto.',
+    errorAuthentication:'Autenticazione non riuscita.',
+    errorCertificate:'Verifica del certificato TLS non riuscita.',
+    errorUnreachable:'Il server non è raggiungibile.',
+  },
+  es:{
+    runvardInstance:'Instancia runvard',proxmox:'Proxmox',linux:'Linux',
+    windows:'Windows Server',generic:'Otro servidor / enlace',
+    adminUrl:'URL de administración',statusUrl:'URL de estado interna',
+    host:'Dirección IP interna',port:'Puerto',username:'Nombre de usuario',
+    hostKey:'Huella de clave de host SSH',
+    hostKeyHint:'Huella SHA256 obligatoria, p. ej. SHA256:…',
+    privateKey:'Clave SSH privada',passphrase:'Frase de la clave',
+    tokenId:'ID del token API',tokenSecret:'Secreto del token API',
+    nodeOptional:'Nodo Proxmox (opcional)',password:'Contraseña',
+    verifyTls:'Verificar certificado TLS',enabled:'Activo',
+    addExternal:'Añadir servidor externo',editServer:'Editar servidor',
+    deleteServer:'Eliminar servidor',refreshStatus:'Actualizar estado',
+    connectionOk:'Conexión correcta',
+    noExternalServers:'No hay servidores externos configurados.',
+    leaveBlank:'Deja vacíos los campos secretos para conservar las credenciales guardadas.',
+    enable:'Activar',disable:'Desactivar',
+    errorTimeout:'Se agotó el tiempo de conexión.',
+    errorAuthentication:'Error de autenticación.',
+    errorCertificate:'Error al validar el certificado TLS.',
+    errorUnreachable:'No se puede acceder al servidor.',
+  },
+  pt:{
+    runvardInstance:'Instância runvard',proxmox:'Proxmox',linux:'Linux',
+    windows:'Windows Server',generic:'Outro servidor / ligação',
+    adminUrl:'URL de administração',statusUrl:'URL de estado interno',
+    host:'Endereço IP interno',port:'Porta',username:'Nome de utilizador',
+    hostKey:'Impressão digital da chave SSH',
+    hostKeyHint:'Impressão SHA256 obrigatória, por ex. SHA256:…',
+    privateKey:'Chave SSH privada',passphrase:'Frase secreta da chave',
+    tokenId:'ID do token da API',tokenSecret:'Segredo do token da API',
+    nodeOptional:'Nó Proxmox (opcional)',password:'Palavra-passe',
+    verifyTls:'Verificar certificado TLS',enabled:'Ativo',
+    addExternal:'Adicionar servidor externo',editServer:'Editar servidor',
+    deleteServer:'Remover servidor',refreshStatus:'Atualizar estado',
+    connectionOk:'Ligação bem-sucedida',
+    noExternalServers:'Nenhum servidor externo configurado.',
+    leaveBlank:'Deixe os campos secretos vazios para manter as credenciais guardadas.',
+    enable:'Ativar',disable:'Desativar',
+    errorTimeout:'O tempo da ligação expirou.',
+    errorAuthentication:'Falha na autenticação.',
+    errorCertificate:'Falha na validação do certificado TLS.',
+    errorUnreachable:'O servidor está inacessível.',
+  },
+};
 for(const lang of Object.keys(FED_FORM_I18N)){
-  Object.assign(FED_I18N[lang],FED_FORM_I18N[lang]);
+  Object.assign(FED_I18N[lang],FED_FORM_I18N[lang],EXTERNAL_SERVER_I18N[lang]);
 }
 function fedText(key){return(FED_I18N[currentLanguage()]||FED_I18N.en)[key]||FED_I18N.en[key]||key;}
+function externalServerErrorText(value){
+  const key={
+    timeout:'errorTimeout',authentication:'errorAuthentication',
+    certificate:'errorCertificate',unreachable:'errorUnreachable',
+  }[String(value||'')];
+  return key?fedText(key):String(value||fedText('errorUnreachable'));
+}
 var _connectedOverview=null;
+var _externalAdminServers=[];
 const CONNECTED_SERVER_ORDER_KEY='runvard_connected_server_order';
 const _connectedServerHistory=new Map();
 let _connectedSortable=null,_connectedServerDragging=false,_connectedResizeFrame=0;
@@ -7851,8 +8012,8 @@ function connectedServerRenderKey(node){
 function connectedServerCardHtml(node){
   const snapshot=node.snapshot||{},history=connectedServerHistory(node);
   const offline=!['online','degraded'].includes(node.health);
-  const percent=value=>offline||value==null?'—':`${Number(value).toFixed(1)}%`;
-  const network=offline||snapshot.network_down_rate==null?'—':`${(Number(snapshot.network_down_rate)/1048576).toFixed(1)} MB/s`;
+  const percent=value=>value==null?'—':`${Number(value).toFixed(1)}%`;
+  const network=snapshot.network_down_rate==null?'—':`${(Number(snapshot.network_down_rate)/1048576).toFixed(1)} MB/s`;
   const updates=Number(snapshot.updates)||0;
   const name=node.name||node.hostname||node.node_id;
   const status=fedText(node.health||'unknown');
@@ -7944,7 +8105,19 @@ function renderConnectedServers(overview){
 }
 
 async function loadConnectedServers(){
-  try{renderConnectedServers(await api('/federation/v1/admin/overview'));}catch(e){}
+  try{
+    const [federation,external]=await Promise.all([
+      api('/federation/v1/admin/overview').catch(()=>({nodes:[]})),
+      api('/external-servers/v1/overview').catch(()=>({nodes:[]})),
+    ]);
+    renderConnectedServers({
+      ...federation,
+      nodes:[
+        ...(federation.nodes||[]),
+        ...(external.nodes||[]).map(node=>({...node,external:true})),
+      ],
+    });
+  }catch(e){}
 }
 
 window.toggleConnectedServers=()=>{
@@ -7957,6 +8130,12 @@ window.connectedServerOpen=nodeId=>{
   if(_connectedServerDragging)return;
   const node=(_connectedOverview?.nodes||[]).find(item=>item.node_id===nodeId);
   if(!node)return;
+  if(node.external){
+    const target=safeExternalServerUrl(node.browser_url);
+    if(!target){toast(fedText('offline'),'error');return;}
+    window.open(target,'_blank','noopener,noreferrer');
+    return;
+  }
   if(!['online','degraded'].includes(node.health)){toast(fedText(node.health||'offline'),'error');return;}
   fedSwitch(node.node_id);
 };
@@ -7968,6 +8147,33 @@ window.connectedServerKey=(event,nodeId)=>{
 window.openConnectedServersModal=()=>{
   $('#user-menu')?.classList.remove('open');
   openModal(SERVER_ADMIN_TILE);
+};
+function safeExternalServerUrl(value){
+  try{
+    const target=new URL(String(value||''));
+    return ['http:','https:'].includes(target.protocol)?target.href:null;
+  }catch(e){return null;}
+}
+window.openServerTypePicker=()=>{
+  $('#form-head').innerHTML=`<span>＋</span> ${esc(fedText('connectServer'))}`;
+  const choices=[
+    ['runvard','⬡','runvardInstance','setup'],
+    ['proxmox','P','proxmox','externalServer'],
+    ['linux','L','linux','externalServer'],
+    ['windows','W','windows','externalServer'],
+    ['generic','↗','generic','externalServer'],
+  ];
+  $('#form-body').innerHTML=`<div class="server-type-grid">${choices.map(([kind,icon,label,description])=>`
+    <button class="server-type-choice" type="button" onclick="externalServerTypeSelect('${kind}')">
+      <span class="server-type-choice-icon" aria-hidden="true">${esc(icon)}</span>
+      <span><strong>${esc(fedText(label))}</strong><span>${esc(fedText(description))}</span></span>
+    </button>`).join('')}</div>`;
+  $('#form-overlay').classList.add('open');
+};
+window.externalServerTypeSelect=kind=>{
+  closeForm();
+  if(kind==='runvard'){openConnectedServersModal();return;}
+  externalServerForm(kind);
 };
 window.addEventListener('resize',()=>{
   cancelAnimationFrame(_connectedResizeFrame);
@@ -8143,20 +8349,20 @@ function fedSetupFields(){
   ];
 }
 async function renderServers(body){
-  const f=await api('/federation/v1/admin/overview');
+  const admin=currentAuthStatus.role==='admin';
+  const [f,external]=await Promise.all([
+    api('/federation/v1/admin/overview'),
+    api(admin?'/external-servers/v1/admin/list':'/external-servers/v1/overview'),
+  ]);
   _fedOverview=f;
-  if(!f.enabled){
-    body.innerHTML=`
+  _externalAdminServers=Array.isArray(external)?external:(external.nodes||[]);
+  const federationHtml=!f.enabled?`
       <div class="fed-setup">
         <section class="fed-setup-card"><h3>${esc(fedText('create'))}</h3><p>${esc(fedText('setupCopy'))}</p>
           <button class="btn" onclick="fedEnableForm()" ${currentAuthStatus.role!=='admin'?'disabled':''}>${esc(fedText('create'))}</button></section>
         <section class="fed-setup-card"><h3>${esc(fedText('join'))}</h3><p>${esc(fedText('setupCopy'))}</p>
           <button class="btn ghost" onclick="fedJoinForm()" ${currentAuthStatus.role!=='admin'?'disabled':''}>${esc(fedText('join'))}</button></section>
-      </div>`;
-    return;
-  }
-  const admin=currentAuthStatus.role==='admin';
-  body.innerHTML=`
+      </div>`:`
     <div class="fed-toolbar">
       <span class="fed-summary">${f.online}/${f.total} ${esc(fedText('online').toLowerCase())}</span>
       ${admin?`<button class="btn ghost sm" onclick="fedRefresh()">↻ ${esc(fedText('refresh'))}</button>
@@ -8164,7 +8370,132 @@ async function renderServers(body){
       <button class="btn ghost sm" onclick="fedSettingsForm()">⚙ ${esc(fedText('settings'))}</button>`:''}
     </div>
     <div class="fed-list">${(f.nodes||[]).map(node=>fedNodeHtml(node,admin)).join('')}</div>`;
+  body.innerHTML=federationHtml+externalServerAdminSection(_externalAdminServers,admin);
 }
+
+function externalServerAdminSection(rows,admin){
+  return `<section class="external-server-section">
+    <div class="external-server-section-head">
+      <div class="external-server-section-title">${esc(fedText('externalServer'))}</div>
+      ${admin?`<button class="btn ghost sm" onclick="openServerTypePicker()">＋ ${esc(fedText('addExternal'))}</button>`:''}
+    </div>
+    <div class="external-server-list">${rows.length
+      ?rows.map(row=>externalServerAdminHtml(row,admin)).join('')
+      :`<div class="external-server-empty">${esc(fedText('noExternalServers'))}</div>`}
+    </div>
+  </section>`;
+}
+
+function externalServerAdminHtml(row,admin){
+  const status=row.status||row;
+  const health=status.health||'unknown';
+  const kind=fedText(row.kind)||row.kind||fedText('externalServer');
+  const url=row.admin_url||row.browser_url||'';
+  const enabled=row.enabled!==false;
+  return `<article class="external-server-admin">
+    <div class="external-server-admin-main">
+      <div class="external-server-admin-name"><span class="fed-health ${esc(health)}"></span>${esc(row.name||'—')}</div>
+      <div class="external-server-admin-meta">${esc(kind)} · ${esc(url)}</div>
+    </div>
+    ${admin?`<div class="external-server-admin-actions">
+      <button class="btn ghost sm" onclick="externalServerRefresh('${esc(row.server_id||row.external_id)}')">↻</button>
+      <button class="btn ghost sm" onclick="externalServerToggle('${esc(row.server_id||row.external_id)}',${enabled?'false':'true'})">${esc(fedText(enabled?'disable':'enable'))}</button>
+      <button class="btn ghost sm" onclick="externalServerEdit('${esc(row.server_id||row.external_id)}')">${esc(fedText('editServer'))}</button>
+      <button class="btn icon danger" title="${esc(fedText('deleteServer'))}" onclick="externalServerDelete('${esc(row.server_id||row.external_id)}')">✕</button>
+    </div>`:''}
+  </article>`;
+}
+
+function externalServerFields(kind,row={}){
+  const fields=[
+    {name:'name',label:fedText('displayName'),value:row.name||''},
+    {name:'admin_url',label:fedText('adminUrl'),value:row.admin_url||'',placeholder:'https://server.example.test'},
+  ];
+  if(kind==='linux')fields.push(
+    {name:'host',label:fedText('host'),value:row.host||'',placeholder:'10.0.0.21'},
+    {name:'port',label:fedText('port'),type:'number',value:row.port||22},
+    {name:'username',label:fedText('username'),value:row.username||''},
+    {name:'host_key',label:fedText('hostKey'),value:row.host_key||'',placeholder:'SHA256:…',hint:fedText('hostKeyHint')},
+    {name:'private_key',label:fedText('privateKey'),type:'textarea',rows:6,hint:row.server_id?fedText('leaveBlank'):''},
+    {name:'passphrase',label:fedText('passphrase'),type:'password'},
+  );
+  else fields.push(
+    {name:'status_url',label:fedText('statusUrl'),value:row.status_url||'',placeholder:kind==='windows'?'https://10.0.0.40:5986/wsman':kind==='proxmox'?'https://10.0.0.10:8006':'https://10.0.0.30:8443/health'},
+  );
+  if(kind==='proxmox')fields.push(
+    {name:'node',label:fedText('nodeOptional'),value:row.node||''},
+    {name:'token_id',label:fedText('tokenId'),hint:row.server_id?fedText('leaveBlank'):''},
+    {name:'token_secret',label:fedText('tokenSecret'),type:'password'},
+  );
+  if(kind==='windows')fields.push(
+    {name:'username',label:fedText('username'),value:row.username||''},
+    {name:'password',label:fedText('password'),type:'password',hint:row.server_id?fedText('leaveBlank'):''},
+  );
+  if(kind!=='linux')fields.push(
+    {name:'verify_tls',label:fedText('verifyTls'),type:'checkbox',value:row.verify_tls!==false},
+  );
+  fields.push({name:'enabled',label:fedText('enabled'),type:'checkbox',value:row.enabled!==false});
+  return fields;
+}
+
+function externalFormValues(fields){
+  const values={};
+  for(const field of fields){
+    const input=$('#f_'+field.name);
+    if(input)values[field.name]=field.type==='checkbox'?input.checked:input.value;
+  }
+  return values;
+}
+
+window.externalServerForm=(kind,row={})=>{
+  const fields=externalServerFields(kind,row);
+  const save=async values=>{
+    const path=row.server_id?'/external-servers/v1/admin/update':'/external-servers/v1/admin/create';
+    const payload={...values,kind};
+    if(row.server_id)payload.server_id=row.server_id;
+    try{
+      await post(path,payload);
+      closeForm();
+      toast(tr('saved'),'success');
+      await renderServers($('#modal-body'));
+      await loadConnectedServers();
+    }catch(e){toast(externalServerErrorText(e.message),'error');}
+  };
+  openForm(row.server_id?fedText('editServer'):fedText('addExternal'),'＋',fields,save);
+  const test=document.createElement('button');
+  test.type='button';test.className='btn ghost';test.textContent=fedText('testConnection');
+  test.onclick=async()=>{
+    test.disabled=true;
+    try{
+      await post('/external-servers/v1/admin/test',{...externalFormValues(fields),kind,server_id:row.server_id||''});
+      toast(fedText('connectionOk'),'success');
+    }catch(e){toast(externalServerErrorText(e.message),'error');}
+    finally{test.disabled=false;}
+  };
+  $('#form-go')?.parentElement?.insertBefore(test,$('#form-go'));
+};
+window.externalServerEdit=serverId=>{
+  const row=_externalAdminServers.find(item=>item.server_id===serverId);
+  if(row)externalServerForm(row.kind,row);
+};
+window.externalServerRefresh=async serverId=>{
+  try{
+    await post('/external-servers/v1/admin/refresh',{server_id:serverId});
+    await renderServers($('#modal-body'));await loadConnectedServers();
+  }catch(e){toast(externalServerErrorText(e.message),'error');}
+};
+window.externalServerToggle=async(serverId,enabled)=>{
+  try{
+    await post('/external-servers/v1/admin/enabled',{server_id:serverId,enabled});
+    await renderServers($('#modal-body'));await loadConnectedServers();
+  }catch(e){toast(externalServerErrorText(e.message),'error');}
+};
+window.externalServerDelete=async serverId=>{
+  try{
+    await post('/external-servers/v1/admin/delete',{server_id:serverId});
+    await renderServers($('#modal-body'));await loadConnectedServers();
+  }catch(e){if(!(e instanceof Error)||e.message!=='cancelled')toast(externalServerErrorText(e.message),'error');}
+};
 function fedNodeHtml(node,admin){
   const s=node.snapshot||{},health=node.health||'unknown';
   const status=fedText(health)||health;

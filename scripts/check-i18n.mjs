@@ -125,6 +125,7 @@ requireKeyParity("VM_PHRASES", vmPhrases, "de");
 
 const fedI18n = evaluate(indexSource, "FED_I18N", context);
 mergeLocales(fedI18n, evaluate(indexSource, "FED_FORM_I18N", context, true));
+mergeLocales(fedI18n, evaluate(indexSource, "EXTERNAL_SERVER_I18N", context, true));
 requireKeyParity("FED_I18N", fedI18n, "en", locales);
 for (const key of [
   "displayName", "internalUrl", "browserUrl", "allowedNetworks",

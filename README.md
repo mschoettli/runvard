@@ -42,6 +42,7 @@ runvard combines many common server administration tasks in one interface:
 - Apply system updates and maintenance tasks
 - Manage virtual machines
 - Connect up to 20 runvard servers and switch between them in both directions
+- Add Linux, Windows Server, Proxmox, and generic server status links
 - Organize services and links on a customizable dashboard
 
 ## Features
@@ -65,6 +66,22 @@ short-lived, single-use sign-in handoff in a new tab while preserving the
 current admin or read-only role and Expert Mode. Internal peer URLs must use
 literal private IP addresses; separate browser URLs may later point at secured
 reverse-proxy hostnames.
+
+### External server status
+
+Linux, Windows Server, Proxmox, and other HTTP-accessible systems can be added
+to the same connected-server area without becoming trusted runvard peers.
+Their compact cards show availability and, where supported, CPU, RAM, network,
+and pending updates. Selecting a card opens its configured administration page
+in a new tab; automatic sign-in is provided only between trusted runvard
+instances.
+
+External status collection uses server-side, read-only connectors: SSH with a
+pinned host key for Linux, the Proxmox HTTPS API, WinRM over HTTPS for Windows
+Server, or a simple HTTP(S) availability check. Credentials remain encrypted
+on the local runvard server and are never returned to the browser. See
+[External server setup](docs/EXTERNAL_SERVER_SETUP.md) for the required target
+configuration.
 
 ### Languages
 

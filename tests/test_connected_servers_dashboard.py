@@ -46,6 +46,43 @@ def test_connected_servers_refresh_independently_from_main_tile_badges():
     assert "setInterval(loadConnectedServers,10000)" in INDEX
 
 
+def test_connected_servers_merge_runvard_and_external_overviews():
+    assert "api('/external-servers/v1/overview')" in INDEX
+    assert "external.nodes||[]" in INDEX
+    assert "federation.nodes||[]" in INDEX
+    assert "external:true" in INDEX
+
+
+def test_external_server_cards_open_safe_http_links_without_sso():
+    assert "safeExternalServerUrl" in INDEX
+    assert "window.open(target,'_blank','noopener,noreferrer')" in INDEX
+    assert "if(node.external)" in INDEX
+    assert "fedSwitch(node.node_id)" in INDEX
+    url_guard = INDEX[
+        INDEX.index("function safeExternalServerUrl"):
+        INDEX.index("window.openServerTypePicker", INDEX.index("function safeExternalServerUrl"))
+    ]
+    assert "location.origin" not in url_guard
+    assert "new URL(String(value||''))" in url_guard
+
+
+def test_add_button_offers_runvard_and_external_server_types():
+    assert "openServerTypePicker" in INDEX
+    for kind in ("runvard", "proxmox", "linux", "windows", "generic"):
+        assert f"['{kind}'" in INDEX
+    assert "externalServerTypeSelect('${kind}')" in INDEX
+
+
+def test_external_server_admin_supports_all_lifecycle_actions():
+    assert "externalServerForm" in INDEX
+    assert "'/external-servers/v1/admin/create'" in INDEX
+    assert "'/external-servers/v1/admin/update'" in INDEX
+    assert "'/external-servers/v1/admin/test'" in INDEX
+    assert "'/external-servers/v1/admin/refresh'" in INDEX
+    assert "'/external-servers/v1/admin/enabled'" in INDEX
+    assert "'/external-servers/v1/admin/delete'" in INDEX
+
+
 def test_connected_server_layout_has_equal_cards_and_wide_alignment_hook():
     assert ".connected-server-card{" in INDEX
     assert "--connected-server-card-height" in INDEX
@@ -62,6 +99,9 @@ def test_connected_server_labels_exist_for_every_supported_language():
         assert "connectedServers:" in locale
         assert "network:" in locale
         assert "showMore:" in locale
+        assert "externalServer:" in locale
+        assert "serverType:" in locale
+        assert "testConnection:" in locale
 
 
 def test_mobile_topbar_can_shrink_without_horizontal_overflow():

@@ -25,6 +25,8 @@ from modules import (system, terminal, files, storage, docker_mgr, services,
                      system_mgr, apps, dashboard, metrics, accounts, audit,
                      ports)
 from modules import security_tokens
+from modules.external_servers import ExternalServerManager
+from modules.external_servers.service import error_category
 from modules.federation import FederationManager
 from modules.federation.service import REDEEM_PATH, STATUS_PATH, SYNC_PATH
 
@@ -85,6 +87,9 @@ SESSION_TTL = 8 * 3600              # 8 Stunden
 SESSION_TTL_REMEMBER = 30 * 86400   # 30 Tage
 
 FEDERATION = FederationManager(os.path.join(DATA_DIR, "federation"))
+EXTERNAL_SERVERS = ExternalServerManager(
+    os.path.join(DATA_DIR, "external-servers"),
+)
 
 
 @app.on_event("startup")
@@ -92,11 +97,14 @@ def _start_federation_worker():
     if FEDERATION.state.get("enabled") and \
             os.environ.get("RUNVARD_FEDERATION_NO_WORKER") != "1":
         FEDERATION.start()
+    if os.environ.get("RUNVARD_EXTERNAL_SERVERS_NO_WORKER") != "1":
+        EXTERNAL_SERVERS.start()
 
 
 @app.on_event("shutdown")
 def _stop_federation_worker():
     FEDERATION.stop()
+    EXTERNAL_SERVERS.stop()
 
 EXPERT_ONLY_PATHS = {
     "/api/monitoring/alerts",
@@ -339,6 +347,8 @@ def _danger_confirm_meta(path, form):
         "/api/federation/v1/admin/join": ("federation:join", "peer_url"),
         "/api/federation/v1/admin/settings": ("federation:settings", "internal_url"),
         "/api/federation/v1/admin/nodes/revoke": ("federation:revoke", "node_id"),
+        "/api/external-servers/v1/admin/delete":
+            ("external-server:delete", "server_id"),
     }
     if path == "/api/auth/toggle":
         if str(form.get("enabled", "")) == "1":
@@ -2207,6 +2217,180 @@ def federation_sso_accept(request: Request, ticket: str = Form(...)):
     response.headers["Cache-Control"] = "no-store"
     response.headers["Referrer-Policy"] = "no-referrer"
     return response
+
+
+# ============ External server status connectors ============
+
+def _external_server_config(
+    *,
+    name, kind, admin_url, status_url, host, port, username, host_key,
+    node, verify_tls, enabled,
+):
+    return {
+        "name": name,
+        "kind": kind,
+        "admin_url": admin_url,
+        "status_url": status_url,
+        "host": host,
+        "port": port,
+        "username": username,
+        "host_key": host_key,
+        "node": node,
+        "verify_tls": verify_tls,
+        "enabled": enabled,
+    }
+
+
+def _external_server_credentials(
+    *, token_id, token_secret, private_key, passphrase, password,
+):
+    return {
+        "token_id": token_id,
+        "token_secret": token_secret,
+        "private_key": private_key,
+        "passphrase": passphrase,
+        "password": password,
+    }
+
+
+@app.get("/api/external-servers/v1/overview")
+def external_servers_overview(user: str = Depends(auth)):
+    return EXTERNAL_SERVERS.overview()
+
+
+@app.get("/api/external-servers/v1/admin/list")
+def external_servers_admin_list(user: str = Depends(require_admin)):
+    return EXTERNAL_SERVERS.admin_list()
+
+
+@app.post("/api/external-servers/v1/admin/create")
+def external_servers_create(
+    name: str = Form(...), kind: str = Form(...),
+    admin_url: str = Form(...), status_url: str = Form(""),
+    host: str = Form(""), port: int = Form(22),
+    username: str = Form(""), host_key: str = Form(""),
+    node: str = Form(""), verify_tls: bool = Form(True),
+    enabled: bool = Form(True), token_id: str = Form(""),
+    token_secret: str = Form(""), private_key: str = Form(""),
+    passphrase: str = Form(""), password: str = Form(""),
+    user: str = Depends(require_admin),
+):
+    try:
+        return EXTERNAL_SERVERS.create(
+            _external_server_config(
+                name=name, kind=kind, admin_url=admin_url,
+                status_url=status_url, host=host, port=port,
+                username=username, host_key=host_key, node=node,
+                verify_tls=verify_tls, enabled=enabled,
+            ),
+            _external_server_credentials(
+                token_id=token_id, token_secret=token_secret,
+                private_key=private_key, passphrase=passphrase,
+                password=password,
+            ),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.post("/api/external-servers/v1/admin/update")
+def external_servers_update(
+    server_id: str = Form(...), name: str = Form(...),
+    kind: str = Form(...), admin_url: str = Form(...),
+    status_url: str = Form(""), host: str = Form(""),
+    port: int = Form(22), username: str = Form(""),
+    host_key: str = Form(""), node: str = Form(""),
+    verify_tls: bool = Form(True), enabled: bool = Form(True),
+    token_id: str = Form(""), token_secret: str = Form(""),
+    private_key: str = Form(""), passphrase: str = Form(""),
+    password: str = Form(""), user: str = Depends(require_admin),
+):
+    try:
+        return EXTERNAL_SERVERS.update(
+            server_id,
+            _external_server_config(
+                name=name, kind=kind, admin_url=admin_url,
+                status_url=status_url, host=host, port=port,
+                username=username, host_key=host_key, node=node,
+                verify_tls=verify_tls, enabled=enabled,
+            ),
+            _external_server_credentials(
+                token_id=token_id, token_secret=token_secret,
+                private_key=private_key, passphrase=passphrase,
+                password=password,
+            ),
+        )
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.post("/api/external-servers/v1/admin/test")
+def external_servers_test(
+    server_id: str = Form(""), name: str = Form(...), kind: str = Form(...),
+    admin_url: str = Form(...), status_url: str = Form(""),
+    host: str = Form(""), port: int = Form(22),
+    username: str = Form(""), host_key: str = Form(""),
+    node: str = Form(""), verify_tls: bool = Form(True),
+    enabled: bool = Form(True), token_id: str = Form(""),
+    token_secret: str = Form(""), private_key: str = Form(""),
+    passphrase: str = Form(""), password: str = Form(""),
+    user: str = Depends(require_admin),
+):
+    try:
+        return EXTERNAL_SERVERS.test_connection(
+            _external_server_config(
+                name=name, kind=kind, admin_url=admin_url,
+                status_url=status_url, host=host, port=port,
+                username=username, host_key=host_key, node=node,
+                verify_tls=verify_tls, enabled=enabled,
+            ),
+            _external_server_credentials(
+                token_id=token_id, token_secret=token_secret,
+                private_key=private_key, passphrase=passphrase,
+                password=password,
+            ),
+            server_id=server_id or None,
+        )
+    except Exception as exc:
+        if isinstance(exc, ValueError) and str(exc) in {
+            "unsupported server type",
+            "server name is required",
+            "credentials are incomplete",
+        }:
+            detail = str(exc)
+        else:
+            detail = error_category(exc)
+        raise HTTPException(400, detail)
+
+
+@app.post("/api/external-servers/v1/admin/refresh")
+def external_servers_refresh(
+    server_id: str = Form(""), user: str = Depends(require_admin),
+):
+    return EXTERNAL_SERVERS.refresh(
+        [server_id] if server_id else None, force_updates=True,
+    )
+
+
+@app.post("/api/external-servers/v1/admin/enabled")
+def external_servers_enabled(
+    server_id: str = Form(...), enabled: bool = Form(...),
+    user: str = Depends(require_admin),
+):
+    try:
+        return EXTERNAL_SERVERS.set_enabled(server_id, enabled)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.post("/api/external-servers/v1/admin/delete")
+def external_servers_delete(
+    server_id: str = Form(...), user: str = Depends(confirmed_admin),
+):
+    try:
+        return EXTERNAL_SERVERS.delete(server_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
 
 # ============ WebSocket Terminal ============
