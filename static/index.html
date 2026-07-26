@@ -78,7 +78,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 
 /* ── Widgets ── */
 .container{max-width:1200px;margin:0 auto;padding:28px}
-.widgets{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.widgets{display:grid;grid-template-columns:repeat(4,1fr);gap:.75rem;margin-bottom:28px}
 .widget{background:var(--bg3);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;transition:border-color .15s}
 .widget-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
 .widget .label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
@@ -621,7 +621,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .tile-edit-actions-main{display:flex;gap:10px}
 
 /* ── Connected servers on dashboard ── */
-.connected-servers{--connected-server-card-height:7.25rem;width:100%;max-width:1200px;margin:0 auto;padding:0 1rem 1.75rem}
+.connected-servers{--connected-server-card-height:6.5rem;width:100%;max-width:1200px;margin:0 auto;padding:0 1rem 1.75rem}
 .connected-servers[hidden]{display:none!important}
 .connected-servers-head{min-height:1.5rem;margin-bottom:.5rem;display:flex;align-items:center;justify-content:space-between;gap:.75rem}
 .connected-servers-title{font-size:.6875rem;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
@@ -630,7 +630,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .connected-servers-add:hover span,.connected-servers-add:focus-visible span{background:rgba(122,74,255,.25);border-color:rgba(122,74,255,.5)}
 .connected-servers-add:focus-visible{opacity:1;outline:none}
 .connected-servers-list{display:grid;grid-template-columns:1fr;gap:1rem}
-.connected-server-card{height:var(--connected-server-card-height);min-width:0;padding:.75rem .875rem;background:var(--bg3);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;justify-content:space-between;gap:.625rem;cursor:pointer;transition:border-color .15s ease,background .15s ease,transform .15s ease;user-select:none;-webkit-user-select:none;overflow:hidden}
+.connected-server-card{height:var(--connected-server-card-height);min-width:0;padding:.625rem .875rem;background:var(--bg3);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:var(--radius);display:flex;flex-direction:column;justify-content:space-between;gap:.375rem;cursor:pointer;transition:border-color .15s ease,background .15s ease,transform .15s ease;user-select:none;-webkit-user-select:none;overflow:hidden}
 .connected-server-card:hover,.connected-server-card:focus-visible{background:rgba(122,74,255,.07);border-color:rgba(122,74,255,.3);transform:translateY(-1px);outline:none}
 .connected-server-card.sortable-ghost{opacity:.3}
 .connected-server-card.sortable-chosen{transform:none}
@@ -8092,7 +8092,7 @@ var _connectedOverview=null;
 var _externalAdminServers=[];
 const CONNECTED_SERVER_ORDER_KEY='runvard_connected_server_order';
 const _connectedServerHistory=new Map();
-let _connectedSortable=null,_connectedServerDragging=false,_connectedResizeFrame=0;
+let _connectedSortable=null,_connectedServerDragging=false;
 
 function syncConnectedServerLabels(){
   const title=$('#connected-servers-title');
@@ -8186,19 +8186,6 @@ function connectedServerCardHtml(node){
   </article>`;
 }
 
-function alignConnectedServerCards(){
-  const section=$('#connected-servers'),widgets=document.querySelector('.widgets');
-  if(!section||section.hidden||!widgets)return;
-  if(!window.matchMedia('(min-width: 1740px)').matches){
-    section.style.removeProperty('--connected-server-card-height');
-    return;
-  }
-  const first=section.querySelector('.connected-server-card');
-  if(!first)return;
-  const height=Math.max(112,Math.round(widgets.getBoundingClientRect().bottom-first.getBoundingClientRect().top));
-  section.style.setProperty('--connected-server-card-height',`${height}px`);
-}
-
 function initConnectedServerSorting(list){
   if(_connectedSortable){_connectedSortable.destroy();_connectedSortable=null;}
   if(typeof Sortable==='undefined'||list.children.length<2)return;
@@ -8255,8 +8242,6 @@ function renderConnectedServers(overview){
   more.hidden=nodes.length<=3;
   more.textContent=section.classList.contains('is-expanded')?fedText('showLess'):fedText('showMore');
   if(structureChanged)initConnectedServerSorting(list);
-  cancelAnimationFrame(_connectedResizeFrame);
-  _connectedResizeFrame=requestAnimationFrame(alignConnectedServerCards);
 }
 
 async function loadConnectedServers(){
@@ -8357,11 +8342,6 @@ window.externalServerTypeSelect=kind=>{
   if(kind==='runvard'){closeForm();openConnectedServersModal();return;}
   externalServerForm(kind);
 };
-window.addEventListener('resize',()=>{
-  cancelAnimationFrame(_connectedResizeFrame);
-  _connectedResizeFrame=requestAnimationFrame(alignConnectedServerCards);
-});
-
 function tileName(tile){return tile.id==='servers'?fedText('servers'):tr(tile.nameKey);}
 function tileDesc(tile){return tile.descKey?tr(tile.descKey):'';}
 function tabLabel(tile,tab,index){return tile.tabKeys&&tile.tabKeys[index]?tr(tile.tabKeys[index]):tab;}

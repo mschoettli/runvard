@@ -145,11 +145,11 @@ def test_external_server_admin_supports_all_lifecycle_actions():
     assert "'/external-servers/v1/admin/delete'" in INDEX
 
 
-def test_connected_server_layout_has_equal_cards_and_wide_alignment_hook():
+def test_connected_server_layout_keeps_equal_compact_cards():
     assert ".connected-server-card{" in INDEX
-    assert "--connected-server-card-height" in INDEX
-    assert "alignConnectedServerCards" in INDEX
-    assert "widgets.getBoundingClientRect().bottom" in INDEX
+    assert "--connected-server-card-height:6.5rem" in INDEX
+    assert "alignConnectedServerCards" not in INDEX
+    assert "grid-template-columns:repeat(3,minmax(0,1fr))" in INDEX
 
 
 def test_connected_server_labels_exist_for_every_supported_language():
