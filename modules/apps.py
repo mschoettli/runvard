@@ -1507,13 +1507,66 @@ def action(app_id, act):
 # ──────────────────────────────────────────────────────────────────────────
 
 def _check_image_update(path):
-    """Vergleicht lokales Image mit Remote via 'docker compose pull --dry-run'."""
+    """Vergleicht lokale und veröffentlichte Registry-Digests der Compose-Images."""
     try:
-        r = subprocess.run(["docker", "compose", "pull", "--dry-run"],
-                           cwd=path, capture_output=True, text=True, timeout=120)
-        out = (r.stdout + r.stderr).lower()
-        # Wenn etwas heruntergeladen würde, taucht "pull" / "download" auf
-        return "pull complete" in out or "downloaded newer" in out or "would pull" in out
+        result = subprocess.run(
+            ["docker", "compose", "config", "--images"],
+            cwd=path,
+            capture_output=True,
+            text=True,
+            timeout=30,
+        )
+        if result.returncode != 0:
+            return False
+
+        # Mehrere Services können dasselbe Image verwenden (z. B. Web + Worker).
+        images = list(dict.fromkeys(
+            line.strip() for line in result.stdout.splitlines() if line.strip()
+        ))
+        for image in images:
+            local = subprocess.run(
+                [
+                    "docker",
+                    "image",
+                    "inspect",
+                    image,
+                    "--format",
+                    "{{json .RepoDigests}}",
+                ],
+                cwd=path,
+                capture_output=True,
+                text=True,
+                timeout=30,
+            )
+            remote = subprocess.run(
+                [
+                    "docker",
+                    "buildx",
+                    "imagetools",
+                    "inspect",
+                    image,
+                    "--format",
+                    "{{json .Manifest}}",
+                ],
+                cwd=path,
+                capture_output=True,
+                text=True,
+                timeout=120,
+            )
+            if local.returncode != 0 or remote.returncode != 0:
+                continue
+
+            repo_digests = json.loads(local.stdout)
+            manifest = json.loads(remote.stdout)
+            local_digests = {
+                reference.rsplit("@", 1)[-1]
+                for reference in repo_digests or []
+                if "@" in reference
+            }
+            remote_digest = manifest.get("digest")
+            if local_digests and remote_digest and remote_digest not in local_digests:
+                return True
+        return False
     except Exception:
         return False
 

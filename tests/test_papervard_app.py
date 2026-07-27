@@ -1,3 +1,4 @@
+import json
 import re
 import subprocess
 from pathlib import Path
@@ -94,6 +95,52 @@ def test_papervard_allocates_both_web_ports(monkeypatch, tmp_path):
         compose["services"]["papervard"]["environment"]["NEXT_PUBLIC_ONLYOFFICE_URL"]
         == "auto:8082"
     )
+
+
+def test_update_check_compares_local_and_remote_image_digests(monkeypatch, tmp_path):
+    remote_digest = ["sha256:new"]
+    calls = []
+
+    def fake_run(command, **kwargs):
+        assert kwargs["cwd"] == str(tmp_path)
+        calls.append(command)
+        if command == ["docker", "compose", "config", "--images"]:
+            return SimpleNamespace(
+                returncode=0,
+                stdout=(
+                    "ghcr.io/mschoettli/papervard:latest\n"
+                    "ghcr.io/mschoettli/papervard:latest\n"
+                ),
+                stderr="",
+            )
+        if command[:3] == ["docker", "image", "inspect"]:
+            return SimpleNamespace(
+                returncode=0,
+                stdout='["ghcr.io/mschoettli/papervard@sha256:old"]\n',
+                stderr="",
+            )
+        if command[:4] == ["docker", "buildx", "imagetools", "inspect"]:
+            return SimpleNamespace(
+                returncode=0,
+                stdout=json.dumps({"digest": remote_digest[0]}),
+                stderr="",
+            )
+        raise AssertionError(f"unexpected command: {command}")
+
+    monkeypatch.setattr(apps.subprocess, "run", fake_run)
+
+    assert apps._check_image_update(str(tmp_path)) is True
+    remote_digest[0] = "sha256:old"
+    assert apps._check_image_update(str(tmp_path)) is False
+    assert calls.count([
+        "docker",
+        "buildx",
+        "imagetools",
+        "inspect",
+        "ghcr.io/mschoettli/papervard:latest",
+        "--format",
+        "{{json .Manifest}}",
+    ]) == 2
 
 
 def test_app_install_rejects_port_conflicts_before_writing(monkeypatch, tmp_path):
