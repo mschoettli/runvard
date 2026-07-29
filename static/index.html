@@ -6,6 +6,9 @@
 <title>runvard</title>
 <link rel="icon" type="image/png" href="/static/runvard-icon.png">
 <link rel="apple-touch-icon" href="/static/runvard-icon.png">
+<script>
+try{document.documentElement.dataset.uiTheme=localStorage.getItem('runvard_ui_theme')==='modern'?'modern':'original';}catch(e){}
+</script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
@@ -790,6 +793,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .ice-bg{background:radial-gradient(ellipse at 60% 30%,#818cf8,transparent 50%),radial-gradient(ellipse at 20% 70%,#3730a3,transparent 55%),radial-gradient(ellipse at 85% 75%,#0284c7,transparent 45%),#03051a!important;background-attachment:fixed!important}
 .galaxy-bg{background:radial-gradient(ellipse at 40% 40%,#4c1d95,transparent 55%),radial-gradient(ellipse at 75% 20%,#1e1b4b,transparent 50%),radial-gradient(ellipse at 20% 80%,#0f172a,transparent 50%),#020108!important;background-attachment:fixed!important}
 </style>
+<link rel="stylesheet" href="/static/modern-theme.css">
 </head>
 <body>
 
@@ -822,6 +826,10 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
         <div class="um-row">
           <span>Expert Mode</span>
           <label class="um-switch"><input type="checkbox" id="um-expert-toggle" onchange="setExpertMode(this.checked)"><span class="um-slider"></span></label>
+        </div>
+        <div class="um-row">
+          <span>Modernes Design</span>
+          <label class="um-switch"><input type="checkbox" id="um-theme-toggle" onchange="setUiTheme(this.checked)" aria-label="Modernes Design"><span class="um-slider"></span></label>
         </div>
         <button class="um-action" onclick="openLanguageModal()">🌐 <span data-i18n="language">Language</span></button>
         <button class="um-action" onclick="openConnectedServersModal()">⬡ <span id="um-connected-servers-label">Connected servers</span></button>
@@ -7467,7 +7475,20 @@ function openLanguageModal(){
   if(select)select.value=currentLanguage();
 }
 const EXPERT_MODE_KEY='runvard_expert_mode';
+const UI_THEME_KEY='runvard_ui_theme';
 let expertModeActive=false;
+function syncUiThemeToggle(){
+  const toggle=$('#um-theme-toggle');
+  if(toggle)toggle.checked=document.documentElement.dataset.uiTheme==='modern';
+}
+function setUiTheme(enabled){
+  const theme=enabled?'modern':'original';
+  document.documentElement.dataset.uiTheme=theme;
+  try{localStorage.setItem(UI_THEME_KEY,theme);}catch(e){}
+  syncUiThemeToggle();
+  requestAnimationFrame(()=>window.dispatchEvent(new Event('resize')));
+}
+syncUiThemeToggle();
 function isExpertMode(){
   return !!expertModeActive;
 }
