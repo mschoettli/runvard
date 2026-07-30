@@ -7481,11 +7481,18 @@ function syncUiThemeToggle(){
   const toggle=$('#um-theme-toggle');
   if(toggle)toggle.checked=document.documentElement.dataset.uiTheme==='modern';
 }
+function isModernUi(){
+  return document.documentElement.dataset.uiTheme==='modern';
+}
 function setUiTheme(enabled){
   const theme=enabled?'modern':'original';
   document.documentElement.dataset.uiTheme=theme;
   try{localStorage.setItem(UI_THEME_KEY,theme);}catch(e){}
   syncUiThemeToggle();
+  renderTiles();
+  loadTileBadges();
+  syncDashboardChartTheme();
+  rerenderCurrentModal();
   requestAnimationFrame(()=>window.dispatchEvent(new Event('resize')));
 }
 syncUiThemeToggle();
@@ -7709,8 +7716,9 @@ $('#confirm-overlay').onclick=e=>{if(e.target.id==='confirm-overlay')closeConfir
 
 function statusBadge(label,tone){
   const cls=tone==='good'?'run':tone==='bad'?'stop':'';
-  const style=tone==='warn'?' style="background:rgba(234,179,8,.1);color:#facc15;border:1px solid rgba(234,179,8,.18)"':'';
-  return `<span class="status-pill ${cls}"${style}>${esc(uiText(label))}</span>`;
+  const warnClass=tone==='warn'&&isModernUi()?' is-warn':'';
+  const style=tone==='warn'&&!isModernUi()?' style="background:rgba(234,179,8,.1);color:#facc15;border:1px solid rgba(234,179,8,.18)"':'';
+  return `<span class="status-pill ${cls}${warnClass}"${style}>${esc(uiText(label))}</span>`;
 }
 function summaryCard(label,value,sub){
   const valueClass=String(value).includes('status-pill')?'v has-pill':'v';
@@ -7731,7 +7739,7 @@ function dockerAppGroupCount(containers,onlyRunning=false){
 }
 function usageBar(percent){
   const p=Math.max(0,Math.min(100,Number(percent)||0));
-  const color=p>90?'var(--red)':p>75?'var(--yellow)':'linear-gradient(90deg,var(--accent),#06b6d4)';
+  const color=p>90?'var(--red)':p>75?'var(--yellow)':isModernUi()?'var(--accent)':'linear-gradient(90deg,var(--accent),#06b6d4)';
   return `<div class="nx-usage"><span style="width:${p}%;background:${color}"></span></div>`;
 }
 function emptyState(text){
@@ -7742,6 +7750,10 @@ function advancedDetails(title,html,open){
 }
 function viewIntro(title,copy,actionHtml){
   if(isExpertMode())return actionHtml?`<div class="nx-expert-actions nx-action-row">${actionHtml}</div>`:'';
+  if(isModernUi()){
+    const moduleId=currentTile?.id||'system';
+    return `<section class="nx-view-intro modern-module-intro"><div class="modern-intro-copy"><h3>${esc(uiText(title))}</h3><p>${esc(uiText(copy))}</p></div>${modernModuleVisual(moduleId)}<div class="nx-action-row">${actionHtml||''}</div></section>`;
+  }
   return `<div class="nx-view-intro"><div><h3>${esc(uiText(title))}</h3><p>${esc(uiText(copy))}</p></div><div class="nx-action-row">${actionHtml||''}</div></div>`;
 }
 function typedConfirm(title,msg,phrase,cb,coversDanger=true){
@@ -7854,6 +7866,15 @@ loadAuthStatus();
 // ═══ Sparklines ═══
 function makeSpark(id,color){return new Chart($(id),{type:'line',data:{labels:Array(30).fill(''),datasets:[{data:Array(30).fill(0),borderColor:color,borderWidth:1.5,fill:true,backgroundColor:color+'22',tension:.4,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false,min:0,max:100}},animation:false}});}
 const cpuSpark=makeSpark('#cpu-spark','#8b5cf6'),ramSpark=makeSpark('#ram-spark','#06b6d4'),netSpark=makeSpark('#net-spark','#22c55e');
+function syncDashboardChartTheme(){
+  const colors=isModernUi()?['#3973e6','#5d8be8','#79a3ec']:['#8b5cf6','#06b6d4','#22c55e'];
+  [cpuSpark,ramSpark,netSpark].forEach((chart,index)=>{
+    chart.data.datasets[0].borderColor=colors[index];
+    chart.data.datasets[0].backgroundColor=colors[index]+'22';
+    chart.update('none');
+  });
+}
+syncDashboardChartTheme();
 function pushData(c,v){c.data.datasets[0].data.shift();c.data.datasets[0].data.push(v);c.update('none');}
 async function poll(){try{const s=await api('/system/stats');$('#cpu-val').textContent=s.cpu.percent;$('#cpu-sub').textContent=`${s.cpu.cores} ${uiText('cores')} · ${s.cpu.freq||'?'} MHz`;pushData(cpuSpark,s.cpu.percent);$('#ram-val').textContent=(s.memory.used/1073741824).toFixed(1);$('#ram-sub').textContent=`${fmtBytes(s.memory.total)} · ${s.memory.percent}%`;pushData(ramSpark,s.memory.percent);const mb=(s.network.down_rate/1048576).toFixed(1);$('#net-val').textContent=mb;$('#net-sub').innerHTML=`▲ ${(s.network.up_rate/1048576).toFixed(1)} ▼ ${mb} MB/s`;pushData(netSpark,Math.min(100,s.network.down_rate/1048576*2));}catch(e){}}
 api('/system/disks').then(d=>{if(d.length){const r=d.find(x=>x.mountpoint==='/')||d[0];$('#disk-val').textContent=r.percent;$('#disk-bar').style.width=r.percent+'%';$('#disk-sub').textContent=`${fmtBytes(r.used)} / ${fmtBytes(r.total)}`;}});
@@ -8370,9 +8391,104 @@ window.externalServerTypeSelect=kind=>{
   if(kind==='runvard'){closeForm();openConnectedServersModal();return;}
   externalServerForm(kind);
 };
+const MODERN_TAB_LABELS={
+  de:{
+    'storage:Disks':'Übersicht','storage:RAID':'Schutz','storage:SMART':'Laufwerkszustand','storage:Swap':'Speicherpuffer',
+    'storage:LUKS':'Verschlüsselung','storage:ZFS/Btrfs':'Speicher-Pools','storage:iSCSI':'Remote-Speicher','storage:LVM':'Datenträger-Pools',
+    'docker:Container':'Dienste','docker:Compose':'Projekte','docker:Images':'Vorlagen','docker:Volumes':'App-Daten',
+    'vms:Machines':'Maschinen','vms:Storage pools':'Speicher','backup:Jobs':'Pläne','monitoring:Audit':'Aktivität',
+    'system:Advanced':'Werkzeuge','system:Power':'Energie'
+  },
+  en:{
+    'storage:Disks':'Overview','storage:RAID':'Protection','storage:SMART':'Drive health','storage:Swap':'Memory buffer',
+    'storage:LUKS':'Encryption','storage:ZFS/Btrfs':'Storage pools','storage:iSCSI':'Remote storage','storage:LVM':'Volume pools',
+    'docker:Container':'Services','docker:Compose':'Projects','docker:Images':'Templates','docker:Volumes':'App data',
+    'vms:Machines':'Machines','vms:Storage pools':'Storage','backup:Jobs':'Plans','monitoring:Audit':'Activity',
+    'system:Advanced':'Tools','system:Power':'Power'
+  },
+  fr:{
+    'storage:Disks':'Vue d’ensemble','storage:RAID':'Protection','storage:SMART':'État des disques','storage:Swap':'Mémoire tampon',
+    'storage:LUKS':'Chiffrement','storage:ZFS/Btrfs':'Pools de stockage','storage:iSCSI':'Stockage distant','storage:LVM':'Pools de volumes',
+    'docker:Container':'Services','docker:Compose':'Projets','docker:Images':'Modèles','docker:Volumes':'Données des apps',
+    'vms:Machines':'Machines','vms:Storage pools':'Stockage','backup:Jobs':'Plans','monitoring:Audit':'Activité',
+    'system:Advanced':'Outils','system:Power':'Alimentation'
+  },
+  it:{
+    'storage:Disks':'Panoramica','storage:RAID':'Protezione','storage:SMART':'Stato dischi','storage:Swap':'Memoria di riserva',
+    'storage:LUKS':'Crittografia','storage:ZFS/Btrfs':'Pool di archiviazione','storage:iSCSI':'Archiviazione remota','storage:LVM':'Pool di volumi',
+    'docker:Container':'Servizi','docker:Compose':'Progetti','docker:Images':'Modelli','docker:Volumes':'Dati delle app',
+    'vms:Machines':'Macchine','vms:Storage pools':'Archiviazione','backup:Jobs':'Piani','monitoring:Audit':'Attività',
+    'system:Advanced':'Strumenti','system:Power':'Alimentazione'
+  },
+  es:{
+    'storage:Disks':'Resumen','storage:RAID':'Protección','storage:SMART':'Estado de discos','storage:Swap':'Memoria de reserva',
+    'storage:LUKS':'Cifrado','storage:ZFS/Btrfs':'Pools de almacenamiento','storage:iSCSI':'Almacenamiento remoto','storage:LVM':'Pools de volúmenes',
+    'docker:Container':'Servicios','docker:Compose':'Proyectos','docker:Images':'Plantillas','docker:Volumes':'Datos de apps',
+    'vms:Machines':'Máquinas','vms:Storage pools':'Almacenamiento','backup:Jobs':'Planes','monitoring:Audit':'Actividad',
+    'system:Advanced':'Herramientas','system:Power':'Energía'
+  },
+  pt:{
+    'storage:Disks':'Visão geral','storage:RAID':'Proteção','storage:SMART':'Estado dos discos','storage:Swap':'Memória de reserva',
+    'storage:LUKS':'Encriptação','storage:ZFS/Btrfs':'Pools de armazenamento','storage:iSCSI':'Armazenamento remoto','storage:LVM':'Pools de volumes',
+    'docker:Container':'Serviços','docker:Compose':'Projetos','docker:Images':'Modelos','docker:Volumes':'Dados das apps',
+    'vms:Machines':'Máquinas','vms:Storage pools':'Armazenamento','backup:Jobs':'Planos','monitoring:Audit':'Atividade',
+    'system:Advanced':'Ferramentas','system:Power':'Energia'
+  }
+};
+const MODERN_ICON_PATHS={
+  terminal:'<path d="m5 8 4 4-4 4"/><path d="M11 17h8"/>',
+  files:'<path d="M3 7.5h7l2 2h9v9.5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M3 7.5v-2A2 2 0 0 1 5 3.5h4l2 2h6"/>',
+  storage:'<ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/><path d="M4 11.5v6c0 1.7 3.6 3 8 3s8-1.3 8-3v-6"/>',
+  docker:'<rect x="3" y="5" width="7" height="5" rx="1.5"/><rect x="14" y="5" width="7" height="5" rx="1.5"/><rect x="3" y="14" width="7" height="5" rx="1.5"/><rect x="14" y="14" width="7" height="5" rx="1.5"/>',
+  vms:'<rect x="3" y="4" width="18" height="13" rx="2.5"/><path d="M8 21h8M12 17v4"/><rect x="7" y="8" width="4" height="4" rx="1"/><rect x="13" y="8" width="4" height="4" rx="1"/>',
+  backup:'<path d="M7 18.5a4 4 0 0 1-.5-8A6 6 0 0 1 18 9a4.5 4.5 0 0 1-.5 9.5z"/><path d="M12 10v8m-3-3 3 3 3-3"/>',
+  monitoring:'<path d="M4 19V5M4 19h16"/><path d="m6.5 15 3.2-4 3 2 4.8-6"/><circle cx="17.5" cy="7" r="1.5"/>',
+  system:'<rect x="4" y="3" width="16" height="18" rx="3"/><path d="M8 8h5M8 12h8M8 16h5"/><circle cx="16.5" cy="8" r="1"/>',
+  apps:'<rect x="3" y="3" width="7" height="7" rx="2"/><rect x="14" y="3" width="7" height="7" rx="2"/><rect x="3" y="14" width="7" height="7" rx="2"/><rect x="14" y="14" width="7" height="7" rx="2"/>',
+  servers:'<rect x="3" y="4" width="7" height="16" rx="2"/><rect x="14" y="4" width="7" height="16" rx="2"/><path d="M10 9h4M10 15h4"/><circle cx="6.5" cy="8" r=".8"/><circle cx="17.5" cy="8" r=".8"/>'
+};
+function modernTileIcon(id){
+  const paths=MODERN_ICON_PATHS[id]||MODERN_ICON_PATHS.system;
+  return `<svg viewBox="0 0 24 24" aria-hidden="true" focusable="false">${paths}</svg>`;
+}
+function tileTitleIcon(tile){
+  return isModernUi()?modernTileIcon(tile.id):tile.icon;
+}
+function modernVisualLabel(id){
+  const labels={
+    de:{storage:'Speicher auf einen Blick',docker:'Dienste auf einen Blick',vms:'Virtuelle Maschinen',backup:'Gesicherter Datenweg',monitoring:'Systemaktivität',system:'Serverzustand',apps:'Apps einfach verwalten',files:'Dateien verwalten',terminal:'Direkter Systemzugriff',servers:'Verbundene Server'},
+    en:{storage:'Storage at a glance',docker:'Services at a glance',vms:'Virtual machines',backup:'Protected data path',monitoring:'System activity',system:'Server health',apps:'Manage apps easily',files:'Manage files',terminal:'Direct system access',servers:'Connected servers'},
+    fr:{storage:'Stockage en un coup d’œil',docker:'Services en un coup d’œil',vms:'Machines virtuelles',backup:'Chemin de données protégé',monitoring:'Activité du système',system:'État du serveur',apps:'Gérer les apps simplement',files:'Gérer les fichiers',terminal:'Accès direct au système',servers:'Serveurs connectés'},
+    it:{storage:'Archiviazione in sintesi',docker:'Servizi in sintesi',vms:'Macchine virtuali',backup:'Percorso dati protetto',monitoring:'Attività del sistema',system:'Stato del server',apps:'Gestisci facilmente le app',files:'Gestisci i file',terminal:'Accesso diretto al sistema',servers:'Server collegati'},
+    es:{storage:'Almacenamiento de un vistazo',docker:'Servicios de un vistazo',vms:'Máquinas virtuales',backup:'Ruta de datos protegida',monitoring:'Actividad del sistema',system:'Estado del servidor',apps:'Gestionar apps fácilmente',files:'Gestionar archivos',terminal:'Acceso directo al sistema',servers:'Servidores conectados'},
+    pt:{storage:'Armazenamento num relance',docker:'Serviços num relance',vms:'Máquinas virtuais',backup:'Percurso de dados protegido',monitoring:'Atividade do sistema',system:'Estado do servidor',apps:'Gerir apps facilmente',files:'Gerir ficheiros',terminal:'Acesso direto ao sistema',servers:'Servidores ligados'}
+  };
+  return (labels[currentLanguage()]||labels.en)[id]||labels.en.system;
+}
+function modernUsedWord(){
+  return ({de:'belegt',en:'used',fr:'utilisé',it:'usato',es:'usado',pt:'usado'})[currentLanguage()]||'used';
+}
+function modernModuleVisual(id){
+  const icon=modernTileIcon(id);
+  const scene=id==='storage'
+    ? '<span class="modern-bay is-on"></span><span class="modern-bay is-on"></span><span class="modern-bay"></span><span class="modern-bay"></span>'
+    : id==='backup'
+      ? '<span class="modern-flow-node"></span><span class="modern-flow-line"><i></i></span><span class="modern-flow-node is-target"></span>'
+      : id==='monitoring'
+        ? '<svg class="modern-chart-line" viewBox="0 0 120 50" aria-hidden="true"><path d="M2 39 22 31 39 35 57 18 74 25 94 10 118 16"/><path class="area" d="M2 39 22 31 39 35 57 18 74 25 94 10 118 16V49H2Z"/></svg>'
+        : `<span class="modern-visual-glyph">${icon}</span><span class="modern-visual-lines"><i></i><i></i><i></i></span>`;
+  return `<div class="modern-module-visual modern-visual-${esc(id)}" data-module="${esc(id)}" role="img" aria-label="${esc(modernVisualLabel(id))}"><div class="modern-visual-scene">${scene}</div><span class="modern-visual-caption"><i></i>${esc(modernVisualLabel(id))}</span></div>`;
+}
 function tileName(tile){return tile.id==='servers'?fedText('servers'):tr(tile.nameKey);}
 function tileDesc(tile){return tile.descKey?tr(tile.descKey):'';}
-function tabLabel(tile,tab,index){return tile.tabKeys&&tile.tabKeys[index]?tr(tile.tabKeys[index]):tab;}
+function tabLabel(tile,tab,index){
+  if(isModernUi()){
+    const labels=MODERN_TAB_LABELS[currentLanguage()]||MODERN_TAB_LABELS.en;
+    const simple=labels[`${tile.id}:${tab}`];
+    if(simple)return simple;
+  }
+  return tile.tabKeys&&tile.tabKeys[index]?tr(tile.tabKeys[index]):tab;
+}
 function renderTiles(){
   const tilesEl=$('#tiles');
   if(!tilesEl)return;
@@ -8382,7 +8498,11 @@ function renderTiles(){
     el.className='tile';
     el.style.animationDelay=(i*.03)+'s';
     el.dataset.id=t.id;
-    el.innerHTML=`
+    el.innerHTML=isModernUi()?`
+      ${t.badge?`<span class="tile-badge" id="badge-${t.id}"></span>`:''}
+      <div class="tile-icon modern-tile-icon">${modernTileIcon(t.id)}</div>
+      <div class="tile-name">${esc(tileName(t))}</div>
+      ${tileDesc(t)?`<div class="tile-desc">${esc(tileDesc(t).split('·')[0].trim())}</div>`:''}`:`
       ${t.badge?`<span class="tile-badge" id="badge-${t.id}"></span>`:''}
       <div class="tile-icon" style="background:${t.color}22">${t.icon}</div>
       <div class="tile-name">${esc(tileName(t))}</div>`;
@@ -8479,7 +8599,7 @@ function openModal(tile){
   const tabs=visibleTabs(tile);
   currentTile=tile;currentTab=tabs.length?tabs[0].tab:null;resetSearch();
   document.querySelector('#overlay .modal')?.classList.toggle('servers-modal',tile.id==='servers');
-  $('#modal-title').innerHTML=`<span>${tile.icon}</span> ${esc(tileName(tile))}`;
+  $('#modal-title').innerHTML=`<span>${tileTitleIcon(tile)}</span> ${esc(tileName(tile))}`;
   const tabsEl=$('#modal-tabs');tabsEl.innerHTML='';
   const hasSearch=['services','docker','vms','system'].includes(tile.id);
   $('#search-btn').style.display=hasSearch?'flex':'none';
@@ -8498,7 +8618,7 @@ function openModal(tile){
 }
 function syncModalLanguage(){
   if(!currentTile)return;
-  $('#modal-title').innerHTML=`<span>${currentTile.icon}</span> ${esc(tileName(currentTile))}`;
+  $('#modal-title').innerHTML=`<span>${tileTitleIcon(currentTile)}</span> ${esc(tileName(currentTile))}`;
   document.querySelectorAll('#modal-tabs .modal-tab[data-tab]').forEach(el=>{
     const index=(currentTile.tabs||[]).indexOf(el.dataset.tab);
     if(index>=0)el.textContent=tabLabel(currentTile,el.dataset.tab,index);
@@ -12309,7 +12429,8 @@ function renderAppsView(body,categories){
   const updateCount=appsCatalog.filter(a=>a.update_available).length;
   const categoryKeys=appCategoryKeys(categories||appsCatalogCategories);
 
-  body.innerHTML=`
+  const modernIntro=isModernUi()?viewIntro('Apps','Install apps or add custom shortcuts.',''):'';
+  body.innerHTML=modernIntro+`
     <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
       <input id="apps-search" class="nx-search" placeholder="${esc(appUi('searchApps'))}" value="${esc(appsSearch)}" style="flex:1;min-width:160px;max-width:280px" oninput="appsDoSearch(this.value)">
       <span style="font-size:11px;color:var(--text3)">${appsCatalog.length} ${esc(appUi('apps'))} · ${installedCount} ${esc(appUi('installed'))}${updateCount?` · <span style="color:#fbbf24">${updateCount} ${esc(appUi(updateCount>1?'updates':'update'))}</span>`:''}</span>
@@ -12330,6 +12451,7 @@ function renderAppsView(body,categories){
 }
 
 function appTint(cat){
+  if(isModernUi())return '#3973e6';
   return ({media:'#a78bfa',network:'#22d3ee',productivity:'#7a4aff',ai:'#f472b6',
     monitoring:'#9ca3af',download:'#2dd4bf',home:'#fbbf24',developer:'#60a5fa',database:'#fb923c',compose:'#9ca3af'})[appCategoryKey(cat)]||'#9d7aff';
 }
@@ -13195,7 +13317,7 @@ async function renderStorage(body,tab){
       +`<div class="nx-summary-grid">
         ${summaryCard('Disks',(d.devices||[]).length,'Physical devices found')}
         ${summaryCard('Mounted volumes',mounted.length,'Usable filesystems')}
-        ${summaryCard('System disk',root?root.percent+'% used':'Unknown',root?`${fmtBytes(root.used)} / ${fmtBytes(root.total)}`:'No mount data')}
+        ${summaryCard('System disk',root?root.percent+'% '+(isModernUi()?modernUsedWord():'used'):'Unknown',root?`${fmtBytes(root.used)} / ${fmtBytes(root.total)}`:'No mount data')}
       </div>${renderDeviceCards(d.devices)}`;
     translateRenderedText(body);
     return;
