@@ -240,13 +240,59 @@ html[data-ui-theme="modern"] .dash-tile-icon {
 
 html[data-ui-theme="modern"] .tile-icon svg,
 html[data-ui-theme="modern"] .modal-title svg {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   fill: none;
   stroke: currentColor;
   stroke-width: 1.65;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+html[data-ui-theme="modern"] .modern-tile-icon {
+  width: 48px;
+  height: 48px;
+  border-color: rgb(57 115 230 / 12%) !important;
+  border-radius: 15px;
+  background:
+    radial-gradient(circle at 28% 20%, rgb(255 255 255 / 96%), transparent 42%),
+    linear-gradient(145deg, rgb(248 251 255 / 96%), rgb(226 237 252 / 88%)) !important;
+  box-shadow:
+    0 8px 18px rgb(48 75 110 / 9%),
+    inset 0 1px 0 rgb(255 255 255 / 96%);
+  color: #356fdc;
+}
+
+html[data-ui-theme="modern"] .tile:hover .modern-tile-icon {
+  border-color: rgb(57 115 230 / 18%) !important;
+  background:
+    radial-gradient(circle at 28% 20%, #fff, transparent 44%),
+    linear-gradient(145deg, #fff, #e9f1fc) !important;
+  box-shadow:
+    0 10px 22px rgb(48 75 110 / 12%),
+    inset 0 1px 0 #fff;
+}
+
+html[data-ui-theme="modern"] .tile-icon svg .mi-surface,
+html[data-ui-theme="modern"] .modal-title svg .mi-surface,
+html[data-ui-theme="modern"] .modern-visual-glyph svg .mi-surface {
+  fill: currentColor;
+  stroke: none;
+  opacity: .15;
+}
+
+html[data-ui-theme="modern"] .tile-icon svg .mi-symbol,
+html[data-ui-theme="modern"] .modal-title svg .mi-symbol,
+html[data-ui-theme="modern"] .modern-visual-glyph svg .mi-symbol {
+  fill: currentColor;
+  stroke: none;
+  opacity: 1;
+}
+
+html[data-ui-theme="modern"] .tile-icon svg .mi-highlight,
+html[data-ui-theme="modern"] .modal-title svg .mi-highlight,
+html[data-ui-theme="modern"] .modern-visual-glyph svg .mi-highlight {
+  fill: rgb(255 255 255 / 92%);
 }
 
 html[data-ui-theme="modern"] .modal-title > span {
