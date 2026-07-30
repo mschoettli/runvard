@@ -413,6 +413,7 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 .docker-service-state.warn{border-color:rgba(234,179,8,.2);background:rgba(234,179,8,.08);color:#facc15}
 .docker-service-state.bad{border-color:rgba(239,68,68,.2);background:rgba(239,68,68,.08);color:#f87171}
 .docker-service-image{margin-top:18px;overflow:hidden;color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.45;text-overflow:ellipsis;white-space:nowrap}
+.docker-service-resources{display:none}
 .docker-service-meta{min-height:51px;margin-top:13px}
 .docker-service-meta-label{margin-bottom:7px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
 .docker-service-ports{display:flex;min-width:0;gap:6px;overflow:hidden}
@@ -837,7 +838,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .ice-bg{background:radial-gradient(ellipse at 60% 30%,#818cf8,transparent 50%),radial-gradient(ellipse at 20% 70%,#3730a3,transparent 55%),radial-gradient(ellipse at 85% 75%,#0284c7,transparent 45%),#03051a!important;background-attachment:fixed!important}
 .galaxy-bg{background:radial-gradient(ellipse at 40% 40%,#4c1d95,transparent 55%),radial-gradient(ellipse at 75% 20%,#1e1b4b,transparent 50%),radial-gradient(ellipse at 20% 80%,#0f172a,transparent 50%),#020108!important;background-attachment:fixed!important}
 </style>
-<link rel="stylesheet" href="/static/modern-theme.css?v=1a95bb08a827">
+<link rel="stylesheet" href="/static/modern-theme.css?v=7d5b4c91f2a8">
 </head>
 <body>
 
@@ -8673,7 +8674,14 @@ function syncModalLanguage(){
   loadAuthStatus();
 }
 function openTileById(id){const t=TILES.find(x=>x.id===id);if(t)openModal(t);}
-function closeModal(){$('#overlay').classList.remove('open');if(termWs){termWs.close();termWs=null;}if(typeof window._termDispose==='function'){try{window._termDispose();}catch(e){}}if(typeof _dockerStatsTimer!=='undefined'&&_dockerStatsTimer){clearInterval(_dockerStatsTimer);_dockerStatsTimer=null;}if(typeof destroyHistChart==='function')destroyHistChart();}
+function closeModal(){
+  $('#overlay').classList.remove('open');
+  if(termWs){termWs.close();termWs=null;}
+  if(typeof window._termDispose==='function'){try{window._termDispose();}catch(e){}}
+  if(typeof _dockerStatsTimer!=='undefined'&&_dockerStatsTimer){clearInterval(_dockerStatsTimer);_dockerStatsTimer=null;}
+  if(typeof stopDockerCardStats==='function')stopDockerCardStats(true);
+  if(typeof destroyHistChart==='function')destroyHistChart();
+}
 
 async function renderTab(id,tab){const body=$('#modal-body');body.style.padding='';body.style.overflow='';body.style.display='';body.style.flexDirection='';body.innerHTML=`<div class="loading">${esc(tr('loading'))}</div>`;try{
  if(tab&&isExpertOnlyTab(id,tab)&&!isExpertMode())throw new Error(uiText('Expert mode required'));
@@ -10540,6 +10548,9 @@ function composeProjectCards(projects){
     }).join('')||emptyState('No projects')}</div>`;
 }
 
+let _dockerCardStatsTimer=null;
+let _dockerCardStatsLoading=false;
+const _dockerCardStatsHistory=new Map();
 function dockerStatePresentation(state,pending){
   if(pending)return {label:appPendingLabel(pending),tone:'warn'};
   const value=String(state||'').toLowerCase();
@@ -10559,6 +10570,98 @@ function dockerPublishedWebPort(ports){
 }
 function dockerServiceGlyph(){
   return `<span class="docker-service-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="4"/><path d="M7.5 8h3v3h-3zM13.5 8h3v3h-3zM7.5 14h3v2h-3zM13.5 14h3v2h-3z"/></svg></span>`;
+}
+function dockerServiceResources(container){
+  if(!isModernUi())return '';
+  const running=container.state==='running';
+  const value=running?'…':'—';
+  const note=running?tr('loading'):uiText('Stopped');
+  const flatPath='M2 27 L138 27';
+  return `<section class="docker-service-resources" data-container-stats="${esc(container.id)}" aria-label="CPU and RAM">
+    <div class="docker-resource-metric cpu">
+      <div class="docker-resource-head"><span>CPU</span><strong class="docker-card-stats-value" data-stat="cpu">${value}</strong></div>
+      <svg class="docker-resource-sparkline${running?' is-loading':' is-idle'}" viewBox="0 0 140 36" role="img" aria-label="CPU">
+        <path class="guide" d="M2 31 H138"></path>
+        <path class="area" data-stat="cpu-area" d=""></path>
+        <path class="line" data-stat="cpu-line" d="${flatPath}"></path>
+      </svg>
+      <div class="docker-card-stats-note" data-stat="cpu-note">${esc(note)}</div>
+    </div>
+    <div class="docker-resource-metric ram">
+      <div class="docker-resource-head"><span>RAM</span><strong class="docker-card-stats-value" data-stat="ram">${value}</strong></div>
+      <svg class="docker-resource-sparkline${running?' is-loading':' is-idle'}" viewBox="0 0 140 36" role="img" aria-label="RAM">
+        <path class="guide" d="M2 31 H138"></path>
+        <path class="area" data-stat="ram-area" d=""></path>
+        <path class="line" data-stat="ram-line" d="${flatPath}"></path>
+      </svg>
+      <div class="docker-card-stats-note" data-stat="ram-note">${esc(note)}</div>
+    </div>
+  </section>`;
+}
+function dockerStatsSparkline(values,maxValue){
+  const width=140,height=31,pad=2;
+  const source=(values||[]).slice(-18);
+  const points=(source.length>1?source:[source[0]||0,source[0]||0]).map((value,index,list)=>{
+    const x=pad+(width-pad*2)*(index/Math.max(1,list.length-1));
+    const y=height-pad-(height-pad*2)*(Math.max(0,Math.min(maxValue,Number(value)||0))/maxValue);
+    return [Number(x.toFixed(1)),Number(y.toFixed(1))];
+  });
+  const line=points.map((point,index)=>(index?'L':'M')+point[0]+' '+point[1]).join(' ');
+  return {line,area:`M${points[0][0]} ${height} ${line.replace(/^M/,'L')} L${points[points.length-1][0]} ${height} Z`};
+}
+function updateDockerCardStats(body,stats){
+  body.querySelectorAll('.docker-service-resources[data-container-stats]').forEach(panel=>{
+    const id=panel.dataset.containerStats;
+    const snapshot=stats&&stats[id];
+    if(!snapshot||snapshot.error){
+      if(snapshot&&snapshot.error){
+        panel.querySelectorAll('.docker-card-stats-value').forEach(el=>{el.textContent='—';});
+        panel.querySelectorAll('.docker-card-stats-note').forEach(el=>{el.textContent=uiText('Error');});
+        panel.querySelectorAll('.docker-resource-sparkline').forEach(el=>{el.classList.remove('is-loading');el.classList.add('is-idle');});
+      }
+      return;
+    }
+    const cpu=Math.max(0,Number(snapshot.cpu_percent)||0);
+    const ram=Math.max(0,Number(snapshot.mem_percent)||0);
+    const history=_dockerCardStatsHistory.get(id)||{cpu:[],ram:[]};
+    history.cpu.push(cpu);history.ram.push(ram);
+    if(history.cpu.length>18)history.cpu.shift();
+    if(history.ram.length>18)history.ram.shift();
+    _dockerCardStatsHistory.set(id,history);
+    const cpuChart=dockerStatsSparkline(history.cpu,Math.max(100,(Number(snapshot.cpu_count)||1)*100));
+    const ramChart=dockerStatsSparkline(history.ram,100);
+    const setText=(key,value)=>{const el=panel.querySelector(`[data-stat="${key}"]`);if(el)el.textContent=value;};
+    const setPath=(key,value)=>{const el=panel.querySelector(`[data-stat="${key}"]`);if(el)el.setAttribute('d',value);};
+    setText('cpu',cpu.toLocaleString(localeCode(),{minimumFractionDigits:1,maximumFractionDigits:1})+' %');
+    setText('ram',fmtBytes(snapshot.mem_used||0));
+    setText('cpu-note',(Number(snapshot.cpu_count)||1)+' CPUs · Live');
+    setText('ram-note',ram.toLocaleString(localeCode(),{maximumFractionDigits:1})+' % · '+fmtBytes(snapshot.mem_used||0)+(snapshot.mem_limit?' / '+fmtBytes(snapshot.mem_limit):''));
+    setPath('cpu-line',cpuChart.line);setPath('cpu-area',cpuChart.area);
+    setPath('ram-line',ramChart.line);setPath('ram-area',ramChart.area);
+    panel.querySelectorAll('.docker-resource-sparkline').forEach(el=>{el.classList.remove('is-loading','is-idle');});
+  });
+}
+function stopDockerCardStats(clearHistory=false){
+  if(_dockerCardStatsTimer){clearInterval(_dockerCardStatsTimer);_dockerCardStatsTimer=null;}
+  _dockerCardStatsLoading=false;
+  if(clearHistory)_dockerCardStatsHistory.clear();
+}
+function startDockerCardStats(body){
+  stopDockerCardStats();
+  if(!isModernUi()||!body.querySelector('.docker-service-resources'))return;
+  const load=async()=>{
+    if(_dockerCardStatsLoading||document.hidden)return;
+    if(!body.isConnected||currentTile?.id!=='docker'){stopDockerCardStats();return;}
+    _dockerCardStatsLoading=true;
+    try{updateDockerCardStats(body,await api('/docker/stats/all'));}
+    catch(e){
+      body.querySelectorAll('.docker-service-resources[data-container-stats]').forEach(panel=>{
+        panel.querySelectorAll('.docker-card-stats-note').forEach(el=>{el.textContent=uiText('Error');});
+      });
+    }finally{_dockerCardStatsLoading=false;}
+  };
+  load();
+  _dockerCardStatsTimer=setInterval(load,5000);
 }
 function dockerServiceCard(container){
   const pending=dockerPendingActions.get(container.id);
@@ -10600,6 +10703,7 @@ function dockerServiceCard(container){
       <span class="docker-service-state ${state.tone}"><i aria-hidden="true"></i>${stateLabel}</span>
     </div>
     <div class="docker-service-image" title="${esc(container.image)}">${esc(container.image)}</div>
+    ${dockerServiceResources(container)}
     <div class="docker-service-meta">
       <div class="docker-service-meta-label">Ports</div>
       <div class="docker-service-ports">${ports.map(port=>`<span class="docker-service-port" title="${esc(port)}">${esc(port)}</span>`).join('')||`<span class="docker-service-port">${esc(uiText('No public ports'))}</span>`}</div>
@@ -13541,6 +13645,7 @@ window.zpoolDestroy=name=>typedConfirm('Destroy ZFS pool',`Pool "${name}" and it
 window.lvRemove=lvpath=>typedConfirm('Delete logical volume',`Logical volume "${lvpath}" will be deleted permanently.`,lvpath,async()=>{try{const r=await post('/storage/lvm/lv-remove',{lv_path:lvpath});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Volume deleted');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
 
 async function renderDocker(body,tab){
+  stopDockerCardStats();
   const av=await api('/docker/available');if(!av.available){body.innerHTML=viewIntro('Containers','Docker is not available on this server.','')+emptyState('Docker unavailable');return;}
   if(tab==='Container'||!tab){
     const c=await api('/docker/containers');
@@ -13548,6 +13653,7 @@ async function renderDocker(body,tab){
       +`<div class="nx-summary-grid">${summaryCard('Apps',dockerAppGroupCount(c),'Total')}${summaryCard('Running',dockerAppGroupCount(c,true),'Active now')}</div>
       <div class="docker-service-grid">${c.map(dockerServiceCard).join('')||emptyState('No containers')}</div>`;
     translateRenderedText(body);
+    startDockerCardStats(body);
     return;
   }
   return renderDockerAdvanced(body,tab);

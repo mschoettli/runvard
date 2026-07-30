@@ -1,4 +1,5 @@
 """Docker: Container, Images, Volumes, Compose - volle Verwaltung."""
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
 import os
 import re
@@ -112,19 +113,21 @@ def container_action(container_id: str, action: str):
     return {"ok": True, "status": c.status}
 
 
-def container_stats(container_id: str):
-    """Momentaufnahme der Ressourcennutzung eines Containers."""
-    client = _get_client()
-    c = client.containers.get(container_id)
-    s = c.stats(stream=False)
+def _container_stats_snapshot(container):
+    s = container.stats(stream=False)
     cpu_pct = 0.0
+    cpu_count = 1
     try:
         cpu, pre = s["cpu_stats"], s["precpu_stats"]
         cpu_delta = cpu["cpu_usage"]["total_usage"] - pre["cpu_usage"]["total_usage"]
         sys_delta = cpu.get("system_cpu_usage", 0) - pre.get("system_cpu_usage", 0)
-        ncpu = cpu.get("online_cpus") or len(cpu["cpu_usage"].get("percpu_usage") or [1]) or 1
+        cpu_count = (
+            cpu.get("online_cpus")
+            or len(cpu["cpu_usage"].get("percpu_usage") or [1])
+            or 1
+        )
         if sys_delta > 0 and cpu_delta > 0:
-            cpu_pct = (cpu_delta / sys_delta) * ncpu * 100.0
+            cpu_pct = (cpu_delta / sys_delta) * cpu_count * 100.0
     except (KeyError, TypeError, ZeroDivisionError):
         cpu_pct = 0.0
     mem = s.get("memory_stats", {}) or {}
@@ -134,12 +137,41 @@ def container_stats(container_id: str):
     net = s.get("networks", {}) or {}
     return {
         "cpu_percent": round(cpu_pct, 1),
+        "cpu_count": cpu_count,
         "mem_used": mem_used,
         "mem_limit": mem_limit,
         "mem_percent": round(mem_used / mem_limit * 100, 1) if mem_limit else 0,
         "net_rx": sum(n.get("rx_bytes", 0) for n in net.values()),
         "net_tx": sum(n.get("tx_bytes", 0) for n in net.values()),
     }
+
+
+def container_stats(container_id: str):
+    """Momentaufnahme der Ressourcennutzung eines Containers."""
+    client = _get_client()
+    return _container_stats_snapshot(client.containers.get(container_id))
+
+
+def list_container_stats():
+    """Ressourcennutzung aller laufenden Container in einem Request."""
+    containers = _get_client().containers.list(filters={"status": "running"})
+    if not containers:
+        return {}
+
+    results = {}
+    worker_count = min(8, len(containers))
+    with ThreadPoolExecutor(max_workers=worker_count) as pool:
+        pending = {
+            pool.submit(_container_stats_snapshot, container): container.short_id
+            for container in containers
+        }
+        for future in as_completed(pending):
+            container_id = pending[future]
+            try:
+                results[container_id] = future.result()
+            except Exception as exc:
+                results[container_id] = {"error": str(exc)}
+    return results
 
 
 def create_container(image, name="", ports="", volumes="", env="", restart="no",

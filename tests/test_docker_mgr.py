@@ -12,6 +12,30 @@ def _container(name, labels=None):
     )
 
 
+def _stats_snapshot(cpu_total=140, cpu_previous=100, system_total=1200,
+                    system_previous=1000, cpu_count=2, memory_used=600,
+                    memory_cache=100, memory_limit=1000):
+    return {
+        "cpu_stats": {
+            "cpu_usage": {"total_usage": cpu_total},
+            "system_cpu_usage": system_total,
+            "online_cpus": cpu_count,
+        },
+        "precpu_stats": {
+            "cpu_usage": {"total_usage": cpu_previous},
+            "system_cpu_usage": system_previous,
+        },
+        "memory_stats": {
+            "usage": memory_used,
+            "limit": memory_limit,
+            "stats": {"cache": memory_cache},
+        },
+        "networks": {
+            "eth0": {"rx_bytes": 1200, "tx_bytes": 800},
+        },
+    }
+
+
 def test_container_app_group_uses_compose_project_label():
     app = _container("papervard-app-1", {
         "com.docker.compose.project": "papervard",
@@ -32,6 +56,57 @@ def test_container_app_group_keeps_standalone_container_separate():
 
     assert docker_mgr._container_app_group(jellyfin)["id"] == "container:jellyfin"
     assert docker_mgr._container_app_group(code_server)["id"] == "container:code-server"
+
+
+def test_container_stats_includes_cpu_count(monkeypatch):
+    container = SimpleNamespace(stats=lambda stream=False: _stats_snapshot())
+    client = SimpleNamespace(
+        containers=SimpleNamespace(get=lambda container_id: container),
+    )
+    monkeypatch.setattr(docker_mgr, "_get_client", lambda: client)
+
+    result = docker_mgr.container_stats("web")
+
+    assert result["cpu_percent"] == 40.0
+    assert result["cpu_count"] == 2
+    assert result["mem_used"] == 500
+    assert result["mem_percent"] == 50.0
+
+
+def test_list_container_stats_batches_running_containers_and_isolates_errors(monkeypatch):
+    requested_filters = []
+
+    class FakeContainer:
+        def __init__(self, short_id, snapshot=None, error=None):
+            self.short_id = short_id
+            self._snapshot = snapshot
+            self._error = error
+
+        def stats(self, stream=False):
+            assert stream is False
+            if self._error:
+                raise RuntimeError(self._error)
+            return self._snapshot
+
+    containers = [
+        FakeContainer("web123", _stats_snapshot(cpu_count=4)),
+        FakeContainer("broken456", error="stats unavailable"),
+    ]
+    client = SimpleNamespace(
+        containers=SimpleNamespace(
+            list=lambda **kwargs: (
+                requested_filters.append(kwargs.get("filters")) or containers
+            ),
+        ),
+    )
+    monkeypatch.setattr(docker_mgr, "_get_client", lambda: client)
+
+    result = docker_mgr.list_container_stats()
+
+    assert requested_filters == [{"status": "running"}]
+    assert result["web123"]["cpu_count"] == 4
+    assert result["web123"]["mem_percent"] == 50.0
+    assert result["broken456"] == {"error": "stats unavailable"}
 
 
 def test_check_compose_ports_reports_occupied_host_port(monkeypatch):

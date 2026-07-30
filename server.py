@@ -1149,6 +1149,11 @@ def docker_stats(container_id: str, user: str = Depends(auth)):
     return docker_mgr.container_stats(container_id)
 
 
+@app.get("/api/docker/stats/all")
+def docker_all_stats(user: str = Depends(auth)):
+    return docker_mgr.list_container_stats()
+
+
 @app.post("/api/docker/create")
 def docker_create(image: str = Form(...), name: str = Form(""),
                   ports: str = Form(""), volumes: str = Form(""),
