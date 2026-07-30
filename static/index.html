@@ -396,6 +396,50 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 .nx-chip.good{border-color:rgba(34,197,94,.24);color:#4ade80;background:rgba(34,197,94,.08)}
 .nx-chip.warn{border-color:rgba(234,179,8,.24);color:#facc15;background:rgba(234,179,8,.08)}
 .nx-chip.bad{border-color:rgba(239,68,68,.24);color:#f87171;background:rgba(239,68,68,.08)}
+.docker-service-grid{display:grid;grid-template-columns:1fr;gap:12px;margin-bottom:16px}
+.docker-service-card{position:relative;display:flex;min-width:0;min-height:232px;flex-direction:column;padding:18px;border:1px solid var(--border);border-radius:14px;background:var(--bg3);transition:border-color .18s ease,background .18s ease,transform .18s ease}
+.docker-service-card:hover{border-color:var(--border-accent);transform:translateY(-1px)}
+.docker-service-card:focus-within{border-color:var(--accent);box-shadow:0 0 0 2px rgba(122,74,255,.12)}
+.docker-service-card:has(.docker-card-menu[open]){z-index:4}
+.docker-service-top{display:grid;grid-template-columns:42px minmax(0,1fr) auto;gap:11px;align-items:start}
+.docker-service-icon{display:inline-flex;width:42px;height:42px;align-items:center;justify-content:center;border:1px solid var(--border-accent);border-radius:12px;background:rgba(122,74,255,.1);color:var(--accent-light)}
+.docker-service-icon svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.docker-service-identity{min-width:0;padding-top:1px}
+.docker-service-name{display:block;overflow:hidden;color:var(--text);font-size:14px;font-weight:700;line-height:1.25;text-overflow:ellipsis;white-space:nowrap}
+.docker-service-context{margin-top:4px;overflow:hidden;color:var(--text3);font-size:10px;font-weight:600;line-height:1.3;text-overflow:ellipsis;white-space:nowrap}
+.docker-service-state{display:inline-flex;min-height:26px;align-items:center;gap:6px;padding:4px 8px;border:1px solid var(--border);border-radius:999px;color:var(--text2);font-size:10px;font-weight:700;line-height:1;white-space:nowrap}
+.docker-service-state i{width:7px;height:7px;flex:0 0 auto;border-radius:50%;background:currentColor;box-shadow:0 0 0 3px color-mix(in srgb,currentColor 12%,transparent)}
+.docker-service-state.good{border-color:rgba(34,197,94,.2);background:rgba(34,197,94,.08);color:#4ade80}
+.docker-service-state.warn{border-color:rgba(234,179,8,.2);background:rgba(234,179,8,.08);color:#facc15}
+.docker-service-state.bad{border-color:rgba(239,68,68,.2);background:rgba(239,68,68,.08);color:#f87171}
+.docker-service-image{margin-top:18px;overflow:hidden;color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:11px;line-height:1.45;text-overflow:ellipsis;white-space:nowrap}
+.docker-service-meta{min-height:51px;margin-top:13px}
+.docker-service-meta-label{margin-bottom:7px;color:var(--text3);font-size:9px;font-weight:700;letter-spacing:.07em;text-transform:uppercase}
+.docker-service-ports{display:flex;min-width:0;gap:6px;overflow:hidden}
+.docker-service-port{display:inline-flex;max-width:100%;min-height:25px;align-items:center;overflow:hidden;padding:4px 8px;border:1px solid var(--border);border-radius:8px;background:rgba(255,255,255,.035);color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:10px;text-overflow:ellipsis;white-space:nowrap}
+.docker-service-footer{display:flex;align-items:center;gap:7px;margin-top:auto;padding-top:16px}
+.docker-service-footer>.btn{margin:0}
+.docker-service-footer .docker-card-spacer{flex:1}
+.docker-card-menu{position:relative;flex:0 0 auto}
+.docker-card-menu>summary{display:flex;width:38px;height:38px;align-items:center;justify-content:center;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.035);color:var(--text2);cursor:pointer;list-style:none;transition:border-color .16s ease,background .16s ease,color .16s ease}
+.docker-card-menu>summary::-webkit-details-marker{display:none}
+.docker-card-menu>summary:hover,.docker-card-menu>summary:focus-visible,.docker-card-menu[open]>summary{border-color:var(--border-accent);background:var(--glass-hover);color:var(--accent-light);outline:none}
+.docker-card-menu-dots{display:flex;gap:3px}
+.docker-card-menu-dots i{width:3px;height:3px;border-radius:50%;background:currentColor}
+.docker-card-menu-list{position:absolute;right:0;bottom:calc(100% + 8px);display:grid;width:164px;padding:6px;border:1px solid var(--border-accent);border-radius:11px;background:var(--bg2);box-shadow:0 16px 36px rgba(0,0,0,.35)}
+.docker-card-menu-list button{width:100%;min-height:36px;padding:8px 10px;border:0;border-radius:7px;background:transparent;color:var(--text2);font:600 11px/1.2 inherit;text-align:left;cursor:pointer}
+.docker-card-menu-list button:hover,.docker-card-menu-list button:focus-visible{background:var(--glass-hover);color:var(--text);outline:none}
+.docker-card-menu-list button.danger{color:#f87171}
+.docker-card-menu-list button.danger:hover,.docker-card-menu-list button.danger:focus-visible{background:rgba(239,68,68,.09)}
+@media(min-width:640px){.docker-service-grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+@media(max-width:639px){
+  .docker-service-card{min-height:220px;padding:16px}
+  .docker-service-top{grid-template-columns:40px minmax(0,1fr)}
+  .docker-service-icon{width:40px;height:40px}
+  .docker-service-state{grid-column:2;justify-self:start;margin-top:2px}
+  .docker-service-footer>.btn{min-height:44px}
+  .docker-card-menu>summary{width:44px;height:44px}
+}
 .vm-card-grid{display:flex;flex-direction:column;gap:10px}
 .vm-card{display:grid;grid-template-columns:minmax(180px,1fr) minmax(220px,.85fr) auto;gap:16px;align-items:center;padding:16px 18px;border-radius:10px;background:linear-gradient(90deg,rgba(122,74,255,.08),rgba(255,255,255,.025) 34%,rgba(255,255,255,.02));border-color:rgba(255,255,255,.08)}
 .vm-card:hover{transform:none;border-color:rgba(139,92,246,.34)}
@@ -10496,6 +10540,83 @@ function composeProjectCards(projects){
     }).join('')||emptyState('No projects')}</div>`;
 }
 
+function dockerStatePresentation(state,pending){
+  if(pending)return {label:appPendingLabel(pending),tone:'warn'};
+  const value=String(state||'').toLowerCase();
+  if(value==='running')return {label:'Running',tone:'good'};
+  if(value==='restarting')return {label:appPendingLabel('restart'),tone:'warn'};
+  if(value==='dead')return {label:'Error',tone:'bad'};
+  if(value==='created')return {label:'created',tone:'warn'};
+  return {label:value==='exited'?'Stopped':value||'Stopped',tone:'warn'};
+}
+function dockerPublishedWebPort(ports){
+  const candidates=(ports||[]).map(raw=>{
+    const match=String(raw).match(/^(\d+):(\d+)(?:\/(tcp|udp))?$/);
+    if(!match)return null;
+    return {published:Number(match[1]),target:Number(match[2]),protocol:match[3]||'tcp'};
+  }).filter(Boolean).filter(port=>port.protocol==='tcp'&&!NON_WEB_PORTS.has(port.published)&&!NON_WEB_PORTS.has(port.target));
+  return (candidates.find(port=>WEB_PORTS.has(port.target)||WEB_PORTS.has(port.published))||candidates[0])?.published||null;
+}
+function dockerServiceGlyph(){
+  return `<span class="docker-service-icon" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="4"/><path d="M7.5 8h3v3h-3zM13.5 8h3v3h-3zM7.5 14h3v2h-3zM13.5 14h3v2h-3z"/></svg></span>`;
+}
+function dockerServiceCard(container){
+  const pending=dockerPendingActions.get(container.id);
+  const state=dockerStatePresentation(container.state,pending);
+  const running=container.state==='running';
+  const composeProject=container.app_group?.type==='compose'?container.app_group.project:'';
+  const composeService=container.app_group?.service||'';
+  const composeId=composeProject?esc(JSON.stringify('compose:'+composeProject)):'';
+  const ports=(container.ports||[]).slice(0,3);
+  const webPort=dockerPublishedWebPort(ports);
+  const context=composeProject?`Compose · ${composeProject}${composeService?' / '+composeService:''}`:'Container';
+  const stateLabel=esc(uiText(state.label));
+  const primaryButton=pending
+    ?`<button class="btn sm docker-card-primary" disabled>${esc(appPendingLabel(pending))}</button>`
+    :webPort&&running
+      ?`<button class="btn sm docker-card-primary" onclick="dockerOpenPort(${webPort})">${esc(uiText('Open'))}</button>`
+      :running
+        ?`<button class="btn sm docker-card-primary" onclick="dockerLogs('${container.id}','${esc(container.name)}')">${esc(uiText('Logs'))}</button>`
+        :`<button class="btn sm docker-card-primary" onclick="dockerAct('${container.id}','start')">${esc(uiText('Start'))}</button>`;
+  const secondaryButton=webPort&&running
+    ?`<button class="btn ghost sm" onclick="dockerLogs('${container.id}','${esc(container.name)}')">${esc(uiText('Logs'))}</button>`
+    :running
+      ?`<button class="btn ghost sm" onclick="dockerStats('${container.id}','${esc(container.name)}')">${esc(uiText('Stats'))}</button>`
+      :`<button class="btn ghost sm" onclick="dockerLogs('${container.id}','${esc(container.name)}')">${esc(uiText('Logs'))}</button>`;
+  const menuItems=[
+    running&&webPort?`<button onclick="dockerAct('${container.id}','restart')">${esc(uiText('Restart'))}</button>`:'',
+    running?`<button onclick="dockerAct('${container.id}','stop')">${esc(uiText('Stop'))}</button>`:'',
+    webPort&&running?`<button onclick="dockerStats('${container.id}','${esc(container.name)}')">${esc(uiText('Stats'))}</button>`:'',
+    composeProject?`<button onclick="dashCompose(${composeId})">${esc(uiText('Edit'))}</button>`:'',
+    `<button class="danger" onclick="dockerDel('${container.id}','${esc(container.name)}')">${esc(uiText('Delete'))}</button>`,
+  ].join('');
+  return `<article class="docker-service-card" data-state="${esc(String(container.state||''))}">
+    <div class="docker-service-top">
+      ${dockerServiceGlyph()}
+      <div class="docker-service-identity">
+        <h4 class="docker-service-name" title="${esc(container.name)}">${esc(container.name)}</h4>
+        <div class="docker-service-context" title="${esc(context)}">${esc(context)}</div>
+      </div>
+      <span class="docker-service-state ${state.tone}"><i aria-hidden="true"></i>${stateLabel}</span>
+    </div>
+    <div class="docker-service-image" title="${esc(container.image)}">${esc(container.image)}</div>
+    <div class="docker-service-meta">
+      <div class="docker-service-meta-label">Ports</div>
+      <div class="docker-service-ports">${ports.map(port=>`<span class="docker-service-port" title="${esc(port)}">${esc(port)}</span>`).join('')||`<span class="docker-service-port">${esc(uiText('No public ports'))}</span>`}</div>
+    </div>
+    <footer class="docker-service-footer">
+      ${primaryButton}${secondaryButton}<span class="docker-card-spacer"></span>
+      <details class="docker-card-menu">
+        <summary title="${esc(uiText('Actions'))}" aria-label="${esc(uiText('Actions'))}"><span class="docker-card-menu-dots" aria-hidden="true"><i></i><i></i><i></i></span></summary>
+        <div class="docker-card-menu-list">${menuItems}</div>
+      </details>
+    </footer>
+  </article>`;
+}
+window.dockerOpenPort=port=>{
+  const value=Number(port);
+  if(Number.isInteger(value)&&value>0&&value<=65535)window.open(`http://${location.hostname}:${value}`,'_blank','noopener,noreferrer');
+};
 async function renderDocker(body,tab){
  const av=await api('/docker/available');if(!av.available){body.innerHTML='<div class="empty-state">🐳 Docker unavailable</div>';return;}
  if(tab==='Container'||!tab){
@@ -12125,7 +12246,7 @@ const APP_UI={
   starting:{de:'Startet...',en:'Starting...',fr:'Démarrage...',it:'Avvio...',es:'Iniciando...',pt:'A iniciar...'},
   stopping:{de:'Stoppt...',en:'Stopping...',fr:'Arrêt...',it:'Arresto...',es:'Deteniendo...',pt:'A parar...'},
   restarting:{de:'Startet neu...',en:'Restarting...',fr:'Redémarrage...',it:'Riavvio...',es:'Reiniciando...',pt:'A reiniciar...'},
-  updating:{de:'Aktualisiert...',en:'Updating...',fr:'Mise à jour...',it:'Aggiornamento...',es:'Actualizando...',pt:'A atualizar...'},
+  updating:{de:'Wird aktualisiert…',en:'Updating...',fr:'Mise à jour...',it:'Aggiornamento...',es:'Actualizando...',pt:'A atualizar...'},
 };
 const APP_CATEGORY_LABELS={
   all:{de:'Alle',en:'All',fr:'Toutes',it:'Tutte',es:'Todas',pt:'Todas'},
@@ -12520,6 +12641,14 @@ window.appsDoSearch=v=>{appsSearch=v;const grid=$('#apps-grid');if(!grid)return;
   translateRenderedText(grid);
 };
 
+async function waitForAppActionJob(jobId){
+  while(true){
+    const job=await api('/apps/action-job?id='+encodeURIComponent(jobId));
+    if(job.status==='succeeded')return job.result||{ok:true,output:''};
+    if(job.status==='failed')throw new Error(job.error||'Update failed');
+    await new Promise(resolve=>setTimeout(resolve,1000));
+  }
+}
 window.appAct=async(id,action)=>{
   const labels={start:'Starting…',stop:'Stopping…',restart:'Restarting…',update:'Refreshing…'};
   toast(uiText(labels[action]||'…'));
@@ -12527,7 +12656,8 @@ window.appAct=async(id,action)=>{
   const body=$('#modal-body');
   if(body)renderAppsView(body,appsCatalogCategories);
   try{
-    const r=await post('/apps/action',{app_id:id,action});
+    let r=await post('/apps/action',{app_id:id,action});
+    if(action==='update'&&r.job_id)r=await waitForAppActionJob(r.job_id);
     const msgs={start:'App started',stop:'App stopped',restart:'App restarted',update:'App updated ✓'};
     if(r.ok)toast(uiText(msgs[action]||'OK'));
     else {
@@ -13416,7 +13546,8 @@ async function renderDocker(body,tab){
     const c=await api('/docker/containers');
     body.innerHTML=viewIntro('Container services','Start, stop and inspect services running in Docker. Advanced image and volume tools are in the other tabs.',`<button class="btn" onclick="dockerCreateForm()">Create container</button>`)
       +`<div class="nx-summary-grid">${summaryCard('Apps',dockerAppGroupCount(c),'Total')}${summaryCard('Running',dockerAppGroupCount(c,true),'Active now')}</div>
-      <div class="nx-card-grid">${c.map(x=>{const pending=dockerPendingActions.get(x.id);const composeProject=x.app_group?.type==='compose'?x.app_group.project:'';const composeId=composeProject?esc(JSON.stringify('compose:'+composeProject)):'';return `<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${pending?statusBadge(appPendingLabel(pending),'warn'):statusBadge(x.state,x.state==='running'?'good':'warn')}</div><div class="nx-action-sub mono">${esc(x.image)}</div><div class="nx-chip-list">${(x.ports||[]).slice(0,3).map(p=>`<span class="nx-chip">${esc(p)}</span>`).join('')||'<span class="nx-chip">No public ports</span>'}</div><div class="nx-action-row" style="margin-top:12px"><button class="btn sm ${x.state==='running'?'ghost':'play'}" onclick="dockerAct('${x.id}','${x.state==='running'?'restart':'start'}')" ${pending?'disabled':''}>${pending?esc(appPendingLabel(pending)):x.state==='running'?'Restart':'Start'}</button>${x.state==='running'?`<button class="btn ghost sm" onclick="dockerAct('${x.id}','stop')" ${pending?'disabled':''}>${esc(uiText('Stop'))}</button>`:''}<button class="btn ghost sm" onclick="dockerLogs('${x.id}','${esc(x.name)}')">Logs</button><button class="btn ghost sm" onclick="dockerStats('${x.id}','${esc(x.name)}')">Stats</button>${composeProject?`<button class="btn ghost sm" onclick="dashCompose(${composeId})">${esc(uiText('Edit'))}</button>`:''}<button class="btn danger sm" onclick="dockerDel('${x.id}','${esc(x.name)}')">Delete</button></div></div>`}).join('')||emptyState('No containers')}</div>`;
+      <div class="docker-service-grid">${c.map(dockerServiceCard).join('')||emptyState('No containers')}</div>`;
+    translateRenderedText(body);
     return;
   }
   return renderDockerAdvanced(body,tab);

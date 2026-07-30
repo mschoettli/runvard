@@ -1969,9 +1969,23 @@ def apps_install_status(job_id: str, user: str = Depends(auth)):
 def apps_action(app_id: str = Form(...), action: str = Form(...),
                 user: str = Depends(confirmed_admin)):
     try:
+        if action == "update":
+            from modules import jobs
+            return jobs.start_job(
+                f"app-update:{app_id}", apps.action, app_id, action,
+            )
         return apps.action(app_id, action)
     except Exception as e:
         raise HTTPException(400, str(e))
+
+
+@app.get("/api/apps/action-job")
+def apps_action_job(id: str, user: str = Depends(auth)):
+    from modules import jobs
+    try:
+        return jobs.get_job(id)
+    except KeyError:
+        raise HTTPException(404, "Job nicht gefunden")
 
 
 @app.get("/api/apps/check-updates")

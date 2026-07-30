@@ -610,6 +610,139 @@ html[data-ui-theme="modern"] .nx-check-row:hover {
   background: rgb(255 255 255 / 68%);
 }
 
+html[data-ui-theme="modern"] .docker-service-grid {
+  gap: 14px;
+}
+
+html[data-ui-theme="modern"] .docker-service-card {
+  min-height: 248px;
+  border-color: rgb(255 255 255 / 82%);
+  border-radius: 16px;
+  background:
+    radial-gradient(circle at 0 0, rgb(57 115 230 / 5%), transparent 38%),
+    rgb(255 255 255 / 58%);
+  box-shadow:
+    0 12px 28px rgb(48 75 110 / 7%),
+    inset 0 1px 0 rgb(255 255 255 / 92%);
+}
+
+html[data-ui-theme="modern"] .docker-service-card:hover {
+  border-color: rgb(57 115 230 / 22%);
+  background:
+    radial-gradient(circle at 0 0, rgb(57 115 230 / 7%), transparent 40%),
+    rgb(255 255 255 / 74%);
+  box-shadow:
+    0 16px 34px rgb(48 75 110 / 10%),
+    inset 0 1px 0 #fff;
+}
+
+html[data-ui-theme="modern"] .docker-service-card:focus-within {
+  border-color: rgb(57 115 230 / 34%);
+  box-shadow:
+    0 0 0 3px rgb(57 115 230 / 10%),
+    0 16px 34px rgb(48 75 110 / 9%);
+}
+
+html[data-ui-theme="modern"] .docker-service-icon {
+  border-color: rgb(57 115 230 / 14%);
+  background:
+    radial-gradient(circle at 28% 20%, #fff, transparent 45%),
+    linear-gradient(145deg, rgb(247 251 255 / 96%), rgb(225 236 251 / 92%));
+  color: #3973e6;
+  box-shadow:
+    0 8px 18px rgb(48 75 110 / 8%),
+    inset 0 1px 0 #fff;
+}
+
+html[data-ui-theme="modern"] .docker-service-name {
+  color: var(--text);
+  font-size: .88rem;
+  letter-spacing: -.012em;
+}
+
+html[data-ui-theme="modern"] .docker-service-context {
+  color: var(--text3);
+}
+
+html[data-ui-theme="modern"] .docker-service-state {
+  border-color: var(--border);
+  background: rgb(255 255 255 / 48%);
+  color: var(--text2);
+}
+
+html[data-ui-theme="modern"] .docker-service-state.good {
+  border-color: rgb(72 167 126 / 20%);
+  background: rgb(72 167 126 / 9%);
+  color: #27845f;
+}
+
+html[data-ui-theme="modern"] .docker-service-state.warn {
+  border-color: rgb(184 106 18 / 16%);
+  background: rgb(184 106 18 / 7%);
+  color: #936020;
+}
+
+html[data-ui-theme="modern"] .docker-service-state.bad {
+  border-color: rgb(199 76 76 / 18%);
+  background: rgb(199 76 76 / 7%);
+  color: #b54444;
+}
+
+html[data-ui-theme="modern"] .docker-service-image {
+  color: var(--text2);
+}
+
+html[data-ui-theme="modern"] .docker-service-meta-label {
+  color: var(--text3);
+}
+
+html[data-ui-theme="modern"] .docker-service-port {
+  border-color: var(--border);
+  background: rgb(255 255 255 / 50%);
+  color: var(--text2);
+}
+
+html[data-ui-theme="modern"] .docker-card-menu > summary {
+  border-color: var(--border);
+  background: rgb(255 255 255 / 48%);
+  color: var(--text2);
+}
+
+html[data-ui-theme="modern"] .docker-card-menu > summary:hover,
+html[data-ui-theme="modern"] .docker-card-menu > summary:focus-visible,
+html[data-ui-theme="modern"] .docker-card-menu[open] > summary {
+  border-color: var(--border-accent);
+  background: rgb(57 115 230 / 9%);
+  color: var(--accent);
+}
+
+html[data-ui-theme="modern"] .docker-card-menu-list {
+  border-color: rgb(57 115 230 / 16%);
+  background: rgb(250 252 255 / 97%);
+  box-shadow:
+    0 18px 42px rgb(29 53 84 / 18%),
+    inset 0 1px 0 #fff;
+}
+
+html[data-ui-theme="modern"] .docker-card-menu-list button {
+  color: var(--text2);
+}
+
+html[data-ui-theme="modern"] .docker-card-menu-list button:hover,
+html[data-ui-theme="modern"] .docker-card-menu-list button:focus-visible {
+  background: rgb(57 115 230 / 8%);
+  color: var(--text);
+}
+
+html[data-ui-theme="modern"] .docker-card-menu-list button.danger {
+  color: #b54444;
+}
+
+html[data-ui-theme="modern"] .docker-card-menu-list button.danger:hover,
+html[data-ui-theme="modern"] .docker-card-menu-list button.danger:focus-visible {
+  background: rgb(199 76 76 / 8%);
+}
+
 html[data-ui-theme="modern"] .nx-view-intro {
   border: 1px solid rgb(57 115 230 / 14%);
   background:
@@ -991,6 +1124,12 @@ html[data-ui-theme="modern"] .dash-ctx-sep {
 }
 
 @media (max-width: 760px) {
+  html[data-ui-theme="modern"] .docker-service-footer > .btn,
+  html[data-ui-theme="modern"] .docker-card-menu > summary,
+  html[data-ui-theme="modern"] .docker-card-menu-list button {
+    min-height: 44px;
+  }
+
   html[data-ui-theme="modern"] .topbar {
     min-height: 60px;
     padding: 8px 12px;
