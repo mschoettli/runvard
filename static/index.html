@@ -838,7 +838,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .ice-bg{background:radial-gradient(ellipse at 60% 30%,#818cf8,transparent 50%),radial-gradient(ellipse at 20% 70%,#3730a3,transparent 55%),radial-gradient(ellipse at 85% 75%,#0284c7,transparent 45%),#03051a!important;background-attachment:fixed!important}
 .galaxy-bg{background:radial-gradient(ellipse at 40% 40%,#4c1d95,transparent 55%),radial-gradient(ellipse at 75% 20%,#1e1b4b,transparent 50%),radial-gradient(ellipse at 20% 80%,#0f172a,transparent 50%),#020108!important;background-attachment:fixed!important}
 </style>
-<link rel="stylesheet" href="/static/modern-theme.css?v=814d5ef867f4">
+<link rel="stylesheet" href="/static/modern-theme.css?v=c9c7ddafe637">
 </head>
 <body>
 
@@ -7793,11 +7793,11 @@ function emptyState(text){
 function advancedDetails(title,html,open){
   return `<details class="nx-advanced" ${open?'open':''}><summary>${esc(uiText(title))}</summary><div class="nx-advanced-body">${html}</div></details>`;
 }
-function viewIntro(title,copy,actionHtml){
+function viewIntro(title,copy,actionHtml,visualData){
   if(isExpertMode())return actionHtml?`<div class="nx-expert-actions nx-action-row">${actionHtml}</div>`:'';
   if(isModernUi()){
     const moduleId=currentTile?.id||'system';
-    return `<section class="nx-view-intro modern-module-intro"><div class="modern-intro-copy"><h3>${esc(uiText(title))}</h3><p>${esc(uiText(copy))}</p></div>${modernModuleVisual(moduleId)}<div class="nx-action-row">${actionHtml||''}</div></section>`;
+    return `<section class="nx-view-intro modern-module-intro"><div class="modern-intro-copy"><h3>${esc(uiText(title))}</h3><p>${esc(uiText(copy))}</p></div>${modernModuleVisual(moduleId,visualData)}<div class="nx-action-row">${actionHtml||''}</div></section>`;
   }
   return `<div class="nx-view-intro"><div><h3>${esc(uiText(title))}</h3><p>${esc(uiText(copy))}</p></div><div class="nx-action-row">${actionHtml||''}</div></div>`;
 }
@@ -8513,16 +8513,48 @@ function modernVisualLabel(id){
 function modernUsedWord(){
   return ({de:'belegt',en:'used',fr:'utilisé',it:'usato',es:'usado',pt:'usado'})[currentLanguage()]||'used';
 }
-function modernModuleVisual(id){
+function modernStorageVisualState(devices){
+  const disks=(devices||[]).filter(device=>device&&device.type==='disk');
+  const visible=disks.length>6?disks.slice(0,5):disks.slice(0,6);
+  return {total:disks.length,visible,overflow:Math.max(0,disks.length-visible.length)};
+}
+function modernStorageDriveCount(total){
+  const labels={
+    de:[`${total} Laufwerk`,`${total} Laufwerke`],en:[`${total} drive`,`${total} drives`],
+    fr:[`${total} disque`,`${total} disques`],it:[`${total} unità`,`${total} unità`],
+    es:[`${total} unidad`,`${total} unidades`],pt:[`${total} unidade`,`${total} unidades`]
+  };
+  const pair=labels[currentLanguage()]||labels.en;
+  return pair[total===1?0:1];
+}
+function modernStorageDiskMounted(device){
+  return !!(device?.mountpoint||(device?.children||[]).some(modernStorageDiskMounted));
+}
+function modernStorageScene(devices){
+  const state=modernStorageVisualState(devices);
+  if(!state.total)return {scene:`<span class="modern-storage-empty">${esc(uiText('No disks found'))}</span>`,label:uiText('No disks found')};
+  const bays=state.visible.map((device,index)=>{
+    const mounted=modernStorageDiskMounted(device);
+    const stateLabel=device.protected?uiText('System disk'):mounted?uiText('Mounted'):uiText('Available');
+    const details=[device.model,device.name,fmtBytes(device.size),stateLabel].filter(Boolean).join(' · ');
+    const cls=device.protected?' is-protected':mounted?' is-mounted':'';
+    return `<span class="modern-bay${cls}" title="${esc(details)}" aria-label="${esc(details)}"><i>${index+1}</i></span>`;
+  }).join('');
+  const more=state.overflow?`<span class="modern-bay modern-bay-more" title="${esc(modernStorageDriveCount(state.overflow))}" aria-label="${esc(modernStorageDriveCount(state.overflow))}">+${state.overflow}</span>`:'';
+  return {scene:bays+more,label:modernStorageDriveCount(state.total)};
+}
+function modernModuleVisual(id,visualData){
   const icon=modernTileIcon(id);
+  const storage=id==='storage'?modernStorageScene(visualData?.devices):null;
   const scene=id==='storage'
-    ? '<span class="modern-bay is-on"></span><span class="modern-bay is-on"></span><span class="modern-bay"></span><span class="modern-bay"></span>'
+    ? storage.scene
     : id==='backup'
       ? '<span class="modern-flow-node"></span><span class="modern-flow-line"><i></i></span><span class="modern-flow-node is-target"></span>'
       : id==='monitoring'
         ? '<svg class="modern-chart-line" viewBox="0 0 120 50" aria-hidden="true"><path d="M2 39 22 31 39 35 57 18 74 25 94 10 118 16"/><path class="area" d="M2 39 22 31 39 35 57 18 74 25 94 10 118 16V49H2Z"/></svg>'
         : `<span class="modern-visual-glyph">${icon}</span><span class="modern-visual-lines"><i></i><i></i><i></i></span>`;
-  return `<div class="modern-module-visual modern-visual-${esc(id)}" data-module="${esc(id)}" role="img" aria-label="${esc(modernVisualLabel(id))}"><div class="modern-visual-scene">${scene}</div><span class="modern-visual-caption"><i></i>${esc(modernVisualLabel(id))}</span></div>`;
+  const label=storage?.label||modernVisualLabel(id);
+  return `<div class="modern-module-visual modern-visual-${esc(id)}" data-module="${esc(id)}" role="img" aria-label="${esc(label)}"><div class="modern-visual-scene">${scene}</div><span class="modern-visual-caption"><i></i>${esc(label)}</span></div>`;
 }
 function tileName(tile){return tile.id==='servers'?fedText('servers'):tr(tile.nameKey);}
 function tileDesc(tile){return tile.descKey?tr(tile.descKey):'';}
@@ -13702,7 +13734,110 @@ function vmCard(vm){
 function simpleTable(headers,rows){
   return `<table class="nx-muted-table"><thead><tr>${headers.map(h=>`<th>${esc(uiText(h))}</th>`).join('')}</tr></thead><tbody>${rows||'<tr><td colspan="'+headers.length+'">'+emptyState('Nothing here yet')+'</td></tr>'}</tbody></table>`;
 }
-function primaryVolume(d){return (d.children||[]).find(x=>x.mountpoint)||(d.children||[]).find(x=>x.fstype)||(d.children||[])[0]||d;}
+function storageDeviceVolumes(device){
+  const rows=[];
+  const visit=node=>{
+    const children=node.children||[];
+    if(node!==device&&(node.fstype||node.mountpoint||!children.length))rows.push(node);
+    children.forEach(visit);
+  };
+  visit(device);
+  if(!rows.length&&(device.fstype||device.mountpoint))rows.push(device);
+  return rows;
+}
+function primaryVolume(d){
+  const volumes=storageDeviceVolumes(d);
+  return volumes.find(x=>x.mountpoint==='/')||volumes.find(x=>x.mountpoint)||volumes.find(x=>x.fstype)||volumes[0]||d;
+}
+function storageMountForVolume(volume,mounts){
+  const name=String(volume?.name||'').replace(/^\/dev\//,'');
+  return (mounts||[]).find(m=>volume?.mountpoint&&m.mountpoint===volume.mountpoint)
+    ||(mounts||[]).find(m=>{
+      const source=String(m.device||'').replace(/^\/dev\//,'');
+      return !!name&&(source===name||source.endsWith('/'+name));
+    });
+}
+function storageDeviceUsage(device,mounts){
+  const seen=new Set(),entries=[];
+  const volumes=storageDeviceVolumes(device);
+  if(!volumes.length)volumes.push(device);
+  volumes.forEach(volume=>{
+    const mount=storageMountForVolume(volume,mounts);
+    if(!mount||!Number(mount.total))return;
+    const key=mount.mountpoint||mount.device;
+    if(seen.has(key))return;
+    seen.add(key);entries.push(mount);
+  });
+  if(!entries.length)return null;
+  const total=entries.reduce((sum,m)=>sum+Number(m.total||0),0);
+  const used=entries.reduce((sum,m)=>sum+Number(m.used||0),0);
+  const free=entries.reduce((sum,m)=>sum+Number(m.free??Math.max(0,Number(m.total||0)-Number(m.used||0))),0);
+  return {total,used,free,percent:total?Math.round(used/total*1000)/10:0,mounts:entries.length};
+}
+function modernDriveKind(device){
+  if(/^nvme/i.test(device.name||''))return 'NVMe';
+  if(device.rm===true||device.rm===1)return 'USB';
+  return device.rota===true||device.rota===1?'HDD':'SSD';
+}
+function modernDriveIcon(){
+  return `<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="3" width="16" height="18" rx="4"/><circle cx="12" cy="10" r="3.25"/><path d="M8 17h5.5M17 17h.01"/></svg>`;
+}
+function modernDriveVolumeRow(volume,mounts){
+  const usage=storageMountForVolume(volume,mounts);
+  const title=volume.mountpoint==='/'?uiText('System'):volume.mountpoint||volume.name||uiText('Volume');
+  const meta=[devicePath(volume.name||''),volume.fstype||uiText('None')].filter(Boolean).join(' · ');
+  const value=usage&&usage.total?`${fmtBytes(usage.used)} / ${fmtBytes(usage.total)}`:uiText('Not mounted');
+  return `<div class="modern-drive-volume-row">
+    <span class="modern-drive-volume-mark" aria-hidden="true"></span>
+    <span class="modern-drive-volume-copy"><strong>${esc(title)}</strong><small>${esc(meta)}</small></span>
+    <span class="modern-drive-volume-value">${esc(value)}</span>
+  </div>`;
+}
+function modernDriveCard(device,mounts){
+  const volumes=storageDeviceVolumes(device),usage=storageDeviceUsage(device,mounts);
+  const mounted=volumes.some(volume=>!!volume.mountpoint)||!!device.mountpoint;
+  const stateClass=device.protected?' is-protected':mounted?' is-mounted':'';
+  const stateLabel=device.protected?uiText('System disk'):mounted?uiText('Mounted'):uiText('Available');
+  const model=device.model||uiText('Disk');
+  const usageTone=usage&&usage.percent>90?' is-critical':usage&&usage.percent>75?' is-warn':'';
+  const usageHtml=usage?`<div class="modern-drive-usage${usageTone}">
+      <div class="modern-drive-usage-head"><span>${esc(uiText('Used'))}</span><strong>${fmtBytes(usage.used)} <small>· ${usage.percent}%</small></strong></div>
+      <div class="modern-drive-usage-track" role="meter" aria-label="${esc(uiText('Used'))}" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${usage.percent}"><span style="width:${Math.max(0,Math.min(100,usage.percent))}%"></span></div>
+      <div class="modern-drive-usage-foot"><span>${fmtBytes(usage.free)} ${esc(uiText('Free')).toLowerCase()}</span><span>${usage.mounts} ${esc(uiText(usage.mounts===1?'volume':'volumes'))}</span></div>
+    </div>`:`<div class="modern-drive-usage is-empty">
+      <div class="modern-drive-usage-head"><span>${esc(uiText('Not mounted'))}</span><strong>${fmtBytes(device.size)}</strong></div>
+      <div class="modern-drive-usage-track" aria-hidden="true"><span style="width:0%"></span></div>
+      <div class="modern-drive-usage-foot"><span>${esc(uiText('No mount data'))}</span></div>
+    </div>`;
+  const visibleVolumes=volumes.slice(0,2),hiddenVolumes=volumes.slice(2);
+  const volumesHtml=volumes.length?visibleVolumes.map(volume=>modernDriveVolumeRow(volume,mounts)).join('')
+    :`<div class="modern-drive-volume-empty">${esc(uiText('No volumes yet'))}</div>`;
+  const moreHtml=hiddenVolumes.length?`<details class="modern-drive-more"><summary>+${hiddenVolumes.length} ${esc(uiText(hiddenVolumes.length===1?'volume':'volumes'))}</summary><div>${hiddenVolumes.map(volume=>modernDriveVolumeRow(volume,mounts)).join('')}</div></details>`:'';
+  const primary=primaryVolume(device);
+  const mountable=volumes.find(volume=>isMountableVolume(volume,device));
+  const actions=[
+    !device.protected&&device.type==='disk'&&!volumes.length?`<button class="btn sm" onclick="diskWizard('${esc(device.name)}')">${esc(uiText('Set up disk'))}</button>`:'',
+    mountable?`<button class="btn sm" onclick="mountVolumeForm('${esc(mountable.name)}')">${esc(uiText('Mount'))}</button>`:'',
+    !device.protected&&/^(ext[234]|xfs|btrfs)$/.test(primary.fstype||'')?`<button class="btn ghost sm" onclick="fsGrowForm('${esc(primary.name)}','${esc(primary.mountpoint||'')}','${esc(primary.fstype)}')">${esc(uiText('Grow filesystem'))}</button>`:''
+  ].filter(Boolean).join('');
+  return `<article class="modern-drive-card">
+    <header class="modern-drive-head">
+      <span class="modern-drive-icon">${modernDriveIcon()}</span>
+      <span class="modern-drive-identity"><strong title="${esc(model)}">${esc(model)}</strong><small>${esc(devicePath(device.name))} · ${modernDriveKind(device)} · ${fmtBytes(device.size)}</small></span>
+      <span class="modern-drive-state${stateClass}">${device.protected?'<svg viewBox="0 0 16 16" aria-hidden="true"><rect x="3.5" y="7" width="9" height="6" rx="2"/><path d="M5.5 7V5.5a2.5 2.5 0 0 1 5 0V7"/></svg>':''}${esc(stateLabel)}</span>
+    </header>
+    ${usageHtml}
+    <section class="modern-drive-volumes" aria-label="${esc(uiText('Volumes'))}">
+      <div class="modern-drive-section-head"><span>${esc(uiText('Volumes'))}</span><strong>${volumes.length}</strong></div>
+      ${volumesHtml}${moreHtml}
+    </section>
+    ${actions?`<footer class="modern-drive-actions">${actions}</footer>`:''}
+  </article>`;
+}
+function renderModernDeviceCards(devs,mounts){
+  const disks=(devs||[]).filter(device=>device&&device.type==='disk');
+  return `<div class="modern-drive-grid">${disks.map(device=>modernDriveCard(device,mounts)).join('')||emptyState('No disks detected')}</div>`;
+}
 function renderDeviceCards(devs){
   return `<div class="nx-card-grid">${(devs||[]).map(d=>{
     const volume=primaryVolume(d);
@@ -13730,12 +13865,12 @@ async function renderStorage(body,tab){
     const [d,mounts]=await Promise.all([api('/storage/devices'),api('/system/disks').catch(()=>[])]);
     const mounted=(mounts||[]).filter(x=>x.total);
     const root=mounted.find(x=>x.mountpoint==='/')||mounted[0];
-    body.innerHTML=viewIntro('Storage overview','Set up new disks from here. The system disk is locked so beginners do not accidentally erase runvard.',`<button class="btn" onclick="renderStorage($('#modal-body'),'SMART')">Check health</button>`)
+    body.innerHTML=viewIntro('Storage overview','Set up new disks from here. The system disk is locked so beginners do not accidentally erase runvard.',`<button class="btn" onclick="renderStorage($('#modal-body'),'SMART')">Check health</button>`,{devices:d.devices})
       +`<div class="nx-summary-grid">
-        ${summaryCard('Disks',(d.devices||[]).length,'Physical devices found')}
+        ${summaryCard('Disks',modernStorageVisualState(d.devices).total,'Physical devices found')}
         ${summaryCard('Mounted volumes',mounted.length,'Usable filesystems')}
         ${summaryCard('System disk',root?root.percent+'% '+(isModernUi()?modernUsedWord():'used'):'Unknown',root?`${fmtBytes(root.used)} / ${fmtBytes(root.total)}`:'No mount data')}
-      </div>${renderDeviceCards(d.devices)}`;
+      </div>${isModernUi()?renderModernDeviceCards(d.devices,mounted):renderDeviceCards(d.devices)}`;
     translateRenderedText(body);
     return;
   }
