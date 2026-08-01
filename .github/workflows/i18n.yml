@@ -1,0 +1,24 @@
+name: Translation checks
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  translations:
+    name: Validate all translations
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v7
+        with:
+          node-version: 24
+
+      - name: Check locale parity, placeholders, and quality rules
+        run: node scripts/check-i18n.mjs
