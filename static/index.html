@@ -384,6 +384,7 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 .nx-action-card>.nx-action-title{margin-bottom:9px}
 .nx-action-card>.nx-action-sub+.nx-action-row,.nx-action-card>.nx-action-title+.nx-action-row{margin-top:10px}
 .nx-action-row{display:flex;gap:7px;align-items:center;flex-wrap:wrap}
+.tm-actions .btn{min-height:44px!important}
 .nx-action-card>.btn,.nx-action-card>button.btn{margin-top:10px}
 .nx-card-grid.actions-grid .nx-action-card{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;min-height:96px}
 .nx-card-grid.actions-grid .nx-action-row{margin-top:auto;padding-top:10px}
@@ -815,6 +816,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   .nx-view-intro{grid-template-columns:1fr;gap:12px}
   .nx-card-grid,.nx-summary-grid{grid-template-columns:1fr}
   .nx-kv{grid-template-columns:1fr}
+  .tm-actions .btn{flex:1 1 100%}
   .files-layout{grid-template-columns:1fr;overflow:auto}
   .files-sidebar{border-right:0;border-bottom:.5px solid var(--border);padding:0 0 10px;margin-bottom:10px;display:grid;grid-template-columns:repeat(2,1fr)}
   .files-main{padding-left:0;overflow:visible}
@@ -1094,6 +1096,10 @@ function dangerConfirmMeta(p,d){
     '/federation/v1/admin/settings':['federation:settings','internal_url'],
     '/federation/v1/admin/nodes/revoke':['federation:revoke','node_id'],
     '/external-servers/v1/admin/delete':['external-server:delete','server_id'],
+    '/time-machine/targets/remove':['time-machine:remove','target_id'],
+    '/time-machine/targets/delete-data':['time-machine:delete-data','target_id'],
+    '/time-machine/replications/promote':['time-machine:promote-replica','replication_id'],
+    '/time-machine/replications/import':['time-machine:promote-received','source_replication_id'],
   };
   if(p==='/auth/toggle'&&String(d.enabled)==='1')return null;
   if(p==='/docker/action'&&d.action!=='remove')return null;
@@ -1174,7 +1180,7 @@ const I18N_BASE={
   tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',
   tabContainer:'Containers',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',
   tabMachines:'Virtual machines',tabStoragePools:'Storage pools',tabJobs:'Jobs',
-  tabHistory:'History',tabLogs:'Logs',tabAlerts:'Alerts',tabAudit:'Audit',
+  tabHistory:'History',tabTimeMachine:'Time Machine',tabLogs:'Logs',tabAlerts:'Alerts',tabAudit:'Audit',
   tabOverview:'Overview',tabUpdates:'Updates',tabUsers:'Users',tabNetwork:'Network',
   tabServices:'Services',tabShares:'Shares',tabMaintenance:'Maintenance',
   tabAdvanced:'Advanced',tabPower:'Power',
@@ -1188,11 +1194,11 @@ const I18N={
   pt:{language:'Idioma',languageSettings:'Definições de idioma',languageField:'Idioma da interface',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Fechar',search:'Pesquisar',searchPlaceholder:'Pesquisar...',loading:'A carregar...',error:'Erro',logout:'Terminar sessão',loginPage:'Página de início de sessão',runvardAccounts:'Contas runvard',background:'Fundo',backgroundTitle:'Fundo',presets:'Predefinições',uploadImage:'Carregar imagem',dropImage:'Clique ou largue uma imagem aqui',imageUrl:'URL da imagem',restoreDefault:'Restaurar predefinição',addTile:'Adicionar atalho',confirmDelete:'Confirmar eliminação',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo especialista ativado',expertOff:'Modo especialista desativado',loginEnabled:'Início de sessão ativado. Será necessária autenticação na próxima visita.',loginDisabled:'Início de sessão desativado',signedInAs:'Sessão iniciada como',loginDisabledHead:'Início de sessão desativado',daySuffix:'',confirmCheckbox:'Compreendo e quero continuar.',dangerConfirmTitle:'Confirmação necessária',dangerConfirmMessage:'Esta ação altera definições ou dados do sistema. Confirme antes de o runvard continuar.',tileTerminal:'Terminal',tileFiles:'Ficheiros',tileStorage:'Armazenamento',tileDocker:'Docker',tileVms:'Máquinas virtuais',tileBackup:'Cópias de segurança',tileMonitoring:'Monitorização',tileSystem:'Sistema',tileApps:'Aplicações',descShell:'Acesso shell',descFiles:'Navegar · Carregar · Partilhar',descStorage:'Discos · Pools · Estado',descDocker:'Contentores · Compose',descVms:'Convidados · Armazenamento',descBackup:'Tarefas · Histórico',descMonitoring:'Registos · Alertas · Auditoria',descSystem:'Visão geral · Atualizações · Utilizadores',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contentores',tabCompose:'Compose',tabImages:'Imagens',tabVolumes:'Volumes',tabMachines:'Máquinas virtuais',tabStoragePools:'Pools de armazenamento',tabJobs:'Tarefas',tabHistory:'Histórico',tabLogs:'Registos',tabAlerts:'Alertas',tabAudit:'Auditoria',tabOverview:'Visão geral',tabUpdates:'Atualizações',tabUsers:'Utilizadores',tabNetwork:'Rede',tabServices:'Serviços',tabShares:'Partilhas',tabMaintenance:'Manutenção',tabAdvanced:'Avançado',tabPower:'Energia'},
 };
 const I18N_COMPLETIONS={
-  de:{tileServers:'Server',descServers:'Verbundene runvard-Instanzen'},
-  fr:{tileServers:'Serveurs',descServers:'Instances runvard connectées'},
-  it:{tileServers:'Server',descServers:'Istanze runvard collegate'},
-  es:{tileServers:'Servidores',descServers:'Instancias de runvard conectadas'},
-  pt:{tileServers:'Servidores',descServers:'Instâncias runvard ligadas'},
+  de:{tileServers:'Server',descServers:'Verbundene runvard-Instanzen',tabTimeMachine:'Time Machine'},
+  fr:{tileServers:'Serveurs',descServers:'Instances runvard connectées',tabTimeMachine:'Time Machine'},
+  it:{tileServers:'Server',descServers:'Istanze runvard collegate',tabTimeMachine:'Time Machine'},
+  es:{tileServers:'Servidores',descServers:'Instancias de runvard conectadas',tabTimeMachine:'Time Machine'},
+  pt:{tileServers:'Servidores',descServers:'Instâncias runvard ligadas',tabTimeMachine:'Time Machine'},
 };
 for(const lang of Object.keys(I18N_COMPLETIONS)){
   Object.assign(I18N[lang],I18N_COMPLETIONS[lang]);
@@ -7980,7 +7986,7 @@ const TILES=[
  {id:'storage',nameKey:'tileStorage',icon:'💾',color:'#fbbf24',descKey:'descStorage',tabs:['Disks','RAID','LUKS','ZFS/Btrfs','iSCSI','SMART','Swap','LVM'],tabKeys:['tabDisks','tabRaid','tabLuks','tabZfs','tabIscsi','tabSmart','tabSwap','tabLvm']},
  {id:'docker',nameKey:'tileDocker',icon:'🐳',color:'#60a5fa',badge:'docker',descKey:'descDocker',tabs:['Container','Compose','Images','Volumes'],tabKeys:['tabContainer','tabCompose','tabImages','tabVolumes']},
  {id:'vms',nameKey:'tileVms',icon:'📦',color:'#c084fc',badge:'vms',descKey:'descVms',tabs:['Machines','Storage pools'],tabKeys:['tabMachines','tabStoragePools']},
- {id:'backup',nameKey:'tileBackup',icon:'☁️',color:'#2dd4bf',badge:'backup',descKey:'descBackup',tabs:['Jobs','History'],tabKeys:['tabJobs','tabHistory']},
+ {id:'backup',nameKey:'tileBackup',icon:'☁️',color:'#2dd4bf',badge:'backup',descKey:'descBackup',tabs:['Jobs','History','Time Machine'],tabKeys:['tabJobs','tabHistory','tabTimeMachine']},
  {id:'monitoring',nameKey:'tileMonitoring',icon:'📈',color:'#9ca3af',badge:'monitoring',descKey:'descMonitoring',tabs:['Logs','Alerts','Audit'],tabKeys:['tabLogs','tabAlerts','tabAudit']},
  {id:'system',nameKey:'tileSystem',icon:'🔧',color:'#9ca3af',badge:'system',descKey:'descSystem',tabs:['Overview','Updates','Users','Network','Services','Shares','Maintenance','Advanced','Power'],tabKeys:['tabOverview','tabUpdates','tabUsers','tabNetwork','tabServices','tabShares','tabMaintenance','tabAdvanced','tabPower']},
  {id:'apps',nameKey:'tileApps',icon:'🧩',color:'#f472b6',badge:'apps',descKey:''},
@@ -11183,7 +11189,225 @@ window.vmVolForm=pool=>openForm('Create volume in '+pool,'📂',[
 window.vmVolDel=(pool,vol)=>confirmDelete('Delete volume',`Delete volume "${vol}" from pool "${pool}" permanently?`,async()=>{try{const r=await post('/vms/pool/vol-delete',{pool,vol});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Volume deleted');vmPoolVols(pool);}catch(e){toast('Error: '+e.message,'error');}});
 
 // ═══ Backup ═══
+const TM_I18N={
+  en:{title:'Time Machine',intro:'Managed encrypted Mac backups over SMB. Bonjour is available on the LAN; use the direct SMB address over VPN.',create:'Add Mac',ready:'Ready',notReady:'Needs attention',targets:'Mac targets',noTargets:'No Time Machine targets yet.',owner:'Account',capacity:'Capacity',share:'Share',quotaHard:'Hard quota',quotaReported:'Reported limit',protect:'Protect now',pause:'Pause',resume:'Resume',remove:'Remove target',deleteData:'Delete backup data',setup:'Mac setup',newTarget:'Add Time Machine target',macName:'Mac name',account:'Backup account',root:'Mounted storage root',sourceCapacity:'Mac storage (GB)',targetCapacity:'Backup capacity (GB)',password:'SMB password',createAccount:'Create backup-only account',encryptionAck:'I will enable encrypted backup on the Mac',encryptionHint:'runvard cannot verify client-side encryption without a Mac agent. Losing that encryption password loses access to the backup.',created:'Time Machine target created',protectionCreated:'Storage protection point created',dataPreserved:'Target removed; backup data is preserved',lan:'LAN / Bonjour',vpn:'VPN / direct SMB',clientEncryption:'Enable “Encrypt Backup” on the Mac',appleRestore:'Restore and verify with Apple Time Machine or Migration Assistant',close:'Close'},
+  de:{title:'Time Machine',intro:'Verwaltete, verschlüsselte Mac-Backups über SMB. Im LAN steht Bonjour bereit; über VPN wird die direkte SMB-Adresse verwendet.',create:'Mac hinzufügen',ready:'Bereit',notReady:'Handlungsbedarf',targets:'Mac-Ziele',noTargets:'Noch keine Time-Machine-Ziele.',owner:'Konto',capacity:'Kapazität',share:'Freigabe',quotaHard:'Harte Quota',quotaReported:'Gemeldetes Limit',protect:'Jetzt schützen',pause:'Pausieren',resume:'Fortsetzen',remove:'Ziel entfernen',deleteData:'Backup-Daten löschen',setup:'Mac einrichten',newTarget:'Time-Machine-Ziel hinzufügen',macName:'Mac-Name',account:'Backup-Konto',root:'Eingehängtes Speicherziel',sourceCapacity:'Mac-Speicher (GB)',targetCapacity:'Backup-Kapazität (GB)',password:'SMB-Passwort',createAccount:'Reines Backup-Konto erstellen',encryptionAck:'Ich aktiviere das verschlüsselte Backup auf dem Mac',encryptionHint:'runvard kann die clientseitige Verschlüsselung ohne Mac-Agent nicht prüfen. Geht dieses Verschlüsselungspasswort verloren, ist das Backup nicht mehr zugänglich.',created:'Time-Machine-Ziel erstellt',protectionCreated:'Speicher-Schutzpunkt erstellt',dataPreserved:'Ziel entfernt; die Backup-Daten bleiben erhalten',lan:'LAN / Bonjour',vpn:'VPN / direkte SMB-Adresse',clientEncryption:'Auf dem Mac „Backup verschlüsseln“ aktivieren',appleRestore:'Mit Apple Time Machine oder Migrationsassistent wiederherstellen und prüfen',close:'Schließen'},
+  fr:{title:'Time Machine',intro:'Sauvegardes Mac chiffrées gérées via SMB. Bonjour fonctionne sur le LAN ; utilisez l’adresse SMB directe via VPN.',create:'Ajouter un Mac',ready:'Prêt',notReady:'Attention requise',targets:'Cibles Mac',noTargets:'Aucune cible Time Machine.',owner:'Compte',capacity:'Capacité',share:'Partage',quotaHard:'Quota strict',quotaReported:'Limite déclarée',protect:'Protéger',pause:'Suspendre',resume:'Reprendre',remove:'Retirer la cible',deleteData:'Supprimer les données',setup:'Configurer le Mac',newTarget:'Ajouter une cible Time Machine',macName:'Nom du Mac',account:'Compte de sauvegarde',root:'Stockage monté',sourceCapacity:'Stockage du Mac (Go)',targetCapacity:'Capacité de sauvegarde (Go)',password:'Mot de passe SMB',createAccount:'Créer un compte dédié',encryptionAck:'J’activerai le chiffrement sur le Mac',encryptionHint:'runvard ne peut pas vérifier le chiffrement client sans agent Mac. La perte du mot de passe de chiffrement rend la sauvegarde inaccessible.',created:'Cible Time Machine créée',protectionCreated:'Point de protection créé',dataPreserved:'Cible retirée ; données conservées',lan:'LAN / Bonjour',vpn:'VPN / SMB direct',clientEncryption:'Activez « Chiffrer la sauvegarde » sur le Mac',appleRestore:'Restaurez et vérifiez avec les outils Apple',close:'Fermer'},
+  it:{title:'Time Machine',intro:'Backup Mac cifrati gestiti via SMB. Bonjour è disponibile in LAN; tramite VPN usa l’indirizzo SMB diretto.',create:'Aggiungi Mac',ready:'Pronto',notReady:'Richiede attenzione',targets:'Destinazioni Mac',noTargets:'Nessuna destinazione Time Machine.',owner:'Account',capacity:'Capacità',share:'Condivisione',quotaHard:'Quota rigida',quotaReported:'Limite dichiarato',protect:'Proteggi ora',pause:'Pausa',resume:'Riprendi',remove:'Rimuovi destinazione',deleteData:'Elimina dati backup',setup:'Configura Mac',newTarget:'Aggiungi destinazione Time Machine',macName:'Nome Mac',account:'Account backup',root:'Archivio montato',sourceCapacity:'Spazio Mac (GB)',targetCapacity:'Capacità backup (GB)',password:'Password SMB',createAccount:'Crea account solo backup',encryptionAck:'Attiverò il backup cifrato sul Mac',encryptionHint:'runvard non può verificare la cifratura client senza un agente Mac. Se perdi la password, perdi l’accesso al backup.',created:'Destinazione Time Machine creata',protectionCreated:'Punto di protezione creato',dataPreserved:'Destinazione rimossa; dati conservati',lan:'LAN / Bonjour',vpn:'VPN / SMB diretto',clientEncryption:'Attiva “Codifica backup” sul Mac',appleRestore:'Ripristina e verifica con gli strumenti Apple',close:'Chiudi'},
+  es:{title:'Time Machine',intro:'Copias Mac cifradas gestionadas por SMB. Bonjour está disponible en LAN; usa la dirección SMB directa por VPN.',create:'Añadir Mac',ready:'Listo',notReady:'Requiere atención',targets:'Destinos Mac',noTargets:'No hay destinos de Time Machine.',owner:'Cuenta',capacity:'Capacidad',share:'Recurso',quotaHard:'Cuota estricta',quotaReported:'Límite informado',protect:'Proteger ahora',pause:'Pausar',resume:'Reanudar',remove:'Quitar destino',deleteData:'Eliminar datos',setup:'Configurar Mac',newTarget:'Añadir destino Time Machine',macName:'Nombre del Mac',account:'Cuenta de copia',root:'Almacenamiento montado',sourceCapacity:'Almacenamiento Mac (GB)',targetCapacity:'Capacidad de copia (GB)',password:'Contraseña SMB',createAccount:'Crear cuenta solo para copias',encryptionAck:'Activaré la copia cifrada en el Mac',encryptionHint:'runvard no puede verificar el cifrado del cliente sin un agente Mac. Perder la contraseña impide acceder a la copia.',created:'Destino Time Machine creado',protectionCreated:'Punto de protección creado',dataPreserved:'Destino quitado; datos conservados',lan:'LAN / Bonjour',vpn:'VPN / SMB directo',clientEncryption:'Activa “Cifrar copia” en el Mac',appleRestore:'Restaura y verifica con herramientas Apple',close:'Cerrar'},
+  pt:{title:'Time Machine',intro:'Cópias Mac cifradas geridas por SMB. Bonjour está disponível na LAN; use o endereço SMB direto por VPN.',create:'Adicionar Mac',ready:'Pronto',notReady:'Requer atenção',targets:'Destinos Mac',noTargets:'Sem destinos Time Machine.',owner:'Conta',capacity:'Capacidade',share:'Partilha',quotaHard:'Quota rígida',quotaReported:'Limite indicado',protect:'Proteger agora',pause:'Pausar',resume:'Retomar',remove:'Remover destino',deleteData:'Eliminar dados',setup:'Configurar Mac',newTarget:'Adicionar destino Time Machine',macName:'Nome do Mac',account:'Conta de backup',root:'Armazenamento montado',sourceCapacity:'Armazenamento Mac (GB)',targetCapacity:'Capacidade de backup (GB)',password:'Palavra-passe SMB',createAccount:'Criar conta só de backup',encryptionAck:'Ativarei o backup cifrado no Mac',encryptionHint:'runvard não consegue verificar a cifragem do cliente sem agente Mac. Perder a palavra-passe impede o acesso ao backup.',created:'Destino Time Machine criado',protectionCreated:'Ponto de proteção criado',dataPreserved:'Destino removido; dados preservados',lan:'LAN / Bonjour',vpn:'VPN / SMB direto',clientEncryption:'Ative “Cifrar backup” no Mac',appleRestore:'Restaure e verifique com ferramentas Apple',close:'Fechar'}
+};
+Object.assign(TM_I18N.en,{replications:'Replicas',noReplications:'No passive replicas configured.',addReplication:'Add replica',runNow:'Run now',promoteReplica:'Promote replica',lastComplete:'Last complete',destination:'Destination',schedule:'Schedule',local:'Local',remote:'Remote',remoteSetup:'Remote setup',importReplica:'Import received replica',sourceUnavailable:'I confirm the original source is unavailable',transport:'Transport',bandwidth:'Bandwidth (Mbit/s)',target:'Mac target',identity:'Source identity',hostKey:'Pin host key',clientKey:'Authorize source key',version:'Received version'});
+Object.assign(TM_I18N.de,{replications:'Replikate',noReplications:'Noch keine passiven Replikate eingerichtet.',addReplication:'Replikat hinzufügen',runNow:'Jetzt ausführen',promoteReplica:'Replikat aktivieren',lastComplete:'Letzter Abschluss',destination:'Ziel',schedule:'Zeitplan',local:'Lokal',remote:'Remote',remoteSetup:'Remote einrichten',importReplica:'Empfangenes Replikat importieren',sourceUnavailable:'Ich bestätige, dass die ursprüngliche Quelle nicht verfügbar ist',transport:'Transport',bandwidth:'Bandbreite (Mbit/s)',target:'Mac-Ziel',identity:'Quell-Identität',hostKey:'Host-Schlüssel fixieren',clientKey:'Quell-Schlüssel autorisieren',version:'Empfangene Version'});
+Object.assign(TM_I18N.fr,{replications:'Répliques',noReplications:'Aucune réplique passive configurée.',addReplication:'Ajouter une réplique',runNow:'Exécuter',promoteReplica:'Promouvoir',lastComplete:'Dernière réussite',destination:'Destination',schedule:'Planification',local:'Locale',remote:'Distante',remoteSetup:'Configurer la réplication distante',importReplica:'Importer une réplique reçue',sourceUnavailable:'Je confirme que la source originale est indisponible',transport:'Transport',bandwidth:'Bande passante (Mbit/s)',target:'Cible Mac',identity:'Identité source',hostKey:'Épingler la clé hôte',clientKey:'Autoriser la clé source',version:'Version reçue'});
+Object.assign(TM_I18N.it,{replications:'Repliche',noReplications:'Nessuna replica passiva configurata.',addReplication:'Aggiungi replica',runNow:'Esegui ora',promoteReplica:'Promuovi replica',lastComplete:'Ultimo completamento',destination:'Destinazione',schedule:'Pianificazione',local:'Locale',remote:'Remota',remoteSetup:'Configura remoto',importReplica:'Importa replica ricevuta',sourceUnavailable:'Confermo che la fonte originale non è disponibile',transport:'Trasporto',bandwidth:'Larghezza di banda (Mbit/s)',target:'Destinazione Mac',identity:'Identità sorgente',hostKey:'Fissa chiave host',clientKey:'Autorizza chiave sorgente',version:'Versione ricevuta'});
+Object.assign(TM_I18N.es,{replications:'Réplicas',noReplications:'No hay réplicas pasivas configuradas.',addReplication:'Añadir réplica',runNow:'Ejecutar ahora',promoteReplica:'Promover réplica',lastComplete:'Última finalización',destination:'Destino',schedule:'Planificación',local:'Local',remote:'Remota',remoteSetup:'Configurar remoto',importReplica:'Importar réplica recibida',sourceUnavailable:'Confirmo que la fuente original no está disponible',transport:'Transporte',bandwidth:'Ancho de banda (Mbit/s)',target:'Destino Mac',identity:'Identidad de origen',hostKey:'Fijar clave de host',clientKey:'Autorizar clave de origen',version:'Versión recibida'});
+Object.assign(TM_I18N.pt,{replications:'Réplicas',noReplications:'Nenhuma réplica passiva configurada.',addReplication:'Adicionar réplica',runNow:'Executar agora',promoteReplica:'Promover réplica',lastComplete:'Última conclusão',destination:'Destino',schedule:'Agendamento',local:'Local',remote:'Remota',remoteSetup:'Configurar remoto',importReplica:'Importar réplica recebida',sourceUnavailable:'Confirmo que a origem original não está disponível',transport:'Transporte',bandwidth:'Largura de banda (Mbit/s)',target:'Destino Mac',identity:'Identidade da origem',hostKey:'Fixar chave do host',clientKey:'Autorizar chave da origem',version:'Versão recebida'});
+Object.assign(TM_I18N.en,{recentJobs:'Recent jobs',noJobs:'No Time Machine jobs yet.',workerInactive:'The persistent Time Machine maintenance worker is inactive.'});
+Object.assign(TM_I18N.de,{recentJobs:'Letzte Aufträge',noJobs:'Noch keine Time-Machine-Aufträge.',workerInactive:'Der dauerhafte Time-Machine-Wartungsdienst ist inaktiv.'});
+Object.assign(TM_I18N.fr,{recentJobs:'Tâches récentes',noJobs:'Aucune tâche Time Machine.',workerInactive:'Le service de maintenance Time Machine est inactif.'});
+Object.assign(TM_I18N.it,{recentJobs:'Attività recenti',noJobs:'Nessuna attività Time Machine.',workerInactive:'Il servizio di manutenzione Time Machine è inattivo.'});
+Object.assign(TM_I18N.es,{recentJobs:'Trabajos recientes',noJobs:'No hay trabajos de Time Machine.',workerInactive:'El servicio de mantenimiento de Time Machine está inactivo.'});
+Object.assign(TM_I18N.pt,{recentJobs:'Tarefas recentes',noJobs:'Sem tarefas do Time Machine.',workerInactive:'O serviço de manutenção do Time Machine está inativo.'});
+Object.assign(TM_I18N.en,{editPolicy:'Edit policy',retainDaily:'Daily copies',retainWeekly:'Weekly copies',retainMonthly:'Monthly copies',enabled:'Enabled'});
+Object.assign(TM_I18N.de,{editPolicy:'Richtlinie bearbeiten',retainDaily:'Tägliche Kopien',retainWeekly:'Wöchentliche Kopien',retainMonthly:'Monatliche Kopien',enabled:'Aktiv'});
+Object.assign(TM_I18N.fr,{editPolicy:'Modifier la politique',retainDaily:'Copies quotidiennes',retainWeekly:'Copies hebdomadaires',retainMonthly:'Copies mensuelles',enabled:'Activée'});
+Object.assign(TM_I18N.it,{editPolicy:'Modifica criterio',retainDaily:'Copie giornaliere',retainWeekly:'Copie settimanali',retainMonthly:'Copie mensili',enabled:'Attiva'});
+Object.assign(TM_I18N.es,{editPolicy:'Editar política',retainDaily:'Copias diarias',retainWeekly:'Copias semanales',retainMonthly:'Copias mensuales',enabled:'Activa'});
+Object.assign(TM_I18N.pt,{editPolicy:'Editar política',retainDaily:'Cópias diárias',retainWeekly:'Cópias semanais',retainMonthly:'Cópias mensais',enabled:'Ativa'});
+Object.assign(TM_I18N.en,{recentChanges:'Recent changes',noChanges:'No Time Machine policy changes yet.',changedBy:'Changed by'});
+Object.assign(TM_I18N.de,{recentChanges:'Letzte Änderungen',noChanges:'Noch keine Time-Machine-Richtlinienänderungen.',changedBy:'Geändert von'});
+Object.assign(TM_I18N.fr,{recentChanges:'Modifications récentes',noChanges:'Aucune modification de politique Time Machine.',changedBy:'Modifié par'});
+Object.assign(TM_I18N.it,{recentChanges:'Modifiche recenti',noChanges:'Nessuna modifica ai criteri Time Machine.',changedBy:'Modificato da'});
+Object.assign(TM_I18N.es,{recentChanges:'Cambios recientes',noChanges:'No hay cambios de política de Time Machine.',changedBy:'Modificado por'});
+Object.assign(TM_I18N.pt,{recentChanges:'Alterações recentes',noChanges:'Nenhuma alteração de política do Time Machine.',changedBy:'Alterado por'});
+Object.assign(TM_I18N.en,{used:'Used',generatePassword:'Generate secure password'});
+Object.assign(TM_I18N.de,{used:'Belegt',generatePassword:'Sicheres Passwort erzeugen'});
+Object.assign(TM_I18N.fr,{used:'Utilisé',generatePassword:'Générer un mot de passe sûr'});
+Object.assign(TM_I18N.it,{used:'Utilizzato',generatePassword:'Genera password sicura'});
+Object.assign(TM_I18N.es,{used:'Usado',generatePassword:'Generar contraseña segura'});
+Object.assign(TM_I18N.pt,{used:'Utilizado',generatePassword:'Gerar palavra-passe segura'});
+Object.assign(TM_I18N.en,{configurationPreview:'Configuration preview',previewStorage:'Storage',previewCapacity:'Capacity policy',previewSecurity:'Security',privateNetwork:'Trusted LAN or VPN only',encryptedSmb:'SMB transport encryption required',clientEncryptionRequired:'Encrypted Time Machine backup required'});
+Object.assign(TM_I18N.de,{configurationPreview:'Konfigurationsvorschau',previewStorage:'Speicher',previewCapacity:'Kapazitätsrichtlinie',previewSecurity:'Sicherheit',privateNetwork:'Nur vertrauenswürdiges LAN oder VPN',encryptedSmb:'SMB-Transportverschlüsselung erforderlich',clientEncryptionRequired:'Verschlüsseltes Time-Machine-Backup erforderlich'});
+Object.assign(TM_I18N.fr,{configurationPreview:'Aperçu de la configuration',previewStorage:'Stockage',previewCapacity:'Politique de capacité',previewSecurity:'Sécurité',privateNetwork:'LAN approuvé ou VPN uniquement',encryptedSmb:'Chiffrement du transport SMB requis',clientEncryptionRequired:'Sauvegarde Time Machine chiffrée requise'});
+Object.assign(TM_I18N.it,{configurationPreview:'Anteprima configurazione',previewStorage:'Archiviazione',previewCapacity:'Criterio capacità',previewSecurity:'Sicurezza',privateNetwork:'Solo LAN attendibile o VPN',encryptedSmb:'Crittografia del trasporto SMB obbligatoria',clientEncryptionRequired:'Backup Time Machine cifrato obbligatorio'});
+Object.assign(TM_I18N.es,{configurationPreview:'Vista previa de configuración',previewStorage:'Almacenamiento',previewCapacity:'Política de capacidad',previewSecurity:'Seguridad',privateNetwork:'Solo LAN de confianza o VPN',encryptedSmb:'Cifrado de transporte SMB obligatorio',clientEncryptionRequired:'Copia de Time Machine cifrada obligatoria'});
+Object.assign(TM_I18N.pt,{configurationPreview:'Pré-visualização da configuração',previewStorage:'Armazenamento',previewCapacity:'Política de capacidade',previewSecurity:'Segurança',privateNetwork:'Apenas LAN de confiança ou VPN',encryptedSmb:'Cifragem do transporte SMB obrigatória',clientEncryptionRequired:'Backup Time Machine cifrado obrigatório'});
+function tmText(key){const lang=currentLanguage();return (TM_I18N[lang]||TM_I18N.en)[key]||TM_I18N.en[key]||key;}
+function tmTone(status){return status==='active'?'good':status==='critical'?'bad':'warn';}
+let _tmTargets=[];
+let _tmReplications=[];
+
+async function renderTimeMachine(body){
+  const [system,overview,replicationData,jobData,eventData]=await Promise.all([api('/time-machine/system'),api('/time-machine/overview'),api('/time-machine/replications'),api('/time-machine/jobs?limit=10'),api('/time-machine/events?limit=10')]);
+  const targets=overview.targets||[];
+  const replications=replicationData.replications||[];
+  const jobs=jobData.jobs||[];
+  const events=eventData.events||[];
+  _tmTargets=targets;
+  _tmReplications=replications;
+  const warnings=[];
+  if(system.managed_config?.drift)warnings.push('Managed Samba configuration changed outside runvard.');
+  if(!system.aapl_audit?.ok)warnings.push('Existing Samba shares may disable Apple AAPL extensions: '+(system.aapl_audit?.risky_shares||[]).join(', '));
+  if(system.worker&&!system.worker.timer_active)warnings.push(tmText('workerInactive'));
+  const cards=targets.map(target=>{
+    const status=target.status||'waiting';
+    const quota=target.quota_mode==='hard'?tmText('quotaHard'):tmText('quotaReported');
+    const used=Number(target.allocated_bytes||0);
+    const usagePercent=target.advertised_bytes?Math.min(100,Math.round(used/target.advertised_bytes*100)):0;
+    const actions=target.status==='removed'
+      ? `<button class="btn danger sm" onclick="tmDeleteData('${target.id}')">${esc(tmText('deleteData'))}</button>`
+      : `<button class="btn ghost sm" onclick="tmGuide('${target.id}')">${esc(tmText('setup'))}</button>
+         ${target.backend==='zfs'||target.backend==='btrfs'?`<button class="btn ghost sm" onclick="tmProtect('${target.id}')">${esc(tmText('protect'))}</button>`:''}
+         <button class="btn ghost sm" onclick="tmTargetPolicyForm('${target.id}')">${esc(tmText('editPolicy'))}</button>
+         <button class="btn ghost sm" onclick="tmToggle('${target.id}',${target.enabled?'false':'true'})">${esc(tmText(target.enabled?'pause':'resume'))}</button>
+         <button class="btn danger sm" onclick="tmRemove('${target.id}')">${esc(tmText('remove'))}</button>`;
+    return `<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(target.display_name||target.share_name)}</div>${statusBadge(status,tmTone(status))}</div>
+      <div class="nx-action-sub mono">${esc(target.share_name||'')}</div>
+      ${usageBar(usagePercent)}<div class="nx-kv">${cardMetric(tmText('owner'),esc(target.owner||''))}${cardMetric(tmText('capacity'),fmtBytes(target.advertised_bytes||0))}${cardMetric(tmText('used'),fmtBytes(target.allocated_bytes||0))}${cardMetric(tmText('share'),esc(target.share_name||''))}${cardMetric('Quota',quota)}</div>
+      ${target.quota_mode==='reported'?`<div class="nx-chip warn">${esc(tmText('quotaReported'))}</div>`:''}
+      <div class="nx-action-row">${actions}</div></div>`;
+  }).join('');
+  const replicaCards=replications.map(replication=>{
+    const target=targets.find(item=>item.id===replication.target_id)||{};
+    const last=replication.last_complete_at?new Date(replication.last_complete_at*1000).toLocaleString(localeCode()):'—';
+    const destination=replication.kind==='remote'?`${replication.remote_user||''}@${replication.remote_host||''}:${replication.destination_root||''}`:(replication.destination_path||replication.destination_root||'');
+    const canPromote=replication.kind==='local'&&replication.status!=='promoted'&&replication.last_complete_at;
+    return `<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(target.display_name||replication.target_id||'')}</div>${statusBadge(replication.status||'passive',replication.status==='failed'?'bad':'warn')}</div>
+      <div class="nx-action-sub mono">${esc(replication.id||'')}</div>
+      <div class="nx-kv">${cardMetric(tmText('transport'),esc(replication.transport||''))}${cardMetric(tmText('destination'),esc(destination))}${cardMetric(tmText('lastComplete'),esc(last))}${cardMetric(tmText('schedule'),String(replication.schedule_hour).padStart(2,'0')+':00')}</div>
+      ${replication.last_error?`<div class="nx-chip bad">${esc(replication.last_error)}</div>`:''}
+      <div class="nx-action-row tm-actions"><button class="btn ghost sm" onclick="tmReplicationPolicyForm('${esc(replication.id)}')">${esc(tmText('editPolicy'))}</button>${replication.enabled?`<button class="btn ghost sm" onclick="tmRunReplication('${esc(replication.id)}')">${esc(tmText('runNow'))}</button>`:''}${canPromote?`<button class="btn danger sm" onclick="tmPromoteReplica('${esc(replication.id)}')">${esc(tmText('promoteReplica'))}</button>`:''}</div></div>`;
+  }).join('');
+  const tmJobCards=jobs.map(job=>{
+    const timestamp=job.finished_at||job.started_at||job.queued_at;
+    const detail=job.type==='replication'?(job.replication_id||''):(job.actions?.length||0)+' actions';
+    const tone=job.status==='completed'?'good':job.status==='failed'?'bad':'warn';
+    return `<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(job.type||'')}</div>${statusBadge(job.status||'unknown',tone)}</div><div class="nx-action-sub mono">${esc(job.id||'')}</div><div class="nx-kv">${cardMetric('Detail',esc(detail))}${cardMetric('Time',timestamp?esc(new Date(timestamp*1000).toLocaleString(localeCode())):'—')}</div>${job.error?`<div class="nx-chip bad">${esc(job.error)}</div>`:''}</div>`;
+  }).join('');
+  const tmEventCards=events.map(event=>{
+    const changes=event.changes||{};
+    let detail=event.target_id||event.replication_id||'';
+    if(event.type==='target_policy_updated'&&changes.capacity_gb)detail=`${changes.capacity_gb.from} → ${changes.capacity_gb.to} GB`;
+    if(event.type==='replication_policy_updated')detail=`${String(changes.schedule_hour?.from??'—').padStart(2,'0')}:00 → ${String(changes.schedule_hour?.to??'—').padStart(2,'0')}:00 · ${changes.enabled?.to?'active':'paused'}`;
+    if(event.type==='target_removed')detail=`${(event.disabled_replication_ids||[]).length} replicas disabled`;
+    return `<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(event.type||'change')}</div>${statusBadge('recorded','good')}</div><div class="nx-action-sub mono">${esc(event.target_id||event.replication_id||'')}</div><div class="nx-kv">${cardMetric('Detail',esc(detail))}${cardMetric(tmText('changedBy'),esc(event.actor||'system'))}${cardMetric('Time',event.created_at?esc(new Date(event.created_at*1000).toLocaleString(localeCode())):'—')}</div></div>`;
+  }).join('');
+  body.innerHTML=viewIntro(tmText('title'),tmText('intro'),`<div class="nx-action-row tm-actions"><button class="btn" onclick="tmCreateForm()">${esc(tmText('create'))}</button><button class="btn ghost" onclick="tmReplicationForm()">${esc(tmText('addReplication'))}</button><button class="btn ghost" onclick="tmRemoteSetup()">${esc(tmText('remoteSetup'))}</button><button class="btn ghost" onclick="tmImportReplicaForm()">${esc(tmText('importReplica'))}</button></div>`)
+    +`<div class="nx-summary-grid">${summaryCard(tmText('ready'),system.ready?tmText('ready'):tmText('notReady'),system.samba?.version?'Samba '+esc(system.samba.version):'Samba')}${summaryCard(tmText('targets'),targets.length,'20 max')}${summaryCard(tmText('replications'),replications.length,'Passive')}${summaryCard('Bonjour',system.avahi?.active?'Active':'Inactive','LAN only')}</div>`
+    +(warnings.length?`<div class="nx-card-inner"><div class="nx-chip-list">${warnings.map(w=>`<span class="nx-chip bad">${esc(w)}</span>`).join('')}</div>${system.managed_config?.drift?`<div class="nx-action-row tm-actions" style="margin-top:12px"><button class="btn danger" onclick="tmReconcileConfig()">Reconcile managed configuration</button></div>`:''}</div>`:'')
+    +`<div class="sec-hdr"><h3>${esc(tmText('targets'))}</h3></div><div class="nx-card-grid">${cards||emptyState(tmText('noTargets'))}</div>`
+    +`<div class="sec-hdr"><h3>${esc(tmText('replications'))}</h3></div><div class="nx-card-grid">${replicaCards||emptyState(tmText('noReplications'))}</div>`
+    +`<div class="sec-hdr"><h3>${esc(tmText('recentJobs'))}</h3></div><div class="nx-card-grid">${tmJobCards||emptyState(tmText('noJobs'))}</div>`
+    +`<div class="sec-hdr"><h3>${esc(tmText('recentChanges'))}</h3></div><div class="nx-card-grid">${tmEventCards||emptyState(tmText('noChanges'))}</div>`;
+}
+
+window.tmGeneratePassword=()=>{
+  const input=$('#f_password');if(!input)return;
+  const alphabet='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_';
+  const bytes=new Uint8Array(24);crypto.getRandomValues(bytes);
+  input.value=Array.from(bytes,value=>alphabet[value&63]).join('');
+  input.type='text';input.dispatchEvent(new Event('input',{bubbles:true}));input.focus();input.select();
+};
+window.tmUpdateCreatePreview=()=>{
+  const preview=$('#tm-create-preview');if(!preview)return;
+  const root=String($('#f_storage_root')?.value||'').trim()||'—';
+  const source=Math.max(0,Number($('#f_source_capacity_gb')?.value||0));
+  const capacity=Math.max(0,Number($('#f_capacity_gb')?.value||0));
+  const capacityText=capacity?`${capacity.toLocaleString(localeCode())} GB${source?` · ${Math.round(capacity/source*100)/100}× Mac`:''}`:'—';
+  preview.innerHTML=`<strong>${esc(tmText('configurationPreview'))}</strong><div class="nx-kv" style="margin-top:10px">${cardMetric(tmText('previewStorage'),esc(root))}${cardMetric(tmText('previewCapacity'),esc(capacityText))}${cardMetric(tmText('previewSecurity'),esc(tmText('encryptedSmb')+' · '+tmText('privateNetwork')+' · '+tmText('clientEncryptionRequired')))}</div>`;
+};
+window.tmCreateForm=()=>{
+openForm(tmText('newTarget'),'⏱',[
+  {name:'display_name',label:tmText('macName'),placeholder:'Marias MacBook'},
+  {name:'owner',label:tmText('account'),placeholder:'tm-maria'},
+  {name:'create_account',label:tmText('createAccount'),type:'checkbox',value:true},
+  {name:'storage_root',label:tmText('root'),placeholder:'/mnt/backups',hint:'Must already be a writable mount point.'},
+  {name:'source_capacity_gb',label:tmText('sourceCapacity'),type:'number',value:500},
+  {name:'capacity_gb',label:tmText('targetCapacity'),type:'number',value:1000,hint:'At least twice the Mac storage is recommended.'},
+  {name:'password',label:tmText('password'),type:'password',hint:'At least 12 characters. It is never stored by runvard.'},
+  {name:'client_encryption_required',label:tmText('encryptionAck'),type:'checkbox',value:false,hint:tmText('encryptionHint')},
+],async d=>{
+  if(!d.client_encryption_required){toast(tmText('encryptionAck'),'error');return;}
+  if(String(d.password||'').length<12){toast('Password must contain at least 12 characters','error');return;}
+  try{await post('/time-machine/targets',d);closeForm();toast(tmText('created'));renderTimeMachine($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}
+});
+const passwordField=$('#field_password');
+if(passwordField)passwordField.insertAdjacentHTML('beforeend',`<button type="button" class="btn ghost sm" style="margin-top:8px" onclick="tmGeneratePassword()">${esc(tmText('generatePassword'))}</button>`);
+const formBody=$('#form-body');
+if(formBody)formBody.insertAdjacentHTML('beforeend','<div class="nx-card-inner" id="tm-create-preview" aria-live="polite"></div>');
+['#f_storage_root','#f_source_capacity_gb','#f_capacity_gb'].forEach(selector=>{
+  const field=$(selector);if(field){field.addEventListener('input',tmUpdateCreatePreview);field.addEventListener('change',tmUpdateCreatePreview);}
+});
+tmUpdateCreatePreview();
+};
+window.tmToggle=async(id,enabled)=>{try{await post('/time-machine/targets/enabled',{target_id:id,enabled});renderTimeMachine($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}};
+window.tmTargetPolicyForm=id=>{
+  const target=_tmTargets.find(item=>item.id===id);if(!target){toast('Target not found','error');return;}
+  const policy=target.protection_policy||{};
+  openForm(tmText('editPolicy'),'⚙',[
+    {name:'capacity_gb',label:tmText('targetCapacity'),type:'number',value:Math.round((target.hard_limit_bytes||0)/1073741824),hint:'10–10,000,000 GB'},
+    {name:'daily',label:tmText('retainDaily'),type:'number',value:policy.daily??7,hint:'0–365'},
+    {name:'weekly',label:tmText('retainWeekly'),type:'number',value:policy.weekly??4,hint:'0–365'},
+    {name:'monthly',label:tmText('retainMonthly'),type:'number',value:policy.monthly??3,hint:'0–365'},
+  ],async d=>{try{await post('/time-machine/targets/policy',{target_id:id,...d});closeForm();toast(tmText('editPolicy'));renderTimeMachine($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+};
+window.tmProtect=async id=>{try{const r=await post('/time-machine/protection-points',{target_id:id,kind:'manual'});toast(r.deferred?'Target is busy; protection deferred':tmText('protectionCreated'));renderTimeMachine($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}};
+window.tmRemove=id=>typedConfirm(tmText('remove'),tmText('dataPreserved'),id,async()=>{try{await post('/time-machine/targets/remove',{target_id:id});toast(tmText('dataPreserved'));renderTimeMachine($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+window.tmDeleteData=id=>typedConfirm(tmText('deleteData'),'This permanently deletes the selected Mac backup and all server-side protection points.',id,async()=>{try{await post('/time-machine/targets/delete-data',{target_id:id});toast(tmText('deleteData'));renderTimeMachine($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+window.tmGuide=async id=>{try{
+  const guide=await api('/time-machine/setup-guide?target_id='+encodeURIComponent(id));
+  resetFormCardClasses();
+  $('#form-head').textContent=tmText('setup')+' · '+guide.display_name;
+  $('#form-body').innerHTML=`<div class="nx-card-inner"><strong>${esc(tmText('lan'))}</strong><div class="mono" style="margin-top:8px;overflow-wrap:anywhere">${esc(guide.lan.url)}</div></div>
+    <div class="nx-card-inner"><strong>${esc(tmText('vpn'))}</strong><div class="mono" style="margin-top:8px;overflow-wrap:anywhere">${esc(guide.vpn.url)}</div></div>
+    <div class="nx-chip bad">${esc(tmText('clientEncryption'))}</div><p class="nx-action-sub" style="margin-top:12px">${esc(tmText('encryptionHint'))}</p>
+    <div class="nx-chip good">${esc(tmText('appleRestore'))}</div><div class="form-actions"><button class="btn" onclick="closeForm()">${esc(tmText('close'))}</button></div>`;
+  openFormOverlay('button');
+}catch(e){toast('Error: '+e.message,'error');}};
+
+window.tmReplicationForm=()=>{
+  if(!_tmTargets.length){toast(tmText('noTargets'),'error');return;}
+  openForm(tmText('addReplication'),'⧉',[
+    {name:'target_id',label:tmText('target'),type:'select',options:_tmTargets.filter(x=>x.status!=='removed').map(x=>({value:x.id,label:x.display_name||x.share_name}))},
+    {name:'mode',label:tmText('transport'),type:'select',options:[{value:'local',label:tmText('local')},{value:'remote',label:tmText('remote')}]},
+    {name:'destination_root',label:tmText('destination'),placeholder:'/mnt/replica or /srv/runvard-replicas'},
+    {name:'schedule_hour',label:tmText('schedule'),type:'number',value:2,hint:'0–23'},
+    {name:'bandwidth_mbps',label:tmText('bandwidth'),type:'number',value:0,hint:'0 = unlimited'},
+    {name:'remote_host',label:'Remote host (LAN/VPN)',placeholder:'10.0.0.12',hint:'Leave empty for a local replica.'},
+    {name:'remote_user',label:'SSH user',placeholder:'runvard-replica'},
+    {name:'remote_port',label:'SSH port',type:'number',value:22},
+  ],async d=>{if(d.mode!=='remote'){d.remote_host='';d.remote_user='';}delete d.mode;try{await post('/time-machine/replications',d);closeForm();toast(tmText('addReplication'));renderTimeMachine($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+};
+window.tmRunReplication=async id=>{try{await post('/time-machine/replications/run',{replication_id:id});toast('Replication queued');renderTimeMachine($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}};
+window.tmReplicationPolicyForm=id=>{
+  const replication=_tmReplications.find(item=>item.id===id);if(!replication){toast('Replica not found','error');return;}
+  openForm(tmText('editPolicy'),'⚙',[
+    {name:'schedule_hour',label:tmText('schedule'),type:'number',value:replication.schedule_hour??2,hint:'0–23'},
+    {name:'bandwidth_mbps',label:tmText('bandwidth'),type:'number',value:replication.bandwidth_mbps??0,hint:'0 = unlimited'},
+    {name:'enabled',label:tmText('enabled'),type:'checkbox',value:replication.enabled!==false},
+  ],async d=>{try{await post('/time-machine/replications/policy',{replication_id:id,...d});closeForm();toast(tmText('editPolicy'));renderTimeMachine($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+};
+window.tmReconcileConfig=()=>typedConfirm('Reconcile managed configuration','This replaces external edits in the runvard-managed Samba include with the registered target configuration.','RECONCILE',async()=>{try{await post('/time-machine/system/reconcile',{});toast('Managed configuration reconciled');renderTimeMachine($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+window.tmPromoteReplica=id=>typedConfirm(tmText('promoteReplica'),tmText('sourceUnavailable'),id,async()=>{try{await post('/time-machine/replications/promote',{replication_id:id,source_unavailable_confirmed:true});toast(tmText('promoteReplica'));renderTimeMachine($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
+window.tmImportReplicaForm=()=>openForm(tmText('importReplica'),'⇥',[
+  {name:'source_replication_id',label:'Source replication ID'},
+  {name:'version',label:tmText('version'),placeholder:'1785580000'},
+  {name:'display_name',label:tmText('macName')},
+  {name:'owner',label:tmText('account'),placeholder:'tm-maria'},
+  {name:'create_account',label:tmText('createAccount'),type:'checkbox',value:true},
+  {name:'storage_root',label:tmText('root'),placeholder:'/mnt/backups'},
+  {name:'capacity_gb',label:tmText('targetCapacity'),type:'number',value:1000},
+  {name:'password',label:tmText('password'),type:'password'},
+  {name:'source_unavailable_confirmed',label:tmText('sourceUnavailable'),type:'checkbox',value:false},
+  {name:'client_encryption_required',label:tmText('encryptionAck'),type:'checkbox',value:false,hint:tmText('encryptionHint')},
+],async d=>{if(!d.source_unavailable_confirmed){toast(tmText('sourceUnavailable'),'error');return;}if(!d.client_encryption_required){toast(tmText('encryptionAck'),'error');return;}if(String(d.password||'').length<12){toast('Password must contain at least 12 characters','error');return;}closeForm();typedConfirm(tmText('importReplica'),tmText('sourceUnavailable'),d.source_replication_id,async()=>{try{await post('/time-machine/replications/import',d);toast(tmText('importReplica'));renderTimeMachine($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});});
+window.tmRemoteSetup=async()=>{try{const identity=await post('/time-machine/replications/identity',{});resetFormCardClasses();$('#form-head').textContent=tmText('remoteSetup');$('#form-body').innerHTML=`<div class="nx-card-inner"><strong>${esc(tmText('identity'))}</strong><p class="nx-action-sub">Copy this public key to the destination server.</p><div class="mono" style="overflow-wrap:anywhere">${esc(identity.public_key||identity.authorized_keys_line||'')}</div></div><div class="nx-action-row tm-actions"><button class="btn ghost" onclick="tmClientKeyForm()">${esc(tmText('clientKey'))}</button><button class="btn ghost" onclick="tmHostKeyForm()">${esc(tmText('hostKey'))}</button><button class="btn" onclick="closeForm()">${esc(tmText('close'))}</button></div>`;openFormOverlay('button');}catch(e){toast('Error: '+e.message,'error');}};
+window.tmClientKeyForm=()=>openForm(tmText('clientKey'),'🔑',[{name:'public_key',label:'Ed25519 public key',placeholder:'ssh-ed25519 AAAA…'}],async d=>{try{await post('/time-machine/replications/client-key',d);closeForm();toast(tmText('clientKey'));}catch(e){toast('Error: '+e.message,'error');}});
+window.tmHostKeyForm=()=>openForm(tmText('hostKey'),'🔐',[{name:'host',label:'Remote host',placeholder:'10.0.0.12'},{name:'port',label:'SSH port',type:'number',value:22},{name:'key_line',label:'ssh-keyscan line',placeholder:'10.0.0.12 ssh-ed25519 AAAA…'},{name:'expected_fingerprint',label:'Verified SHA256 fingerprint',placeholder:'SHA256:…'}],async d=>{try{await post('/time-machine/replications/host-key',d);closeForm();toast(tmText('hostKey'));}catch(e){toast('Error: '+e.message,'error');}});
+
 async function renderBackup(body,tab){
+  if(tab==='Time Machine'){await renderTimeMachine(body);return;}
  if(tab==='Jobs'||!tab){
    const j=await api('/backup/jobs');
    body.innerHTML=`<div class="sec-hdr"><h3>Backup jobs</h3><button class="btn" onclick="backupForm()">+ New job</button></div>
@@ -14657,6 +14881,7 @@ function appCardHtml(a){
 }
 
 async function renderBackup(body,tab){
+  if(tab==='Time Machine'){await renderTimeMachine(body);return;}
   if(tab==='History'||tab==='History'){
     const h=await api('/backup/history');
     body.innerHTML=viewIntro('Backup history','Recent backup results and failures.','')+simpleTable(['Job','Time','Duration','Status'],h.map(x=>`<tr><td>${esc(x.name)}</td><td>${new Date(x.time*1000).toLocaleString(localeCode())}</td><td>${x.duration}s</td><td>${statusBadge(x.success?'OK':'Failed',x.success?'good':'bad')}</td></tr>`).join(''));

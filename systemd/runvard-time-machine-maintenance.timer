@@ -1,0 +1,12 @@
+[Unit]
+Description=Run runvard Time Machine maintenance every 15 minutes
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=15min
+RandomizedDelaySec=2min
+Persistent=true
+Unit=runvard-time-machine-maintenance.service
+
+[Install]
+WantedBy=timers.target

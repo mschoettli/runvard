@@ -1,0 +1,16 @@
+[Unit]
+Description=runvard Time Machine health and storage protection
+After=network-online.target smbd.service avahi-daemon.service
+Wants=network-online.target
+
+[Service]
+Type=oneshot
+User=root
+WorkingDirectory=/opt/runvard
+Environment=RUNVARD_DATA_DIR=/opt/runvard/data
+ExecStart=/opt/runvard/venv/bin/python /opt/runvard/scripts/time-machine-worker.py
+Nice=10
+IOSchedulingClass=best-effort
+IOSchedulingPriority=7
+PrivateTmp=true
+NoNewPrivileges=true

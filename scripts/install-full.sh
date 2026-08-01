@@ -481,7 +481,7 @@ PKGS=(
   rsync curl ca-certificates git openssl sudo cron tmux
   btop htop smartmontools mdadm parted lvm2 cryptsetup dosfstools
   e2fsprogs xfsprogs btrfs-progs zfsutils-linux
-  samba nfs-kernel-server nfs-common cifs-utils
+  samba samba-vfs-modules avahi-daemon libnss-mdns nfs-kernel-server nfs-common cifs-utils
   docker.io
   qemu-kvm qemu-utils libvirt-daemon-system libvirt-clients libvirt-dev virtinst
   open-iscsi
@@ -577,8 +577,38 @@ RestartSec=5
 WantedBy=multi-user.target
 EOF
 chmod 644 "$SERVICE_FILE"
+install -m 0644 \
+  "$INSTALL_DIR/systemd/runvard-time-machine-maintenance.service" \
+  /etc/systemd/system/runvard-time-machine-maintenance.service
+install -m 0644 \
+  "$INSTALL_DIR/systemd/runvard-time-machine-maintenance.timer" \
+  /etc/systemd/system/runvard-time-machine-maintenance.timer
+if ! id runvard-replica >/dev/null 2>&1; then
+  useradd --system --home-dir /var/lib/runvard-replica --create-home \
+    --shell /bin/sh --user-group runvard-replica
+fi
+usermod --shell /bin/sh runvard-replica
+# A locked shadow entry can make OpenSSH reject public-key authentication
+# before ForceCommand is reached. Use a discarded random password instead;
+# the sshd Match block disables every password-based authentication method.
+REPLICA_RANDOM_PASSWORD="$(openssl rand -hex 48)"
+printf 'runvard-replica:%s\n' "$REPLICA_RANDOM_PASSWORD" | chpasswd
+unset REPLICA_RANDOM_PASSWORD
+install -d -m 0700 -o runvard-replica -g runvard-replica \
+  /var/lib/runvard-replica/.ssh /srv/runvard-replicas
+touch /var/lib/runvard-replica/.ssh/authorized_keys
+chown runvard-replica:runvard-replica /var/lib/runvard-replica/.ssh/authorized_keys \
+  /srv/runvard-replicas
+chmod 0600 /var/lib/runvard-replica/.ssh/authorized_keys
+install -m 0644 \
+  "$INSTALL_DIR/systemd/90-runvard-time-machine-replication.conf" \
+  /etc/ssh/sshd_config.d/90-runvard-time-machine-replication.conf
+sshd -t
 systemctl daemon-reload
 systemctl enable runvard >/dev/null 2>&1 || true
+systemctl enable --now smbd avahi-daemon >/dev/null 2>&1 || true
+systemctl enable --now runvard-time-machine-maintenance.timer >/dev/null 2>&1 || true
+systemctl reload ssh >/dev/null 2>&1 || systemctl reload sshd >/dev/null 2>&1 || true
 systemctl restart runvard
 ok "$(t service_ok)"
 

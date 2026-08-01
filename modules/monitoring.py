@@ -107,24 +107,46 @@ def get_alert_history():
 def trigger_alert(message: str, channel: str = "webhook"):
     """Alert auslösen + in Verlauf schreiben."""
     cfg = list_alert_rules()
-    history = _load(ALERT_HISTORY, [])
-    history.insert(0, {"time": time.time(), "message": message, "channel": channel})
-    _save(ALERT_HISTORY, history[:200])
+    delivery = {"ok": True}
+    channels = cfg.get("channels", {})
+    if channel == "webhook":
+        if channels.get("webhook"):
+            delivery = _send_webhook(channels["webhook"], message)
+        else:
+            delivery = {"ok": False, "error": "webhook channel is not configured"}
+    elif channel == "email":
+        if channels.get("email"):
+            delivery = _send_email(channels["email"], message)
+        else:
+            delivery = {"ok": False, "error": "email channel is not configured"}
+    elif channel != "in-app":
+        delivery = {"ok": False, "error": "unknown alert channel"}
 
-    if channel == "webhook" and cfg["channels"].get("webhook"):
-        _send_webhook(cfg["channels"]["webhook"], message)
-    elif channel == "email" and cfg["channels"].get("email"):
-        _send_email(cfg["channels"]["email"], message)
-    return {"ok": True}
+    history = _load(ALERT_HISTORY, [])
+    entry = {
+        "time": time.time(), "message": message, "channel": channel,
+        "delivered": bool(delivery.get("ok")),
+    }
+    if not delivery.get("ok"):
+        entry["delivery_error"] = str(delivery.get("error") or "delivery failed")
+    history.insert(0, entry)
+    _save(ALERT_HISTORY, history[:200])
+    if delivery.get("ok"):
+        return {"ok": True}
+    return {"ok": False, "delivery_error": entry["delivery_error"]}
 
 
 def _send_webhook(url: str, message: str):
     """Webhook für Discord/Slack/Telegram."""
     try:
         import requests
-        requests.post(url, json={"content": message, "text": message}, timeout=10)
-    except Exception:
-        pass
+        response = requests.post(
+            url, json={"content": message, "text": message}, timeout=10,
+        )
+        response.raise_for_status()
+        return {"ok": True}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)[:240]}
 
 
 def _send_email(config: dict, message: str):
@@ -140,5 +162,6 @@ def _send_email(config: dict, message: str):
             s.starttls()
             s.login(config["user"], config["pass"])
             s.send_message(msg)
-    except Exception:
-        pass
+        return {"ok": True}
+    except Exception as exc:
+        return {"ok": False, "error": str(exc)[:240]}

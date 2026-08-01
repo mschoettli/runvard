@@ -23,7 +23,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from modules import (system, terminal, files, storage, docker_mgr, services,
                      vms, backup, shares, network, security, monitoring,
                      system_mgr, apps, dashboard, metrics, accounts, audit,
-                     ports)
+                     ports, time_machine)
 from modules import security_tokens
 from modules.external_servers import ExternalServerManager
 from modules.external_servers.service import error_category
@@ -349,6 +349,14 @@ def _danger_confirm_meta(path, form):
         "/api/federation/v1/admin/nodes/revoke": ("federation:revoke", "node_id"),
         "/api/external-servers/v1/admin/delete":
             ("external-server:delete", "server_id"),
+        "/api/time-machine/targets/remove":
+            ("time-machine:remove", "target_id"),
+        "/api/time-machine/targets/delete-data":
+            ("time-machine:delete-data", "target_id"),
+        "/api/time-machine/replications/promote":
+            ("time-machine:promote-replica", "replication_id"),
+        "/api/time-machine/replications/import":
+            ("time-machine:promote-received", "source_replication_id"),
     }
     if path == "/api/auth/toggle":
         if str(form.get("enabled", "")) == "1":
@@ -1464,6 +1472,295 @@ def backup_run(job_id: int = Form(...), user: str = Depends(auth)):
 @app.get("/api/backup/history")
 def backup_history(user: str = Depends(auth)):
     return backup.get_history()
+
+
+# ============ Time Machine ============
+
+@app.get("/api/time-machine/overview")
+def time_machine_overview(user: str = Depends(auth)):
+    overview = time_machine.health_check()
+    overview["protection_points"] = time_machine.list_protection_points()
+    return overview
+
+
+@app.get("/api/time-machine/system")
+def time_machine_system(user: str = Depends(auth)):
+    return time_machine.system_status()
+
+
+@app.post("/api/time-machine/system/reconcile")
+def time_machine_system_reconcile(user: str = Depends(confirmed_admin)):
+    try:
+        return time_machine.reconcile_managed_config()
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/time-machine/setup-guide")
+def time_machine_setup_guide(
+    request: Request, target_id: str, user: str = Depends(auth),
+):
+    try:
+        hostname = request.url.hostname or request.headers.get("host", "").split(":", 1)[0]
+        return time_machine.setup_guide(target_id, hostname=hostname)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/time-machine/targets")
+def time_machine_target_create(
+    display_name: str = Form(...),
+    owner: str = Form(...),
+    storage_root: str = Form(...),
+    capacity_gb: int = Form(...),
+    source_capacity_gb: int = Form(0),
+    password: str = Form(""),
+    create_account: bool = Form(False),
+    client_encryption_required: bool = Form(False),
+    user: str = Depends(confirmed_admin),
+):
+    try:
+        if not client_encryption_required:
+            raise ValueError(
+                "client-side encryption policy must be explicitly confirmed"
+            )
+        return time_machine.create_target(
+            display_name=display_name,
+            owner=owner,
+            storage_root=storage_root,
+            capacity_gb=capacity_gb,
+            source_capacity_gb=source_capacity_gb,
+            password=password,
+            create_account=create_account,
+            client_encryption_required=client_encryption_required,
+        )
+    except (ValueError, KeyError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/time-machine/targets/enabled")
+def time_machine_target_enabled(
+    target_id: str = Form(...), enabled: bool = Form(...),
+    user: str = Depends(confirmed_admin),
+):
+    try:
+        return time_machine.set_target_enabled(target_id, enabled)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/time-machine/targets/policy")
+def time_machine_target_policy(
+    target_id: str = Form(...), capacity_gb: int = Form(...),
+    daily: int = Form(7), weekly: int = Form(4), monthly: int = Form(3),
+    user: str = Depends(confirmed_admin),
+):
+    try:
+        return time_machine.update_target_policy(
+            target_id, capacity_gb=capacity_gb,
+            daily=daily, weekly=weekly, monthly=monthly,
+            actor=user,
+        )
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/time-machine/targets/remove")
+def time_machine_target_remove(
+    target_id: str = Form(...), confirm_token: str = Form(""),
+    user: str = Depends(confirmed_admin),
+):
+    try:
+        return time_machine.remove_target(target_id, actor=user)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/time-machine/targets/delete-data")
+def time_machine_target_delete_data(
+    target_id: str = Form(...), confirm_token: str = Form(""),
+    user: str = Depends(confirmed_admin),
+):
+    try:
+        return time_machine.delete_target_data(target_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/time-machine/protection-points")
+def time_machine_protection_point(
+    target_id: str = Form(...), kind: str = Form("manual"),
+    user: str = Depends(confirmed_admin),
+):
+    try:
+        return time_machine.create_protection_point(target_id, kind=kind)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/time-machine/replications")
+def time_machine_replications(target_id: str = "", user: str = Depends(auth)):
+    try:
+        return {"replications": time_machine.list_replications(target_id or None)}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/time-machine/jobs")
+def time_machine_jobs(limit: int = 50, user: str = Depends(auth)):
+    try:
+        return {"jobs": time_machine.list_jobs(limit=limit)}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.get("/api/time-machine/events")
+def time_machine_events(limit: int = 50, user: str = Depends(auth)):
+    try:
+        return {"events": time_machine.list_events(limit=limit)}
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/time-machine/replications")
+def time_machine_replication_create(
+    target_id: str = Form(...), destination_root: str = Form(...),
+    schedule_hour: int = Form(2), bandwidth_mbps: int = Form(0),
+    remote_host: str = Form(""), remote_user: str = Form(""),
+    remote_port: int = Form(22), user: str = Depends(confirmed_admin),
+):
+    try:
+        return time_machine.create_replication(
+            target_id=target_id, destination_root=destination_root,
+            schedule_hour=schedule_hour, bandwidth_mbps=bandwidth_mbps,
+            remote_host=remote_host, remote_user=remote_user,
+            remote_port=remote_port,
+        )
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/time-machine/replications/run")
+def time_machine_replication_run(
+    replication_id: str = Form(...), user: str = Depends(confirmed_admin),
+):
+    try:
+        return time_machine.queue_replication(replication_id)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/time-machine/replications/policy")
+def time_machine_replication_policy(
+    replication_id: str = Form(...), schedule_hour: int = Form(...),
+    bandwidth_mbps: int = Form(0), enabled: bool = Form(True),
+    user: str = Depends(confirmed_admin),
+):
+    try:
+        return time_machine.update_replication_policy(
+            replication_id, schedule_hour=schedule_hour,
+            bandwidth_mbps=bandwidth_mbps, enabled=enabled, actor=user,
+        )
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/time-machine/replications/promote")
+def time_machine_replication_promote(
+    replication_id: str = Form(...),
+    source_unavailable_confirmed: bool = Form(False),
+    confirm_token: str = Form(""),
+    user: str = Depends(confirmed_admin),
+):
+    try:
+        return time_machine.promote_replica(
+            replication_id,
+            source_unavailable_confirmed=source_unavailable_confirmed,
+        )
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/time-machine/replications/import")
+def time_machine_replication_import(
+    source_replication_id: str = Form(...), version: str = Form(...),
+    display_name: str = Form(...), owner: str = Form(...),
+    storage_root: str = Form(...), capacity_gb: int = Form(...),
+    password: str = Form(...), create_account: bool = Form(False),
+    source_unavailable_confirmed: bool = Form(False),
+    client_encryption_required: bool = Form(False),
+    confirm_token: str = Form(""), user: str = Depends(confirmed_admin),
+):
+    try:
+        if not client_encryption_required:
+            raise ValueError(
+                "client-side encryption policy must be explicitly confirmed"
+            )
+        return time_machine.promote_received_replica(
+            source_replication_id=source_replication_id, version=version,
+            display_name=display_name, owner=owner, storage_root=storage_root,
+            capacity_gb=capacity_gb, password=password,
+            create_account=create_account,
+            source_unavailable_confirmed=source_unavailable_confirmed,
+            client_encryption_required=client_encryption_required,
+        )
+    except KeyError as exc:
+        raise HTTPException(404, str(exc)) from exc
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/time-machine/replications/identity")
+def time_machine_replication_identity(user: str = Depends(confirmed_admin)):
+    try:
+        return time_machine.ensure_replication_identity()
+    except RuntimeError as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/time-machine/replications/client-key")
+def time_machine_replication_client_key(
+    public_key: str = Form(...), user: str = Depends(confirmed_admin),
+):
+    try:
+        return time_machine.register_replication_client_key(public_key)
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
+
+
+@app.post("/api/time-machine/replications/host-key")
+def time_machine_replication_host_key(
+    host: str = Form(...), port: int = Form(22), key_line: str = Form(...),
+    expected_fingerprint: str = Form(...),
+    user: str = Depends(confirmed_admin),
+):
+    try:
+        return time_machine.register_remote_host_key(
+            host=host, port=port, key_line=key_line,
+            expected_fingerprint=expected_fingerprint,
+        )
+    except (ValueError, RuntimeError) as exc:
+        raise HTTPException(400, str(exc)) from exc
 
 
 # ============ Freigaben ============
