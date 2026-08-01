@@ -838,7 +838,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .ice-bg{background:radial-gradient(ellipse at 60% 30%,#818cf8,transparent 50%),radial-gradient(ellipse at 20% 70%,#3730a3,transparent 55%),radial-gradient(ellipse at 85% 75%,#0284c7,transparent 45%),#03051a!important;background-attachment:fixed!important}
 .galaxy-bg{background:radial-gradient(ellipse at 40% 40%,#4c1d95,transparent 55%),radial-gradient(ellipse at 75% 20%,#1e1b4b,transparent 50%),radial-gradient(ellipse at 20% 80%,#0f172a,transparent 50%),#020108!important;background-attachment:fixed!important}
 </style>
-<link rel="stylesheet" href="/static/modern-theme.css?v=03a8990670b4">
+<link rel="stylesheet" href="/static/modern-theme.css?v=814d5ef867f4">
 </head>
 <body>
 
@@ -11125,13 +11125,61 @@ window.backupForm=()=>openForm('Create backup','🗄',[{name:'name',label:'Name'
 window.runBackup=async id=>{toast('Backup started…');try{const r=await post('/backup/run',{job_id:id});toast(r.ok?'Backup complete':'Error',r.ok?'success':'error');}catch(e){toast('Error: '+e.message,'error');}};
 
 // ═══ Freigaben – alle auf einer Seite ═══
+const SHARE_UI={
+  en:{
+    intro:'Choose a protocol to manage its shares and settings.',shares:'Shares',exports:'Exports',service:'Service',active:'Active',inactive:'Inactive',
+    sambaTitle:'Samba shares',sambaCopy:'For Windows, macOS and Linux',nfsTitle:'NFS exports',nfsCopy:'For Linux and Unix systems',ftpTitle:'FTP server',ftpCopy:'Legacy file transfer service',
+    addShare:'Add share',addExport:'Add export',name:'Name',folder:'Folder',access:'Access',devices:'Allowed devices',readWrite:'Read & write',readOnly:'Read only',connect:'Connect',
+    noSamba:'No Samba shares yet.',noNfs:'No NFS exports yet.',ftpActive:'FTP is active on this server.',ftpInactive:'FTP is inactive on this server.',ftpUnavailable:'FTP status is unavailable.'
+  },
+  de:{
+    intro:'Wähle ein Protokoll, um dessen Freigaben und Einstellungen zu verwalten.',shares:'Freigaben',exports:'Exporte',service:'Dienst',active:'Aktiv',inactive:'Inaktiv',
+    sambaTitle:'Samba-Freigaben',sambaCopy:'Für Windows, macOS und Linux',nfsTitle:'NFS-Exporte',nfsCopy:'Für Linux- und Unix-Systeme',ftpTitle:'FTP-Server',ftpCopy:'Klassischer Dateiübertragungsdienst',
+    addShare:'Freigabe hinzufügen',addExport:'Export hinzufügen',name:'Name',folder:'Ordner',access:'Zugriff',devices:'Freigegebene Geräte',readWrite:'Lesen & Schreiben',readOnly:'Nur Lesen',connect:'Verbinden',
+    noSamba:'Noch keine Samba-Freigaben.',noNfs:'Noch keine NFS-Exporte.',ftpActive:'FTP ist auf diesem Server aktiv.',ftpInactive:'FTP ist auf diesem Server inaktiv.',ftpUnavailable:'Der FTP-Status ist nicht verfügbar.'
+  },
+  fr:{
+    intro:'Choisissez un protocole pour gérer ses partages et ses réglages.',shares:'Partages',exports:'Exports',service:'Service',active:'Actif',inactive:'Inactif',
+    sambaTitle:'Partages Samba',sambaCopy:'Pour Windows, macOS et Linux',nfsTitle:'Exports NFS',nfsCopy:'Pour les systèmes Linux et Unix',ftpTitle:'Serveur FTP',ftpCopy:'Service classique de transfert de fichiers',
+    addShare:'Ajouter un partage',addExport:'Ajouter un export',name:'Nom',folder:'Dossier',access:'Accès',devices:'Appareils autorisés',readWrite:'Lecture et écriture',readOnly:'Lecture seule',connect:'Se connecter',
+    noSamba:'Aucun partage Samba.',noNfs:'Aucun export NFS.',ftpActive:'FTP est actif sur ce serveur.',ftpInactive:'FTP est inactif sur ce serveur.',ftpUnavailable:'Le statut FTP est indisponible.'
+  },
+  it:{
+    intro:'Scegli un protocollo per gestire condivisioni e impostazioni.',shares:'Condivisioni',exports:'Esportazioni',service:'Servizio',active:'Attivo',inactive:'Inattivo',
+    sambaTitle:'Condivisioni Samba',sambaCopy:'Per Windows, macOS e Linux',nfsTitle:'Esportazioni NFS',nfsCopy:'Per sistemi Linux e Unix',ftpTitle:'Server FTP',ftpCopy:'Servizio classico di trasferimento file',
+    addShare:'Aggiungi condivisione',addExport:'Aggiungi esportazione',name:'Nome',folder:'Cartella',access:'Accesso',devices:'Dispositivi consentiti',readWrite:'Lettura e scrittura',readOnly:'Sola lettura',connect:'Connetti',
+    noSamba:'Nessuna condivisione Samba.',noNfs:'Nessuna esportazione NFS.',ftpActive:'FTP è attivo su questo server.',ftpInactive:'FTP è inattivo su questo server.',ftpUnavailable:'Lo stato FTP non è disponibile.'
+  },
+  es:{
+    intro:'Elige un protocolo para gestionar sus recursos y ajustes.',shares:'Recursos compartidos',exports:'Exportaciones',service:'Servicio',active:'Activo',inactive:'Inactivo',
+    sambaTitle:'Recursos Samba',sambaCopy:'Para Windows, macOS y Linux',nfsTitle:'Exportaciones NFS',nfsCopy:'Para sistemas Linux y Unix',ftpTitle:'Servidor FTP',ftpCopy:'Servicio clásico de transferencia de archivos',
+    addShare:'Añadir recurso',addExport:'Añadir exportación',name:'Nombre',folder:'Carpeta',access:'Acceso',devices:'Dispositivos permitidos',readWrite:'Lectura y escritura',readOnly:'Solo lectura',connect:'Conectar',
+    noSamba:'Todavía no hay recursos Samba.',noNfs:'Todavía no hay exportaciones NFS.',ftpActive:'FTP está activo en este servidor.',ftpInactive:'FTP está inactivo en este servidor.',ftpUnavailable:'El estado de FTP no está disponible.'
+  },
+  pt:{
+    intro:'Escolha um protocolo para gerir as partilhas e definições.',shares:'Partilhas',exports:'Exportações',service:'Serviço',active:'Ativo',inactive:'Inativo',
+    sambaTitle:'Partilhas Samba',sambaCopy:'Para Windows, macOS e Linux',nfsTitle:'Exportações NFS',nfsCopy:'Para sistemas Linux e Unix',ftpTitle:'Servidor FTP',ftpCopy:'Serviço clássico de transferência de ficheiros',
+    addShare:'Adicionar partilha',addExport:'Adicionar exportação',name:'Nome',folder:'Pasta',access:'Acesso',devices:'Dispositivos permitidos',readWrite:'Leitura e escrita',readOnly:'Apenas leitura',connect:'Ligar',
+    noSamba:'Ainda não há partilhas Samba.',noNfs:'Ainda não há exportações NFS.',ftpActive:'O FTP está ativo neste servidor.',ftpInactive:'O FTP está inativo neste servidor.',ftpUnavailable:'O estado do FTP não está disponível.'
+  }
+};
+function shareUi(key){const lang=currentLanguage();return SHARE_UI[lang]?.[key]||SHARE_UI.en[key]||key;}
+let modernShareState={activeProtocol:'smb',samba:[],nfs:[],ftp:{active:false},host:''};
+
 async function renderSharesAll(body){
   const [samba, nfs, ftp]=await Promise.all([
-    api('/shares/samba'), api('/shares/nfs'), api('/shares/ftp')
+    api('/shares/samba').catch(()=>[]),
+    api('/shares/nfs').catch(()=>[]),
+    api('/shares/ftp').catch(()=>({active:false,unavailable:true}))
   ]);
   const host=location.hostname;
+  if(!isModernUi())return renderSharesOriginal(body,samba,nfs,ftp,host);
+  return renderSharesModern(body,samba,nfs,ftp,host,modernShareState.activeProtocol);
+}
+
+function renderSharesOriginal(body,samba,nfs,ftp,host){
   body.innerHTML=`
-  <div style="display:flex;flex-direction:column;gap:20px">
+  <div class="shares-original" style="display:flex;flex-direction:column;gap:20px">
     <div>
       <div class="sec-hdr"><h3>Samba (SMB)</h3><button class="btn" onclick="sambaForm()">+ Share</button></div>
       <table style="table-layout:fixed"><thead><tr><th>Name</th><th>Pfad</th><th style="width:90px">Schreibbar</th><th style="width:90px;text-align:right">Links</th></tr></thead><tbody>
@@ -11159,6 +11207,71 @@ async function renderSharesAll(body){
       ${ftp.active?`<button class="btn sm ghost" onclick="showFtpLinks('${host}')">🔗 Links</button>`:''}
     </div>
   </div>`;
+  translateRenderedText(body);
+}
+
+function modernShareDetail(protocol,samba,nfs,ftp,host){
+  if(protocol==='nfs'){
+    const rows=nfs.map(x=>`<tr>
+      <td class="mono" data-label="${esc(shareUi('folder'))}">${esc(x.path)}</td>
+      <td data-label="${esc(shareUi('devices'))}">${esc(x.clients||'—')}</td>
+      <td class="modern-share-row-action" data-label=""><button class="btn ghost sm" onclick="showNfsLinks('${esc(x.path)}','${host}')">${esc(shareUi('connect'))}</button></td>
+    </tr>`).join('');
+    return `<section class="modern-share-detail" data-share-detail="nfs">
+      <header class="modern-share-detail-head"><div><h3>${esc(shareUi('nfsTitle'))}</h3><p>${esc(shareUi('nfsCopy'))}</p></div><button class="btn" onclick="nfsForm()">＋ ${esc(shareUi('addExport'))}</button></header>
+      ${rows?`<div class="modern-share-table-wrap"><table><thead><tr><th>${esc(shareUi('folder'))}</th><th>${esc(shareUi('devices'))}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="modern-share-empty"><p>${esc(shareUi('noNfs'))}</p><button class="btn" onclick="nfsForm()">＋ ${esc(shareUi('addExport'))}</button></div>`}
+    </section>`;
+  }
+  if(protocol==='ftp'){
+    const stateText=ftp.unavailable?shareUi('ftpUnavailable'):ftp.active?shareUi('ftpActive'):shareUi('ftpInactive');
+    const stateLabel=ftp.active?shareUi('active'):shareUi('inactive');
+    return `<section class="modern-share-detail" data-share-detail="ftp">
+      <header class="modern-share-detail-head"><div><h3>${esc(shareUi('ftpTitle'))}</h3><p>${esc(shareUi('ftpCopy'))}</p></div></header>
+      <div class="modern-share-service-state ${ftp.active?'is-active':'is-inactive'}"><span class="modern-share-state-dot"></span><div><strong>${esc(stateLabel)}</strong><p>${esc(stateText)}</p></div>${ftp.active?`<button class="btn ghost" onclick="showFtpLinks('${host}')">${esc(shareUi('connect'))}</button>`:''}</div>
+    </section>`;
+  }
+  const rows=samba.map(x=>`<tr>
+    <td data-label="${esc(shareUi('name'))}"><strong>${esc(x.name)}</strong></td>
+    <td class="mono" data-label="${esc(shareUi('folder'))}">${esc(x.path)}</td>
+    <td data-label="${esc(shareUi('access'))}">${esc(x.writable?shareUi('readWrite'):shareUi('readOnly'))}</td>
+    <td class="modern-share-row-action" data-label=""><button class="btn ghost sm" onclick="showShareLinks('${esc(x.name)}','${host}')">${esc(shareUi('connect'))}</button></td>
+  </tr>`).join('');
+  return `<section class="modern-share-detail" data-share-detail="smb">
+    <header class="modern-share-detail-head"><div><h3>${esc(shareUi('sambaTitle'))}</h3><p>${esc(shareUi('sambaCopy'))}</p></div><button class="btn" onclick="sambaForm()">＋ ${esc(shareUi('addShare'))}</button></header>
+    ${rows?`<div class="modern-share-table-wrap"><table><thead><tr><th>${esc(shareUi('name'))}</th><th>${esc(shareUi('folder'))}</th><th>${esc(shareUi('access'))}</th><th></th></tr></thead><tbody>${rows}</tbody></table></div>`:`<div class="modern-share-empty"><p>${esc(shareUi('noSamba'))}</p><button class="btn" onclick="sambaForm()">＋ ${esc(shareUi('addShare'))}</button></div>`}
+  </section>`;
+}
+
+function renderSharesModern(body,samba,nfs,ftp,host,activeProtocol='smb'){
+  const allowed=['smb','nfs','ftp'];
+  if(!allowed.includes(activeProtocol))activeProtocol='smb';
+  modernShareState={activeProtocol,samba,nfs,ftp,host};
+  body.innerHTML=`<div class="modern-share-page">
+    <header class="modern-share-intro"><h3>${esc(uiText('Shares'))}</h3><p>${esc(shareUi('intro'))}</p></header>
+    <div class="modern-share-protocol-grid" role="group" aria-label="${esc(uiText('Shares'))}">
+      <button type="button" class="modern-share-protocol-card" data-share-protocol="smb" aria-pressed="true" onclick="selectShareProtocol('smb')">
+        <span class="modern-share-protocol-mark">SMB</span><span class="modern-share-protocol-name">Samba</span><strong>${samba.length}</strong><small>${esc(shareUi('shares'))}</small>
+      </button>
+      <button type="button" class="modern-share-protocol-card" data-share-protocol="nfs" aria-pressed="false" onclick="selectShareProtocol('nfs')">
+        <span class="modern-share-protocol-mark">NFS</span><span class="modern-share-protocol-name">NFS</span><strong>${nfs.length}</strong><small>${esc(shareUi('exports'))}</small>
+      </button>
+      <button type="button" class="modern-share-protocol-card" data-share-protocol="ftp" aria-pressed="false" onclick="selectShareProtocol('ftp')">
+        <span class="modern-share-protocol-mark">FTP</span><span class="modern-share-protocol-name">FTP</span><span class="modern-share-protocol-status ${ftp.active?'is-active':'is-inactive'}"><i></i>${esc(ftp.active?shareUi('active'):shareUi('inactive'))}</span><small>${esc(shareUi('service'))}</small>
+      </button>
+    </div>
+    ${modernShareDetail(activeProtocol,samba,nfs,ftp,host)}
+  </div>`;
+  body.querySelectorAll('[data-share-protocol]').forEach(card=>{
+    const active=card.dataset.shareProtocol===activeProtocol;
+    card.classList.toggle('is-active',active);
+    card.setAttribute('aria-pressed',active?'true':'false');
+  });
+}
+
+window.selectShareProtocol=protocol=>{
+  if(!isModernUi()||!['smb','nfs','ftp'].includes(protocol))return;
+  const state=modernShareState;
+  renderSharesModern($('#modal-body'),state.samba,state.nfs,state.ftp,state.host,protocol);
 }
 
 // Link-Modal für Samba

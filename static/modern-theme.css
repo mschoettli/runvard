@@ -1170,6 +1170,392 @@ html[data-ui-theme="modern"] .dash-ctx-sep {
   background: var(--border);
 }
 
+/* Shares: the modern theme uses progressive disclosure instead of the original admin tables. */
+html[data-ui-theme="modern"] .modern-share-page {
+  width: 100%;
+  max-width: 760px;
+  margin: 0 auto;
+}
+
+html[data-ui-theme="modern"] .modern-share-intro {
+  margin-bottom: 20px;
+}
+
+html[data-ui-theme="modern"] .modern-share-intro h3 {
+  margin: 0 0 6px;
+  color: var(--text);
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -.025em;
+}
+
+html[data-ui-theme="modern"] .modern-share-intro p {
+  max-width: 58ch;
+  margin: 0;
+  color: var(--text2);
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-rows: auto 1fr auto;
+  gap: 5px 10px;
+  min-height: 124px;
+  padding: 14px;
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 82%);
+  border-radius: 15px;
+  background: rgb(255 255 255 / 48%);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  box-shadow: 0 10px 26px rgb(48 75 110 / 7%);
+  cursor: pointer;
+  transition: border-color .16s ease, background .16s ease, box-shadow .16s ease, transform .16s ease;
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-card:hover {
+  border-color: var(--border-accent);
+  background: rgb(255 255 255 / 72%);
+  box-shadow: 0 14px 30px rgb(48 75 110 / 11%);
+  transform: translateY(-1px);
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-card:active {
+  transform: translateY(0);
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-card:focus-visible {
+  border-color: var(--accent);
+  outline: 3px solid rgb(57 115 230 / 18%);
+  outline-offset: 2px;
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-card.is-active {
+  border-color: rgb(57 115 230 / 26%);
+  background: rgb(255 255 255 / 82%);
+  box-shadow:
+    0 14px 34px rgb(48 75 110 / 11%),
+    inset 0 0 0 1px rgb(57 115 230 / 7%);
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-mark {
+  display: inline-grid;
+  grid-row: 1;
+  place-items: center;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgb(57 115 230 / 16%);
+  border-radius: 10px;
+  background: rgb(57 115 230 / 9%);
+  color: var(--accent);
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .035em;
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-card.is-active .modern-share-protocol-mark {
+  border-color: var(--accent);
+  background: var(--accent);
+  color: #fff;
+  box-shadow: 0 6px 14px rgb(57 115 230 / 18%);
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-name {
+  align-self: center;
+  min-width: 0;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-card > strong {
+  grid-column: 1 / -1;
+  align-self: end;
+  margin-top: 8px;
+  color: var(--text);
+  font-size: 28px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.04em;
+  line-height: 1;
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-card > small {
+  grid-column: 1 / -1;
+  color: var(--text3);
+  font-size: 10px;
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-status {
+  grid-column: 1 / -1;
+  align-self: end;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 12px;
+  color: var(--text2);
+  font-size: 12px;
+  font-weight: 650;
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-status i,
+html[data-ui-theme="modern"] .modern-share-state-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--text3);
+  box-shadow: 0 0 0 4px rgb(72 99 132 / 8%);
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-status.is-active i,
+html[data-ui-theme="modern"] .modern-share-service-state.is-active .modern-share-state-dot {
+  background: var(--green);
+  box-shadow: 0 0 0 4px rgb(32 137 101 / 10%);
+}
+
+html[data-ui-theme="modern"] .modern-share-protocol-status.is-inactive i,
+html[data-ui-theme="modern"] .modern-share-service-state.is-inactive .modern-share-state-dot {
+  background: var(--red);
+  box-shadow: 0 0 0 4px rgb(200 62 77 / 9%);
+}
+
+html[data-ui-theme="modern"] .modern-share-detail {
+  overflow: hidden;
+  border: 1px solid rgb(255 255 255 / 82%);
+  border-radius: 15px;
+  background: rgb(255 255 255 / 52%);
+  box-shadow: 0 12px 30px rgb(48 75 110 / 7%);
+}
+
+html[data-ui-theme="modern"] .modern-share-detail-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-height: 70px;
+  padding: 13px 16px;
+  border-bottom: 1px solid var(--border);
+}
+
+html[data-ui-theme="modern"] .modern-share-detail-head > div {
+  min-width: 0;
+}
+
+html[data-ui-theme="modern"] .modern-share-detail-head h3 {
+  margin: 0 0 4px;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+html[data-ui-theme="modern"] .modern-share-detail-head p {
+  margin: 0;
+  color: var(--text3);
+  font-size: 11px;
+}
+
+html[data-ui-theme="modern"] .modern-share-detail-head .btn {
+  margin-left: auto;
+}
+
+html[data-ui-theme="modern"] .modern-share-table-wrap {
+  overflow-x: auto;
+}
+
+html[data-ui-theme="modern"] .modern-share-detail table {
+  min-width: 590px;
+  margin: 0;
+}
+
+html[data-ui-theme="modern"] .modern-share-detail th {
+  padding: 10px 16px;
+  font-size: 10px;
+}
+
+html[data-ui-theme="modern"] .modern-share-detail td {
+  padding: 11px 16px;
+  color: var(--text2);
+  font-size: 12px;
+}
+
+html[data-ui-theme="modern"] .modern-share-detail td strong {
+  color: var(--text);
+  font-weight: 650;
+}
+
+html[data-ui-theme="modern"] .modern-share-detail td.mono {
+  max-width: 260px;
+  overflow: hidden;
+  color: var(--text2);
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-ui-theme="modern"] .modern-share-row-action {
+  width: 1%;
+  text-align: right;
+  white-space: nowrap;
+}
+
+html[data-ui-theme="modern"] .modern-share-empty {
+  display: grid;
+  place-items: center;
+  min-height: 160px;
+  padding: 28px;
+  text-align: center;
+}
+
+html[data-ui-theme="modern"] .modern-share-empty p {
+  margin: 0 0 14px;
+  color: var(--text2);
+  font-size: 13px;
+}
+
+html[data-ui-theme="modern"] .modern-share-service-state {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  min-height: 112px;
+  padding: 22px;
+}
+
+html[data-ui-theme="modern"] .modern-share-service-state strong {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text);
+  font-size: 13px;
+}
+
+html[data-ui-theme="modern"] .modern-share-service-state p {
+  margin: 0;
+  color: var(--text2);
+  font-size: 12px;
+}
+
+@media (max-width: 640px) {
+  html[data-ui-theme="modern"] .modern-share-protocol-grid {
+    grid-template-columns: 1fr;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-protocol-card {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    grid-template-rows: auto auto;
+    min-height: 76px;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-protocol-card > strong,
+  html[data-ui-theme="modern"] .modern-share-protocol-status {
+    grid-column: 3;
+    grid-row: 1;
+    align-self: center;
+    justify-self: end;
+    margin: 0;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-protocol-card > small {
+    grid-column: 2 / -1;
+    grid-row: 2;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-detail-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-detail-head .btn {
+    width: 100%;
+    margin-left: 0;
+    justify-content: center;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-table-wrap {
+    overflow: visible;
+    padding: 8px 10px 10px;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-detail table {
+    display: block;
+    min-width: 0;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-detail thead {
+    display: none;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-detail tbody {
+    display: grid;
+    gap: 8px;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-detail tr {
+    display: grid;
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 11px;
+    background: rgb(255 255 255 / 44%);
+  }
+
+  html[data-ui-theme="modern"] .modern-share-detail td {
+    display: grid;
+    grid-template-columns: 92px minmax(0, 1fr);
+    gap: 10px;
+    width: auto;
+    max-width: none;
+    padding: 6px 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-detail td::before {
+    color: var(--text3);
+    font-size: 10px;
+    font-weight: 650;
+    content: attr(data-label);
+  }
+
+  html[data-ui-theme="modern"] .modern-share-detail td.mono {
+    max-width: none;
+    white-space: normal;
+    overflow-wrap: anywhere;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-detail td[data-label=""] {
+    display: block;
+    padding-top: 9px;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-detail td[data-label=""]::before {
+    display: none;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-row-action .btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  html[data-ui-theme="modern"] .modern-share-service-state {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  html[data-ui-theme="modern"] .modern-share-service-state .btn {
+    grid-column: 1 / -1;
+    justify-content: center;
+  }
+}
+
 @media (min-width: 761px) {
   html[data-ui-theme="modern"] .modern-module-intro {
     grid-template-columns: minmax(0, 1fr) minmax(9.5rem, 11rem);
