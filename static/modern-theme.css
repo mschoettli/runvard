@@ -2040,8 +2040,9 @@ html[data-ui-theme="modern"] .modern-share-service-state p {
     background: rgb(248 251 255 / 98%);
   }
 
-  html[data-ui-theme="modern"] .topbar-user-button {
-    background: rgb(255 255 255 / 62%);
+  html[data-ui-theme="modern"] .topbar-menu-icon {
+    background: rgb(255 255 255 / 42%);
+    color: var(--text2);
   }
 
   html[data-ui-theme="modern"] .container {

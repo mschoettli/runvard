@@ -66,8 +66,11 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 .avatar-wrap{display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:8px;cursor:pointer;transition:background .15s;margin-left:6px}.avatar-wrap:hover{background:rgba(122,74,255,.08)}.avatar{width:30px;height:30px;border-radius:50%;background:rgba(122,74,255,.2);border:1.5px solid rgba(122,74,255,.4);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#9d7aff;flex-shrink:0}.avatar-info{display:flex;flex-direction:column;line-height:1.2}.avatar-name{font-size:12px;font-weight:600;color:var(--text)}.avatar-role{font-size:10px;color:var(--text3)}
 .user-menu-wrap{position:relative}
 .topbar-user-button{min-width:0;height:32px;padding:4px 8px;border:0;border-radius:7px;background:transparent;color:rgba(240,240,255,.4);font:inherit;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.topbar-user-button:hover,.topbar-user-button:focus-visible{background:var(--glass-hover);color:var(--text);outline:2px solid var(--border-accent);outline-offset:2px}
-.topbar-menu-icon{display:none;font-size:18px;line-height:1;letter-spacing:.06em;transform:translateY(-2px)}
+.topbar-user-button:hover{background:transparent;color:var(--text)}
+.topbar-user-button:focus-visible{outline:none}
+.topbar-user-button:hover .topbar-menu-icon{background:var(--glass-hover);color:var(--text)}
+.topbar-user-button:focus-visible .topbar-menu-icon{outline:2px solid var(--border-accent);outline-offset:2px}
+.topbar-menu-icon{display:none;font-size:20px;line-height:1}
 .user-menu{position:absolute;top:calc(100% + .5rem);right:0;min-width:210px;background:#0d0e1a;border:1px solid var(--border-accent);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.5);padding:6px;display:none;z-index:200}
 .user-menu.open{display:block}
 .mobile-header-tools{display:none}
@@ -825,9 +828,9 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   .logo-host::before{display:none}
   .topright{grid-column:2;grid-row:1}
   .desktop-header-action,.topbar-sep{display:none}
-  .topbar-user-button{width:2.75rem;height:2.75rem;padding:0;border:1px solid var(--border);border-radius:.75rem;background:var(--glass)}
+  .topbar-user-button{width:2.75rem;height:2.75rem;padding:0;border:0;border-radius:.75rem;background:transparent}
   .topbar-user-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-  .topbar-menu-icon{display:block}
+  .topbar-menu-icon{display:grid;width:2rem;height:2rem;place-items:center;border-radius:.625rem;background:rgba(255,255,255,.04);color:var(--text2)}
   .topbar-center{position:absolute;left:0;right:0;bottom:0;width:auto;height:3px;margin:0;pointer-events:none}
   .top-progress{width:100%;max-width:none;height:3px;gap:0;transform:none}
   .top-progress-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
@@ -858,7 +861,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .ice-bg{background:radial-gradient(ellipse at 60% 30%,#818cf8,transparent 50%),radial-gradient(ellipse at 20% 70%,#3730a3,transparent 55%),radial-gradient(ellipse at 85% 75%,#0284c7,transparent 45%),#03051a!important;background-attachment:fixed!important}
 .galaxy-bg{background:radial-gradient(ellipse at 40% 40%,#4c1d95,transparent 55%),radial-gradient(ellipse at 75% 20%,#1e1b4b,transparent 50%),radial-gradient(ellipse at 20% 80%,#0f172a,transparent 50%),#020108!important;background-attachment:fixed!important}
 </style>
-<link rel="stylesheet" href="/static/modern-theme.css?v=9555bb9de914">
+<link rel="stylesheet" href="/static/modern-theme.css?v=b96e4ba19cc6">
 </head>
 <body>
 
@@ -882,7 +885,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
     <div class="user-menu-wrap">
       <button id="topbar-user" class="topbar-user-button" type="button" onclick="toggleUserMenu(event)" aria-label="Menu" aria-controls="user-menu" aria-expanded="false">
         <span class="topbar-user-label">…</span>
-        <span class="topbar-menu-icon" aria-hidden="true">•••</span>
+        <span class="topbar-menu-icon" aria-hidden="true">⋯</span>
       </button>
       <div class="user-menu" id="user-menu">
         <div class="um-head" id="um-head">…</div>

@@ -39,6 +39,16 @@ def test_mobile_header_has_one_stable_touch_friendly_row():
     assert ".logo-host{display:block" in css
 
 
+def test_mobile_menu_uses_a_small_visual_surface_inside_the_touch_target():
+    css = mobile_styles()
+
+    assert '<span class="topbar-menu-icon" aria-hidden="true">⋯</span>' in INDEX
+    assert ".topbar-user-button{width:2.75rem;height:2.75rem;padding:0;border:0" in css
+    assert ".topbar-menu-icon{display:grid;width:2rem;height:2rem" in css
+    assert ".topbar-user-button:focus-visible{outline:none}" in INDEX
+    assert ".topbar-user-button:focus-visible .topbar-menu-icon{outline:2px solid" in INDEX
+
+
 def test_mobile_progress_is_pinned_without_changing_header_height():
     css = mobile_styles()
 
@@ -56,3 +66,4 @@ def test_modern_theme_keeps_the_shared_mobile_geometry():
     assert 'html[data-ui-theme="modern"] .user-menu {' in mobile
     assert "width: min(calc(100vw - 1.5rem), 22rem)" in mobile
     assert "background: rgb(248 251 255 / 98%)" in mobile
+    assert 'html[data-ui-theme="modern"] .topbar-menu-icon {' in mobile
