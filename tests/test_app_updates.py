@@ -1,4 +1,6 @@
 from pathlib import Path
+import re
+import subprocess
 
 from fastapi.testclient import TestClient
 
@@ -91,3 +93,51 @@ def test_app_store_polls_update_job_and_labels_running_state():
     assert "api('/apps/action-job?id='+encodeURIComponent(jobId))" in html
     assert "r=await waitForAppActionJob(r.job_id)" in html
     assert "updating:{de:'Wird aktualisiert…'" in html
+
+
+def test_apps_main_tile_shows_update_dot_and_keeps_install_count_priority():
+    html = Path("static/index.html").read_text()
+    match = re.search(
+        r"function updateAppsBadge\(\)\{.*?^\}",
+        html,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+
+    assert match
+    assert "async function refreshAppsUpdateBadge" in html
+    assert "api('/apps/check-updates')" in html
+
+    script = f"""
+const badge = {{textContent:'', className:''}};
+const $ = selector => selector === '#badge-apps' ? badge : null;
+let _activeInstalls = 0;
+let _appsUpdateBadgeHasUpdates = true;
+{match.group(0)}
+
+updateAppsBadge();
+if (badge.className !== 'tile-badge red dot-only' || badge.textContent !== '') {{
+  throw new Error(`Expected red update dot, got ${{badge.className}} / ${{badge.textContent}}`);
+}}
+
+_activeInstalls = 2;
+updateAppsBadge();
+if (badge.className !== 'tile-badge blue' || badge.textContent !== 2) {{
+  throw new Error(`Expected active install count, got ${{badge.className}} / ${{badge.textContent}}`);
+}}
+"""
+    subprocess.run(
+        ["node", "-e", script],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_updates_tab_dot_has_clean_inset_from_top_right_corner():
+    html = Path("static/index.html").read_text()
+
+    assert (
+        ".modal-tab.has-update::after{content:'';position:absolute;"
+        "top:6px;right:6px;width:8px;height:8px;"
+        in html
+    )

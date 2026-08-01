@@ -145,7 +145,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 .modal-tabs.sub-tabs{padding:0 0 10px;margin-top:0;margin-bottom:10px}
 .modal-tab{position:relative;padding:8px 12px;font-size:12px;color:var(--text2);cursor:pointer;border-bottom:2px solid transparent;transition:color .15s}
 .modal-tab.active{color:var(--accent-light);border-bottom-color:var(--accent);border-bottom-width:2px}
-.modal-tab.has-update::after{content:'';position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#ef4444}
+.modal-tab.has-update::after{content:'';position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;background:#ef4444}
 .modal-body{flex:1;overflow:auto;padding:24px 28px}
 .modal-body:has(> .modal-tabs.sub-tabs){padding-top:8px}
 
@@ -8561,6 +8561,7 @@ setInterval(loadConnectedServers,10000);
 
 // Load live badge data
 let _systemUpdateBadgeNext=0,_systemUpdateBadgeHasUpdates=false;
+let _appsUpdateBadgeHasUpdates=false;
 const RUNVARD_DOCUMENT_TITLE='runvard';
 function updateDocumentTitle(){
   document.title=_systemUpdateBadgeHasUpdates?`${uiText('Update available')} · ${RUNVARD_DOCUMENT_TITLE}`:RUNVARD_DOCUMENT_TITLE;
@@ -8589,6 +8590,11 @@ async function refreshSystemUpdateBadge(){
   ]);
   _systemUpdateBadgeHasUpdates=(u.updates||0)>0||!!rv.update_available;
   applySystemUpdateBadge();
+}
+async function refreshAppsUpdateBadge(){
+  const result=await api('/apps/check-updates');
+  _appsUpdateBadgeHasUpdates=Array.isArray(result.updates)&&result.updates.length>0;
+  updateAppsBadge();
 }
 async function loadTileBadges(){
   try{
@@ -8633,6 +8639,7 @@ async function loadTileBadges(){
     }
   }catch(e){}
   try{await refreshSystemUpdateBadge();}catch(e){}
+  try{await refreshAppsUpdateBadge();}catch(e){}
 }
 loadTileBadges();
 
@@ -12727,6 +12734,9 @@ function updateAppsBadge(){
   if(_activeInstalls>0){
     el.textContent=_activeInstalls;
     el.className='tile-badge blue';
+  } else if(_appsUpdateBadgeHasUpdates){
+    el.textContent='';
+    el.className='tile-badge red dot-only';
   } else {
     el.textContent='';
     el.className='tile-badge';
@@ -12751,6 +12761,8 @@ async function renderApps(body){
     const data=await api('/apps/catalog');
     appsCatalog=data.apps||[];
     appsCatalogCategories=data.categories||[];
+    _appsUpdateBadgeHasUpdates=appsCatalog.some(app=>app.update_available);
+    updateAppsBadge();
     renderAppsView(body,appsCatalogCategories);
   }catch(e){
     body.innerHTML=`<div class="empty-state">Fehler beim Laden: ${esc(e.message)}</div>`;
@@ -13022,7 +13034,9 @@ window.appMenu=(ev,id,name,running,upd)=>{
 window.appsCheckUpdates=async()=>{
   toast('Checking for updates…');
   try{
-    await api('/apps/check-updates?force=true');
+    const result=await api('/apps/check-updates?force=true');
+    _appsUpdateBadgeHasUpdates=Array.isArray(result.updates)&&result.updates.length>0;
+    updateAppsBadge();
     toast('Update check complete');
     renderApps($('#modal-body'));
   }catch(e){toast('Error: '+e.message,'error');}
