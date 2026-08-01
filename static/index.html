@@ -12876,7 +12876,13 @@ window.appsDoSearch=v=>{appsSearch=v;const grid=$('#apps-grid');if(!grid)return;
 
 async function waitForAppActionJob(jobId){
   while(true){
-    const job=await api('/apps/action-job?id='+encodeURIComponent(jobId));
+    let job;
+    try{job=await api('/apps/action-job?id='+encodeURIComponent(jobId));}
+    catch(e){
+      if(e&&e.status>=400&&e.status<500)throw e;
+      await new Promise(resolve=>setTimeout(resolve,1000));
+      continue;
+    }
     if(job.status==='succeeded')return job.result||{ok:true,output:''};
     if(job.status==='failed')throw new Error(job.error||'Update failed');
     await new Promise(resolve=>setTimeout(resolve,1000));

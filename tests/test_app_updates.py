@@ -95,6 +95,87 @@ def test_app_store_polls_update_job_and_labels_running_state():
     assert "updating:{de:'Wird aktualisiert…'" in html
 
 
+def test_app_update_polling_recovers_after_transient_status_failure():
+    html = Path("static/index.html").read_text()
+    polling = re.search(
+        r"async function waitForAppActionJob\(jobId\)\{.*?^\}",
+        html,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+
+    assert polling
+
+    script = f"""
+let attempts = 0;
+const api = async () => {{
+  attempts += 1;
+  if (attempts === 1) throw new Error('temporary disconnect');
+  return {{status:'succeeded', result:{{ok:true, output:'updated'}}}};
+}};
+globalThis.setTimeout = fn => fn();
+{polling.group(0)}
+
+(async () => {{
+  const result = await waitForAppActionJob('app-update-job');
+  if (attempts !== 2) throw new Error(`Expected polling retry, got ${{attempts}} attempt(s)`);
+  if (!result.ok || result.output !== 'updated') {{
+    throw new Error(`Expected successful update result, got ${{JSON.stringify(result)}}`);
+  }}
+}})().catch(error => {{
+  console.error(error);
+  process.exit(1);
+}});
+"""
+    subprocess.run(
+        ["node", "-e", script],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
+def test_app_update_polling_surfaces_missing_job():
+    html = Path("static/index.html").read_text()
+    polling = re.search(
+        r"async function waitForAppActionJob\(jobId\)\{.*?^\}",
+        html,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+
+    assert polling
+
+    script = f"""
+let attempts = 0;
+const api = async () => {{
+  attempts += 1;
+  const error = new Error('Job not found');
+  error.status = 404;
+  throw error;
+}};
+globalThis.setTimeout = () => {{ throw new Error('Unexpected retry'); }};
+{polling.group(0)}
+
+(async () => {{
+  try {{
+    await waitForAppActionJob('missing-job');
+    throw new Error('Expected missing job to fail');
+  }} catch (error) {{
+    if (error.message !== 'Job not found') throw error;
+    if (attempts !== 1) throw new Error(`Expected one attempt, got ${{attempts}}`);
+  }}
+}})().catch(error => {{
+  console.error(error);
+  process.exit(1);
+}});
+"""
+    subprocess.run(
+        ["node", "-e", script],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
 def test_system_update_polling_recovers_after_transient_status_failure():
     html = Path("static/index.html").read_text()
     button_state = re.search(
