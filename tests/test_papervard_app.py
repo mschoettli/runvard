@@ -97,8 +97,8 @@ def test_papervard_allocates_both_web_ports(monkeypatch, tmp_path):
     )
 
 
-def test_update_check_compares_local_and_remote_image_digests(monkeypatch, tmp_path):
-    remote_digest = ["sha256:new"]
+def test_update_check_uses_docker_manifest_without_buildx(monkeypatch, tmp_path):
+    remote_config_digest = ["sha256:new"]
     calls = []
 
     def fake_run(command, **kwargs):
@@ -116,13 +116,22 @@ def test_update_check_compares_local_and_remote_image_digests(monkeypatch, tmp_p
         if command[:3] == ["docker", "image", "inspect"]:
             return SimpleNamespace(
                 returncode=0,
-                stdout='["ghcr.io/mschoettli/papervard@sha256:old"]\n',
+                stdout='"sha256:old"\n',
                 stderr="",
             )
-        if command[:4] == ["docker", "buildx", "imagetools", "inspect"]:
+        if command[:4] == ["docker", "manifest", "inspect", "--verbose"]:
             return SimpleNamespace(
                 returncode=0,
-                stdout=json.dumps({"digest": remote_digest[0]}),
+                stdout=json.dumps([
+                    {
+                        "Descriptor": {
+                            "platform": {"architecture": "amd64", "os": "linux"},
+                        },
+                        "OCIManifest": {
+                            "config": {"digest": remote_config_digest[0]},
+                        },
+                    },
+                ]),
                 stderr="",
             )
         raise AssertionError(f"unexpected command: {command}")
@@ -130,17 +139,35 @@ def test_update_check_compares_local_and_remote_image_digests(monkeypatch, tmp_p
     monkeypatch.setattr(apps.subprocess, "run", fake_run)
 
     assert apps._check_image_update(str(tmp_path)) is True
-    remote_digest[0] = "sha256:old"
+    remote_config_digest[0] = "sha256:old"
     assert apps._check_image_update(str(tmp_path)) is False
     assert calls.count([
         "docker",
-        "buildx",
-        "imagetools",
+        "manifest",
         "inspect",
+        "--verbose",
         "ghcr.io/mschoettli/papervard:latest",
-        "--format",
-        "{{json .Manifest}}",
     ]) == 2
+    assert not any(command[:2] == ["docker", "buildx"] for command in calls)
+
+
+def test_check_updates_reports_registry_inspection_errors(monkeypatch, tmp_path):
+    apps_dir = tmp_path / "apps"
+    app_dir = apps_dir / "papervard"
+    app_dir.mkdir(parents=True)
+    (app_dir / "docker-compose.yml").write_text("services: {}\n")
+    monkeypatch.setattr(apps, "APPS_DIR", str(apps_dir))
+    monkeypatch.setattr(apps, "UPDATE_CACHE", str(tmp_path / "updates.json"))
+    monkeypatch.setattr(
+        apps,
+        "_check_image_update",
+        lambda path: (_ for _ in ()).throw(RuntimeError("registry unavailable")),
+    )
+
+    result = apps.check_updates(force=True)
+
+    assert result["updates"] == []
+    assert result["errors"] == {"papervard": "registry unavailable"}
 
 
 def test_app_install_rejects_port_conflicts_before_writing(monkeypatch, tmp_path):

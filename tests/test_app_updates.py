@@ -95,6 +95,13 @@ def test_app_store_polls_update_job_and_labels_running_state():
     assert "updating:{de:'Wird aktualisiert…'" in html
 
 
+def test_manual_update_check_surfaces_registry_errors():
+    html = Path("static/index.html").read_text()
+
+    assert "Object.entries(result.errors||{})" in html
+    assert "toast('Update check failed: '+details,'error')" in html
+
+
 def test_app_update_indicator_tracks_running_and_terminal_states():
     html = Path("static/index.html").read_text()
     helpers = []

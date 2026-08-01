@@ -13572,7 +13572,11 @@ window.appsCheckUpdates=async()=>{
     const result=await api('/apps/check-updates?force=true');
     _appsUpdateBadgeHasUpdates=Array.isArray(result.updates)&&result.updates.length>0;
     updateAppsBadge();
-    toast('Update check complete');
+    const failures=Object.entries(result.errors||{});
+    if(failures.length){
+      const details=failures.map(([id,error])=>`${id}: ${error}`).join(' · ');
+      toast('Update check failed: '+details,'error');
+    }else toast('Update check complete');
     renderApps($('#modal-body'));
   }catch(e){toast('Error: '+e.message,'error');}
 };

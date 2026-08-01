@@ -1111,7 +1111,7 @@ def _load_updates():
         with open(UPDATE_CACHE) as f:
             return json.load(f)
     except Exception:
-        return {"checked": 0, "updates": []}
+        return {"checked": 0, "updates": [], "errors": {}}
 
 
 def _is_compose_app_id(app_id):
@@ -1507,68 +1507,63 @@ def action(app_id, act):
 # ──────────────────────────────────────────────────────────────────────────
 
 def _check_image_update(path):
-    """Vergleicht lokale und veröffentlichte Registry-Digests der Compose-Images."""
-    try:
-        result = subprocess.run(
-            ["docker", "compose", "config", "--images"],
+    """Compare local image IDs with published manifest config digests."""
+    result = subprocess.run(
+        ["docker", "compose", "config", "--images"],
+        cwd=path,
+        capture_output=True,
+        text=True,
+        timeout=30,
+    )
+    if result.returncode != 0:
+        raise RuntimeError(result.stderr.strip() or "Could not read Compose images")
+
+    # Multiple services may use the same image (for example web and worker).
+    images = list(dict.fromkeys(
+        line.strip() for line in result.stdout.splitlines() if line.strip()
+    ))
+    for image in images:
+        local = subprocess.run(
+            ["docker", "image", "inspect", image, "--format", "{{json .Id}}"],
             cwd=path,
             capture_output=True,
             text=True,
             timeout=30,
         )
-        if result.returncode != 0:
-            return False
+        remote = subprocess.run(
+            ["docker", "manifest", "inspect", "--verbose", image],
+            cwd=path,
+            capture_output=True,
+            text=True,
+            timeout=120,
+        )
+        if local.returncode != 0:
+            raise RuntimeError(local.stderr.strip() or f"Local image unavailable: {image}")
+        if remote.returncode != 0:
+            raise RuntimeError(remote.stderr.strip() or f"Registry manifest unavailable: {image}")
 
-        # Mehrere Services können dasselbe Image verwenden (z. B. Web + Worker).
-        images = list(dict.fromkeys(
-            line.strip() for line in result.stdout.splitlines() if line.strip()
-        ))
-        for image in images:
-            local = subprocess.run(
-                [
-                    "docker",
-                    "image",
-                    "inspect",
-                    image,
-                    "--format",
-                    "{{json .RepoDigests}}",
-                ],
-                cwd=path,
-                capture_output=True,
-                text=True,
-                timeout=30,
-            )
-            remote = subprocess.run(
-                [
-                    "docker",
-                    "buildx",
-                    "imagetools",
-                    "inspect",
-                    image,
-                    "--format",
-                    "{{json .Manifest}}",
-                ],
-                cwd=path,
-                capture_output=True,
-                text=True,
-                timeout=120,
-            )
-            if local.returncode != 0 or remote.returncode != 0:
+        local_digest = json.loads(local.stdout)
+        manifest_data = json.loads(remote.stdout)
+        manifests = manifest_data if isinstance(manifest_data, list) else [manifest_data]
+        remote_digests = set()
+        for entry in manifests:
+            descriptor = entry.get("Descriptor") or {}
+            platform = descriptor.get("platform") or {}
+            if platform.get("os") == "unknown":
                 continue
-
-            repo_digests = json.loads(local.stdout)
-            manifest = json.loads(remote.stdout)
-            local_digests = {
-                reference.rsplit("@", 1)[-1]
-                for reference in repo_digests or []
-                if "@" in reference
-            }
-            remote_digest = manifest.get("digest")
-            if local_digests and remote_digest and remote_digest not in local_digests:
-                return True
-        return False
-    except Exception:
-        return False
+            manifest = (
+                entry.get("OCIManifest")
+                or entry.get("SchemaV2Manifest")
+                or entry
+            )
+            digest = (manifest.get("config") or {}).get("digest")
+            if digest:
+                remote_digests.add(digest)
+        if not local_digest or not remote_digests:
+            raise RuntimeError(f"Image digest unavailable: {image}")
+        if local_digest not in remote_digests:
+            return True
+    return False
 
 
 def check_updates(force=False):
@@ -1578,13 +1573,17 @@ def check_updates(force=False):
     if not force and age < UPDATE_INTERVAL:
         return cache
     updates = []
+    errors = {}
     if os.path.isdir(APPS_DIR):
         for app_id in os.listdir(APPS_DIR):
             path = _app_dir(app_id)
             if os.path.isfile(os.path.join(path, "docker-compose.yml")):
-                if _check_image_update(path):
-                    updates.append(app_id)
-    cache = {"checked": time.time(), "updates": updates}
+                try:
+                    if _check_image_update(path):
+                        updates.append(app_id)
+                except Exception as exc:
+                    errors[app_id] = str(exc)
+    cache = {"checked": time.time(), "updates": updates, "errors": errors}
     try:
         os.makedirs(APPS_DIR, exist_ok=True)
         with open(UPDATE_CACHE, "w") as f:
