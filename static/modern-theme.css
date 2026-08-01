@@ -545,7 +545,7 @@ html[data-ui-theme="modern"] .btn.icon {
   box-shadow: none;
 }
 
-html[data-ui-theme="modern"] input,
+html[data-ui-theme="modern"] input:not([type="checkbox"]),
 html[data-ui-theme="modern"] select,
 html[data-ui-theme="modern"] textarea {
   min-height: 44px;
@@ -555,7 +555,7 @@ html[data-ui-theme="modern"] textarea {
   color: var(--text);
 }
 
-html[data-ui-theme="modern"] input:focus,
+html[data-ui-theme="modern"] input:not([type="checkbox"]):focus,
 html[data-ui-theme="modern"] select:focus,
 html[data-ui-theme="modern"] textarea:focus {
   border-color: var(--accent);
