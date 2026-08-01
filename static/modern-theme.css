@@ -99,7 +99,7 @@ html[data-ui-theme="modern"] .app-menu {
 }
 
 html[data-ui-theme="modern"] .user-menu {
-  top: 34px;
+  top: calc(100% + .5rem);
   min-width: 224px;
   border-radius: 14px;
 }
@@ -2029,8 +2029,19 @@ html[data-ui-theme="modern"] .modern-share-service-state p {
   }
 
   html[data-ui-theme="modern"] .topbar {
+    height: 3.75rem;
     min-height: 60px;
     padding: 8px 12px;
+  }
+
+  html[data-ui-theme="modern"] .user-menu {
+    width: min(calc(100vw - 1.5rem), 22rem);
+    min-width: 0;
+    background: rgb(248 251 255 / 98%);
+  }
+
+  html[data-ui-theme="modern"] .topbar-user-button {
+    background: rgb(255 255 255 / 62%);
   }
 
   html[data-ui-theme="modern"] .container {

@@ -56,15 +56,21 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 .bg-upload-area:hover{background:var(--glass-hover);border-color:var(--accent)}
 .bg-btn-icon{background:transparent;border:none;color:rgba(240,240,255,.35);width:32px;height:32px;border-radius:8px;cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:14px;transition:all .15s}
 .bg-btn-icon:hover{background:rgba(122,74,255,.1);color:#9d7aff}
-.logo{font-size:15px;font-weight:700;letter-spacing:.04em;color:#fff;display:flex;align-items:center;gap:10px}
-.logo span{color:var(--text3);font-weight:400;font-size:13px;margin-left:12px}
+.logo{min-width:0;font-size:15px;font-weight:700;letter-spacing:.04em;color:#fff;display:flex;align-items:center;gap:0}
+.logo-wordmark{flex-shrink:0}
+.logo-host{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text3);font-weight:400;font-size:12px;letter-spacing:0;margin-left:.75rem}
+.logo-host::before{content:"·";margin-right:.75rem;color:var(--text3)}
 .topright{display:flex;align-items:center;gap:6px;justify-content:flex-end}.topbar-sep{width:1px;height:14px;background:rgba(255,255,255,.08);margin:0 4px}
 .ports-toplink{width:auto;min-width:48px;padding:0 10px;font-size:11px;font-weight:600;letter-spacing:.03em}
 .time{font-size:14px;color:var(--text2)}.uptime{font-size:12px;color:var(--text3)}
 .avatar-wrap{display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:8px;cursor:pointer;transition:background .15s;margin-left:6px}.avatar-wrap:hover{background:rgba(122,74,255,.08)}.avatar{width:30px;height:30px;border-radius:50%;background:rgba(122,74,255,.2);border:1.5px solid rgba(122,74,255,.4);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#9d7aff;flex-shrink:0}.avatar-info{display:flex;flex-direction:column;line-height:1.2}.avatar-name{font-size:12px;font-weight:600;color:var(--text)}.avatar-role{font-size:10px;color:var(--text3)}
 .user-menu-wrap{position:relative}
-.user-menu{position:absolute;top:28px;right:0;min-width:210px;background:var(--bg2);border:1px solid var(--border-accent);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.5);padding:6px;display:none;z-index:200}
+.topbar-user-button{min-width:0;height:32px;padding:4px 8px;border:0;border-radius:7px;background:transparent;color:rgba(240,240,255,.4);font:inherit;font-size:11px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.topbar-user-button:hover,.topbar-user-button:focus-visible{background:var(--glass-hover);color:var(--text);outline:2px solid var(--border-accent);outline-offset:2px}
+.topbar-menu-icon{display:none;font-size:18px;line-height:1;letter-spacing:.06em;transform:translateY(-2px)}
+.user-menu{position:absolute;top:calc(100% + .5rem);right:0;min-width:210px;background:#0d0e1a;border:1px solid var(--border-accent);border-radius:12px;box-shadow:0 12px 40px rgba(0,0,0,.5);padding:6px;display:none;z-index:200}
 .user-menu.open{display:block}
+.mobile-header-tools{display:none}
 .um-head{padding:9px 10px;font-size:12px;color:var(--text2);border-bottom:.5px solid var(--border);margin-bottom:4px}
 .um-head strong{color:var(--text);font-weight:600}
 .um-row{display:flex;align-items:center;justify-content:space-between;padding:9px 10px;font-size:12px;color:var(--text2)}
@@ -810,14 +816,28 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   .files-sidebar{border-right:0;border-bottom:.5px solid var(--border);padding:0 0 10px;margin-bottom:10px;display:grid;grid-template-columns:repeat(2,1fr)}
   .files-main{padding-left:0;overflow:visible}
   .files-scroll{overflow-x:hidden}
-  .topbar{grid-template-columns:minmax(0,1fr) auto;padding:7px 12px}
+  .topbar{grid-template-columns:minmax(0,1fr) auto;column-gap:.75rem;height:3.75rem;min-height:3.75rem;padding:.5rem .75rem;position:sticky}
   .logo{min-width:0;overflow:hidden}
+  .logo{flex-direction:column;align-items:flex-start;justify-content:center;gap:.125rem;line-height:1.05}
   .logo #hostname{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .logo-wordmark{font-size:.9375rem}
+  .logo-host{display:block;max-width:min(14rem,calc(100vw - 5.75rem));margin-left:0;color:var(--text3);font-size:.6875rem;line-height:1.2}
+  .logo-host::before{display:none}
   .topright{grid-column:2;grid-row:1}
-  .topbar-center{grid-column:1/-1;grid-row:2;width:100%;margin-top:2px}
-  .top-progress{width:100%;max-width:320px}
-  .top-progress-label{max-width:118px}
+  .desktop-header-action,.topbar-sep{display:none}
+  .topbar-user-button{width:2.75rem;height:2.75rem;padding:0;border:1px solid var(--border);border-radius:.75rem;background:var(--glass)}
+  .topbar-user-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .topbar-menu-icon{display:block}
+  .topbar-center{position:absolute;left:0;right:0;bottom:0;width:auto;height:3px;margin:0;pointer-events:none}
+  .top-progress{width:100%;max-width:none;height:3px;gap:0;transform:none}
+  .top-progress-label{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+  .top-progress-track{width:100%;height:3px;min-width:0;border-radius:0}
+  .top-progress-fill{border-radius:0}
   .time{display:none}
+  .user-menu{top:calc(100% + .5rem);width:min(calc(100vw - 1.5rem),22rem);min-width:0;max-height:calc(100dvh - 5.25rem);overflow-y:auto;background:#0d0e1a}
+  .mobile-header-tools{display:block}
+  .mobile-header-tools{border-bottom:1px solid var(--border);margin-bottom:.25rem;padding-bottom:.25rem}
+  .mobile-header-tools .um-action{min-height:2.75rem;display:flex;align-items:center;gap:.75rem}
   .fed-setup{grid-template-columns:1fr}
   .fed-node{grid-template-columns:1fr}
   .fed-metrics{grid-template-columns:repeat(3,1fr)}
@@ -838,15 +858,14 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .ice-bg{background:radial-gradient(ellipse at 60% 30%,#818cf8,transparent 50%),radial-gradient(ellipse at 20% 70%,#3730a3,transparent 55%),radial-gradient(ellipse at 85% 75%,#0284c7,transparent 45%),#03051a!important;background-attachment:fixed!important}
 .galaxy-bg{background:radial-gradient(ellipse at 40% 40%,#4c1d95,transparent 55%),radial-gradient(ellipse at 75% 20%,#1e1b4b,transparent 50%),radial-gradient(ellipse at 20% 80%,#0f172a,transparent 50%),#020108!important;background-attachment:fixed!important}
 </style>
-<link rel="stylesheet" href="/static/modern-theme.css?v=c9c7ddafe637">
+<link rel="stylesheet" href="/static/modern-theme.css?v=9555bb9de914">
 </head>
 <body>
 
 <div class="topbar">
   <div class="logo">
-    RUNVARD
-    <span style="font-size:11px;font-weight:400;color:rgba(240,240,255,.3);letter-spacing:0">·</span>
-    <span id="hostname" style="font-size:12px;font-weight:400;color:rgba(240,240,255,.4);letter-spacing:0">…</span>
+    <strong class="logo-wordmark">RUNVARD</strong>
+    <span class="logo-host" id="hostname">…</span>
   </div>
   <div class="topbar-center">
     <div class="time mono" id="clock" style="font-size:10px;color:rgba(240,240,255,.3);letter-spacing:.01em;white-space:nowrap">…</div>
@@ -856,14 +875,22 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
     </div>
   </div>
   <div class="topright">
-    <button class="bg-btn-icon ports-toplink" onclick="openPortsView()" title="Ports">ports</button>
-    <button class="bg-btn-icon" onclick="openBtop()" title="btop – System Monitor" style="font-size:11px;font-weight:600;letter-spacing:.03em">btop</button>
-    <button class="bg-btn-icon" onclick="toggleBgPanel()" data-i18n-title="backgroundTitle" title="Hintergrund" style="font-size:14px">⬡</button>
+    <button class="bg-btn-icon ports-toplink desktop-header-action" onclick="openPortsView()" title="Ports">ports</button>
+    <button class="bg-btn-icon desktop-header-action" onclick="openBtop()" title="btop – System Monitor" style="font-size:11px;font-weight:600;letter-spacing:.03em">btop</button>
+    <button class="bg-btn-icon desktop-header-action" onclick="toggleBgPanel()" data-i18n-title="backgroundTitle" title="Hintergrund" style="font-size:14px">⬡</button>
     <div class="topbar-sep"></div>
     <div class="user-menu-wrap">
-      <span id="topbar-user" onclick="toggleUserMenu(event)" style="font-size:11px;color:rgba(240,240,255,.4);cursor:pointer;padding:4px 8px;border-radius:7px">…</span>
+      <button id="topbar-user" class="topbar-user-button" type="button" onclick="toggleUserMenu(event)" aria-label="Menu" aria-controls="user-menu" aria-expanded="false">
+        <span class="topbar-user-label">…</span>
+        <span class="topbar-menu-icon" aria-hidden="true">•••</span>
+      </button>
       <div class="user-menu" id="user-menu">
         <div class="um-head" id="um-head">…</div>
+        <div class="mobile-header-tools" aria-label="Tools">
+          <button class="um-action" type="button" onclick="closeUserMenu();openPortsView()"><span aria-hidden="true">▦</span><span>Ports</span></button>
+          <button class="um-action" type="button" onclick="closeUserMenu();openBtop()"><span aria-hidden="true">▥</span><span>btop</span></button>
+          <button class="um-action" type="button" onclick="closeUserMenu();toggleBgPanel()"><span aria-hidden="true">⬡</span><span data-i18n="backgroundTitle">Hintergrund</span></button>
+        </div>
         <div class="um-row">
           <span data-i18n="loginPage">Login-Seite</span>
           <label class="um-switch"><input type="checkbox" id="um-login-toggle" onchange="toggleLogin(this.checked)"><span class="um-slider"></span></label>
@@ -7511,8 +7538,7 @@ function localeCode(){
   return map[currentLanguage()]||currentLanguage();
 }
 function openLanguageModal(){
-  const userMenu=$('#user-menu');
-  if(userMenu)userMenu.classList.remove('open');
+  closeUserMenu();
   openForm(tr('languageSettings'),'🌐',[
     {name:'language',label:tr('languageField'),type:'select',value:currentLanguage(),options:LANGUAGES.map(x=>({value:x.code,label:x.name}))},
   ],d=>{setLanguage(d.language);closeForm();toast(tr('languageSaved'));});
@@ -7839,17 +7865,35 @@ function resetSearch(){searchEnabled=false;$('#modal-search').classList.remove('
 
 // ═══ Clock & Sys-Info ═══
 setInterval(updateClock,1000);
-api('/system/info').then(i=>{$('#hostname').textContent=i.hostname;const u=$('#topbar-user');if(u)u.textContent=i.user||'admin';});
+api('/system/info').then(i=>{$('#hostname').textContent=i.hostname;setTopbarUser(i.user||'admin');});
 
 // ── Benutzer-Menü: Status, Login-Schalter, Abmelden ──
-function toggleUserMenu(e){e.stopPropagation();$('#user-menu').classList.toggle('open');}
-document.addEventListener('click',e=>{const m=$('#user-menu');if(m&&m.classList.contains('open')&&!e.target.closest('.user-menu-wrap'))m.classList.remove('open');});
+function setTopbarUser(name){
+  const trigger=$('#topbar-user');
+  const label=trigger?.querySelector('.topbar-user-label');
+  if(label)label.textContent=name;
+  if(trigger)trigger.setAttribute('aria-label',`${name} – Menu`);
+}
+function setUserMenuOpen(open){
+  const menu=$('#user-menu');
+  const trigger=$('#topbar-user');
+  if(!menu||!trigger)return;
+  menu.classList.toggle('open',open);
+  trigger.setAttribute('aria-expanded',String(open));
+}
+function closeUserMenu(){setUserMenuOpen(false);}
+function toggleUserMenu(e){
+  e.stopPropagation();
+  setUserMenuOpen(!$('#user-menu')?.classList.contains('open'));
+}
+document.addEventListener('click',e=>{if(!e.target.closest('.user-menu-wrap'))closeUserMenu();});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#user-menu')?.classList.contains('open')){closeUserMenu();$('#topbar-user')?.focus();}});
 let currentAuthStatus={role:null,expert:false};
 async function loadAuthStatus(){
   try{
     const s=await api('/auth/status');
     currentAuthStatus=s;
-    const tu=$('#topbar-user'); if(tu) tu.textContent=s.user||tr('loginDisabled');
+    setTopbarUser(s.user||tr('loginDisabled'));
     const h=$('#um-head'); if(h) h.innerHTML=s.user?`${esc(tr('signedInAs'))} <strong>${esc(s.user)}</strong>`:tr('loginDisabledHead');
     const t=$('#um-login-toggle'); if(t) t.checked=!!s.login_enabled;
     const acc=$('#um-accounts'); if(acc) acc.style.display=(s.role==='admin')?'block':'none';
@@ -7875,7 +7919,7 @@ async function toggleLogin(on){
 
 // ── runvard-Konten (RBAC) ──
 let _accts=[];
-window.accountsManage=async()=>{$('#user-menu').classList.remove('open');await renderAccounts();};
+window.accountsManage=async()=>{closeUserMenu();await renderAccounts();};
 async function renderAccounts(){
   try{const r=await api('/accounts');_accts=r.users||[];}catch(e){toast('Error: '+e.message,'error');return;}
   $('#form-head').innerHTML='<span>👥</span> runvard-Konten';
@@ -8375,7 +8419,7 @@ window.connectedServerKey=(event,nodeId)=>{
   connectedServerOpen(nodeId);
 };
 window.openConnectedServersModal=()=>{
-  $('#user-menu')?.classList.remove('open');
+  closeUserMenu();
   openModal(SERVER_ADMIN_TILE);
 };
 function safeExternalServerUrl(value){
