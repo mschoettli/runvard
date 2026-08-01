@@ -12081,7 +12081,11 @@ function pollUpdateJob(id,reboot){
   const tick=async()=>{
     let j;
     try{j=await api('/sysmgr/updates/job?id='+encodeURIComponent(id));}
-    catch(e){if(out)out.textContent+='\n[Statusabfrage fehlgeschlagen]';return;}
+    catch(e){
+      if(out)out.textContent=uiText('Connection interrupted while the service restarts...');
+      setTimeout(tick,2500);
+      return;
+    }
     if(j.status==='running'){if(out)out.textContent=uiText('apt-get upgrade is running … (may take a few minutes)');setTimeout(tick,2500);return;}
     if(j.status==='succeeded'){
       const res=j.result||{};

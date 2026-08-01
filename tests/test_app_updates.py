@@ -95,6 +95,64 @@ def test_app_store_polls_update_job_and_labels_running_state():
     assert "updating:{de:'Wird aktualisiert…'" in html
 
 
+def test_system_update_polling_recovers_after_transient_status_failure():
+    html = Path("static/index.html").read_text()
+    button_state = re.search(
+        r"function setUpdateButtonState\(state\)\{.*?^\}",
+        html,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+    polling = re.search(
+        r"function pollUpdateJob\(id,reboot\)\{.*?^\}",
+        html,
+        flags=re.MULTILINE | re.DOTALL,
+    )
+
+    assert button_state
+    assert polling
+
+    script = f"""
+const button = {{
+  disabled: false,
+  textContent: '',
+  removeAttribute() {{}},
+  setAttribute() {{}},
+  onclick: null,
+}};
+const output = {{textContent: ''}};
+const $ = selector => selector === '#upd-go' ? button : output;
+const uiText = text => text;
+const toast = () => {{}};
+const refreshSystemUpdateBadge = async () => {{}};
+let _systemUpdateBadgeNext = 0;
+let attempts = 0;
+const api = async () => {{
+  attempts += 1;
+  if (attempts === 1) throw new Error('temporary disconnect');
+  return {{status:'succeeded', result:{{ok:true, stdout:'updated', stderr:''}}}};
+}};
+const realSetTimeout = globalThis.setTimeout;
+globalThis.setTimeout = fn => realSetTimeout(fn, 0);
+{button_state.group(0)}
+{polling.group(0)}
+
+setUpdateButtonState('running');
+pollUpdateJob('system-update-job', false);
+realSetTimeout(() => {{
+  if (attempts !== 2) throw new Error(`Expected polling retry, got ${{attempts}} attempt(s)`);
+  if (button.textContent !== '✓ Done' || button.disabled !== true) {{
+    throw new Error(`Expected completed button, got ${{button.textContent}} / ${{button.disabled}}`);
+  }}
+}}, 25);
+"""
+    subprocess.run(
+        ["node", "-e", script],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
 def test_apps_main_tile_shows_update_dot_and_keeps_install_count_priority():
     html = Path("static/index.html").read_text()
     match = re.search(
