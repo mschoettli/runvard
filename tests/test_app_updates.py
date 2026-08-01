@@ -95,6 +95,83 @@ def test_app_store_polls_update_job_and_labels_running_state():
     assert "updating:{de:'Wird aktualisiert…'" in html
 
 
+def test_app_update_indicator_tracks_running_and_terminal_states():
+    html = Path("static/index.html").read_text()
+    helpers = []
+    for name, args in (
+        ("startAppUpdateIndicator", "appId,appName"),
+        ("advanceAppUpdateIndicator", "tracker"),
+        ("finishAppUpdateIndicator", "tracker,ok,detail=''"),
+    ):
+        match = re.search(
+            rf"function {name}\({re.escape(args)}\)\{{.*?^\}}",
+            html,
+            flags=re.MULTILINE | re.DOTALL,
+        )
+        assert match
+        helpers.append(match.group(0))
+
+    script = f"""
+function makeIndicator() {{
+  const classes = new Set();
+  const nodes = new Map();
+  return {{
+    className: '',
+    title: '',
+    removed: false,
+    _innerHTML: '',
+    classList: {{add: value => classes.add(value), contains: value => classes.has(value)}},
+    set innerHTML(value) {{ this._innerHTML = value; }},
+    get innerHTML() {{ return this._innerHTML; }},
+    querySelector(selector) {{
+      if (!nodes.has(selector)) nodes.set(selector, {{textContent: '', style: {{}}}});
+      return nodes.get(selector);
+    }},
+    remove() {{ this.removed = true; }},
+  }};
+}}
+const inserted = [];
+const host = {{firstChild: null, insertBefore: indicator => inserted.push(indicator)}};
+const document = {{createElement: () => makeIndicator()}};
+const ensureInstallIndicatorHost = () => host;
+const esc = value => String(value);
+const appUi = key => key;
+let _activeInstalls = 0;
+let badgeUpdates = 0;
+const updateAppsBadge = () => {{ badgeUpdates += 1; }};
+globalThis.setTimeout = fn => fn();
+{''.join(helpers)}
+
+const success = startAppUpdateIndicator('demo', 'Demo App');
+if (_activeInstalls !== 1 || inserted.length !== 1) throw new Error('Update indicator did not start');
+if (!success.indicator.innerHTML.includes('Demo App')) throw new Error('App name missing');
+const before = Number.parseFloat(success.indicator.querySelector('.install-bar-fill').style.width);
+advanceAppUpdateIndicator(success);
+const after = Number.parseFloat(success.indicator.querySelector('.install-bar-fill').style.width);
+if (!(after > before)) throw new Error('Progress did not advance');
+finishAppUpdateIndicator(success, true);
+if (_activeInstalls !== 0 || !success.indicator.classList.contains('done') || !success.indicator.removed) {{
+  throw new Error('Successful update indicator did not finish');
+}}
+
+const failure = startAppUpdateIndicator('demo-2', 'Broken App');
+finishAppUpdateIndicator(failure, false, 'pull failed');
+if (_activeInstalls !== 0 || !failure.indicator.classList.contains('error')) {{
+  throw new Error('Failed update indicator did not finish');
+}}
+if (failure.indicator.title !== 'pull failed' || !failure.indicator.removed) {{
+  throw new Error('Failed update details were not preserved');
+}}
+if (badgeUpdates !== 4) throw new Error(`Expected four badge updates, got ${{badgeUpdates}}`);
+"""
+    subprocess.run(
+        ["node", "-e", script],
+        check=True,
+        capture_output=True,
+        text=True,
+    )
+
+
 def test_app_update_polling_recovers_after_transient_status_failure():
     html = Path("static/index.html").read_text()
     polling = re.search(

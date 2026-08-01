@@ -12758,6 +12758,45 @@ function ensureInstallIndicatorHost(){
   }
   return host;
 }
+function startAppUpdateIndicator(appId,appName){
+  const tracker={indicator:null,progress:8,timer:null,finished:false};
+  const host=ensureInstallIndicatorHost();
+  if(host){
+    const indicator=document.createElement('div');
+    indicator.className='install-indicator';
+    indicator.innerHTML=`<span class="install-dot"></span><span class="install-label">${esc(appName||appId)}</span><span class="install-bar-wrap"><span class="install-bar-fill"></span></span><span class="install-pct">${esc(appUi('updating'))}</span>`;
+    const bar=indicator.querySelector('.install-bar-fill');
+    if(bar)bar.style.width=tracker.progress+'%';
+    host.insertBefore(indicator,host.firstChild);
+    tracker.indicator=indicator;
+  }
+  tracker.timer=setInterval(()=>advanceAppUpdateIndicator(tracker),1500);
+  _activeInstalls++;
+  updateAppsBadge();
+  return tracker;
+}
+function advanceAppUpdateIndicator(tracker){
+  if(!tracker||tracker.finished)return;
+  tracker.progress=Math.min(tracker.progress+8,92);
+  const bar=tracker.indicator?.querySelector('.install-bar-fill');
+  if(bar)bar.style.width=tracker.progress+'%';
+}
+function finishAppUpdateIndicator(tracker,ok,detail=''){
+  if(!tracker||tracker.finished)return;
+  tracker.finished=true;
+  if(tracker.timer)clearInterval(tracker.timer);
+  _activeInstalls=Math.max(0,_activeInstalls-1);
+  updateAppsBadge();
+  const indicator=tracker.indicator;
+  if(!indicator)return;
+  const bar=indicator.querySelector('.install-bar-fill');
+  const status=indicator.querySelector('.install-pct');
+  if(bar)bar.style.width='100%';
+  if(status)status.textContent=ok?'✓':'!';
+  indicator.classList.add(ok?'done':'error');
+  if(detail)indicator.title=detail;
+  setTimeout(()=>indicator.remove(),3000);
+}
 
 async function renderApps(body){
   body.innerHTML='<div class="loading">Loading app catalog…</div>';
@@ -12893,11 +12932,17 @@ window.appAct=async(id,action)=>{
   toast(uiText(labels[action]||'…'));
   appPendingActions.set(id,action);
   const body=$('#modal-body');
+  let updateIndicator=null;
   if(body)renderAppsView(body,appsCatalogCategories);
   try{
     let r=await post('/apps/action',{app_id:id,action});
-    if(action==='update'&&r.job_id)r=await waitForAppActionJob(r.job_id);
+    if(action==='update'&&r.job_id){
+      const appName=appsCatalog.find(app=>app.id===id)?.name||id;
+      updateIndicator=startAppUpdateIndicator(id,appName);
+      r=await waitForAppActionJob(r.job_id);
+    }
     const msgs={start:'App started',stop:'App stopped',restart:'App restarted',update:'App updated ✓'};
+    if(updateIndicator)finishAppUpdateIndicator(updateIndicator,r.ok!==false,r.output||'');
     if(r.ok)toast(uiText(msgs[action]||'OK'));
     else {
       const detail=(r.output||'').split('\n').map(x=>x.trim()).filter(Boolean).pop();
@@ -12906,6 +12951,7 @@ window.appAct=async(id,action)=>{
     appPendingActions.delete(id);
     renderApps($('#modal-body'));
   }catch(e){
+    if(updateIndicator)finishAppUpdateIndicator(updateIndicator,false,e.message||'');
     appPendingActions.delete(id);
     if(body)renderAppsView(body,appsCatalogCategories);
     toast('Error: '+e.message,'error');
