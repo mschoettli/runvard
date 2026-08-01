@@ -182,6 +182,71 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 .typed-confirm-check input{margin-top:2px}
 .typed-confirm-target{display:block;font-size:11px;color:var(--text2);margin-top:4px}
 
+/* ── Guided backup wizard ── */
+.form-card.backup-wizard-card{width:min(52rem,calc(100vw - 2rem));max-width:none;overflow:hidden;border-color:rgba(45,212,191,.25);background:linear-gradient(160deg,rgba(19,24,38,.98),rgba(11,14,25,.99));box-shadow:0 2rem 6rem rgba(0,0,0,.52),0 0 0 1px rgba(255,255,255,.025)}
+.backup-wizard-card .form-head{padding:1rem 1.25rem;border-bottom-color:rgba(255,255,255,.07)}
+.backup-wizard-close{width:2.75rem;height:2.75rem;min-width:2.75rem;border:0;border-radius:.8rem;background:transparent;color:var(--text2);font-size:1rem;cursor:pointer}
+.backup-wizard-close:hover,.backup-wizard-close:focus-visible{background:rgba(255,255,255,.07);color:var(--text);outline:1px solid rgba(45,212,191,.45)}
+.form-body.backup-wizard-body{padding:0;overflow:auto;max-height:calc(90vh - 4.8rem)}
+.backup-wizard-progress{display:grid;grid-template-columns:repeat(4,1fr);gap:.3rem;padding:1rem 1rem .25rem;list-style:none;margin:0}
+.backup-wizard-step{display:flex;align-items:center;gap:.45rem;min-width:0;color:var(--text3);font-size:.72rem;font-weight:600}
+.backup-wizard-step::before{content:attr(data-step);display:grid;place-items:center;width:1.65rem;height:1.65rem;flex:0 0 1.65rem;border:1px solid rgba(255,255,255,.11);border-radius:50%;background:rgba(255,255,255,.025);font-size:.67rem}
+.backup-wizard-step span{display:none;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.backup-wizard-step.done{color:rgba(171,255,232,.72)}
+.backup-wizard-step.done::before{content:'✓';border-color:rgba(45,212,191,.35);background:rgba(45,212,191,.1)}
+.backup-wizard-step[aria-current="step"]{color:#d9fff5}
+.backup-wizard-step[aria-current="step"]::before{border-color:#2dd4bf;background:#2dd4bf;color:#06211d;box-shadow:0 0 1rem rgba(45,212,191,.25)}
+.backup-wizard-stage{padding:1.15rem 1rem 1rem}
+.backup-wizard-heading{margin-bottom:1rem}
+.backup-wizard-kicker{color:#5eead4;font-size:.7rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.35rem}
+.backup-wizard-heading h3{font-size:clamp(1.3rem,5vw,1.75rem);line-height:1.15;margin:0;color:#f7fffd;letter-spacing:-.025em}
+.backup-wizard-heading p{font-size:.9rem;line-height:1.5;color:var(--text2);margin:.45rem 0 0;max-width:62ch}
+.backup-tile-grid{display:grid;grid-template-columns:1fr;gap:.65rem}
+.backup-choice-tile{position:relative;min-height:6.7rem;width:100%;padding:1rem;text-align:left;border:1px solid rgba(255,255,255,.09);border-radius:1rem;background:rgba(255,255,255,.035);color:var(--text);cursor:pointer;transition:transform .16s ease,border-color .16s ease,background .16s ease,box-shadow .16s ease}
+.backup-choice-tile:hover{transform:translateY(-2px);border-color:rgba(94,234,212,.35);background:rgba(45,212,191,.055)}
+.backup-choice-tile:focus-visible{outline:2px solid #5eead4;outline-offset:2px}
+.backup-choice-tile.selected{border-color:#2dd4bf;background:linear-gradient(145deg,rgba(45,212,191,.14),rgba(45,212,191,.055));box-shadow:inset 0 0 0 1px rgba(94,234,212,.12),0 .7rem 1.7rem rgba(0,0,0,.16)}
+.backup-choice-check{position:absolute;right:.7rem;top:.7rem;width:1.35rem;height:1.35rem;border-radius:50%;display:grid;place-items:center;border:1px solid rgba(255,255,255,.14);color:transparent;font-size:.72rem}
+.backup-choice-tile.selected .backup-choice-check{background:#2dd4bf;border-color:#2dd4bf;color:#06211d}
+.backup-choice-icon{display:grid;place-items:center;width:2.45rem;height:2.45rem;margin-bottom:.7rem;border-radius:.8rem;background:rgba(45,212,191,.1);color:#8ff8e4;font-size:1.25rem}
+.backup-choice-title{display:block;padding-right:1.7rem;font-size:.94rem;font-weight:700;color:#f5fffc;overflow-wrap:anywhere}
+.backup-choice-meta{display:block;margin-top:.3rem;color:var(--text2);font-size:.76rem;line-height:1.4;overflow-wrap:anywhere}
+.backup-choice-path{display:block;margin-top:.25rem;color:var(--text3);font-family:'JetBrains Mono',monospace;font-size:.68rem;line-height:1.4;overflow-wrap:anywhere}
+.backup-choice-badge{display:inline-flex;align-items:center;gap:.3rem;margin-top:.55rem;padding:.22rem .45rem;border-radius:999px;background:rgba(45,212,191,.1);color:#8ff8e4;font-size:.66rem;font-weight:700}
+.backup-choice-badge.warn{background:rgba(245,158,11,.11);color:#fbcf77}
+.backup-choice-tile:disabled{cursor:not-allowed;opacity:.5;transform:none}
+.backup-wizard-actions{display:flex;flex-wrap:wrap;gap:.65rem;align-items:center;justify-content:flex-end;margin-top:1rem;padding-top:1rem;border-top:1px solid rgba(255,255,255,.07)}
+.backup-wizard-actions .btn{min-height:2.75rem;padding-inline:1rem}
+.backup-wizard-actions .backup-back{margin-right:auto}
+.backup-wizard-notice{display:flex;gap:.75rem;padding:.8rem .9rem;margin-top:.8rem;border:1px solid rgba(245,158,11,.2);border-radius:.8rem;background:rgba(245,158,11,.075);color:#f6d89a;font-size:.78rem;line-height:1.5}
+.backup-wizard-notice.good{border-color:rgba(45,212,191,.22);background:rgba(45,212,191,.07);color:#b6faeb}
+.backup-summary{display:grid;gap:.65rem}
+.backup-summary-row{display:grid;grid-template-columns:2.4rem minmax(0,1fr);gap:.75rem;align-items:center;padding:.8rem;border:1px solid rgba(255,255,255,.08);border-radius:.85rem;background:rgba(255,255,255,.025)}
+.backup-summary-icon{font-size:1.25rem;text-align:center}
+.backup-summary-row strong{display:block;font-size:.82rem;color:#f5fffc}
+.backup-summary-row span{display:block;margin-top:.2rem;color:var(--text2);font-size:.75rem;overflow-wrap:anywhere}
+.backup-name-field{margin-bottom:1rem}
+.backup-name-field label{display:block;margin-bottom:.4rem;color:var(--text2);font-size:.75rem}
+.backup-name-field input{min-height:2.75rem}
+.backup-browser-head{display:flex;gap:.7rem;align-items:center;margin-bottom:.8rem}
+.backup-browser-up{width:2.75rem;height:2.75rem;min-width:2.75rem;border:1px solid rgba(255,255,255,.09);border-radius:.75rem;background:rgba(255,255,255,.035);color:var(--text);cursor:pointer}
+.backup-browser-path{min-width:0;color:var(--text2);font-family:'JetBrains Mono',monospace;font-size:.76rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.backup-browser-list{display:grid;gap:.4rem;max-height:19rem;overflow:auto;padding-right:.2rem}
+.backup-browser-row{display:grid;grid-template-columns:2rem minmax(0,1fr) auto;gap:.65rem;align-items:center;width:100%;min-height:3.25rem;padding:.55rem .7rem;border:1px solid rgba(255,255,255,.07);border-radius:.72rem;background:rgba(255,255,255,.025);color:var(--text);text-align:left;cursor:pointer}
+.backup-browser-row:hover,.backup-browser-row:focus-visible{border-color:rgba(94,234,212,.32);background:rgba(45,212,191,.055);outline:none}
+.backup-browser-row strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:.8rem}
+.backup-browser-row small{color:var(--text3);font-size:.67rem}
+.backup-browser-manual{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.5rem;margin-top:.8rem}
+.backup-browser-manual input,.backup-browser-manual button{min-height:2.75rem}
+@media (min-width:40rem){
+  .backup-wizard-progress{padding:1.1rem 1.5rem .35rem;gap:.75rem}
+  .backup-wizard-step span{display:block}
+  .backup-wizard-stage{padding:1.35rem 1.5rem 1.25rem}
+  .backup-tile-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:.75rem}
+  .backup-tile-grid.sources{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (prefers-reduced-motion:reduce){.backup-choice-tile{transition:none}.backup-choice-tile:hover{transform:none}}
+
 /* ── Confirm modal ── */
 .confirm-overlay{position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.7);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center}
 .confirm-overlay.open{display:flex}
@@ -863,7 +928,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .ice-bg{background:radial-gradient(ellipse at 60% 30%,#818cf8,transparent 50%),radial-gradient(ellipse at 20% 70%,#3730a3,transparent 55%),radial-gradient(ellipse at 85% 75%,#0284c7,transparent 45%),#03051a!important;background-attachment:fixed!important}
 .galaxy-bg{background:radial-gradient(ellipse at 40% 40%,#4c1d95,transparent 55%),radial-gradient(ellipse at 75% 20%,#1e1b4b,transparent 50%),radial-gradient(ellipse at 20% 80%,#0f172a,transparent 50%),#020108!important;background-attachment:fixed!important}
 </style>
-<link rel="stylesheet" href="/static/modern-theme.css?v=b96e4ba19cc6">
+<link rel="stylesheet" href="/static/modern-theme.css?v=f892967cba69">
 </head>
 <body>
 
@@ -7680,8 +7745,9 @@ function resetFormCardClasses(){
   const formCard=document.querySelector('#form-overlay .form-card');
   if(formCard)formCard.classList.remove(
     'compose-install-card','tile-edit-card',
-    'server-type-picker-card','external-server-form-card',
+    'server-type-picker-card','external-server-form-card','backup-wizard-card',
   );
+  $('#form-body')?.classList.remove('backup-wizard-body');
   return formCard;
 }
 function formOverlayFocusable(){
@@ -11431,8 +11497,118 @@ async function renderBackup(body,tab){
    </tr>`).join('')||'<tr><td colspan="4"><div class="empty-state">No history</div></td></tr>'}</tbody></table>`;}
  translateRenderedText(body);
 }
-window.backupForm=()=>openForm('Create backup','🗄',[{name:'name',label:'Name',placeholder:'Documents backup'},{name:'source',label:'Source path',placeholder:'/home/user/docs'},{name:'dest',label:'Destination path',placeholder:'/mnt/backup/docs'},{name:'schedule',label:'Schedule',type:'select',options:[{value:'manual',label:'Manual'},{value:'hourly',label:'Hourly'},{value:'daily',label:'Daily'},{value:'weekly',label:'Weekly'}]}],async d=>{await post('/backup/add',d);closeForm();toast('Task created');renderBackup($('#modal-body'),'Jobs');});
-window.runBackup=async id=>{toast('Backup started…');try{const r=await post('/backup/run',{job_id:id});toast(r.ok?'Backup complete':'Error',r.ok?'success':'error');}catch(e){toast('Error: '+e.message,'error');}};
+const BACKUP_WIZARD_I18N={
+  en:{title:'New backup',data:'Data',target:'Destination',schedule:'Schedule',review:'Review',step:'Step',sourceTitle:'What would you like to back up?',sourceCopy:'Choose a common folder or browse every available folder on this server.',customFolder:'Choose another folder',customFolderCopy:'Browse the complete server file system',noSources:'No common folders were detected. You can still browse all folders.',targetTitle:'Where should the backup be stored?',targetCopy:'External drives and network storage offer better protection than the system disk.',recommended:'Recommended',free:'free',network:'Network storage',local:'Local storage',notWritable:'Read only',sameDisk:'Not protected against a disk failure',otherTarget:'Choose another location',otherTargetCopy:'Browse mounted folders and storage',connectNetwork:'Connect network storage',connectNetworkCopy:'Add an SMB or NFS destination',scheduleTitle:'When should Runvard back it up?',scheduleCopy:'Daily is a good default. You can always start the backup manually as well.',daily:'Every day',dailyMeta:'Automatic · recommended',weekly:'Every week',weeklyMeta:'Automatic',manual:'Only when I start it',manualMeta:'No automatic schedule',reviewTitle:'Ready to protect your data',reviewCopy:'Check the source, destination and schedule before creating the backup.',name:'Backup name',mirrorTitle:'This is a mirror backup',mirrorCopy:'Files deleted from the source can also be deleted from the destination during the next backup.',sameDiskCopy:'Source and destination use the same file system. This copy is not protected against a disk failure.',back:'Back',next:'Continue',create:'Set up backup',creating:'Setting up…',useFolder:'Use this folder',up:'Up',manualPath:'Enter path manually',open:'Use path',noFolders:'No folders are available here.',loading:'Loading storage…',created:'Backup created',validationFailed:'This location cannot be used',source:'Source',destination:'Destination',browseTitle:'Choose folder'},
+  de:{title:'Neues Backup',data:'Daten',target:'Ziel',schedule:'Zeitplan',review:'Prüfen',step:'Schritt',sourceTitle:'Was möchtest du sichern?',sourceCopy:'Wähle einen häufigen Ordner oder durchsuche alle verfügbaren Ordner dieses Servers.',customFolder:'Anderen Ordner auswählen',customFolderCopy:'Das vollständige Dateisystem durchsuchen',noSources:'Es wurden keine häufigen Ordner erkannt. Du kannst trotzdem alle Ordner durchsuchen.',targetTitle:'Wohin soll das Backup gespeichert werden?',targetCopy:'Externe Laufwerke und Netzwerkspeicher schützen besser als der Systemdatenträger.',recommended:'Empfohlen',free:'frei',network:'Netzwerkspeicher',local:'Lokaler Speicher',notWritable:'Schreibgeschützt',sameDisk:'Nicht vor einem Laufwerksausfall geschützt',otherTarget:'Anderen Speicherort wählen',otherTargetCopy:'Eingebundene Ordner und Speicher durchsuchen',connectNetwork:'Netzwerkspeicher verbinden',connectNetworkCopy:'Ein SMB- oder NFS-Ziel hinzufügen',scheduleTitle:'Wann soll Runvard sichern?',scheduleCopy:'Täglich ist eine gute Voreinstellung. Das Backup kann zusätzlich jederzeit manuell gestartet werden.',daily:'Jeden Tag',dailyMeta:'Automatisch · empfohlen',weekly:'Jede Woche',weeklyMeta:'Automatisch',manual:'Nur wenn ich es starte',manualMeta:'Kein automatischer Zeitplan',reviewTitle:'Bereit, deine Daten zu schützen',reviewCopy:'Prüfe Quelle, Ziel und Zeitplan, bevor das Backup eingerichtet wird.',name:'Name des Backups',mirrorTitle:'Dies ist ein Spiegel-Backup',mirrorCopy:'Dateien, die in der Quelle gelöscht werden, können beim nächsten Backup auch im Ziel gelöscht werden.',sameDiskCopy:'Quelle und Ziel verwenden dasselbe Dateisystem. Diese Kopie schützt nicht vor einem Laufwerksausfall.',back:'Zurück',next:'Weiter',create:'Backup einrichten',creating:'Wird eingerichtet…',useFolder:'Diesen Ordner verwenden',up:'Nach oben',manualPath:'Pfad manuell eingeben',open:'Pfad verwenden',noFolders:'Hier sind keine Ordner verfügbar.',loading:'Speicher werden geladen…',created:'Backup wurde eingerichtet',validationFailed:'Dieser Speicherort kann nicht verwendet werden',source:'Quelle',destination:'Ziel',browseTitle:'Ordner auswählen'}
+};
+function backupText(key){const lang=currentLanguage();return BACKUP_WIZARD_I18N[lang]?.[key]||BACKUP_WIZARD_I18N.en[key]||key;}
+const BACKUP_SOURCE_LABELS={
+  en:{documents:'Documents',photos:'Photos',media:'Media',docker:'Docker data',homes:'User folders'},
+  de:{documents:'Dokumente',photos:'Fotos',media:'Medien',docker:'Docker-Daten',homes:'Benutzerordner'}
+};
+function backupWizardSourceLabel(item){const key=String(item.id||'').replace(/-\d+$/,'');return BACKUP_SOURCE_LABELS[currentLanguage()]?.[key]||BACKUP_SOURCE_LABELS.en[key]||item.label;}
+function backupWizardIcon(icon){return({document:'▤',photo:'◉',media:'▶',docker:'◇',users:'♙'}[icon]||'▱');}
+function backupWizardSteps(){return[backupText('data'),backupText('target'),backupText('schedule'),backupText('review')];}
+let backupWizardState=null,backupBrowserData=null;
+
+function backupWizardProgress(){
+  const state=backupWizardState,steps=backupWizardSteps();
+  return `<ol class="backup-wizard-progress" aria-label="${esc(backupText('title'))}">${steps.map((label,index)=>`<li class="backup-wizard-step${index<state.step?' done':''}" data-step="${index+1}" ${index===state.step?'aria-current="step"':''}><span>${esc(label)}</span></li>`).join('')}</ol>`;
+}
+function backupWizardHeading(title,copy){return `<div class="backup-wizard-heading"><div class="backup-wizard-kicker">${esc(backupText('step'))} ${backupWizardState.step+1} / 4</div><h3>${esc(title)}</h3><p>${esc(copy)}</p></div>`;}
+function backupWizardActions(nextLabel=backupText('next'),nextDisabled=false){
+  const back=backupWizardState.step>0?`<button class="btn ghost backup-back" type="button" onclick="backupWizardBack()">← ${esc(backupText('back'))}</button>`:'<span class="backup-back"></span>';
+  return `<div class="backup-wizard-actions">${back}<button class="btn" id="backup-next" type="button" onclick="backupWizardNext()" ${nextDisabled?'disabled':''}>${esc(nextLabel)} →</button></div>`;
+}
+function backupWizardSourceStep(){
+  const state=backupWizardState,sources=state.locations.sources||[];
+  const tiles=sources.map((item,index)=>{const selected=state.source===item.path;return `<button type="button" role="radio" aria-checked="${selected}" class="backup-choice-tile backup-source-tile${selected?' selected':''}" onclick="backupWizardSelectSource(${index})"><span class="backup-choice-check">✓</span><span class="backup-choice-icon" aria-hidden="true">${backupWizardIcon(item.icon)}</span><span class="backup-choice-title">${esc(backupWizardSourceLabel(item))}</span><span class="backup-choice-path">${esc(item.path)}</span></button>`;}).join('');
+  return backupWizardHeading(backupText('sourceTitle'),backupText('sourceCopy'))
+    +`${sources.length?'':`<div class="backup-wizard-notice">ⓘ <span>${esc(backupText('noSources'))}</span></div>`}`
+    +`<div class="backup-tile-grid sources" role="radiogroup" aria-label="${esc(backupText('source'))}">${tiles}<button type="button" class="backup-choice-tile backup-source-tile" onclick="backupDirectoryBrowser('source','/')"><span class="backup-choice-icon" aria-hidden="true">⌕</span><span class="backup-choice-title">${esc(backupText('customFolder'))}</span><span class="backup-choice-meta">${esc(backupText('customFolderCopy'))}</span></button></div>`
+    +backupWizardActions(backupText('next'),!state.source);
+}
+function backupWizardTargetStep(){
+  const state=backupWizardState,targets=state.locations.destinations||[];
+  const ordered=[...targets].sort((a,b)=>Number(b.recommended)-Number(a.recommended));
+  const tiles=ordered.map(item=>{const index=targets.indexOf(item),selected=state.destRoot===item.path;return `<button type="button" role="radio" aria-checked="${selected}" class="backup-choice-tile backup-target-tile${selected?' selected':''}" onclick="backupWizardSelectTarget(${index})" ${item.writable?'':'disabled'}><span class="backup-choice-check">✓</span><span class="backup-choice-icon" aria-hidden="true">${item.kind==='network'?'⌁':'▰'}</span><span class="backup-choice-title">${esc(item.label)}</span><span class="backup-choice-meta">${esc(item.kind==='network'?backupText('network'):backupText('local'))} · ${esc(fmtBytes(item.free))} ${esc(backupText('free'))}</span><span class="backup-choice-path">${esc(item.path)}</span>${item.recommended?`<span class="backup-choice-badge">✓ ${esc(backupText('recommended'))}</span>`:''}${!item.writable?`<span class="backup-choice-badge warn">${esc(backupText('notWritable'))}</span>`:''}</button>`;}).join('');
+  const error=state.error?`<div class="backup-wizard-notice">! <span><strong>${esc(backupText('validationFailed'))}</strong><br>${esc(state.error)}</span></div>`:'';
+  return backupWizardHeading(backupText('targetTitle'),backupText('targetCopy'))+error
+    +`<div class="backup-tile-grid" role="radiogroup" aria-label="${esc(backupText('destination'))}">${tiles}<button type="button" class="backup-choice-tile backup-target-tile" onclick="backupDirectoryBrowser('destination','/')"><span class="backup-choice-icon" aria-hidden="true">⌕</span><span class="backup-choice-title">${esc(backupText('otherTarget'))}</span><span class="backup-choice-meta">${esc(backupText('otherTargetCopy'))}</span></button><button type="button" class="backup-choice-tile backup-target-tile" onclick="backupWizardConnectNetwork()"><span class="backup-choice-icon" aria-hidden="true">⌁</span><span class="backup-choice-title">${esc(backupText('connectNetwork'))}</span><span class="backup-choice-meta">${esc(backupText('connectNetworkCopy'))}</span></button></div>`
+    +backupWizardActions(backupText('next'),!state.destRoot);
+}
+function backupWizardScheduleStep(){
+  const choices=[['daily',backupText('daily'),backupText('dailyMeta'),'◷'],['weekly',backupText('weekly'),backupText('weeklyMeta'),'▦'],['manual',backupText('manual'),backupText('manualMeta'),'▷']];
+  return backupWizardHeading(backupText('scheduleTitle'),backupText('scheduleCopy'))+`<div class="backup-tile-grid sources backup-schedule-grid" role="radiogroup" aria-label="${esc(backupText('schedule'))}">${choices.map(([value,label,meta,icon])=>{const selected=backupWizardState.schedule===value;return `<button type="button" role="radio" aria-checked="${selected}" class="backup-choice-tile backup-schedule-tile${selected?' selected':''}" onclick="backupWizardSelectSchedule('${value}')"><span class="backup-choice-check">✓</span><span class="backup-choice-icon" aria-hidden="true">${icon}</span><span class="backup-choice-title">${esc(label)}</span><span class="backup-choice-meta">${esc(meta)}</span></button>`;}).join('')}</div>`+backupWizardActions(backupText('next'));
+}
+function backupWizardDestination(){
+  const state=backupWizardState,base=(state.sourceLabel||state.source.split('/').filter(Boolean).pop()||'backup').normalize('NFKD').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'backup';
+  return state.destRoot.replace(/\/$/,'')+'/runvard-backups/'+base;
+}
+function backupWizardScheduleLabel(){return backupText(backupWizardState.schedule==='daily'?'daily':backupWizardState.schedule==='weekly'?'weekly':'manual');}
+function backupWizardSummary(){
+  const state=backupWizardState,dest=backupWizardDestination();
+  return backupWizardHeading(backupText('reviewTitle'),backupText('reviewCopy'))
+    +`<div class="backup-name-field"><label for="backup-job-name">${esc(backupText('name'))}</label><input id="backup-job-name" value="${esc(state.name)}" autocomplete="off"></div>`
+    +`<div class="backup-summary"><div class="backup-summary-row"><div class="backup-summary-icon">▤</div><div><strong>${esc(backupText('source'))}</strong><span>${esc(state.sourceLabel)} · ${esc(state.source)}</span></div></div><div class="backup-summary-row"><div class="backup-summary-icon">▰</div><div><strong>${esc(backupText('destination'))}</strong><span>${esc(state.targetLabel)} · ${esc(dest)}</span></div></div><div class="backup-summary-row"><div class="backup-summary-icon">◷</div><div><strong>${esc(backupText('schedule'))}</strong><span>${esc(backupWizardScheduleLabel())}</span></div></div></div>`
+    +`${state.validation?.same_filesystem?`<div class="backup-wizard-notice">⚠ <span><strong>${esc(backupText('sameDisk'))}</strong><br>${esc(backupText('sameDiskCopy'))}</span></div>`:`<div class="backup-wizard-notice good">✓ <span>${esc(backupText('recommended'))}: ${esc(state.targetLabel)}</span></div>`}`
+    +`<div class="backup-wizard-notice">↻ <span><strong>${esc(backupText('mirrorTitle'))}</strong><br>${esc(backupText('mirrorCopy'))}</span></div>`
+    +`<div class="backup-wizard-actions"><button class="btn ghost backup-back" type="button" onclick="backupWizardBack()">← ${esc(backupText('back'))}</button><button class="btn" id="backup-create" type="button" onclick="backupWizardCreate()">${esc(backupText('create'))}</button></div>`;
+}
+function backupWizardRender(){
+  if(!backupWizardState)return;
+  const views=[backupWizardSourceStep,backupWizardTargetStep,backupWizardScheduleStep,backupWizardSummary],body=$('#form-body');
+  $('#form-head').innerHTML=`<div class="form-head-title"><span aria-hidden="true">◒</span><span>${esc(backupText('title'))}</span></div><button class="backup-wizard-close" type="button" onclick="closeForm()" aria-label="${esc(tr('cancel'))}">✕</button>`;
+  body.innerHTML=backupWizardProgress()+`<section class="backup-wizard-stage">${views[backupWizardState.step]()}</section>`;
+  body.scrollTop=0;
+}
+window.backupWizardSelectSource=index=>{const item=backupWizardState.locations.sources[index];if(!item)return;const label=backupWizardSourceLabel(item);backupWizardState.source=item.path;backupWizardState.sourceLabel=label;backupWizardState.name=label+' backup';backupWizardState.error='';backupWizardRender();};
+window.backupWizardSelectTarget=index=>{const item=backupWizardState.locations.destinations[index];if(!item||!item.writable)return;backupWizardState.destRoot=item.path;backupWizardState.targetLabel=item.label;backupWizardState.error='';backupWizardRender();};
+window.backupWizardSelectSchedule=value=>{backupWizardState.schedule=value;backupWizardRender();};
+window.backupWizardBack=()=>{if(backupWizardState.step>0){backupWizardState.step--;backupWizardState.error='';backupWizardRender();}};
+window.backupWizardNext=async()=>{
+  const state=backupWizardState;
+  if(state.step===0&&!state.source||state.step===1&&!state.destRoot)return;
+  if(state.step<2){state.step++;backupWizardRender();return;}
+  if(state.step===2){
+    const button=$('#backup-next');if(button){button.disabled=true;button.textContent=backupText('loading');}
+    try{state.validation=await post('/backup/validate',{source:state.source,dest:backupWizardDestination()});state.error='';state.step=3;backupWizardRender();}
+    catch(e){state.error=e.message;state.step=1;backupWizardRender();}
+  }
+};
+window.backupWizardCreate=async()=>{
+  const state=backupWizardState,button=$('#backup-create');state.name=$('#backup-job-name')?.value.trim()||state.name;
+  if(button){button.disabled=true;button.textContent=backupText('creating');}
+  try{await post('/backup/add',{name:state.name,source:state.source,dest:backupWizardDestination(),schedule:state.schedule});closeForm();toast(backupText('created'));renderBackup($('#modal-body'),'Jobs');}
+  catch(e){if(button){button.disabled=false;button.textContent=backupText('create');}toast(e.message,'error');}
+};
+
+function backupVisibleBrowserEntries(entries){return(entries||[]).filter(entry=>isExpertMode()||!entry.name.startsWith('.'));}
+window.backupDirectoryBrowser=async(kind,path)=>{
+  try{
+    backupBrowserData=await api('/backup/browse?path='+encodeURIComponent(path||'/'));
+    backupBrowserData.entries=backupVisibleBrowserEntries(backupBrowserData.entries);
+    backupBrowserData.kind=kind;
+    const body=$('#form-body'),isSource=kind==='source';
+    $('#form-head').innerHTML=`<div class="form-head-title"><span aria-hidden="true">⌕</span><span>${esc(backupText('browseTitle'))}</span></div><button class="backup-wizard-close" type="button" onclick="backupWizardRender()" aria-label="${esc(backupText('back'))}">✕</button>`;
+    body.innerHTML=`<section class="backup-wizard-stage">${backupWizardHeading(isSource?backupText('sourceTitle'):backupText('targetTitle'),isSource?backupText('sourceCopy'):backupText('targetCopy'))}<div class="backup-browser-head"><button class="backup-browser-up" type="button" onclick="backupDirectoryBrowser('${kind}',backupBrowserData.parent)" ${backupBrowserData.parent===backupBrowserData.path?'disabled':''} aria-label="${esc(backupText('up'))}">↑</button><div class="backup-browser-path" title="${esc(backupBrowserData.path)}">${esc(backupBrowserData.path)}</div></div><div class="backup-browser-list">${backupBrowserData.entries.map((entry,index)=>`<button class="backup-browser-row" type="button" onclick="backupWizardOpenEntry(${index})"><span aria-hidden="true">▱</span><strong>${esc(entry.name)}</strong><small>${entry.readable?'›':'×'}</small></button>`).join('')||`<div class="backup-wizard-notice">${esc(backupText('noFolders'))}</div>`}</div><div class="backup-browser-manual"><input id="backup-manual-path" value="${esc(backupBrowserData.path)}" aria-label="${esc(backupText('manualPath'))}"><button class="btn ghost" type="button" onclick="backupWizardManualFolder()">${esc(backupText('open'))}</button></div><div class="backup-wizard-actions"><button class="btn ghost backup-back" type="button" onclick="backupWizardRender()">← ${esc(backupText('back'))}</button><button class="btn" type="button" onclick="backupWizardChooseFolder('${kind}',backupBrowserData.path)">${esc(backupText('useFolder'))}</button></div></section>`;
+    body.scrollTop=0;
+  }catch(e){toast(e.message,'error');}
+};
+window.backupWizardOpenEntry=index=>{const entry=backupBrowserData?.entries?.[index];if(entry?.readable)backupDirectoryBrowser(backupBrowserData.kind,entry.path);};
+window.backupWizardManualFolder=()=>{const path=$('#backup-manual-path')?.value.trim();if(path)backupDirectoryBrowser(backupBrowserData.kind,path);};
+window.backupWizardChooseFolder=(kind,path)=>{const label=path.split('/').filter(Boolean).pop()||'/';if(kind==='source'){backupWizardState.source=path;backupWizardState.sourceLabel=label;backupWizardState.name=label+' backup';}else{backupWizardState.destRoot=path;backupWizardState.targetLabel=label;}backupWizardState.error='';backupBrowserData=null;backupWizardRender();};
+window.backupWizardConnectNetwork=()=>{closeForm();setTimeout(()=>openTileById('files'),0);};
+window.backupForm=async()=>{
+  resetFormCardClasses();
+  const card=document.querySelector('#form-overlay .form-card');card?.classList.add('backup-wizard-card');$('#form-body').classList.add('backup-wizard-body');
+  backupWizardState={step:0,source:'',sourceLabel:'',destRoot:'',targetLabel:'',schedule:'daily',name:'',validation:null,error:'',locations:{sources:[],destinations:[]}};
+  $('#form-head').innerHTML=`<div class="form-head-title"><span aria-hidden="true">◒</span><span>${esc(backupText('title'))}</span></div><button class="backup-wizard-close" type="button" onclick="closeForm()" aria-label="${esc(tr('cancel'))}">✕</button>`;
+  $('#form-body').innerHTML=`<div class="loading">${esc(backupText('loading'))}</div>`;openFormOverlay('button');
+  try{backupWizardState.locations=await api('/backup/locations');}catch(e){toast(e.message,'error');}
+  backupWizardRender();
+};
+window.runBackup=async id=>{toast('Backup started…');try{const r=await post('/backup/run',{job_id:id});toast(r.ok?'Backup complete':(r.error||'Error'),r.ok?'success':'error');}catch(e){toast('Error: '+e.message,'error');}};
 
 // ═══ Freigaben – alle auf einer Seite ═══
 const SHARE_UI={

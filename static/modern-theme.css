@@ -579,6 +579,248 @@ html[data-ui-theme="modern"] select option {
   color: var(--text) !important;
 }
 
+/* Guided backup wizard: light, calm, and storage-focused. */
+html[data-ui-theme="modern"] .form-card.backup-wizard-card {
+  --backup-wizard-accent: #3973e6;
+  --backup-wizard-accent-strong: #285fc9;
+  --backup-wizard-accent-soft: rgb(57 115 230 / 10%);
+  --backup-wizard-surface: rgb(255 255 255 / 68%);
+  --backup-wizard-surface-strong: rgb(255 255 255 / 88%);
+  --backup-wizard-success: #208965;
+  --backup-wizard-warning: #a65f10;
+  border-color: rgb(255 255 255 / 94%);
+  background:
+    radial-gradient(circle at 8% 0%, rgb(57 115 230 / 9%), transparent 32%),
+    radial-gradient(circle at 94% 100%, rgb(32 137 101 / 7%), transparent 34%),
+    rgb(244 249 254 / 96%);
+  color: var(--text);
+  box-shadow:
+    0 32px 88px rgb(29 53 84 / 24%),
+    inset 0 1px 0 rgb(255 255 255 / 98%);
+}
+
+html[data-ui-theme="modern"] .backup-wizard-card .form-head {
+  border-bottom-color: rgb(72 99 132 / 12%);
+  background: rgb(255 255 255 / 52%);
+  color: var(--text);
+}
+
+html[data-ui-theme="modern"] .backup-wizard-close {
+  border: 1px solid var(--border);
+  background: rgb(255 255 255 / 48%);
+  color: var(--text2);
+}
+
+html[data-ui-theme="modern"] .backup-wizard-close:hover,
+html[data-ui-theme="modern"] .backup-wizard-close:focus-visible {
+  border-color: var(--border-accent);
+  background: var(--backup-wizard-accent-soft);
+  color: var(--backup-wizard-accent);
+  outline: 2px solid rgb(57 115 230 / 16%);
+  outline-offset: 2px;
+}
+
+html[data-ui-theme="modern"] .backup-wizard-progress {
+  border-bottom: 1px solid rgb(72 99 132 / 8%);
+  background: rgb(255 255 255 / 28%);
+}
+
+html[data-ui-theme="modern"] .backup-wizard-step {
+  color: var(--text3);
+}
+
+html[data-ui-theme="modern"] .backup-wizard-step::before {
+  border-color: rgb(72 99 132 / 16%);
+  background: rgb(255 255 255 / 54%);
+  color: var(--text3);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 84%);
+}
+
+html[data-ui-theme="modern"] .backup-wizard-step.done {
+  color: var(--backup-wizard-success);
+}
+
+html[data-ui-theme="modern"] .backup-wizard-step.done::before {
+  border-color: rgb(32 137 101 / 22%);
+  background: rgb(32 137 101 / 10%);
+  color: var(--backup-wizard-success);
+}
+
+html[data-ui-theme="modern"] .backup-wizard-step[aria-current="step"] {
+  color: var(--backup-wizard-accent-strong);
+}
+
+html[data-ui-theme="modern"] .backup-wizard-step[aria-current="step"]::before {
+  border-color: var(--backup-wizard-accent);
+  background: var(--backup-wizard-accent);
+  color: #fff;
+  box-shadow: 0 6px 16px rgb(57 115 230 / 24%);
+}
+
+html[data-ui-theme="modern"] .backup-wizard-kicker {
+  color: var(--backup-wizard-accent);
+}
+
+html[data-ui-theme="modern"] .backup-wizard-heading h3 {
+  color: var(--text);
+}
+
+html[data-ui-theme="modern"] .backup-wizard-heading p {
+  color: var(--text2);
+}
+
+html[data-ui-theme="modern"] .backup-choice-tile {
+  border-color: rgb(72 99 132 / 13%);
+  background: var(--backup-wizard-surface);
+  color: var(--text);
+  box-shadow:
+    0 10px 28px rgb(48 75 110 / 7%),
+    inset 0 1px 0 rgb(255 255 255 / 88%);
+}
+
+html[data-ui-theme="modern"] .backup-choice-tile:hover {
+  border-color: rgb(57 115 230 / 28%);
+  background: var(--backup-wizard-surface-strong);
+  box-shadow:
+    0 14px 34px rgb(48 75 110 / 11%),
+    inset 0 1px 0 #fff;
+}
+
+html[data-ui-theme="modern"] .backup-choice-tile:focus-visible {
+  outline-color: rgb(57 115 230 / 54%);
+}
+
+html[data-ui-theme="modern"] .backup-choice-tile.selected {
+  border-color: rgb(57 115 230 / 54%);
+  background:
+    linear-gradient(145deg, rgb(57 115 230 / 12%), rgb(255 255 255 / 82%));
+  box-shadow:
+    0 14px 34px rgb(57 115 230 / 12%),
+    inset 0 0 0 1px rgb(57 115 230 / 7%);
+}
+
+html[data-ui-theme="modern"] .backup-choice-check {
+  border-color: rgb(72 99 132 / 18%);
+  background: rgb(255 255 255 / 56%);
+}
+
+html[data-ui-theme="modern"] .backup-choice-tile.selected .backup-choice-check {
+  border-color: var(--backup-wizard-accent);
+  background: var(--backup-wizard-accent);
+  color: #fff;
+  box-shadow: 0 4px 10px rgb(57 115 230 / 20%);
+}
+
+html[data-ui-theme="modern"] .backup-choice-icon {
+  background: var(--backup-wizard-accent-soft);
+  color: var(--backup-wizard-accent);
+}
+
+html[data-ui-theme="modern"] .backup-choice-title {
+  color: var(--text);
+}
+
+html[data-ui-theme="modern"] .backup-choice-meta {
+  color: var(--text2);
+}
+
+html[data-ui-theme="modern"] .backup-choice-path {
+  color: var(--text3);
+}
+
+html[data-ui-theme="modern"] .backup-choice-badge {
+  background: rgb(32 137 101 / 10%);
+  color: var(--backup-wizard-success);
+}
+
+html[data-ui-theme="modern"] .backup-choice-badge.warn {
+  background: rgb(184 106 18 / 11%);
+  color: var(--backup-wizard-warning);
+}
+
+html[data-ui-theme="modern"] .backup-choice-tile:disabled {
+  border-color: rgb(72 99 132 / 8%);
+  background: rgb(235 241 247 / 56%);
+  color: var(--text3);
+  box-shadow: none;
+}
+
+html[data-ui-theme="modern"] .backup-wizard-actions {
+  border-top-color: rgb(72 99 132 / 11%);
+}
+
+html[data-ui-theme="modern"] .backup-wizard-notice {
+  border-color: rgb(184 106 18 / 20%);
+  background: rgb(255 247 233 / 76%);
+  color: #85500f;
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 72%);
+}
+
+html[data-ui-theme="modern"] .backup-wizard-notice.good {
+  border-color: rgb(32 137 101 / 20%);
+  background: rgb(235 249 243 / 82%);
+  color: #176e52;
+}
+
+html[data-ui-theme="modern"] .backup-summary-row {
+  border-color: rgb(72 99 132 / 12%);
+  background: var(--backup-wizard-surface);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 82%);
+}
+
+html[data-ui-theme="modern"] .backup-summary-row strong {
+  color: var(--text);
+}
+
+html[data-ui-theme="modern"] .backup-summary-row span,
+html[data-ui-theme="modern"] .backup-name-field label {
+  color: var(--text2);
+}
+
+html[data-ui-theme="modern"] .backup-browser-up {
+  border-color: var(--border);
+  background: rgb(255 255 255 / 58%);
+  color: var(--text2);
+}
+
+html[data-ui-theme="modern"] .backup-browser-up:hover:not(:disabled),
+html[data-ui-theme="modern"] .backup-browser-up:focus-visible {
+  border-color: var(--border-accent);
+  background: var(--backup-wizard-accent-soft);
+  color: var(--backup-wizard-accent);
+  outline: 2px solid rgb(57 115 230 / 14%);
+  outline-offset: 2px;
+}
+
+html[data-ui-theme="modern"] .backup-browser-up:disabled {
+  color: var(--text3);
+  opacity: .55;
+}
+
+html[data-ui-theme="modern"] .backup-browser-path {
+  color: var(--text2);
+}
+
+html[data-ui-theme="modern"] .backup-browser-row {
+  border-color: rgb(72 99 132 / 11%);
+  background: var(--backup-wizard-surface);
+  color: var(--text);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / 80%);
+}
+
+html[data-ui-theme="modern"] .backup-browser-row:hover,
+html[data-ui-theme="modern"] .backup-browser-row:focus-visible {
+  border-color: rgb(57 115 230 / 27%);
+  background: var(--backup-wizard-surface-strong);
+  color: var(--backup-wizard-accent-strong);
+  outline: 2px solid rgb(57 115 230 / 11%);
+  outline-offset: 1px;
+}
+
+html[data-ui-theme="modern"] .backup-browser-row small {
+  color: var(--text3);
+}
+
 html[data-ui-theme="modern"] th {
   color: var(--text3);
   text-transform: none;

@@ -80,6 +80,7 @@ BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 # ============ Auth: Session-Cookies + Login an/aus ============
 DATA_DIR = os.environ.get("RUNVARD_DATA_DIR", os.path.join(BASE_DIR, "data"))
 os.makedirs(DATA_DIR, exist_ok=True)
+backup.configure_data_dir(DATA_DIR)
 SECRET_FILE = os.path.join(DATA_DIR, "secret.key")
 AUTH_CFG_FILE = os.path.join(DATA_DIR, "auth.json")
 COOKIE_NAME = "runvard_session"
@@ -1457,15 +1458,40 @@ def backup_jobs(user: str = Depends(auth)):
     return backup.list_jobs()
 
 
+@app.get("/api/backup/locations")
+def backup_locations(user: str = Depends(auth)):
+    return backup.discover_locations()
+
+
+@app.get("/api/backup/browse")
+def backup_browse(path: str = "/", user: str = Depends(auth)):
+    try:
+        return backup.browse_directories(path)
+    except (OSError, ValueError) as e:
+        raise HTTPException(400, str(e))
+
+
+@app.post("/api/backup/validate")
+def backup_validate(source: str = Form(...), dest: str = Form(...),
+                    user: str = Depends(require_admin)):
+    try:
+        return backup.validate_paths(source, dest)
+    except (OSError, ValueError) as e:
+        raise HTTPException(400, str(e))
+
+
 @app.post("/api/backup/add")
 def backup_add(name: str = Form(...), source: str = Form(...),
                dest: str = Form(...), schedule: str = Form("manual"),
-               user: str = Depends(auth)):
-    return backup.add_job(name, source, dest, schedule)
+               user: str = Depends(require_admin)):
+    try:
+        return backup.add_job(name, source, dest, schedule)
+    except (OSError, ValueError) as e:
+        raise HTTPException(400, str(e))
 
 
 @app.post("/api/backup/run")
-def backup_run(job_id: int = Form(...), user: str = Depends(auth)):
+def backup_run(job_id: int = Form(...), user: str = Depends(require_admin)):
     return backup.run_job(job_id)
 
 
