@@ -70,6 +70,9 @@ def test_papervard_install_draft_is_image_only_and_secure(monkeypatch, tmp_path)
         "./config:/config",
         "./data:/data",
     ]
+    health_command = services["papervard"]["healthcheck"]["test"][3]
+    assert "process.env.HOSTNAME" in health_command
+    assert "127.0.0.1" not in health_command
     assert services["db"]["volumes"] == ["./data:/papervard-data"]
     assert first["install_info"]["credentials"] == [
         {
@@ -82,6 +85,25 @@ def test_papervard_install_draft_is_image_only_and_secure(monkeypatch, tmp_path)
             "secret": True,
         },
     ]
+
+
+def test_papervard_update_migrates_loopback_healthcheck():
+    old_healthcheck = (
+        "fetch('http://127.0.0.1:3000/login')"
+        ".then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+    )
+    content = f'''services:
+  papervard:
+    image: ghcr.io/mschoettli/papervard:latest
+    healthcheck:
+      test: ["CMD", "node", "-e", "{old_healthcheck}"]
+'''
+
+    updated = apps._normalize_app_compose(_papervard(), content)
+
+    assert "127.0.0.1" not in updated
+    assert "process.env.HOSTNAME" in updated
+    assert yaml.safe_load(updated)["services"]["papervard"]["healthcheck"]["test"][3]
 
 
 def test_papervard_allocates_both_web_ports(monkeypatch, tmp_path):

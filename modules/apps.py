@@ -784,6 +784,11 @@ def _prepare_host_network_content(app, content):
 
 def _normalize_app_compose(app, content):
     """Apply catalog migrations to already saved app compose files."""
+    if app.get("id") == "papervard":
+        content = str(content or "").replace(
+            "fetch('http://127.0.0.1:3000/login')",
+            "fetch('http://'+process.env.HOSTNAME+':3000/login')",
+        )
     return content
 
 
@@ -968,7 +973,7 @@ services:
       - ./data:/data
     command: ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && npm run db:seed && node server.js"]
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://'+process.env.HOSTNAME+':3000/login').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 10s
       timeout: 5s
       retries: 30
