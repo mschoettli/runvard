@@ -1,4 +1,10 @@
 /* Optional light interface. All rules are scoped so the original design stays unchanged. */
+html[data-ui-theme="modern"] .path-picker-card{border-color:rgba(75,85,99,.18);background:rgba(250,251,255,.96);box-shadow:0 28px 90px rgba(39,45,62,.24)}
+html[data-ui-theme="modern"] .path-picker-root{border-color:rgba(75,85,99,.14);background:#fff;color:var(--text2)}
+html[data-ui-theme="modern"] .path-picker-entry{border-color:rgba(75,85,99,.14);background:#fff;color:var(--text2);box-shadow:0 2px 8px rgba(42,48,65,.05)}
+html[data-ui-theme="modern"] .path-picker-entry.selected{border-color:var(--accent);background:rgba(77,101,255,.09);color:var(--text)}
+html[data-ui-theme="modern"] .path-picker-status.good{background:rgba(22,163,74,.06);color:#15803d}
+html[data-ui-theme="modern"] .path-picker-status.bad{background:rgba(220,38,38,.06);color:#b91c1c}
 html[data-ui-theme="modern"] {
   --bg: #edf4fb;
   --bg2: rgb(255 255 255 / 64%);

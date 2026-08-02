@@ -12,6 +12,7 @@ import base64
 import time
 import html
 import requests
+import subprocess
 
 from fastapi import FastAPI, Request, Depends, HTTPException, WebSocket, \
     WebSocketDisconnect, UploadFile, File, Form
@@ -23,7 +24,7 @@ from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from modules import (system, terminal, files, storage, docker_mgr, services,
                      vms, backup, shares, network, security, monitoring,
                      system_mgr, apps, dashboard, metrics, accounts, audit,
-                     ports, time_machine)
+                     ports, time_machine, path_picker)
 from modules import security_tokens
 from modules.external_servers import ExternalServerManager
 from modules.external_servers.service import error_category
@@ -759,6 +760,53 @@ def system_history(minutes: int = 60, user: str = Depends(auth)):
 
 
 # ============ Dateien ============
+
+@app.get("/api/path-picker/roots")
+def path_picker_roots(request: Request, purpose: str, mode: str = "folder",
+                      user: str = Depends(require_admin)):
+    return path_picker.list_roots(purpose, is_expert_request(request), mode)
+
+
+@app.get("/api/path-picker/browse")
+def path_picker_browse(request: Request, path: str, purpose: str,
+                       mode: str = "folder", user: str = Depends(require_admin)):
+    try:
+        return path_picker.browse(path, purpose, mode, is_expert_request(request))
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc))
+    except (ValueError, OSError) as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.post("/api/path-picker/validate")
+def path_picker_validate(request: Request, path: str = Form(...),
+                         purpose: str = Form(...), mode: str = Form("folder"),
+                         user: str = Depends(require_admin)):
+    try:
+        return path_picker.validate(path, purpose, mode, is_expert_request(request))
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc))
+    except (ValueError, OSError) as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.post("/api/path-picker/folder")
+def path_picker_folder(request: Request, parent: str = Form(...), name: str = Form(...),
+                       purpose: str = Form(...), user: str = Depends(require_admin)):
+    try:
+        return path_picker.create_folder(parent, name, purpose, is_expert_request(request))
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc))
+    except (ValueError, OSError) as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.get("/api/path-picker/nfs-exports")
+def path_picker_nfs_exports(server: str, user: str = Depends(require_admin)):
+    try:
+        return path_picker.discover_nfs_exports(server)
+    except (ValueError, OSError, subprocess.SubprocessError) as exc:
+        raise HTTPException(400, str(exc))
 
 @app.get("/api/files/list")
 def files_list(path: str = "/root", user: str = Depends(auth)):

@@ -179,10 +179,14 @@ for (const key of [
 
 for (const name of [
   "TOAST_PHRASES", "PROGRESS_PHRASES", "FILE_I18N", "APP_UI",
-  "APP_CATEGORY_LABELS", "APP_INSTALL_STEP_PHRASES",
+  "APP_CATEGORY_LABELS", "APP_INSTALL_STEP_PHRASES", "PATH_PICKER_I18N",
 ]) {
   requireLocalizedLeaves(name, evaluate(indexSource, name, context));
 }
+const backupWizardI18n = evaluate(indexSource, "BACKUP_WIZARD_I18N", context);
+mergeLocales(backupWizardI18n, evaluate(indexSource, "BACKUP_WIZARD_I18N_COMPLETIONS", context));
+requireKeyParity("BACKUP_WIZARD_I18N", backupWizardI18n, "en", locales);
+requireKeyParity("BACKUP_SOURCE_LABELS", evaluate(indexSource, "BACKUP_SOURCE_LABELS", context), "en", locales);
 for (const name of ["PHRASE_PATTERNS", "TOAST_PATTERNS", "PROGRESS_PATTERNS"]) {
   evaluate(indexSource, name, context).forEach((pattern, index) => {
     const missing = translatedLocales.filter((locale) => !(locale in (pattern.t || {})));

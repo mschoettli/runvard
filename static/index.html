@@ -918,6 +918,16 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 }
 
 @keyframes runvard-shift{0%{background-position:0% 50%}50%{background-position:100% 50%}100%{background-position:0% 50%}}
+.path-picker-overlay{position:fixed;inset:0;z-index:1300;display:none;place-items:center;padding:1rem;background:rgba(3,4,12,.72);backdrop-filter:blur(12px)}
+.path-picker-overlay.open{display:grid}.path-picker-card{width:min(100%,58rem);max-height:calc(100dvh - 2rem);display:flex;flex-direction:column;overflow:hidden;border:1px solid var(--border);border-radius:16px;background:#10111f;box-shadow:0 24px 80px rgba(0,0,0,.48)}
+.path-picker-head,.path-picker-actions{display:flex;align-items:center;gap:.65rem;padding:1rem;border-bottom:1px solid var(--border)}.path-picker-head h2{margin:0;flex:1;font-size:1rem}.path-picker-close{min-width:2.75rem;min-height:2.75rem}
+.path-picker-layout{display:grid;grid-template-columns:1fr;min-height:18rem;overflow:auto}.path-picker-roots{display:flex;gap:.5rem;padding:.75rem;overflow:auto;border-bottom:1px solid var(--border)}
+.path-picker-root,.path-picker-entry{min-height:2.75rem;border:1px solid var(--border);border-radius:10px;background:rgba(255,255,255,.025);color:var(--text2);cursor:pointer;text-align:left}.path-picker-root{flex:0 0 auto;padding:.6rem .8rem}.path-picker-root.selected,.path-picker-entry.selected{border-color:var(--accent);background:rgba(124,92,252,.16);color:var(--text)}
+.path-picker-main{min-width:0;padding:.75rem;overflow:auto}.path-picker-breadcrumb{display:flex;align-items:center;gap:.5rem;margin-bottom:.65rem}.path-picker-current{min-width:0;flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:11px 'JetBrains Mono',monospace;color:var(--text2)}
+.path-picker-entries{display:grid;grid-template-columns:repeat(auto-fill,minmax(11rem,1fr));gap:.5rem}.path-picker-entry{display:flex;align-items:center;gap:.6rem;padding:.65rem .75rem;overflow:hidden}.path-picker-entry span:last-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.path-picker-status{min-height:2.75rem;padding:.7rem 1rem;border-top:1px solid var(--border);color:var(--text3)}.path-picker-status.good{color:var(--green)}.path-picker-status.bad{color:var(--red)}
+.path-picker-expert,.path-picker-new-folder{display:flex;gap:.5rem;padding:.65rem 1rem;border-top:1px solid var(--border)}.path-picker-expert[hidden],.path-picker-new-folder[hidden]{display:none}.path-picker-expert input,.path-picker-new-folder input{min-width:0;flex:1}.path-picker-actions{justify-content:flex-end;border-top:1px solid var(--border);border-bottom:0}.path-field-control{display:flex;gap:.5rem}.path-field-control input{min-width:0;flex:1}.path-field-control button{min-width:2.75rem;min-height:2.75rem}
+@media(min-width:768px){.path-picker-layout{grid-template-columns:minmax(11rem,.42fr) minmax(0,1fr)}.path-picker-roots{display:block;border-right:1px solid var(--border);border-bottom:0}.path-picker-root{width:100%;margin-bottom:.4rem}.path-picker-main{max-height:24rem}}
 @keyframes aurora-shift{0%{background-position:0% 0%}33%{background-position:100% 100%}66%{background-position:0% 100%}100%{background-position:0% 0%}}
 .runvard-bg{background:radial-gradient(ellipse at 20% 50%,#6d28d9,transparent 55%),radial-gradient(ellipse at 80% 20%,#0891b2,transparent 50%),radial-gradient(ellipse at 60% 80%,#1e1b4b,transparent 50%),#050714!important;background-attachment:fixed!important}
 .aurora-bg{background:radial-gradient(ellipse at 75% 30%,#c026d3,transparent 50%),radial-gradient(ellipse at 25% 70%,#7c3aed,transparent 55%),radial-gradient(ellipse at 50% 90%,#be123c,transparent 40%),#0d0714!important;background-attachment:fixed!important}
@@ -928,7 +938,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .ice-bg{background:radial-gradient(ellipse at 60% 30%,#818cf8,transparent 50%),radial-gradient(ellipse at 20% 70%,#3730a3,transparent 55%),radial-gradient(ellipse at 85% 75%,#0284c7,transparent 45%),#03051a!important;background-attachment:fixed!important}
 .galaxy-bg{background:radial-gradient(ellipse at 40% 40%,#4c1d95,transparent 55%),radial-gradient(ellipse at 75% 20%,#1e1b4b,transparent 50%),radial-gradient(ellipse at 20% 80%,#0f172a,transparent 50%),#020108!important;background-attachment:fixed!important}
 </style>
-<link rel="stylesheet" href="/static/modern-theme.css?v=f892967cba69">
+<link rel="stylesheet" href="/static/modern-theme.css?v=5dbbc5656367">
 </head>
 <body>
 
@@ -1032,6 +1042,24 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   <div class="form-card" role="dialog" aria-modal="true" aria-labelledby="form-head">
     <div class="form-head" id="form-head"></div>
     <div class="form-body" id="form-body"></div>
+  </div>
+</div>
+
+<!-- Gemeinsame sichere Server-Pfadauswahl -->
+<div class="path-picker-overlay" id="path-picker-overlay" aria-hidden="true">
+  <div class="path-picker-card" role="dialog" aria-modal="true" aria-labelledby="path-picker-title">
+    <div class="path-picker-head"><h2 id="path-picker-title"></h2><button id="path-picker-close" class="btn ghost path-picker-close" type="button">✕</button></div>
+    <div class="path-picker-layout">
+      <nav class="path-picker-roots" id="path-picker-roots" aria-label=""></nav>
+      <main class="path-picker-main">
+        <div class="path-picker-breadcrumb"><button id="path-picker-up" class="btn ghost" type="button">↑</button><div class="path-picker-current" id="path-picker-current"></div></div>
+        <div class="path-picker-entries" id="path-picker-entries"></div>
+      </main>
+    </div>
+    <div class="path-picker-new-folder" id="path-picker-new-folder"><input id="path-picker-folder-name"><button id="path-picker-create" class="btn ghost" type="button"></button></div>
+    <div class="path-picker-expert" id="path-picker-expert" hidden><input id="path-picker-manual"><button id="path-picker-open-manual" class="btn ghost" type="button"></button></div>
+    <div class="path-picker-status" id="path-picker-status" aria-live="polite"></div>
+    <div class="path-picker-actions"><button id="path-picker-cancel" class="btn ghost" type="button"></button><button id="path-picker-use" class="btn" type="button"></button></div>
   </div>
 </div>
 
@@ -7743,6 +7771,113 @@ function failTopProgress(label){
   topProgressHideTimer=setTimeout(hideTopProgress,2200);
 }
 
+// ═══ Gemeinsame Server-Pfadauswahl ═══
+const PATH_PICKER_I18N={
+  titleFolder:{de:'Ordner auswählen',en:'Choose folder',fr:'Choisir un dossier',it:'Scegli cartella',es:'Elegir carpeta',pt:'Escolher pasta'},
+  titleFile:{de:'Datei auswählen',en:'Choose file',fr:'Choisir un fichier',it:'Scegli file',es:'Elegir archivo',pt:'Escolher ficheiro'},
+  titleDevice:{de:'Gerät auswählen',en:'Choose device',fr:'Choisir un périphérique',it:'Scegli dispositivo',es:'Elegir dispositivo',pt:'Escolher dispositivo'},
+  titleRemote:{de:'Freigabe auswählen',en:'Choose export',fr:'Choisir un partage',it:'Scegli esportazione',es:'Elegir exportación',pt:'Escolher exportação'},
+  locations:{de:'Speicherorte',en:'Locations',fr:'Emplacements',it:'Posizioni',es:'Ubicaciones',pt:'Localizações'},
+  empty:{de:'Keine passenden Einträge gefunden.',en:'No matching entries found.',fr:'Aucun élément correspondant.',it:'Nessun elemento corrispondente.',es:'No se encontraron elementos.',pt:'Nenhum item correspondente.'},
+  loading:{de:'Speicherorte werden geladen …',en:'Loading locations…',fr:'Chargement des emplacements…',it:'Caricamento delle posizioni…',es:'Cargando ubicaciones…',pt:'A carregar localizações…'},
+  choose:{de:'Auswählen',en:'Choose',fr:'Choisir',it:'Scegli',es:'Elegir',pt:'Escolher'},
+  cancel:{de:'Abbrechen',en:'Cancel',fr:'Annuler',it:'Annulla',es:'Cancelar',pt:'Cancelar'},
+  browse:{de:'Durchsuchen',en:'Browse',fr:'Parcourir',it:'Sfoglia',es:'Examinar',pt:'Procurar'},
+  newFolder:{de:'Neuer Ordner',en:'New folder',fr:'Nouveau dossier',it:'Nuova cartella',es:'Nueva carpeta',pt:'Nova pasta'},
+  create:{de:'Erstellen',en:'Create',fr:'Créer',it:'Crea',es:'Crear',pt:'Criar'},
+  manual:{de:'Pfad manuell öffnen',en:'Open path manually',fr:'Ouvrir le chemin manuellement',it:'Apri percorso manualmente',es:'Abrir ruta manualmente',pt:'Abrir caminho manualmente'},
+  ready:{de:'Dieser Pfad kann verwendet werden.',en:'This path can be used.',fr:'Ce chemin peut être utilisé.',it:'Questo percorso può essere usato.',es:'Esta ruta se puede utilizar.',pt:'Este caminho pode ser utilizado.'},
+  selectFirst:{de:'Bitte zuerst einen Eintrag auswählen.',en:'Select an entry first.',fr:'Sélectionnez d’abord un élément.',it:'Seleziona prima un elemento.',es:'Selecciona primero un elemento.',pt:'Selecione primeiro um item.'},
+  unavailable:{de:'Dieser Speicherort ist nicht verfügbar.',en:'This location is unavailable.',fr:'Cet emplacement est indisponible.',it:'Questa posizione non è disponibile.',es:'Esta ubicación no está disponible.',pt:'Esta localização não está disponível.'},
+  expertHint:{de:'Manuelle Pfade sind nur im Expertenmodus verfügbar.',en:'Manual paths are available only in Expert Mode.',fr:'Les chemins manuels sont réservés au mode expert.',it:'I percorsi manuali sono disponibili solo in modalità esperto.',es:'Las rutas manuales solo están disponibles en el modo experto.',pt:'Os caminhos manuais só estão disponíveis no modo especialista.'}
+};
+function pathPickerText(key){const value=PATH_PICKER_I18N[key];return value?.[currentLanguage()]||value?.en||key;}
+let pathPickerState=null,pathPickerReturnFocus=null;
+function pathPickerFocusable(){return [...document.querySelectorAll('#path-picker-overlay button:not([disabled]),#path-picker-overlay input:not([disabled]):not([hidden])')].filter(el=>el.offsetParent!==null);}
+function pathPickerKeydown(event){
+  if(!$('#path-picker-overlay').classList.contains('open'))return;
+  if(event.key==='Escape'){event.preventDefault();closePathPicker();return;}
+  if(event.key!=='Tab')return;
+  const items=pathPickerFocusable();if(!items.length)return;
+  const first=items[0],last=items[items.length-1];
+  if(event.shiftKey&&document.activeElement===first){event.preventDefault();last.focus();}
+  else if(!event.shiftKey&&document.activeElement===last){event.preventDefault();first.focus();}
+}
+function pathPickerStatus(message,tone=''){
+  const el=$('#path-picker-status');el.textContent=message;el.className='path-picker-status'+(tone?' '+tone:'');
+}
+function pathPickerSetText(){
+  const s=pathPickerState||{mode:'folder'};
+  $('#path-picker-title').textContent=pathPickerText('title'+s.mode[0].toUpperCase()+s.mode.slice(1));
+  $('#path-picker-roots').setAttribute('aria-label',pathPickerText('locations'));
+  $('#path-picker-cancel').textContent=pathPickerText('cancel');$('#path-picker-use').textContent=pathPickerText('choose');
+  $('#path-picker-create').textContent=pathPickerText('create');$('#path-picker-folder-name').placeholder=pathPickerText('newFolder');
+  $('#path-picker-open-manual').textContent=pathPickerText('browse');$('#path-picker-manual').placeholder=pathPickerText('manual');
+}
+function pathPickerEntry(row){
+  const button=document.createElement('button');button.type='button';button.className='path-picker-entry';
+  const icon=document.createElement('span');icon.setAttribute('aria-hidden','true');icon.textContent=row.type==='folder'?'▱':row.type==='device'?'▣':'◇';
+  const label=document.createElement('span');label.textContent=row.name;button.append(icon,label);
+  button.addEventListener('click',()=>{
+    if(row.type==='folder'&&pathPickerState.mode!=='folder'){pathPickerBrowse(row.path);return;}
+    document.querySelectorAll('.path-picker-entry.selected').forEach(el=>el.classList.remove('selected'));
+    button.classList.add('selected');pathPickerState.selected=row.path;pathPickerStatus(pathPickerText('ready'),'good');
+  });
+  button.addEventListener('dblclick',()=>row.type==='folder'?pathPickerBrowse(row.path):pathPickerChoose());
+  return button;
+}
+async function pathPickerBrowse(path){
+  const s=pathPickerState;if(!s)return;pathPickerStatus(pathPickerText('loading'));
+  try{
+    const endpoint=s.mode==='remote'?'/path-picker/nfs-exports?server='+encodeURIComponent(s.server||''):'/path-picker/browse?path='+encodeURIComponent(path||'/')+'&purpose='+encodeURIComponent(s.purpose)+'&mode='+encodeURIComponent(s.mode);
+    const data=await api(endpoint);s.current=data.path||'';s.parent=data.parent;s.selected=s.mode==='folder'?s.current:'';
+    $('#path-picker-current').textContent=s.mode==='remote'?(s.server||''):s.current;$('#path-picker-up').disabled=!s.parent;
+    const entries=$('#path-picker-entries');entries.replaceChildren();(data.entries||[]).forEach(row=>entries.append(pathPickerEntry(row)));
+    if(!(data.entries||[]).length){const empty=document.createElement('div');empty.className='empty-state';empty.textContent=pathPickerText('empty');entries.append(empty);}
+    $('#path-picker-new-folder').hidden=s.mode==='remote'||s.mode==='device'||!data.writable;
+    pathPickerStatus(s.selected?pathPickerText('ready'):'');return true;
+  }catch(error){pathPickerStatus(error.message||pathPickerText('unavailable'),'bad');return false;}
+}
+async function openPathPicker(options,onChoose){
+  pathPickerReturnFocus=document.activeElement;
+  pathPickerState=Object.assign({mode:'folder',purpose:'share',value:'',server:'',onChoose},options||{});
+  const overlay=$('#path-picker-overlay');overlay.classList.add('open');overlay.setAttribute('aria-hidden','false');pathPickerSetText();
+  $('#path-picker-expert').hidden=!isExpertMode();$('#path-picker-manual').value=pathPickerState.value||'';
+  pathPickerStatus(pathPickerText('loading'));$('#path-picker-roots').replaceChildren();$('#path-picker-entries').replaceChildren();
+  try{
+    if(pathPickerState.mode==='remote'){await pathPickerBrowse('');}
+    else{
+      const data=await api('/path-picker/roots?purpose='+encodeURIComponent(pathPickerState.purpose)+'&mode='+encodeURIComponent(pathPickerState.mode));
+      data.roots.forEach((root,index)=>{const button=document.createElement('button');button.type='button';button.className='path-picker-root';button.textContent=root.name;button.title=root.path;button.onclick=()=>pathPickerBrowse(root.path);$('#path-picker-roots').append(button);if(index===0&&!pathPickerState.value)pathPickerState.value=root.path;});
+      let start=pathPickerState.value||(data.roots[0]?.path||'/');
+      if(pathPickerState.purpose==='container-host'&&start.includes(':'))start=start.split(':',1)[0];
+      if((pathPickerState.mode==='file'||pathPickerState.appendName)&&start.includes('/'))start=start.slice(0,start.lastIndexOf('/'))||'/';
+      const loaded=await pathPickerBrowse(start);if(!loaded&&data.roots[0]?.path!==start)await pathPickerBrowse(data.roots[0]?.path||'/');
+    }
+  }catch(error){pathPickerStatus(error.message||pathPickerText('unavailable'),'bad');}
+  requestAnimationFrame(()=>$('#path-picker-close').focus());
+}
+function closePathPicker(){const overlay=$('#path-picker-overlay');overlay.classList.remove('open');overlay.setAttribute('aria-hidden','true');pathPickerState=null;const target=pathPickerReturnFocus;pathPickerReturnFocus=null;if(target?.isConnected)requestAnimationFrame(()=>target.focus());}
+async function pathPickerChoose(){
+  const s=pathPickerState,path=s?.selected;if(!s||!path){pathPickerStatus(pathPickerText('selectFirst'),'bad');return;}
+  if(s.mode!=='remote'){
+    try{const result=await post('/path-picker/validate',{path,purpose:s.purpose,mode:s.mode});if(!result.ok){pathPickerStatus(pathPickerText('unavailable'),'bad');return;}}
+    catch(error){pathPickerStatus(error.message,'bad');return;}
+  }
+  const callback=s.onChoose;closePathPicker();callback?.(path);
+}
+function openPathPickerForField(name,picker){
+  const input=$('#f_'+name);if(!input)return;
+  const server=picker.serverField?$('#f_'+picker.serverField)?.value:'';
+  openPathPicker(Object.assign({},picker,{value:input.value,server}),path=>{input.value=picker.appendName?path.replace(/\/$/,'')+'/'+picker.appendName:path;input.dispatchEvent(new Event('input',{bubbles:true}));});
+}
+$('#path-picker-close').onclick=closePathPicker;$('#path-picker-cancel').onclick=closePathPicker;$('#path-picker-use').onclick=pathPickerChoose;
+$('#path-picker-up').onclick=()=>pathPickerState?.parent&&pathPickerBrowse(pathPickerState.parent);
+$('#path-picker-open-manual').onclick=()=>{const path=$('#path-picker-manual').value.trim();if(!path)return;if(pathPickerState?.mode==='folder')pathPickerBrowse(path);else{pathPickerState.selected=path;pathPickerStatus(pathPickerText('ready'),'good');}};
+$('#path-picker-create').onclick=async()=>{const name=$('#path-picker-folder-name').value.trim();if(!name||!pathPickerState?.current)return;try{await post('/path-picker/folder',{parent:pathPickerState.current,name,purpose:pathPickerState.purpose});$('#path-picker-folder-name').value='';await pathPickerBrowse(pathPickerState.current);}catch(error){pathPickerStatus(error.message,'bad');}};
+$('#path-picker-overlay').onclick=event=>{if(event.target.id==='path-picker-overlay')closePathPicker();};
+document.addEventListener('keydown',pathPickerKeydown);
+
 // ═══ Formular-Modal ═══
 let formSubmitFn=null;
 let formReturnFocus=null;
@@ -7776,6 +7911,7 @@ function openFormOverlay(focusSelector){
   });
 }
 function formOverlayKeydown(event){
+  if($('#path-picker-overlay').classList.contains('open'))return;
   if(!$('#form-overlay').classList.contains('open'))return;
   if(event.key==='Escape'){
     event.preventDefault();
@@ -7809,6 +7945,7 @@ function openForm(title,icon,fields,onSubmit){
       const options=f.options||[];
       inp=options.length?`<div id="f_${f.name}" class="nx-check-list">${options.map((o,i)=>{const value=o.value??o;return`<label class="nx-check-row"><input type="checkbox" name="f_${f.name}" value="${esc(value)}" ${selected.has(String(value))?'checked':''}> <span><strong>${esc(o.label??value)}</strong>${o.sub?`<small>${esc(o.sub)}</small>`:''}</span></label>`;}).join('')}</div>`:`<div id="f_${f.name}" class="empty-state" style="padding:12px">${esc(uiText(f.empty||'No devices available'))}</div>`;
     }
+    else if(f.picker){const pickerReadonly=isExpertMode()?'' :'readonly';inp=`<div class="path-field-control"><input id="f_${f.name}" type="${f.type||'text'}" value="${esc(f.value||'')}" placeholder="${esc(uiText(f.placeholder||''))}" ${pickerReadonly}><button class="btn ghost" type="button" data-path-picker="${esc(f.name)}" aria-label="${esc(pathPickerText('browse'))}">⌕</button>${f.picker.device&&isExpertMode()?`<button class="btn ghost" type="button" data-device-picker="${esc(f.name)}" aria-label="${esc(pathPickerText('titleDevice'))}">▣</button>`:''}</div>`;}
     else inp=`<input id="f_${f.name}" type="${f.type||'text'}" value="${esc(f.value||'')}" placeholder="${esc(uiText(f.placeholder||''))}">`;
     const cond=f.showWhen?` data-show-when="${esc(f.showWhen)}" data-show-value="${esc(String(f.showValue??'true'))}"`:'';
     if(f.type==='checkbox') return `<div class="form-field" id="field_${esc(f.name)}"${cond}>${inp}${f.hint?`<div class="hint">${esc(uiText(f.hint))}</div>`:''}</div>`;
@@ -7827,6 +7964,8 @@ function openForm(title,icon,fields,onSubmit){
     const el=$('#f_'+f.name);
     if(el)el.addEventListener(f.type==='checkbox'||f.type==='checkbox-group'?'change':'input',syncFormConditions);
   });
+  valueFields.filter(f=>f.picker).forEach(f=>body.querySelector(`[data-path-picker="${CSS.escape(f.name)}"]`)?.addEventListener('click',()=>openPathPickerForField(f.name,f.picker)));
+  valueFields.filter(f=>f.picker?.device).forEach(f=>body.querySelector(`[data-device-picker="${CSS.escape(f.name)}"]`)?.addEventListener('click',()=>openPathPickerForField(f.name,f.picker.device)));
   syncFormConditions();
   formSubmitFn=()=>{const d={};valueFields.forEach(f=>{const el=$('#f_'+f.name);if(el)d[f.name]=f.type==='checkbox'?el.checked:f.type==='checkbox-group'?Array.from(body.querySelectorAll(`input[name="f_${CSS.escape(f.name)}"]:checked`)).map(x=>x.value).join(','):el.value;});onSubmit(d);};
   $('#form-go').onclick=formSubmitFn;
@@ -10288,7 +10427,7 @@ window.sambaShareForm=(path,name)=>openForm(uiText('Create Samba share'),'🔗',
 window.mountSmbForm=()=>openForm(uiText('Connect SMB'),'🔗',[
   {name:'server',label:uiText('Server IP or hostname'),placeholder:'192.168.1.10'},
   {name:'share_name',label:uiText('Share name'),placeholder:'media'},
-  {name:'mountpoint',label:uiText('Mountpoint'),placeholder:'/mnt/nas'},
+  {name:'mountpoint',label:uiText('Mountpoint'),placeholder:'/mnt/nas',picker:{purpose:'mountpoint',mode:'folder'}},
   {name:'username',label:uiText('Username'),value:'guest'},
   {name:'password',label:uiText('Password'),type:'password'},
 ],async d=>{try{const r=await post('/files/mount-smb',d);if(r&&r.ok===false){toast((r.stderr||r.stdout||'SMB mount failed').slice(0,300),'error');return;}closeForm();toast('SMB share connected');currentPath=(r&&r.mountpoint)||d.mountpoint;renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
@@ -10296,8 +10435,8 @@ window.mountSmbForm=()=>openForm(uiText('Connect SMB'),'🔗',[
 // Externes NFS mounten
 window.mountNfsForm=()=>openForm(uiText('Connect NFS'),'🔗',[
   {name:'server',label:uiText('Server IP or hostname'),placeholder:'192.168.1.10'},
-  {name:'export',label:uiText('Export path'),placeholder:'/srv/nfs/media'},
-  {name:'mountpoint',label:uiText('Mountpoint'),placeholder:'/mnt/nfs'},
+  {name:'export',label:uiText('Export path'),placeholder:'/srv/nfs/media',picker:{purpose:'nfs-export',mode:'remote',serverField:'server'}},
+  {name:'mountpoint',label:uiText('Mountpoint'),placeholder:'/mnt/nfs',picker:{purpose:'mountpoint',mode:'folder'}},
   {name:'options',label:uiText('Options (optional)'),placeholder:'ro,soft',hint:uiText('Comma-separated mount options')},
 ],async d=>{try{const r=await post('/files/mount-nfs',d);if(r&&r.ok===false){toast((r.stderr||r.stdout||'NFS mount failed').slice(0,300),'error');return;}closeForm();toast('NFS share connected');currentPath=(r&&r.mountpoint)||d.mountpoint;renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
 
@@ -10393,7 +10532,7 @@ async function renderSwap(body){
   </tbody></table>`;
 }
 window.swapForm=()=>openForm('Create swap file','💾',[
-  {name:'path',label:'Path',value:'/swapfile',placeholder:'/swapfile'},
+  {name:'path',label:'Path',value:'/swapfile',placeholder:'/swapfile',picker:{purpose:'swap-file',mode:'folder',appendName:'swapfile'}},
   {name:'size_mb',label:'Size (MB)',type:'number',value:2048},
   {name:'persist',label:'Add to /etc/fstab (permanent)',type:'checkbox',value:true},
 ],async d=>{closeForm();toast('Creating swapfile…');try{const r=await post('/storage/swap/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Swap file active');renderStorage($('#modal-body'),'Swap');}catch(e){toast('Error: '+e.message,'error');}});
@@ -10470,7 +10609,7 @@ window.loadSmart=async()=>{
     <div class="nx-card-inner"><div style="font-size:10px;color:var(--text3);text-transform:uppercase;letter-spacing:.07em;margin-bottom:6px">Modell</div><span style="font-size:12px;color:var(--text2)">${esc(s.model)||'—'}</span></div>
   </div>`;
 };
-window.diskWizard=dev=>openForm('Set up disk: '+dev,'💿',[{name:'fstype',label:'Filesystem',type:'select',options:['ext4','xfs','btrfs']},{name:'mountpoint',label:'Mount point',placeholder:'/mnt/data'},{name:'persist',label:'Add to /etc/fstab (permanent)',type:'checkbox',value:true}],async d=>{closeForm();toast('Setting up disk…');try{await post('/storage/partition-table',{device:dev,label:'gpt'});await post('/storage/partition',{device:dev});await post('/storage/format',{partition:dev+'1',fstype:d.fstype});await post('/storage/mount',{partition:dev+'1',mountpoint:d.mountpoint,persist:d.persist});toast('Disk ready');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}});
+window.diskWizard=dev=>openForm('Set up disk: '+dev,'💿',[{name:'fstype',label:'Filesystem',type:'select',options:['ext4','xfs','btrfs']},{name:'mountpoint',label:'Mount point',placeholder:'/mnt/data',picker:{purpose:'mountpoint',mode:'folder'}},{name:'persist',label:'Add to /etc/fstab (permanent)',type:'checkbox',value:true}],async d=>{closeForm();toast('Setting up disk…');try{await post('/storage/partition-table',{device:dev,label:'gpt'});await post('/storage/partition',{device:dev});await post('/storage/format',{partition:dev+'1',fstype:d.fstype});await post('/storage/mount',{partition:dev+'1',mountpoint:d.mountpoint,persist:d.persist});toast('Disk ready');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}});
 window.raidForm=async()=>{
   const d=await api('/storage/devices');
   const disks=d.devices.filter(x=>x.type==='disk'&&!x.protected);
@@ -10539,7 +10678,7 @@ window.luksOpenForm=device=>openForm('Unlock container','🔓',[
 window.luksClose=mapper=>confirmDelete('Lock container',`Lock "${mapper}"? The mapping will be closed (unmount first).`,async()=>{try{const r=await post('/storage/luks/close',{name:mapper});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Locked');renderStorage($('#modal-body'),'LUKS');}catch(e){toast('Error: '+e.message,'error');}});
 window.luksSetupForm=mapper=>openForm('Format & mount: '+mapper,'⚙',[
   {name:'fstype',label:'Filesystem',type:'select',options:['ext4','xfs','btrfs']},
-  {name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/crypt'},
+  {name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/crypt',picker:{purpose:'mountpoint',mode:'folder'}},
   {name:'persist',label:'Add to /etc/fstab (permanent)',type:'checkbox',value:false},
 ],async d=>{closeForm();toast('Formatting & mounting…');try{
   const part='mapper/'+mapper;
@@ -10609,7 +10748,7 @@ window.btrfsForm=async()=>{
   ],async d=>{if(!selectedDeviceList(d.devices).length){toast('Select at least one device','error');return;}closeForm();toast('Creating Btrfs pool…');try{const r=await post('/storage/btrfs/create',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Btrfs pool created');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
 };
 window.btrfsScrubForm=()=>openForm('Btrfs-Scrub','🧹',[
-  {name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/daten',hint:'Mount path of the Btrfs filesystem'},
+  {name:'mountpoint',label:'Mountpoint',placeholder:'/mnt/daten',hint:'Mount path of the Btrfs filesystem',picker:{purpose:'mountpoint',mode:'folder'}},
 ],async d=>{closeForm();toast('Scrub started…');try{const r=await post('/storage/btrfs/scrub',{mountpoint:d.mountpoint});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Scrub running');}catch(e){toast('Error: '+e.message,'error');}});
 
 // ---- iSCSI ----
@@ -11006,7 +11145,7 @@ window.dockerExecBack=()=>{
   const b=$('#modal-body');b.style.display='';b.style.flexDirection='';b.style.padding='';b.style.overflow='';
   renderDocker(b,'Container');
 };
-window.dockerCreateForm=()=>openForm('Create container','🐳',[{name:'image',label:'Image',placeholder:'nginx:latest'},{name:'name',label:'Name (optional)',placeholder:'mein-container'},{name:'ports',label:'Ports',placeholder:'8080:80,8443:443',hint:'host:container, comma-separated'},{name:'volumes',label:'Volumes',placeholder:'/host/pfad:/container/pfad'},{name:'env',label:'Env-Variablen',placeholder:'KEY=wert,KEY2=wert2'},{name:'cpus',label:'CPU-Limit',placeholder:'e.g. 1.5 (empty = unlimited)'},{name:'memory',label:'RAM-Limit',placeholder:'e.g. 512m or 2g (empty = unlimited)'},{name:'restart',label:'Restart-Policy',type:'select',options:['no','always','unless-stopped','on-failure']}],async d=>{closeForm();toast('Erstelle Container…');try{await post('/docker/create',d);toast('Container running');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}});
+window.dockerCreateForm=()=>openForm('Create container','🐳',[{name:'image',label:'Image',placeholder:'nginx:latest'},{name:'name',label:'Name (optional)',placeholder:'mein-container'},{name:'ports',label:'Ports',placeholder:'8080:80,8443:443',hint:'host:container, comma-separated'},{name:'volumes',label:'Volumes',placeholder:'/host/pfad:/container/pfad',picker:{purpose:'container-host',mode:'folder'}},{name:'env',label:'Env-Variablen',placeholder:'KEY=wert,KEY2=wert2'},{name:'cpus',label:'CPU-Limit',placeholder:'e.g. 1.5 (empty = unlimited)'},{name:'memory',label:'RAM-Limit',placeholder:'e.g. 512m or 2g (empty = unlimited)'},{name:'restart',label:'Restart-Policy',type:'select',options:['no','always','unless-stopped','on-failure']}],async d=>{if(d.volumes&&!d.volumes.includes(':'))d.volumes+=':/data';closeForm();toast('Erstelle Container…');try{await post('/docker/create',d);toast('Container running');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}});
 window.dockerLimitsForm=async(id,name)=>{const c=await api('/docker/containers');const cur=c.find(x=>x.id===id)||{};const cpus=cur.nano_cpus?(cur.nano_cpus/1e9).toString():'';const mem=cur.mem_limit?Math.round(cur.mem_limit/1048576)+'m':'';openForm('Limits: '+name,'📊',[{name:'cpus',label:'CPU-Limit',value:cpus,placeholder:'z. B. 1.5',hint:'0 = unlimited, empty = unchanged'},{name:'memory',label:'RAM-Limit',value:mem,placeholder:'z. B. 512m / 2g',hint:'empty = unchanged'}],async d=>{closeForm();toast('Setze Limits…');try{const r=await post('/docker/update',{container_id:id,cpus:d.cpus,memory:d.memory});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Limits updated');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}});};
 window.dockerSearchForm=()=>openForm('Registry-Suche','🔍',[{name:'term',label:'Suchbegriff',placeholder:'z. B. postgres'}],async d=>{closeForm();if(!d.term){return;}toast('Suche…');try{const r=await api('/docker/search?term='+encodeURIComponent(d.term));if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}renderDockerSearch($('#modal-body'),d.term,r.results||[]);}catch(e){toast('Error: '+e.message,'error');}});
 function renderDockerSearch(body,term,results){
@@ -11191,7 +11330,7 @@ window.vmResourcesForm=(name,memoryMb,vcpus)=>openForm('Change resources: '+name
 window.vmDiskForm=async name=>{
   const p=await api('/vms/pools').catch(()=>({pools:[]}));
   openForm('Attach disk: '+name,'🔌',[
-    {name:'source',label:'Source image/device',placeholder:'/var/lib/libvirt/images/data.qcow2',hint:'Path to an existing qcow2/raw image or block device'+(p.pools&&p.pools.length?' · Pools: '+p.pools.map(x=>x.name).join(', '):'')},
+    {name:'source',label:'Source image/device',placeholder:'/var/lib/libvirt/images/data.qcow2',hint:'Path to an existing qcow2/raw image or block device'+(p.pools&&p.pools.length?' · Pools: '+p.pools.map(x=>x.name).join(', '):''),picker:{purpose:'vm-image',mode:'file',device:{purpose:'vm-image',mode:'device'}}},
     {name:'target',label:'Target device',value:'vdb',hint:'e.g. vdb, vdc …'},
     {name:'bus',label:'Bus',type:'select',options:['virtio','sata','scsi','ide']},
   ],async d=>{closeForm();toast('Attaching disk…');try{const r=await post('/vms/disk/attach',{name,source:d.source,target:d.target,bus:d.bus});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Disk attached');vmHardware(name);}catch(e){toast('Error: '+e.message,'error');}});
@@ -11239,7 +11378,7 @@ async function renderVmPools(body){
 window.vmPoolForm=()=>openForm('Create storage pool','📂',[
   {name:'name',label:'Pool name',placeholder:'vmdata'},
   {name:'ptype',label:'Type',type:'select',options:[{value:'dir',label:'Directory (dir)'},{value:'fs',label:'Filesystem (fs)'}]},
-  {name:'target',label:'Target folder',placeholder:'/var/lib/libvirt/pools/vmdata',hint:'Created when needed (pool-build)'},
+  {name:'target',label:'Target folder',placeholder:'/var/lib/libvirt/pools/vmdata',hint:'Created when needed (pool-build)',picker:{purpose:'vm-pool',mode:'folder'}},
 ],async d=>{closeForm();toast('Creating pool…');try{const r=await post('/vms/pool/create',d);if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Pool created');renderVmPools($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
 window.vmPoolAct=async(name,action)=>{try{const r=await post('/vms/pool/action',{name,action});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}const msgs={start:'Pool started',stop:'Pool stopped','autostart-on':'Autostart enabled','autostart-off':'Autostart disabled'};toast(msgs[action]||'OK');renderVmPools($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}};
 window.vmPoolDel=name=>confirmDelete('Delete pool',`Delete storage pool "${name}"? (The pool definition is removed, files stay on disk)`,async()=>{try{const r=await post('/vms/pool/action',{name,action:'delete'});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('Pool deleted');renderVmPools($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}});
@@ -11393,7 +11532,7 @@ openForm(tmText('newTarget'),'⏱',[
   {name:'display_name',label:tmText('macName'),placeholder:'Marias MacBook'},
   {name:'owner',label:tmText('account'),placeholder:'tm-maria'},
   {name:'create_account',label:tmText('createAccount'),type:'checkbox',value:true},
-  {name:'storage_root',label:tmText('root'),placeholder:'/mnt/backups',hint:'Must already be a writable mount point.'},
+  {name:'storage_root',label:tmText('root'),placeholder:'/mnt/backups',hint:'Must already be a writable mount point.',picker:{purpose:'time-machine',mode:'folder'}},
   {name:'source_capacity_gb',label:tmText('sourceCapacity'),type:'number',value:500},
   {name:'capacity_gb',label:tmText('targetCapacity'),type:'number',value:1000,hint:'At least twice the Mac storage is recommended.'},
   {name:'password',label:tmText('password'),type:'password',hint:'At least 12 characters. It is never stored by runvard.'},
@@ -11442,7 +11581,7 @@ window.tmReplicationForm=()=>{
   openForm(tmText('addReplication'),'⧉',[
     {name:'target_id',label:tmText('target'),type:'select',options:_tmTargets.filter(x=>x.status!=='removed').map(x=>({value:x.id,label:x.display_name||x.share_name}))},
     {name:'mode',label:tmText('transport'),type:'select',options:[{value:'local',label:tmText('local')},{value:'remote',label:tmText('remote')}]},
-    {name:'destination_root',label:tmText('destination'),placeholder:'/mnt/replica or /srv/runvard-replicas'},
+    {name:'destination_root',label:tmText('destination'),placeholder:'/mnt/replica or /srv/runvard-replicas',picker:{purpose:'time-machine',mode:'folder'}},
     {name:'schedule_hour',label:tmText('schedule'),type:'number',value:2,hint:'0–23'},
     {name:'bandwidth_mbps',label:tmText('bandwidth'),type:'number',value:0,hint:'0 = unlimited'},
     {name:'remote_host',label:'Remote host (LAN/VPN)',placeholder:'10.0.0.12',hint:'Leave empty for a local replica.'},
@@ -11467,7 +11606,7 @@ window.tmImportReplicaForm=()=>openForm(tmText('importReplica'),'⇥',[
   {name:'display_name',label:tmText('macName')},
   {name:'owner',label:tmText('account'),placeholder:'tm-maria'},
   {name:'create_account',label:tmText('createAccount'),type:'checkbox',value:true},
-  {name:'storage_root',label:tmText('root'),placeholder:'/mnt/backups'},
+  {name:'storage_root',label:tmText('root'),placeholder:'/mnt/backups',picker:{purpose:'time-machine',mode:'folder'}},
   {name:'capacity_gb',label:tmText('targetCapacity'),type:'number',value:1000},
   {name:'password',label:tmText('password'),type:'password'},
   {name:'source_unavailable_confirmed',label:tmText('sourceUnavailable'),type:'checkbox',value:false},
@@ -11503,13 +11642,24 @@ async function renderBackup(body,tab){
  translateRenderedText(body);
 }
 const BACKUP_WIZARD_I18N={
-  en:{title:'New backup',data:'Data',target:'Destination',schedule:'Schedule',review:'Review',step:'Step',sourceTitle:'What would you like to back up?',sourceCopy:'Choose a common folder or browse every available folder on this server.',customFolder:'Choose another folder',customFolderCopy:'Browse the complete server file system',noSources:'No common folders were detected. You can still browse all folders.',targetTitle:'Where should the backup be stored?',targetCopy:'External drives and network storage offer better protection than the system disk.',recommended:'Recommended',free:'free',network:'Network storage',local:'Local storage',notWritable:'Read only',sameDisk:'Not protected against a disk failure',otherTarget:'Choose another location',otherTargetCopy:'Browse mounted folders and storage',connectNetwork:'Connect network storage',connectNetworkCopy:'Add an SMB or NFS destination',scheduleTitle:'When should Runvard back it up?',scheduleCopy:'Daily is a good default. You can always start the backup manually as well.',daily:'Every day',dailyMeta:'Automatic · recommended',weekly:'Every week',weeklyMeta:'Automatic',manual:'Only when I start it',manualMeta:'No automatic schedule',reviewTitle:'Ready to protect your data',reviewCopy:'Check the source, destination and schedule before creating the backup.',name:'Backup name',mirrorTitle:'This is a mirror backup',mirrorCopy:'Files deleted from the source can also be deleted from the destination during the next backup.',sameDiskCopy:'Source and destination use the same file system. This copy is not protected against a disk failure.',back:'Back',next:'Continue',create:'Set up backup',creating:'Setting up…',useFolder:'Use this folder',up:'Up',manualPath:'Enter path manually',open:'Use path',noFolders:'No folders are available here.',loading:'Loading storage…',created:'Backup created',validationFailed:'This location cannot be used',source:'Source',destination:'Destination',browseTitle:'Choose folder'},
-  de:{title:'Neues Backup',data:'Daten',target:'Ziel',schedule:'Zeitplan',review:'Prüfen',step:'Schritt',sourceTitle:'Was möchtest du sichern?',sourceCopy:'Wähle einen häufigen Ordner oder durchsuche alle verfügbaren Ordner dieses Servers.',customFolder:'Anderen Ordner auswählen',customFolderCopy:'Das vollständige Dateisystem durchsuchen',noSources:'Es wurden keine häufigen Ordner erkannt. Du kannst trotzdem alle Ordner durchsuchen.',targetTitle:'Wohin soll das Backup gespeichert werden?',targetCopy:'Externe Laufwerke und Netzwerkspeicher schützen besser als der Systemdatenträger.',recommended:'Empfohlen',free:'frei',network:'Netzwerkspeicher',local:'Lokaler Speicher',notWritable:'Schreibgeschützt',sameDisk:'Nicht vor einem Laufwerksausfall geschützt',otherTarget:'Anderen Speicherort wählen',otherTargetCopy:'Eingebundene Ordner und Speicher durchsuchen',connectNetwork:'Netzwerkspeicher verbinden',connectNetworkCopy:'Ein SMB- oder NFS-Ziel hinzufügen',scheduleTitle:'Wann soll Runvard sichern?',scheduleCopy:'Täglich ist eine gute Voreinstellung. Das Backup kann zusätzlich jederzeit manuell gestartet werden.',daily:'Jeden Tag',dailyMeta:'Automatisch · empfohlen',weekly:'Jede Woche',weeklyMeta:'Automatisch',manual:'Nur wenn ich es starte',manualMeta:'Kein automatischer Zeitplan',reviewTitle:'Bereit, deine Daten zu schützen',reviewCopy:'Prüfe Quelle, Ziel und Zeitplan, bevor das Backup eingerichtet wird.',name:'Name des Backups',mirrorTitle:'Dies ist ein Spiegel-Backup',mirrorCopy:'Dateien, die in der Quelle gelöscht werden, können beim nächsten Backup auch im Ziel gelöscht werden.',sameDiskCopy:'Quelle und Ziel verwenden dasselbe Dateisystem. Diese Kopie schützt nicht vor einem Laufwerksausfall.',back:'Zurück',next:'Weiter',create:'Backup einrichten',creating:'Wird eingerichtet…',useFolder:'Diesen Ordner verwenden',up:'Nach oben',manualPath:'Pfad manuell eingeben',open:'Pfad verwenden',noFolders:'Hier sind keine Ordner verfügbar.',loading:'Speicher werden geladen…',created:'Backup wurde eingerichtet',validationFailed:'Dieser Speicherort kann nicht verwendet werden',source:'Quelle',destination:'Ziel',browseTitle:'Ordner auswählen'}
+  en:{title:'New backup',data:'Data',target:'Destination',schedule:'Schedule',review:'Review',step:'Step',sourceTitle:'What would you like to back up?',sourceCopy:'Choose a common folder or browse the allowed locations on this server.',customFolder:'Choose another folder',customFolderCopy:'Browse allowed locations',noSources:'No common folders were detected. You can still browse the allowed locations.',targetTitle:'Where should the backup be stored?',targetCopy:'External drives and network storage offer better protection than the system disk.',recommended:'Recommended',free:'free',network:'Network storage',local:'Local storage',notWritable:'Read only',sameDisk:'Not protected against a disk failure',otherTarget:'Choose another location',otherTargetCopy:'Browse mounted folders and storage',connectNetwork:'Connect network storage',connectNetworkCopy:'Add an SMB or NFS destination',scheduleTitle:'When should Runvard back it up?',scheduleCopy:'Daily is a good default. You can always start the backup manually as well.',daily:'Every day',dailyMeta:'Automatic · recommended',weekly:'Every week',weeklyMeta:'Automatic',manual:'Only when I start it',manualMeta:'No automatic schedule',reviewTitle:'Ready to protect your data',reviewCopy:'Check the source, destination and schedule before creating the backup.',name:'Backup name',mirrorTitle:'This is a mirror backup',mirrorCopy:'Files deleted from the source can also be deleted from the destination during the next backup.',sameDiskCopy:'Source and destination use the same file system. This copy is not protected against a disk failure.',back:'Back',next:'Continue',create:'Set up backup',creating:'Setting up…',useFolder:'Use this folder',up:'Up',manualPath:'Enter path manually',open:'Use path',noFolders:'No folders are available here.',loading:'Loading storage…',created:'Backup created',validationFailed:'This location cannot be used',source:'Source',destination:'Destination',browseTitle:'Choose folder'},
+  de:{title:'Neues Backup',data:'Daten',target:'Ziel',schedule:'Zeitplan',review:'Prüfen',step:'Schritt',sourceTitle:'Was möchtest du sichern?',sourceCopy:'Wähle einen häufigen Ordner oder durchsuche die erlaubten Speicherorte dieses Servers.',customFolder:'Anderen Ordner auswählen',customFolderCopy:'Erlaubte Speicherorte durchsuchen',noSources:'Es wurden keine häufigen Ordner erkannt. Du kannst trotzdem die erlaubten Speicherorte durchsuchen.',targetTitle:'Wohin soll das Backup gespeichert werden?',targetCopy:'Externe Laufwerke und Netzwerkspeicher schützen besser als der Systemdatenträger.',recommended:'Empfohlen',free:'frei',network:'Netzwerkspeicher',local:'Lokaler Speicher',notWritable:'Schreibgeschützt',sameDisk:'Nicht vor einem Laufwerksausfall geschützt',otherTarget:'Anderen Speicherort wählen',otherTargetCopy:'Eingebundene Ordner und Speicher durchsuchen',connectNetwork:'Netzwerkspeicher verbinden',connectNetworkCopy:'Ein SMB- oder NFS-Ziel hinzufügen',scheduleTitle:'Wann soll Runvard sichern?',scheduleCopy:'Täglich ist eine gute Voreinstellung. Das Backup kann zusätzlich jederzeit manuell gestartet werden.',daily:'Jeden Tag',dailyMeta:'Automatisch · empfohlen',weekly:'Jede Woche',weeklyMeta:'Automatisch',manual:'Nur wenn ich es starte',manualMeta:'Kein automatischer Zeitplan',reviewTitle:'Bereit, deine Daten zu schützen',reviewCopy:'Prüfe Quelle, Ziel und Zeitplan, bevor das Backup eingerichtet wird.',name:'Name des Backups',mirrorTitle:'Dies ist ein Spiegel-Backup',mirrorCopy:'Dateien, die in der Quelle gelöscht werden, können beim nächsten Backup auch im Ziel gelöscht werden.',sameDiskCopy:'Quelle und Ziel verwenden dasselbe Dateisystem. Diese Kopie schützt nicht vor einem Laufwerksausfall.',back:'Zurück',next:'Weiter',create:'Backup einrichten',creating:'Wird eingerichtet…',useFolder:'Diesen Ordner verwenden',up:'Nach oben',manualPath:'Pfad manuell eingeben',open:'Pfad verwenden',noFolders:'Hier sind keine Ordner verfügbar.',loading:'Speicher werden geladen…',created:'Backup wurde eingerichtet',validationFailed:'Dieser Speicherort kann nicht verwendet werden',source:'Quelle',destination:'Ziel',browseTitle:'Ordner auswählen'}
 };
+const BACKUP_WIZARD_I18N_COMPLETIONS={
+  fr:{title:'Nouvelle sauvegarde',data:'Données',target:'Destination',schedule:'Planification',review:'Vérification',step:'Étape',sourceTitle:'Que souhaitez-vous sauvegarder ?',sourceCopy:'Choisissez un dossier courant ou parcourez les emplacements autorisés sur ce serveur.',customFolder:'Choisir un autre dossier',customFolderCopy:'Parcourir les emplacements autorisés',noSources:'Aucun dossier courant détecté. Vous pouvez parcourir les emplacements autorisés.',targetTitle:'Où enregistrer la sauvegarde ?',targetCopy:'Les disques externes et le stockage réseau offrent une meilleure protection que le disque système.',recommended:'Recommandé',free:'libres',network:'Stockage réseau',local:'Stockage local',notWritable:'Lecture seule',sameDisk:'Non protégé contre une panne de disque',otherTarget:'Choisir un autre emplacement',otherTargetCopy:'Parcourir les dossiers montés et le stockage',connectNetwork:'Connecter un stockage réseau',connectNetworkCopy:'Ajouter une destination SMB ou NFS',scheduleTitle:'Quand Runvard doit-il effectuer la sauvegarde ?',scheduleCopy:'Une sauvegarde quotidienne est un bon choix par défaut. Vous pouvez aussi la lancer manuellement.',daily:'Chaque jour',dailyMeta:'Automatique · recommandé',weekly:'Chaque semaine',weeklyMeta:'Automatique',manual:'Uniquement lorsque je la lance',manualMeta:'Aucune planification automatique',reviewTitle:'Prêt à protéger vos données',reviewCopy:'Vérifiez la source, la destination et la planification avant de créer la sauvegarde.',name:'Nom de la sauvegarde',mirrorTitle:'Ceci est une sauvegarde miroir',mirrorCopy:'Les fichiers supprimés de la source peuvent aussi être supprimés de la destination lors de la prochaine sauvegarde.',sameDiskCopy:'La source et la destination utilisent le même système de fichiers. Cette copie ne protège pas contre une panne de disque.',back:'Retour',next:'Continuer',create:'Configurer la sauvegarde',creating:'Configuration…',useFolder:'Utiliser ce dossier',up:'Remonter',manualPath:'Saisir le chemin manuellement',open:'Utiliser le chemin',noFolders:'Aucun dossier disponible ici.',loading:'Chargement du stockage…',created:'Sauvegarde créée',validationFailed:'Cet emplacement ne peut pas être utilisé',source:'Source',destination:'Destination',browseTitle:'Choisir un dossier'},
+  it:{title:'Nuovo backup',data:'Dati',target:'Destinazione',schedule:'Pianificazione',review:'Verifica',step:'Passaggio',sourceTitle:'Cosa vuoi salvare?',sourceCopy:'Scegli una cartella comune o esplora le posizioni consentite su questo server.',customFolder:'Scegli un’altra cartella',customFolderCopy:'Esplora le posizioni consentite',noSources:'Non sono state rilevate cartelle comuni. Puoi esplorare le posizioni consentite.',targetTitle:'Dove deve essere salvato il backup?',targetCopy:'Le unità esterne e l’archiviazione di rete offrono una protezione migliore del disco di sistema.',recommended:'Consigliato',free:'liberi',network:'Archiviazione di rete',local:'Archiviazione locale',notWritable:'Sola lettura',sameDisk:'Non protetto da un guasto del disco',otherTarget:'Scegli un’altra posizione',otherTargetCopy:'Esplora cartelle montate e dispositivi di archiviazione',connectNetwork:'Collega archiviazione di rete',connectNetworkCopy:'Aggiungi una destinazione SMB o NFS',scheduleTitle:'Quando deve eseguire il backup Runvard?',scheduleCopy:'Il backup giornaliero è una buona impostazione predefinita. Puoi anche avviarlo manualmente.',daily:'Ogni giorno',dailyMeta:'Automatico · consigliato',weekly:'Ogni settimana',weeklyMeta:'Automatico',manual:'Solo quando lo avvio',manualMeta:'Nessuna pianificazione automatica',reviewTitle:'Pronto a proteggere i tuoi dati',reviewCopy:'Controlla origine, destinazione e pianificazione prima di creare il backup.',name:'Nome del backup',mirrorTitle:'Questo è un backup speculare',mirrorCopy:'I file eliminati dall’origine possono essere eliminati anche dalla destinazione durante il backup successivo.',sameDiskCopy:'Origine e destinazione usano lo stesso file system. Questa copia non protegge da un guasto del disco.',back:'Indietro',next:'Continua',create:'Configura backup',creating:'Configurazione…',useFolder:'Usa questa cartella',up:'Su',manualPath:'Inserisci il percorso manualmente',open:'Usa percorso',noFolders:'Non ci sono cartelle disponibili qui.',loading:'Caricamento archiviazione…',created:'Backup creato',validationFailed:'Questa posizione non può essere utilizzata',source:'Origine',destination:'Destinazione',browseTitle:'Scegli cartella'},
+  es:{title:'Nueva copia de seguridad',data:'Datos',target:'Destino',schedule:'Programación',review:'Revisión',step:'Paso',sourceTitle:'¿Qué quieres guardar?',sourceCopy:'Elige una carpeta habitual o explora las ubicaciones permitidas de este servidor.',customFolder:'Elegir otra carpeta',customFolderCopy:'Explorar las ubicaciones permitidas',noSources:'No se detectaron carpetas habituales. Puedes explorar las ubicaciones permitidas.',targetTitle:'¿Dónde debe guardarse la copia?',targetCopy:'Las unidades externas y el almacenamiento de red ofrecen más protección que el disco del sistema.',recommended:'Recomendado',free:'libres',network:'Almacenamiento de red',local:'Almacenamiento local',notWritable:'Solo lectura',sameDisk:'Sin protección ante fallos del disco',otherTarget:'Elegir otra ubicación',otherTargetCopy:'Explorar carpetas montadas y almacenamiento',connectNetwork:'Conectar almacenamiento de red',connectNetworkCopy:'Añadir un destino SMB o NFS',scheduleTitle:'¿Cuándo debe crear Runvard la copia?',scheduleCopy:'Una copia diaria es una buena opción predeterminada. También puedes iniciarla manualmente.',daily:'Cada día',dailyMeta:'Automático · recomendado',weekly:'Cada semana',weeklyMeta:'Automático',manual:'Solo cuando la inicio',manualMeta:'Sin programación automática',reviewTitle:'Todo listo para proteger tus datos',reviewCopy:'Comprueba el origen, el destino y la programación antes de crear la copia.',name:'Nombre de la copia',mirrorTitle:'Esta es una copia en espejo',mirrorCopy:'Los archivos eliminados del origen también pueden eliminarse del destino durante la siguiente copia.',sameDiskCopy:'El origen y el destino usan el mismo sistema de archivos. Esta copia no protege ante fallos del disco.',back:'Atrás',next:'Continuar',create:'Configurar copia',creating:'Configurando…',useFolder:'Usar esta carpeta',up:'Subir',manualPath:'Introducir ruta manualmente',open:'Usar ruta',noFolders:'No hay carpetas disponibles aquí.',loading:'Cargando almacenamiento…',created:'Copia creada',validationFailed:'No se puede usar esta ubicación',source:'Origen',destination:'Destino',browseTitle:'Elegir carpeta'},
+  pt:{title:'Nova cópia de segurança',data:'Dados',target:'Destino',schedule:'Agendamento',review:'Revisão',step:'Passo',sourceTitle:'O que pretende guardar?',sourceCopy:'Escolha uma pasta comum ou procure nas localizações permitidas deste servidor.',customFolder:'Escolher outra pasta',customFolderCopy:'Procurar nas localizações permitidas',noSources:'Não foram detetadas pastas comuns. Pode procurar nas localizações permitidas.',targetTitle:'Onde deve ser guardada a cópia?',targetCopy:'As unidades externas e o armazenamento de rede oferecem melhor proteção do que o disco do sistema.',recommended:'Recomendado',free:'livres',network:'Armazenamento de rede',local:'Armazenamento local',notWritable:'Só de leitura',sameDisk:'Sem proteção contra falha do disco',otherTarget:'Escolher outra localização',otherTargetCopy:'Procurar em pastas montadas e armazenamento',connectNetwork:'Ligar armazenamento de rede',connectNetworkCopy:'Adicionar um destino SMB ou NFS',scheduleTitle:'Quando deve o Runvard criar a cópia?',scheduleCopy:'Uma cópia diária é uma boa predefinição. Também pode iniciá-la manualmente.',daily:'Todos os dias',dailyMeta:'Automático · recomendado',weekly:'Todas as semanas',weeklyMeta:'Automático',manual:'Apenas quando a inicio',manualMeta:'Sem agendamento automático',reviewTitle:'Tudo pronto para proteger os seus dados',reviewCopy:'Verifique a origem, o destino e o agendamento antes de criar a cópia.',name:'Nome da cópia',mirrorTitle:'Esta é uma cópia espelho',mirrorCopy:'Os ficheiros eliminados da origem também podem ser eliminados do destino durante a próxima cópia.',sameDiskCopy:'A origem e o destino usam o mesmo sistema de ficheiros. Esta cópia não protege contra falha do disco.',back:'Voltar',next:'Continuar',create:'Configurar cópia',creating:'A configurar…',useFolder:'Usar esta pasta',up:'Subir',manualPath:'Introduzir caminho manualmente',open:'Usar caminho',noFolders:'Não há pastas disponíveis aqui.',loading:'A carregar armazenamento…',created:'Cópia criada',validationFailed:'Esta localização não pode ser utilizada',source:'Origem',destination:'Destino',browseTitle:'Escolher pasta'}
+};
+Object.assign(BACKUP_WIZARD_I18N,BACKUP_WIZARD_I18N_COMPLETIONS);
 function backupText(key){const lang=currentLanguage();return BACKUP_WIZARD_I18N[lang]?.[key]||BACKUP_WIZARD_I18N.en[key]||key;}
 const BACKUP_SOURCE_LABELS={
   en:{documents:'Documents',photos:'Photos',media:'Media',docker:'Docker data',homes:'User folders'},
-  de:{documents:'Dokumente',photos:'Fotos',media:'Medien',docker:'Docker-Daten',homes:'Benutzerordner'}
+  de:{documents:'Dokumente',photos:'Fotos',media:'Medien',docker:'Docker-Daten',homes:'Benutzerordner'},
+  fr:{documents:'Documents',photos:'Photos',media:'Médias',docker:'Données Docker',homes:'Dossiers utilisateurs'},
+  it:{documents:'Documenti',photos:'Foto',media:'Contenuti multimediali',docker:'Dati Docker',homes:'Cartelle utenti'},
+  es:{documents:'Documentos',photos:'Fotos',media:'Multimedia',docker:'Datos de Docker',homes:'Carpetas de usuarios'},
+  pt:{documents:'Documentos',photos:'Fotografias',media:'Multimédia',docker:'Dados do Docker',homes:'Pastas de utilizadores'}
 };
 function backupWizardSourceLabel(item){const key=String(item.id||'').replace(/-\d+$/,'');return BACKUP_SOURCE_LABELS[currentLanguage()]?.[key]||BACKUP_SOURCE_LABELS.en[key]||item.label;}
 function backupWizardIcon(icon){return({document:'▤',photo:'◉',media:'▶',docker:'◇',users:'♙'}[icon]||'▱');}
@@ -11530,7 +11680,7 @@ function backupWizardSourceStep(){
   const tiles=sources.map((item,index)=>{const selected=state.source===item.path;return `<button type="button" role="radio" aria-checked="${selected}" class="backup-choice-tile backup-source-tile${selected?' selected':''}" onclick="backupWizardSelectSource(${index})"><span class="backup-choice-check">✓</span><span class="backup-choice-icon" aria-hidden="true">${backupWizardIcon(item.icon)}</span><span class="backup-choice-title">${esc(backupWizardSourceLabel(item))}</span><span class="backup-choice-path">${esc(item.path)}</span></button>`;}).join('');
   return backupWizardHeading(backupText('sourceTitle'),backupText('sourceCopy'))
     +`${sources.length?'':`<div class="backup-wizard-notice">ⓘ <span>${esc(backupText('noSources'))}</span></div>`}`
-    +`<div class="backup-tile-grid sources" role="radiogroup" aria-label="${esc(backupText('source'))}">${tiles}<button type="button" class="backup-choice-tile backup-source-tile" onclick="backupDirectoryBrowser('source','/')"><span class="backup-choice-icon" aria-hidden="true">⌕</span><span class="backup-choice-title">${esc(backupText('customFolder'))}</span><span class="backup-choice-meta">${esc(backupText('customFolderCopy'))}</span></button></div>`
+    +`<div class="backup-tile-grid sources" role="radiogroup" aria-label="${esc(backupText('source'))}">${tiles}<button type="button" class="backup-choice-tile backup-source-tile" onclick="backupOpenSharedPicker('source')"><span class="backup-choice-icon" aria-hidden="true">⌕</span><span class="backup-choice-title">${esc(backupText('customFolder'))}</span><span class="backup-choice-meta">${esc(backupText('customFolderCopy'))}</span></button></div>`
     +backupWizardActions(backupText('next'),!state.source);
 }
 function backupWizardTargetStep(){
@@ -11539,13 +11689,17 @@ function backupWizardTargetStep(){
   const tiles=ordered.map(item=>{const index=targets.indexOf(item),selected=state.destRoot===item.path;return `<button type="button" role="radio" aria-checked="${selected}" class="backup-choice-tile backup-target-tile${selected?' selected':''}" onclick="backupWizardSelectTarget(${index})" ${item.writable?'':'disabled'}><span class="backup-choice-check">✓</span><span class="backup-choice-icon" aria-hidden="true">${item.kind==='network'?'⌁':'▰'}</span><span class="backup-choice-title">${esc(item.label)}</span><span class="backup-choice-meta">${esc(item.kind==='network'?backupText('network'):backupText('local'))} · ${esc(fmtBytes(item.free))} ${esc(backupText('free'))}</span><span class="backup-choice-path">${esc(item.path)}</span>${item.recommended?`<span class="backup-choice-badge">✓ ${esc(backupText('recommended'))}</span>`:''}${!item.writable?`<span class="backup-choice-badge warn">${esc(backupText('notWritable'))}</span>`:''}</button>`;}).join('');
   const error=state.error?`<div class="backup-wizard-notice">! <span><strong>${esc(backupText('validationFailed'))}</strong><br>${esc(state.error)}</span></div>`:'';
   return backupWizardHeading(backupText('targetTitle'),backupText('targetCopy'))+error
-    +`<div class="backup-tile-grid" role="radiogroup" aria-label="${esc(backupText('destination'))}">${tiles}<button type="button" class="backup-choice-tile backup-target-tile" onclick="backupDirectoryBrowser('destination','/')"><span class="backup-choice-icon" aria-hidden="true">⌕</span><span class="backup-choice-title">${esc(backupText('otherTarget'))}</span><span class="backup-choice-meta">${esc(backupText('otherTargetCopy'))}</span></button><button type="button" class="backup-choice-tile backup-target-tile" onclick="backupWizardConnectNetwork()"><span class="backup-choice-icon" aria-hidden="true">⌁</span><span class="backup-choice-title">${esc(backupText('connectNetwork'))}</span><span class="backup-choice-meta">${esc(backupText('connectNetworkCopy'))}</span></button></div>`
+    +`<div class="backup-tile-grid" role="radiogroup" aria-label="${esc(backupText('destination'))}">${tiles}<button type="button" class="backup-choice-tile backup-target-tile" onclick="backupOpenSharedPicker('destination')"><span class="backup-choice-icon" aria-hidden="true">⌕</span><span class="backup-choice-title">${esc(backupText('otherTarget'))}</span><span class="backup-choice-meta">${esc(backupText('otherTargetCopy'))}</span></button><button type="button" class="backup-choice-tile backup-target-tile" onclick="backupWizardConnectNetwork()"><span class="backup-choice-icon" aria-hidden="true">⌁</span><span class="backup-choice-title">${esc(backupText('connectNetwork'))}</span><span class="backup-choice-meta">${esc(backupText('connectNetworkCopy'))}</span></button></div>`
     +backupWizardActions(backupText('next'),!state.destRoot);
 }
 function backupWizardScheduleStep(){
   const choices=[['daily',backupText('daily'),backupText('dailyMeta'),'◷'],['weekly',backupText('weekly'),backupText('weeklyMeta'),'▦'],['manual',backupText('manual'),backupText('manualMeta'),'▷']];
   return backupWizardHeading(backupText('scheduleTitle'),backupText('scheduleCopy'))+`<div class="backup-tile-grid sources backup-schedule-grid" role="radiogroup" aria-label="${esc(backupText('schedule'))}">${choices.map(([value,label,meta,icon])=>{const selected=backupWizardState.schedule===value;return `<button type="button" role="radio" aria-checked="${selected}" class="backup-choice-tile backup-schedule-tile${selected?' selected':''}" onclick="backupWizardSelectSchedule('${value}')"><span class="backup-choice-check">✓</span><span class="backup-choice-icon" aria-hidden="true">${icon}</span><span class="backup-choice-title">${esc(label)}</span><span class="backup-choice-meta">${esc(meta)}</span></button>`;}).join('')}</div>`+backupWizardActions(backupText('next'));
 }
+window.backupOpenSharedPicker=kind=>{
+  const options=kind==='source'?{purpose:'backup-source',mode:'folder'}:{purpose:'backup-destination',mode:'folder'};
+  openPathPicker(options,path=>backupWizardChooseFolder(kind,path));
+};
 function backupWizardDestination(){
   const state=backupWizardState,base=(state.sourceLabel||state.source.split('/').filter(Boolean).pop()||'backup').normalize('NFKD').replace(/[^a-zA-Z0-9]+/g,'-').replace(/^-|-$/g,'').toLowerCase()||'backup';
   return state.destRoot.replace(/\/$/,'')+'/runvard-backups/'+base;
@@ -11839,8 +11993,8 @@ async function renderShares(body,tab){
  else if(tab==='NFS'){const s=await api('/shares/nfs');body.innerHTML=`<button class="btn" onclick="nfsForm()">+ Export</button><table><thead><tr><th>Pfad</th><th>Clients</th></tr></thead><tbody>${s.map(x=>`<tr><td class="mono">${esc(x.path)}</td><td>${esc(x.clients)}</td></tr>`).join('')||'<tr><td colspan="2" class="loading">No exports</td></tr>'}</tbody></table>`;}
  else{const s=await api('/shares/ftp');body.innerHTML=`<div style="padding:20px;display:flex;align-items:center;gap:16px">FTP-Server (vsftpd): <span class="status-pill ${s.active?'run':'stop'}">${s.active?'active':'inactive'}</span></div>`;}
 }
-window.sambaForm=()=>openForm('Samba share','🔗',[{name:'name',label:'Share name',placeholder:'medien'},{name:'path',label:'Pfad',placeholder:'/mnt/data/medien'},{name:'writable',label:'Schreibbar',type:'checkbox',value:true}],async d=>{await post('/shares/samba/add',d);closeForm();toast('Share created');renderShares($('#modal-body'),'Samba');});
-window.nfsForm=()=>openForm('NFS-Export','🔗',[{name:'path',label:'Pfad',placeholder:'/mnt/data'},{name:'clients',label:'Clients',value:'*',hint:'z.B. 192.168.1.0/24 oder *'}],async d=>{await post('/shares/nfs/add',d);closeForm();toast('Export created');renderShares($('#modal-body'),'NFS');});
+window.sambaForm=()=>openForm('Samba share','🔗',[{name:'name',label:'Share name',placeholder:'medien'},{name:'path',label:'Pfad',placeholder:'/mnt/data/medien',picker:{purpose:'share',mode:'folder'}},{name:'writable',label:'Schreibbar',type:'checkbox',value:true}],async d=>{await post('/shares/samba/add',d);closeForm();toast('Share created');renderShares($('#modal-body'),'Samba');});
+window.nfsForm=()=>openForm('NFS-Export','🔗',[{name:'path',label:'Pfad',placeholder:'/mnt/data',picker:{purpose:'share',mode:'folder'}},{name:'clients',label:'Clients',value:'*',hint:'z.B. 192.168.1.0/24 oder *'}],async d=>{await post('/shares/nfs/add',d);closeForm();toast('Export created');renderShares($('#modal-body'),'NFS');});
 
 // ═══ Netzwerk ═══
 async function renderNetwork(body,tab){
@@ -12308,7 +12462,7 @@ async function renderAppArmor(body){
     <pre class="logbox" style="max-height:440px">${esc(d.raw)}</pre>`;
 }
 window.aaSetForm=()=>openForm('Set AppArmor profile','🛡',[
-  {name:'profile',label:'Profile (path or name)',placeholder:'/usr/sbin/nginx'},
+  {name:'profile',label:'Profile (path or name)',placeholder:'/usr/sbin/nginx',picker:{purpose:'system-file',mode:'file'}},
   {name:'mode',label:'Modus',type:'select',options:[{value:'enforce',label:'Enforce (erzwingen)'},{value:'complain',label:'Complain (protokollieren)'},{value:'disable',label:'Disable'}]},
 ],async d=>{try{const r=await post('/sysmgr/apparmor/set',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}closeForm();toast('Profile updated');renderSystem($('#modal-body'),'AppArmor');}catch(e){toast('Error: '+e.message,'error');}});
 
@@ -14408,11 +14562,11 @@ async function renderIscsiSimple(body){
 }
 window.diskWizard=dev=>typedConfirm('Erase and set up disk',`This will create a new partition table, format ${devicePath(dev)}, and mount it. Existing data on this disk will be lost.`,dev,()=>openForm('Set up disk: '+dev,'💿',[
   {name:'fstype',label:'Filesystem',type:'select',options:['ext4','xfs','btrfs']},
-  {name:'mountpoint',label:'Mount point',value:defaultMountPoint(dev)},
+  {name:'mountpoint',label:'Mount point',value:defaultMountPoint(dev),picker:{purpose:'mountpoint',mode:'folder'}},
   {name:'persist',label:'Mount automatically after reboot',type:'checkbox',value:true},
 ],async d=>{closeForm();toast('Setting up disk…');try{const mountpoint=normalizeMountPoint(d.mountpoint,dev);requireOk(await post('/storage/partition-table',{device:dev,label:'gpt'}),'Could not create partition table');const part=requireOk(await post('/storage/partition',{device:dev}),'Could not create partition');const partition=part.partition||partitionName(dev);requireOk(await post('/storage/format',{partition,fstype:d.fstype}),'Could not format partition');requireOk(await post('/storage/mount',{partition,mountpoint,persist:d.persist}),'Could not mount partition');toast('Disk ready');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}}));
 window.mountVolumeForm=dev=>openForm('Mount volume: '+dev,'💿',[
-  {name:'mountpoint',label:'Mount point',value:defaultMountPoint(dev)},
+  {name:'mountpoint',label:'Mount point',value:defaultMountPoint(dev),picker:{purpose:'mountpoint',mode:'folder'}},
   {name:'persist',label:'Mount automatically after reboot',type:'checkbox',value:true},
 ],async d=>{closeForm();toast('Mounting volume…');try{const mountpoint=normalizeMountPoint(d.mountpoint,dev);requireOk(await post('/storage/mount',{partition:dev,mountpoint,persist:d.persist}),'Could not mount volume');toast('Volume mounted');renderStorage($('#modal-body'),'Disks');}catch(e){toast('Error: '+e.message,'error');}});
 window.zpoolDestroy=name=>typedConfirm('Destroy ZFS pool',`Pool "${name}" and its data will be removed permanently.`,name,async()=>{try{const r=await post('/storage/zfs/destroy',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool destroyed');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
@@ -14772,7 +14926,7 @@ function appInstallRenderVolumes(){
       </div>
       <div class="compose-volume-fields">
         <div class="compose-field"><label for="app-volume-drive-${i}">Drive</label><div class="compose-drive-select ${driveClass}">${v.managed?`<select id="app-volume-drive-${i}" onchange="appInstallSetVolumeMount(${i},this.value)">${d.mounts.map(m=>`<option value="${esc(m.mountpoint)}" ${m.mountpoint===v.mountpoint?'selected':''}>${esc(appInstallMountLabel(m))}</option>`).join('')}</select>`:`<input id="app-volume-drive-${i}" value="${esc(uiText('Fixed'))}" readonly>`}</div></div>
-        <div class="compose-field compose-volume-source"><label for="app-volume-source-${i}">Host source</label><input id="app-volume-source-${i}" value="${esc(appInstallVolumeSource(d,v))}" oninput="appInstallRefresh()"></div>
+        <div class="compose-field compose-volume-source"><label for="app-volume-source-${i}">Host source</label><div class="path-field-control"><input id="app-volume-source-${i}" value="${esc(appInstallVolumeSource(d,v))}" oninput="appInstallRefresh()" ${isExpertMode()?'':'readonly'}><button class="btn ghost" type="button" onclick="appInstallPickVolume(${i})" aria-label="${esc(pathPickerText('browse'))}">⌕</button></div></div>
         <div class="compose-field"><label for="app-volume-target-${i}">Container target</label><input id="app-volume-target-${i}" value="${esc(v.target||'')}" oninput="appInstallRefresh()"></div>
         <div class="compose-field"><label for="app-volume-mode-${i}">Mode</label><input id="app-volume-mode-${i}" value="${esc(v.mode||'rw')}" oninput="appInstallRefresh()"></div>
       </div>
@@ -14863,6 +15017,12 @@ window.appInstallSetVolumeMount=(index,mountpoint)=>{
   }
   appInstallRenderVolumes();
   appInstallRefresh();
+};
+window.appInstallPickVolume=index=>{
+  const volume=_appInstallDraft?.volumes?.[index];if(!volume)return;
+  openPathPicker({purpose:'app-host',mode:'folder',value:appInstallVolumeSource(_appInstallDraft,volume)},path=>{
+    volume.managed=false;volume.source=path;volume.sourceOverride=path;appInstallRenderVolumes();appInstallRefresh();
+  });
 };
 async function appInstallStart(draft){
   const content=appInstallCompose(draft);
