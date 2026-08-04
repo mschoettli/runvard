@@ -77,6 +77,7 @@ class TerminalSession:
                 f"{shlex.quote(shell_cmd)}",
                 "fi",
                 f"tmux set-option -t {shlex.quote(TMUX_SESSION)} status off",
+                f"tmux set-option -t {shlex.quote(TMUX_SESSION)} mouse on",
                 f"exec tmux attach-session -t {shlex.quote(TMUX_SESSION)}",
             ])
             return ["/bin/bash", "-lc", script]

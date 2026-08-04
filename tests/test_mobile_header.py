@@ -27,6 +27,13 @@ def test_secondary_header_tools_are_available_in_the_mobile_menu():
     assert 'closeUserMenu();toggleBgPanel()' in INDEX
 
 
+def test_mobile_menu_theme_toggle_uses_translated_modern_label():
+    assert '<span>Modern</span>' in INDEX
+    assert 'id="um-theme-toggle"' in INDEX
+    assert 'aria-label="Modern"' in INDEX
+    assert 'Modernes Design' not in INDEX
+
+
 def test_mobile_header_has_one_stable_touch_friendly_row():
     css = mobile_styles()
 

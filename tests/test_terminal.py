@@ -15,6 +15,7 @@ def test_persistent_terminal_uses_tmux_when_available(monkeypatch, tmp_path):
     assert "tmux new-session -d -s runvard" in cmd[2]
     assert f"/bin/bash --rcfile {rcfile}" in cmd[2]
     assert "tmux set-option -t runvard status off" in cmd[2]
+    assert "tmux set-option -t runvard mouse on" in cmd[2]
     assert "exec tmux attach-session -t runvard" in cmd[2]
     assert rcfile.exists()
     assert "history -a" in rcfile.read_text()

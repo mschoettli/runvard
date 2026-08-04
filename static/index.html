@@ -995,8 +995,8 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
           <label class="um-switch"><input type="checkbox" id="um-expert-toggle" onchange="setExpertMode(this.checked)"><span class="um-slider"></span></label>
         </div>
         <div class="um-row">
-          <span>Modernes Design</span>
-          <label class="um-switch"><input type="checkbox" id="um-theme-toggle" onchange="setUiTheme(this.checked)" aria-label="Modernes Design"><span class="um-slider"></span></label>
+          <span>Modern</span>
+          <label class="um-switch"><input type="checkbox" id="um-theme-toggle" onchange="setUiTheme(this.checked)" aria-label="Modern"><span class="um-slider"></span></label>
         </div>
         <button class="um-action" onclick="openLanguageModal()">🌐 <span data-i18n="language">Language</span></button>
         <button class="um-action" onclick="openConnectedServersModal()">⬡ <span id="um-connected-servers-label">Connected servers</span></button>
@@ -1333,6 +1333,7 @@ const UI_PHRASES={
     "Gruppen":"Groups",
     "Pakete":"Packages",
     "Speicher-Pools":"Storage pools",
+    "Modern":"Modern",
     "Wartung":"Maintenance"},
   de:{" (not mounted)":" (nicht eingehängt)",
     " added":" hinzugefügt",
@@ -1432,6 +1433,7 @@ const UI_PHRASES={
     "Available updates":"Verfügbare Updates",
     "Available:":"Verfügbar:",
     "Available: ":"Verfügbar: ",
+    "Modern":"Modern",
     "Back":"Zurück",
     "Background set":"Hintergrund gesetzt",
     "Backup complete":"Sicherung abgeschlossen",
@@ -2434,6 +2436,7 @@ const UI_PHRASES={
     "Available updates":"Mises à jour disponibles",
     "Available:":"Disponible :",
     "Available: ":"Disponible : ",
+    "Modern":"Moderne",
     "Back":"Retour",
     "Background set":"Arrière-plan défini",
     "Backup complete":"Sauvegarde terminée",
@@ -3399,6 +3402,7 @@ const UI_PHRASES={
     "Available updates":"Aggiornamenti disponibili",
     "Available:":"Disponibile:",
     "Available: ":"Disponibile: ",
+    "Modern":"Moderno",
     "Back":"Indietro",
     "Background set":"Sfondo impostato",
     "Backup complete":"Backup completato",
@@ -4363,6 +4367,7 @@ const UI_PHRASES={
     "Available updates":"Actualizaciones disponibles",
     "Available:":"Disponible:",
     "Available: ":"Disponible: ",
+    "Modern":"Moderno",
     "Back":"Atrás",
     "Background set":"Fondo establecido",
     "Backup complete":"Copia de seguridad completada",
@@ -5331,6 +5336,7 @@ const UI_PHRASES={
     "Available updates":"Atualizações disponíveis",
     "Available:":"Disponível:",
     "Available: ":"Disponível: ",
+    "Modern":"Moderno",
     "Back":"Voltar",
     "Background set":"Fundo definido",
     "Backup complete":"Cópia de segurança concluída",
@@ -12601,7 +12607,7 @@ async function renderPower(body){
   const tunedActive=tuned.available?(tuned.active||'None'):'Unavailable';
   const activeProfile=profiles.available?ppActive:tunedActive;
   const inhibitorRows=(inhibitors.inhibitors||[]).map(x=>`<tr><td>${esc(x.who||'-')}</td><td class="mono">${esc(x.what||'-')}</td><td>${esc(x.why||'-')}</td><td class="mono">${esc(x.pid||'-')}</td></tr>`).join('');
-  body.innerHTML=viewIntro('Power','Control Debian/systemd power actions, profiles and idle behavior.', `<button class="btn" onclick="location.href='/static/energy-info.html'">Energy info</button>`)
+  body.innerHTML=viewIntro('Power','Control Debian/systemd power actions, profiles and idle behavior.', `<button class="btn" onclick="window.open('/static/energy-info.html','_blank','noopener')">Energy info</button>`)
     +`<div class="nx-summary-grid">
       ${summaryCard('Current state','Online','Server is running')}
       ${summaryCard('Scheduled power action',powerScheduledText(status.scheduled),status.scheduled?'Can be canceled':'No shutdown queued')}

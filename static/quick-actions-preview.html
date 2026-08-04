@@ -1,0 +1,267 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>runvard Quick Actions Preview</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{--bg2:rgba(13,14,26,.85);--bg3:rgba(17,18,33,.65);--glass:rgba(255,255,255,.04);--glass-hover:rgba(122,74,255,.08);--border:rgba(255,255,255,.08);--border-accent:rgba(122,74,255,.3);--text:#f0f0ff;--text2:rgba(240,240,255,.58);--text3:rgba(240,240,255,.32);--accent:#7a4aff;--accent-light:#9d7aff;--green:#22c55e;--yellow:#eab308;--red:#ef4444;--radius:12px;--blur:blur(16px)}
+*{box-sizing:border-box;margin:0;padding:0}
+html{background:#0f0c1a}
+body{min-height:100vh;overflow-x:hidden;font-family:'Plus Jakarta Sans',sans-serif;color:var(--text);background:radial-gradient(ellipse at 20% 50%,#6d28d9,transparent 55%),radial-gradient(ellipse at 80% 20%,#0891b2,transparent 50%),radial-gradient(ellipse at 60% 80%,#1e1b4b,transparent 50%),#050714;background-attachment:fixed}
+button{font-family:inherit}
+.mono{font-family:'JetBrains Mono',monospace}
+.topbar{position:sticky;top:0;z-index:30;display:grid;grid-template-columns:1fr auto 1fr;align-items:center;padding:8px 24px;background:rgba(13,14,26,.74);border-bottom:1px solid var(--border);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur)}
+.logo{font-size:15px;font-weight:700;letter-spacing:.04em;display:flex;align-items:center;gap:12px}
+.logo span{font-size:12px;font-weight:400;color:var(--text3);letter-spacing:0}
+.clock{font-size:10px;color:var(--text3)}
+.top-actions{justify-self:end;display:flex;align-items:center;gap:8px}
+.top-chip{height:30px;border:1px solid var(--border);background:var(--glass);color:var(--text2);border-radius:8px;padding:0 10px;font-size:11px;font-weight:600}
+.container{max-width:1200px;margin:0 auto;padding:28px}
+.widgets{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:28px}
+.widget{min-height:102px;background:var(--bg3);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px}
+.widget-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:8px}
+.label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em}
+.metric-icon{font-size:13px;color:var(--text3)}
+.value{font-size:24px;font-weight:600;margin-bottom:10px}
+.value small{font-size:13px;color:var(--text3);font-weight:400;margin-left:3px}
+.spark{height:36px;display:flex;align-items:end;gap:3px;border-bottom:1px solid rgba(122,74,255,.35)}
+.spark i{display:block;flex:1;min-width:3px;border-radius:3px 3px 0 0;background:linear-gradient(180deg,var(--accent-light),var(--accent));opacity:.38}
+.spark.cyan{border-bottom-color:rgba(6,182,212,.35)}
+.spark.cyan i{background:linear-gradient(180deg,#67e8f9,#0891b2)}
+.bar{height:5px;background:rgba(255,255,255,.08);border-radius:3px;overflow:hidden;margin:26px 0 4px}
+.bar>div{height:100%;width:5.4%;background:linear-gradient(90deg,var(--accent),#06b6d4);border-radius:3px}
+.sub{font-size:11px;color:var(--text3);margin-top:6px}
+.tiles{display:grid;grid-template-columns:repeat(9,1fr);gap:10px;margin-bottom:76px}
+.tile,.dash-tile{background:var(--bg3);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:var(--radius);transition:all .15s;position:relative;user-select:none}
+.tile{min-height:94px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center}
+.tile:hover,.dash-tile:hover{background:rgba(122,74,255,.07);border-color:rgba(122,74,255,.3);transform:translateY(-2px)}
+.tile-icon,.dash-tile-icon{width:36px;height:36px;border-radius:9px;background:rgba(122,74,255,.16);border:.5px solid rgba(122,74,255,.28);display:flex;align-items:center;justify-content:center;font-size:18px}
+.tile-name,.dash-tile-name{font-size:12px;font-weight:600;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.tile-badge{position:absolute;top:-4px;right:-4px;min-width:14px;height:14px;border-radius:7px;background:var(--green);font-size:8px;font-weight:700;display:flex;align-items:center;justify-content:center;color:#fff}
+.dash-section{margin-top:28px}
+.dash-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}
+.section-label{font-size:11px;color:var(--text3);text-transform:uppercase;letter-spacing:.1em}
+.dash-grid{display:grid;grid-template-columns:repeat(9,1fr);gap:10px}
+.dash-tile{min-height:98px;overflow:visible}
+.dash-tile-body{min-height:88px;padding:14px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;text-align:center}
+.dash-status{position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%;background:var(--green);box-shadow:0 0 8px rgba(34,197,94,.6)}
+.dash-tile:nth-child(3) .dash-status{background:var(--yellow);box-shadow:0 0 8px rgba(234,179,8,.5)}
+.quick-rail{position:fixed;left:max(18px,calc((100vw - 1200px)/2 - 86px));top:50%;z-index:40;transform:translateY(-50%);display:flex;flex-direction:column;gap:9px;padding:10px;background:rgba(13,14,26,.58);border:1px solid rgba(255,255,255,.1);border-radius:18px;backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);box-shadow:0 16px 48px rgba(0,0,0,.24)}
+.qa-btn{position:relative;width:42px;height:42px;border:1px solid rgba(255,255,255,.1);border-radius:12px;background:rgba(255,255,255,.045);color:var(--text2);display:flex;align-items:center;justify-content:center;font-size:18px;cursor:pointer;transition:transform .15s,background .15s,border-color .15s,color .15s}
+.qa-btn:hover,.qa-btn:focus-visible{outline:none;transform:translateX(2px);background:rgba(122,74,255,.12);border-color:rgba(122,74,255,.38);color:#fff}
+.qa-btn.danger:hover,.qa-btn.danger:focus-visible{background:rgba(239,68,68,.14);border-color:rgba(239,68,68,.36);color:#fff}
+.qa-btn.busy{pointer-events:none;color:transparent}
+.qa-btn.busy::after{content:"";position:absolute;width:16px;height:16px;border:2px solid rgba(255,255,255,.22);border-top-color:#fff;border-radius:50%;animation:spin .65s linear infinite}
+.qa-btn::before{content:attr(data-tip);position:absolute;left:54px;top:50%;transform:translateY(-50%) translateX(-4px);opacity:0;pointer-events:none;white-space:nowrap;background:#0d0e1a;border:1px solid var(--border-accent);border-radius:8px;padding:7px 10px;font-size:12px;color:var(--text);box-shadow:0 10px 30px rgba(0,0,0,.32);transition:opacity .12s,transform .12s}
+.qa-btn:hover::before,.qa-btn:focus-visible::before{opacity:1;transform:translateY(-50%) translateX(0)}
+.qa-sep{height:1px;background:rgba(255,255,255,.1);margin:2px 5px}
+#toasts{position:fixed;right:20px;bottom:20px;z-index:80;display:flex;flex-direction:column;gap:8px;pointer-events:none}
+.toast{width:282px;display:flex;align-items:center;gap:9px;background:#0d0e1a;border:.5px solid rgba(255,255,255,.1);border-radius:10px;padding:10px 14px;font-size:13px;color:rgba(240,240,255,.86);box-shadow:0 8px 24px rgba(0,0,0,.4);animation:toastIn .22s ease}
+.toast-dot{width:7px;height:7px;border-radius:50%;background:var(--accent);box-shadow:0 0 8px rgba(122,74,255,.4);flex-shrink:0}
+.toast.success .toast-dot{background:var(--green);box-shadow:0 0 8px rgba(34,197,94,.4)}
+.toast.error .toast-dot{background:var(--red);box-shadow:0 0 8px rgba(239,68,68,.4)}
+.confirm-overlay{position:fixed;inset:0;z-index:90;background:rgba(0,0,0,.62);backdrop-filter:blur(10px);display:none;align-items:center;justify-content:center;padding:24px}
+.confirm-overlay.open{display:flex}
+.confirm-card{width:380px;max-width:92vw;background:#0d0e1a;border:1px solid rgba(239,68,68,.22);border-radius:14px;padding:28px 32px;text-align:center;box-shadow:0 18px 60px rgba(0,0,0,.45);animation:modalIn .18s ease}
+.confirm-icon{font-size:34px;margin-bottom:12px}
+.confirm-card h2{font-size:17px;margin-bottom:8px}
+.confirm-card p{font-size:12px;line-height:1.55;color:var(--text2);margin-bottom:22px}
+.confirm-actions{display:flex;justify-content:center;gap:10px}
+.btn{border:none;border-radius:8px;padding:8px 14px;font-size:12px;font-weight:600;cursor:pointer;background:var(--accent);color:#fff}
+.btn:hover{background:#8d64ff}
+.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,.12);color:var(--text2)}
+.btn.ghost:hover{background:var(--glass-hover);color:var(--text)}
+.btn.danger{background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.24);color:#fca5a5}
+.btn.danger:hover{background:var(--red);color:#fff}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes toastIn{from{opacity:0;transform:translateX(32px)}to{opacity:1;transform:translateX(0)}}
+@keyframes modalIn{from{opacity:0;transform:scale(.96)}to{opacity:1;transform:scale(1)}}
+@media(max-width:1380px){.quick-rail{left:18px}.container{padding-left:86px}}
+@media(max-width:760px){
+  body{padding-bottom:78px}
+  .topbar{grid-template-columns:1fr auto;padding:8px 12px}.clock{display:none}.top-actions{display:none}
+  .container{padding:18px 12px}
+  .widgets{grid-template-columns:1fr;gap:10px;margin-bottom:20px}
+  .tiles,.dash-grid{grid-template-columns:1fr}
+  .widget,.tile,.dash-tile{min-width:0}.tile-name,.dash-tile-name{font-size:11px}
+  .quick-rail{left:12px;right:12px;top:auto;bottom:12px;transform:none;flex-direction:row;justify-content:space-between;gap:6px;padding:8px;border-radius:16px}
+  .qa-btn{width:auto;min-width:0;height:40px;flex:1 1 0;max-width:none}.qa-btn:hover,.qa-btn:focus-visible{transform:translateY(-2px)}
+  .qa-btn::before{left:50%;top:-9px;transform:translate(-50%,-100%);max-width:140px;overflow:hidden;text-overflow:ellipsis}.qa-btn:hover::before,.qa-btn:focus-visible::before{transform:translate(-50%,-100%)}
+  .qa-sep{display:none}
+  #toasts{right:12px;left:12px;bottom:82px}.toast{width:auto}
+}
+@media(max-width:430px){.qa-btn{font-size:16px}.tiles,.dash-grid{gap:8px}}
+</style>
+</head>
+<body>
+<nav class="quick-rail" aria-label="Quick Actions">
+  <button class="qa-btn" data-action="terminal" data-tip="Terminal öffnen" aria-label="Terminal öffnen">⌨</button>
+  <button class="qa-btn" data-action="files" data-tip="Dateien öffnen" aria-label="Dateien öffnen">📁</button>
+  <button class="qa-btn" data-action="backup" data-tip="Backup starten" aria-label="Backup starten">☁</button>
+  <div class="qa-sep" aria-hidden="true"></div>
+  <button class="qa-btn" data-action="app-updates" data-tip="App-Updates prüfen" aria-label="App-Updates prüfen">↻</button>
+  <button class="qa-btn" data-action="system-updates" data-tip="System-Updates starten" aria-label="System-Updates starten">⬆</button>
+  <div class="qa-sep" aria-hidden="true"></div>
+  <button class="qa-btn danger" data-action="restart" data-tip="Neustart" aria-label="Neustart">⟳</button>
+  <button class="qa-btn danger" data-action="shutdown" data-tip="Herunterfahren" aria-label="Herunterfahren">⏻</button>
+</nav>
+
+<header class="topbar">
+  <div class="logo">RUNVARD <span>· nas-01</span></div>
+  <div class="clock mono">24.06.2026 · 14:32</div>
+  <div class="top-actions">
+    <button class="top-chip">Ports</button>
+    <button class="top-chip">btop</button>
+    <button class="top-chip">admin</button>
+  </div>
+</header>
+
+<main class="container">
+  <section class="widgets" aria-label="Systemstatus">
+    <article class="widget">
+      <div class="widget-head"><div class="label">CPU</div><div class="metric-icon">⚡</div></div>
+      <div class="value">0.2<small>%</small></div>
+      <div class="spark"><i style="height:15%"></i><i style="height:28%"></i><i style="height:18%"></i><i style="height:36%"></i><i style="height:22%"></i><i style="height:30%"></i><i style="height:20%"></i><i style="height:26%"></i></div>
+      <div class="sub">12 Kerne · 808 MHz</div>
+    </article>
+    <article class="widget">
+      <div class="widget-head"><div class="label">RAM</div><div class="metric-icon">≋</div></div>
+      <div class="value">0.7<small>GB</small></div>
+      <div class="spark cyan"><i style="height:20%"></i><i style="height:24%"></i><i style="height:18%"></i><i style="height:25%"></i><i style="height:22%"></i><i style="height:26%"></i><i style="height:19%"></i><i style="height:21%"></i></div>
+      <div class="sub">19.2 GB · 5.3%</div>
+    </article>
+    <article class="widget">
+      <div class="widget-head"><div class="label">Disk</div><div class="metric-icon">⊞</div></div>
+      <div class="value">5.4<small>%</small></div>
+      <div class="bar"><div></div></div>
+      <div class="sub">11.4 GB / 220.6 GB</div>
+    </article>
+    <article class="widget">
+      <div class="widget-head"><div class="label">Network</div><div class="metric-icon">⇄</div></div>
+      <div class="value">0.0<small>MB/s</small></div>
+      <div class="spark cyan"><i style="height:4%"></i><i style="height:6%"></i><i style="height:5%"></i><i style="height:7%"></i><i style="height:5%"></i><i style="height:4%"></i><i style="height:6%"></i><i style="height:5%"></i></div>
+      <div class="sub">▲ 0.0 ▼ 0.0 MB/s</div>
+    </article>
+  </section>
+
+  <section class="tiles" aria-label="Hauptmodule">
+    <article class="tile"><div class="tile-icon">⌨</div><div class="tile-name">Terminal</div></article>
+    <article class="tile"><div class="tile-icon">🗂</div><div class="tile-name">Files</div></article>
+    <article class="tile"><div class="tile-icon">💾</div><div class="tile-name">Storage</div></article>
+    <article class="tile"><div class="tile-badge">1</div><div class="tile-icon">🐳</div><div class="tile-name">Docker</div></article>
+    <article class="tile"><div class="tile-badge" style="background:rgba(100,100,120,.8)">0</div><div class="tile-icon">📦</div><div class="tile-name">Virtual machines</div></article>
+    <article class="tile"><div class="tile-icon">☁</div><div class="tile-name">Backup</div></article>
+    <article class="tile"><div class="tile-badge">0</div><div class="tile-icon">📈</div><div class="tile-name">Monitoring</div></article>
+    <article class="tile"><div class="tile-icon">🔧</div><div class="tile-name">System</div></article>
+    <article class="tile"><div class="tile-icon">🧩</div><div class="tile-name">Apps</div></article>
+  </section>
+
+  <section class="dash-section" aria-label="App-Verknüpfungen">
+    <div class="dash-head">
+      <div class="section-label">Apps</div>
+      <div class="section-label">Quick Actions Preview</div>
+    </div>
+    <div class="dash-grid">
+      <article class="dash-tile"><div class="dash-status"></div><div class="dash-tile-body"><div class="dash-tile-icon">△</div><div class="dash-tile-name">Jellyfin</div></div></article>
+      <article class="dash-tile"><div class="dash-status"></div><div class="dash-tile-body"><div class="dash-tile-icon">⌂</div><div class="dash-tile-name">Home Assistant</div></div></article>
+      <article class="dash-tile"><div class="dash-status"></div><div class="dash-tile-body"><div class="dash-tile-icon">▣</div><div class="dash-tile-name">Portainer</div></div></article>
+    </div>
+  </section>
+</main>
+
+<div id="toasts" aria-live="polite"></div>
+
+<div class="confirm-overlay" id="confirm">
+  <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirm-title">
+    <div class="confirm-icon">⚠</div>
+    <h2 id="confirm-title">Aktion bestätigen</h2>
+    <p id="confirm-message">Diese Demo-Aktion würde den Server beeinflussen. In Runvard bleibt hier eine explizite Bestätigung erhalten.</p>
+    <div class="confirm-actions">
+      <button class="btn ghost" id="confirm-cancel">Abbrechen</button>
+      <button class="btn danger" id="confirm-ok">Demo ausführen</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const actionCopy={
+  terminal:{busy:'Terminal wird geöffnet...',done:'Terminal geöffnet'},
+  files:{busy:'Dateimanager wird geöffnet...',done:'Dateien geöffnet'},
+  backup:{busy:'Backup-Job wird gestartet...',done:'Backup gestartet'},
+  'app-updates':{busy:'App-Updates werden geprüft...',done:'Update-Check abgeschlossen'},
+  'system-updates':{busy:'System-Updates werden gestartet...',done:'System-Update-Job gestartet'},
+  restart:{busy:'Neustart wird vorbereitet...',done:'Neustart bestätigt'},
+  shutdown:{busy:'Shutdown wird vorbereitet...',done:'Herunterfahren bestätigt'}
+};
+const destructive=new Set(['restart','shutdown']);
+let pendingConfirm=null;
+
+function toast(message,type='info'){
+  const wrap=document.getElementById('toasts');
+  const item=document.createElement('div');
+  item.className='toast '+type;
+  item.innerHTML='<span class="toast-dot"></span><span>'+escapeHtml(message)+'</span>';
+  wrap.appendChild(item);
+  setTimeout(()=>{item.style.opacity='0';item.style.transform='translateX(20px)';},2700);
+  setTimeout(()=>item.remove(),3100);
+}
+
+function escapeHtml(value){
+  return String(value).replace(/[&<>"]/g,chr=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[chr]));
+}
+
+function runDemoAction(button,action){
+  const copy=actionCopy[action];
+  button.classList.add('busy');
+  toast(copy.busy);
+  setTimeout(()=>{
+    button.classList.remove('busy');
+    toast(copy.done,'success');
+  },900);
+}
+
+function openConfirm(button,action){
+  pendingConfirm={button,action};
+  document.getElementById('confirm-title').textContent=action==='restart'?'Neustart bestätigen':'Herunterfahren bestätigen';
+  document.getElementById('confirm-message').textContent=action==='restart'
+    ? 'Diese Demo zeigt den Sicherheitsdialog für einen späteren Server-Neustart.'
+    : 'Diese Demo zeigt den Sicherheitsdialog für ein späteres Herunterfahren.';
+  document.getElementById('confirm').classList.add('open');
+}
+
+function closeConfirm(){
+  pendingConfirm=null;
+  document.getElementById('confirm').classList.remove('open');
+}
+
+document.querySelectorAll('.qa-btn').forEach(button=>{
+  button.addEventListener('click',()=>{
+    const action=button.dataset.action;
+    if(destructive.has(action)){
+      openConfirm(button,action);
+      return;
+    }
+    runDemoAction(button,action);
+  });
+});
+
+document.getElementById('confirm-cancel').addEventListener('click',closeConfirm);
+document.getElementById('confirm').addEventListener('click',event=>{
+  if(event.target.id==='confirm')closeConfirm();
+});
+document.getElementById('confirm-ok').addEventListener('click',()=>{
+  const confirmed=pendingConfirm;
+  closeConfirm();
+  if(confirmed)runDemoAction(confirmed.button,confirmed.action);
+});
+document.addEventListener('keydown',event=>{
+  if(event.key==='Escape')closeConfirm();
+});
+
+toast('Quick-Actions Vorschau geladen','success');
+</script>
+</body>
+</html>
