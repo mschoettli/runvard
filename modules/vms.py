@@ -269,7 +269,17 @@ def _parse_int(value):
         return 0
 
 
-def vm_action(name, action):
+_VIRSH_VM_ACTIONS = {
+    "start": lambda name: ["start", name],
+    "shutdown": lambda name: ["shutdown", name, "--mode", "acpi"],
+    "reboot": lambda name: ["reboot", name],
+    "force-off": lambda name: ["destroy", name],
+    "autostart-on": lambda name: ["autostart", name],
+    "autostart-off": lambda name: ["autostart", name, "--disable"],
+}
+
+
+def _vm_action_libvirt(name, action):
     conn = _connect()
     dom = conn.lookupByName(name)
     if action == "start":
@@ -293,6 +303,35 @@ def vm_action(name, action):
     else:
         raise ValueError("Unbekannte Aktion")
     return {"ok": True}
+
+
+def _vm_action_virsh(name, action):
+    if action == "delete":
+        state = _virsh(["domstate", name], timeout=15)
+        if state["ok"] and "running" in state["stdout"].lower():
+            stopped = _virsh(["destroy", name], timeout=30)
+            if not stopped["ok"]:
+                return stopped
+        return _virsh(["undefine", name, "--snapshots-metadata"], timeout=30)
+    command = _VIRSH_VM_ACTIONS.get(action)
+    if command is None:
+        return {"ok": False, "stderr": "Unbekannte Aktion"}
+    return _virsh(command(name), timeout=30)
+
+
+def vm_action(name, action):
+    if not _valid_vm(name):
+        return {"ok": False, "stderr": "Ungueltiger VM-Name"}
+    try:
+        return _vm_action_libvirt(name, action)
+    except Exception:
+        fallback = _vm_action_virsh(name, action)
+        if fallback["ok"]:
+            result = {"ok": True}
+            if action == "delete":
+                result["deleted"] = True
+            return result
+        return fallback
 
 
 def list_isos():

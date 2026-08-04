@@ -218,6 +218,26 @@ def test_virsh_uses_system_uri(monkeypatch):
     assert seen["args"][:3] == ["virsh", "-c", "qemu:///system"]
 
 
+def test_vm_action_shutdown_falls_back_to_virsh(monkeypatch):
+    calls = []
+
+    def fake_connect():
+        raise RuntimeError("libvirt unavailable")
+
+    def fake_virsh(args, timeout=120):
+        calls.append(args)
+        assert timeout == 30
+        return {"ok": True, "stdout": "Domain debian-vm is being shutdown", "stderr": ""}
+
+    monkeypatch.setattr(vms, "_connect", fake_connect)
+    monkeypatch.setattr(vms, "_virsh", fake_virsh)
+
+    result = vms.vm_action("debian-vm", "shutdown")
+
+    assert result == {"ok": True}
+    assert calls == [["shutdown", "debian-vm", "--mode", "acpi"]]
+
+
 def test_update_resources_persists_and_attempts_live_for_running_vm(monkeypatch):
     calls = []
     defined_xml = {}
