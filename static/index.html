@@ -15462,11 +15462,52 @@ function modernNetworkPanel(title,copy,actions,content){
   </section>`;
 }
 
+function modernNetworkMenu(activeTab,meta={}){
+  const items=[
+    {
+      key:'Interfaces',
+      mark:'NIC',
+      name:uiText('Interfaces'),
+      value:String(meta.interfaceCount||0),
+      detail:uiText('Network')
+    },
+    {
+      key:'Firewall',
+      mark:'ACL',
+      name:uiText('Firewall'),
+      value:String(meta.firewallCount||0),
+      detail:uiText('Rules')
+    },
+    {
+      key:'Docker',
+      mark:'NET',
+      name:'Docker',
+      status:meta.dockerAvailable===false
+        ? {label:uiText('Unavailable'), tone:'is-inactive'}
+        : {label:uiText('Available'), tone:'is-active'},
+      detail:uiText('Docker networks')
+    }
+  ];
+  return `<div class="modern-share-protocol-grid modern-network-menu" role="group" aria-label="${esc(uiText('Network'))}">${items.map(item=>{
+    const selected=item.key===activeTab;
+    const footer=item.status
+      ? `<span class="modern-share-protocol-status ${item.status.tone}"><i></i>${esc(item.status.label)}</span>`
+      : `<strong>${esc(item.value)}</strong>`;
+    return `<button type="button" class="modern-share-protocol-card${selected?' is-active':''}" data-network-tab="${esc(item.key)}" aria-pressed="${selected?'true':'false'}" onclick="renderNetwork($('#modal-body'),'${item.key}')">
+      <span class="modern-share-protocol-mark">${esc(item.mark)}</span>
+      <span class="modern-share-protocol-name">${esc(item.name)}</span>
+      ${footer}
+      <small>${esc(item.detail)}</small>
+    </button>`;
+  }).join('')}</div>`;
+}
+
 async function renderNetwork(body,tab){
   const sub=(tab==='Firewall'||tab==='Docker')?tab:'Interfaces';
   const tabs=`<div class="modal-tabs sub-tabs">${['Interfaces','Firewall','Docker'].map(t=>`<div class="modal-tab${t===sub?' active':''}" onclick="renderNetwork($('#modal-body'),'${t}')">${esc(uiText(t))}</div>`).join('')}</div>`;
   if(sub==='Firewall'){
     const f=await api('/network/firewall/rules');
+    const menu=isModernUi()?modernNetworkMenu(sub,{firewallCount:(f.rules||[]).length,dockerAvailable:true}):tabs;
     const firewallRows=(f.rules||[]).map(r=>`<tr>
       <td data-label="No.">${r.num}</td>
       <td class="mono" data-label="To">${esc(r.to)}</td>
@@ -15483,15 +15524,16 @@ async function renderNetwork(body,tab){
         )
       : viewIntro('Firewall','Allow or block network access. Keep rules simple unless you know exactly what a service needs.',`<button class="btn" onclick="fwAddForm()">Add rule</button>`)
         +simpleTable(['No.','To','Action','From',''],firewallRows.join(''));
-    body.innerHTML=tabs+firewallContent
+    body.innerHTML=menu+firewallContent
       +`<div class="nx-summary-grid${isModernUi()?' modern-network-summary':''}">${summaryCard('Firewall',f.active?'Active':'Inactive',f.backend||'Unknown backend')}${summaryCard('Rules',(f.rules||[]).length,'Configured')}</div>`;
     translateRenderedText(body);
     return;
   }
   if(sub==='Docker'){
     const av=await api('/docker/available');
-    if(!av.available){body.innerHTML=tabs+viewIntro('Docker networks','Docker is not available on this server.','')+emptyState('Docker unavailable');translateRenderedText(body);return;}
+    if(!av.available){body.innerHTML=(isModernUi()?modernNetworkMenu(sub,{dockerAvailable:false}):tabs)+viewIntro('Docker networks','Docker is not available on this server.','')+emptyState('Docker unavailable');translateRenderedText(body);return;}
     const nets=await api('/docker/networks');
+    const menu=isModernUi()?modernNetworkMenu(sub,{dockerAvailable:true}):tabs;
     const unused=(nets||[]).filter(n=>n.unused);
     const builtin=(nets||[]).filter(n=>n.builtin);
     const actions=`<button class="btn danger" onclick="dockerNetworkPrune()" ${unused.length?'':'disabled'}>${esc(uiText('Delete unused Docker networks'))}</button>`;
@@ -15512,13 +15554,14 @@ async function renderNetwork(body,tab){
         )
       : viewIntro('Docker networks','Docker keeps containers isolated. Remove unused Docker networks when Compose projects or containers have left old networks behind.',actions)
         +simpleTable(['Name','Driver','Scope','Containers','Subnet',''],dockerRows.join(''));
-    body.innerHTML=tabs+dockerContent
+    body.innerHTML=menu+dockerContent
       +`<div class="nx-summary-grid${isModernUi()?' modern-network-summary':''}">${summaryCard('Docker networks',(nets||[]).length,'All Docker networks')}${summaryCard('Unused networks',unused.length,'Safe to prune')}${summaryCard('System networks',builtin.length,'Docker built-in')}</div>`;
     translateRenderedText(body);
     return;
   }
   const dockerInterface=i=>/^docker/.test(i.name||'')||/^br-[0-9a-f]{12,}$/i.test(i.name||'')||/^veth/.test(i.name||'');
   const ifs=(await api('/network/interfaces')).filter(i=>!dockerInterface(i));
+  const menu=isModernUi()?modernNetworkMenu(sub,{interfaceCount:ifs.length,dockerAvailable:true}):tabs;
   const physical=ifs.filter(i=>i.is_physical);
   const virtual=ifs.filter(i=>!i.is_physical);
   const activePorts=physical.filter(i=>i.up);
@@ -15533,7 +15576,7 @@ async function renderNetwork(body,tab){
       <div class="nx-card-grid">${physical.map(ifaceCard).join('')||emptyState('No physical ports detected')}</div>
       <div class="sec-hdr" style="margin-top:18px"><h3>Virtual and logical interfaces</h3></div>
       <div class="nx-card-grid">${virtual.map(ifaceCard).join('')||emptyState('No virtual interfaces')}</div>`;
-  body.innerHTML=tabs+(isModernUi()?modernInterfaceContent:originalInterfaceContent)
+  body.innerHTML=menu+(isModernUi()?modernInterfaceContent:originalInterfaceContent)
     +`<div class="nx-summary-grid${isModernUi()?' modern-network-summary':''}">${summaryCard('Active ports',activePorts.length,activePorts.map(i=>i.name).join(', ')||'No physical port connected')}${summaryCard('Physical ports',physical.length,'Real NIC ports')}${summaryCard('Virtual interfaces',virtual.length,'Docker, bridge, VLAN, bond or tunnel')}</div>`;
   translateRenderedText(body);
 }

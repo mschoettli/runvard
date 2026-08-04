@@ -13,9 +13,13 @@ def test_modern_network_uses_quiet_panels_and_interface_cards():
     assert "function modernNetworkInterfaceCard" in html
     assert "function modernNetworkTable" in html
     assert "function modernNetworkPanel" in html
+    assert "function modernNetworkMenu" in html
     assert 'class="modern-network-panel"' in html
     assert 'class="modern-network-interface-card"' in html
     assert 'class="modern-network-table-wrap"' in html
+    assert 'class="modern-share-protocol-grid modern-network-menu"' in html
+    assert 'data-network-tab="${esc(item.key)}"' in html
+    assert "onclick=\"renderNetwork($('#modal-body'),'${item.key}')\"" in html
     assert "isModernUi()\n      ? modernNetworkPanel(" in html
     assert 'html[data-ui-theme="modern"] .modern-network-panel' in css
     assert 'html[data-ui-theme="modern"] .modern-network-interface-card' in css
