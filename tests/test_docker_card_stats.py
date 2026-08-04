@@ -31,14 +31,13 @@ def test_docker_stats_all_endpoint_returns_container_map(monkeypatch):
     assert response.json()["web123"]["cpu_count"] == 2
 
 
-def test_modern_docker_cards_include_live_resource_visuals():
+def test_modern_docker_app_cards_show_calm_live_resource_values():
     html = Path("static/index.html").read_text()
     css = Path("static/modern-theme.css").read_text()
 
-    assert 'class="docker-service-resources"' in html
     assert "api('/docker/stats/all')" in html
-    assert "dockerStatsSparkline" in html
-    assert "docker-card-stats-value" in html
-    assert "docker-card-stats-note" in html
-    assert "docker-service-resources" in css
-    assert "docker-resource-sparkline" in css
+    assert "RunvardDockerModern.aggregateStats" in html
+    assert 'data-app-stat="cpu"' in html
+    assert 'data-app-stat="ram"' in html
+    assert "function updateDockerModernAppStats" in html
+    assert 'html[data-ui-theme="modern"] .modern-docker-app-metric' in css

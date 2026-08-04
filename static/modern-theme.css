@@ -1098,6 +1098,529 @@ html[data-ui-theme="modern"] .docker-card-menu-list button.danger:focus-visible 
   background: rgb(199 76 76 / 8%);
 }
 
+html[data-ui-theme="modern"] .modern-docker-app-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+html[data-ui-theme="modern"] .modern-docker-summary {
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+html[data-ui-theme="modern"] .modern-docker-summary .nx-summary-card {
+  min-height: 88px;
+  padding: 10px;
+}
+
+html[data-ui-theme="modern"] .modern-docker-summary .nx-summary-card .k {
+  overflow: hidden;
+  font-size: .58rem;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-ui-theme="modern"] .modern-docker-summary .nx-summary-card .v {
+  font-size: 1.08rem;
+}
+
+html[data-ui-theme="modern"] .modern-docker-summary .nx-summary-card .s {
+  font-size: .59rem;
+  line-height: 1.3;
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-summary {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-summary .nx-summary-card {
+  min-height: 88px;
+  padding: 10px;
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-summary .nx-summary-card .v {
+  font-size: 1.08rem;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-card {
+  min-width: 0;
+  padding: 16px;
+  border: 1px solid rgb(255 255 255 / 82%);
+  border-radius: 16px;
+  background: rgb(255 255 255 / 58%);
+  box-shadow:
+    0 10px 26px rgb(48 75 110 / 7%),
+    inset 0 1px 0 rgb(255 255 255 / 92%);
+  transition: border-color .18s ease, background-color .18s ease, box-shadow .18s ease;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-card:hover {
+  border-color: rgb(57 115 230 / 20%);
+  background: rgb(255 255 255 / 68%);
+  box-shadow:
+    0 12px 30px rgb(48 75 110 / 9%),
+    inset 0 1px 0 #fff;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-card:focus-within {
+  border-color: rgb(57 115 230 / 28%);
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-head {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 11px;
+  align-items: center;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-icon,
+html[data-ui-theme="modern"] .modern-docker-app-icon-glyph {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  border: 1px solid rgb(57 115 230 / 14%);
+  border-radius: 12px;
+  background: linear-gradient(145deg, rgb(247 251 255 / 96%), rgb(225 236 251 / 92%));
+  color: var(--accent);
+  box-shadow: inset 0 1px 0 #fff;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-icon > img {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-icon > span,
+html[data-ui-theme="modern"] .modern-docker-app-icon > span .modern-docker-app-icon-glyph {
+  width: 100%;
+  height: 100%;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-icon svg,
+html[data-ui-theme="modern"] .modern-docker-app-icon-glyph svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-identity {
+  min-width: 0;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-identity h4 {
+  overflow: hidden;
+  margin: 0;
+  color: var(--text);
+  font-size: .94rem;
+  font-weight: 700;
+  letter-spacing: -.015em;
+  line-height: 1.25;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-identity p {
+  overflow: hidden;
+  margin-top: 4px;
+  color: var(--text3);
+  font-size: .7rem;
+  font-weight: 600;
+  line-height: 1.3;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-state,
+html[data-ui-theme="modern"] .modern-docker-service-state {
+  display: inline-flex;
+  min-height: 26px;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: rgb(255 255 255 / 48%);
+  color: var(--text2);
+  font-size: .65rem;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-state {
+  grid-column: 2;
+  justify-self: start;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-state i,
+html[data-ui-theme="modern"] .modern-docker-service-state i {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 auto;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-state.good,
+html[data-ui-theme="modern"] .modern-docker-service-state.good {
+  border-color: rgb(72 167 126 / 18%);
+  background: rgb(72 167 126 / 8%);
+  color: #27845f;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-state.warn,
+html[data-ui-theme="modern"] .modern-docker-service-state.warn {
+  border-color: rgb(184 106 18 / 16%);
+  background: rgb(184 106 18 / 7%);
+  color: #936020;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-state.bad,
+html[data-ui-theme="modern"] .modern-docker-service-state.bad {
+  border-color: rgb(199 76 76 / 18%);
+  background: rgb(199 76 76 / 7%);
+  color: #b54444;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-description {
+  max-width: 62ch;
+  margin: 12px 0 0;
+  color: var(--text2);
+  font-size: .75rem;
+  line-height: 1.5;
+  text-wrap: pretty;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-overview {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0;
+  margin-top: 14px;
+  padding: 12px 0;
+  border-top: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-metric,
+html[data-ui-theme="modern"] .modern-docker-app-access {
+  min-width: 0;
+  padding: 0 12px;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-metric:first-child {
+  padding-left: 0;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-metric + .modern-docker-app-metric {
+  border-left: 1px solid var(--border);
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-access {
+  grid-column: 1 / -1;
+  margin-top: 11px;
+  padding: 11px 0 0;
+  border-top: 1px solid var(--border);
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-metric span,
+html[data-ui-theme="modern"] .modern-docker-app-access span {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text3);
+  font-size: .64rem;
+  font-weight: 700;
+  letter-spacing: .045em;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-metric strong,
+html[data-ui-theme="modern"] .modern-docker-app-access strong {
+  display: block;
+  overflow: hidden;
+  color: var(--text);
+  font-family: "JetBrains Mono", monospace;
+  font-size: .78rem;
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-footer {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-top: 14px;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-footer > .btn {
+  min-width: 88px;
+  margin: 0;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-details {
+  margin-top: 14px;
+  border-top: 1px solid var(--border);
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-details > summary {
+  display: flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--text2);
+  font-size: .72rem;
+  font-weight: 650;
+  cursor: pointer;
+  list-style: none;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-details > summary::-webkit-details-marker {
+  display: none;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-details > summary::after {
+  content: "+";
+  color: var(--text3);
+  font-size: 1rem;
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-details[open] > summary::after {
+  content: "−";
+}
+
+html[data-ui-theme="modern"] .modern-docker-app-details > summary:focus-visible {
+  border-radius: 8px;
+  outline: 2px solid rgb(57 115 230 / 24%);
+  outline-offset: 2px;
+}
+
+html[data-ui-theme="modern"] .modern-docker-service-list {
+  display: grid;
+  gap: 8px;
+  padding-top: 2px;
+}
+
+html[data-ui-theme="modern"] .modern-docker-service-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px;
+  border: 1px solid rgb(72 99 132 / 10%);
+  border-radius: 11px;
+  background: rgb(255 255 255 / 42%);
+}
+
+html[data-ui-theme="modern"] .modern-docker-service-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 8px;
+  min-width: 0;
+  align-items: center;
+}
+
+html[data-ui-theme="modern"] .modern-docker-service-main strong,
+html[data-ui-theme="modern"] .modern-docker-service-main small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-ui-theme="modern"] .modern-docker-service-main strong {
+  color: var(--text);
+  font-size: .78rem;
+}
+
+html[data-ui-theme="modern"] .modern-docker-service-main small {
+  grid-column: 1 / -1;
+  color: var(--text3);
+  font-size: .64rem;
+}
+
+html[data-ui-theme="modern"] .modern-docker-service-ports {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+  overflow: hidden;
+}
+
+html[data-ui-theme="modern"] .modern-docker-service-ports span {
+  overflow: hidden;
+  padding: 4px 7px;
+  border: 1px solid var(--border);
+  border-radius: 7px;
+  background: rgb(255 255 255 / 44%);
+  color: var(--text2);
+  font: .64rem "JetBrains Mono", monospace;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-ui-theme="modern"] .modern-docker-service-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+html[data-ui-theme="modern"] .modern-docker-service-actions .btn,
+html[data-ui-theme="modern"] .modern-docker-row-menu > summary {
+  min-height: 44px;
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-list {
+  display: grid;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-row {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr);
+  gap: 8px 12px;
+  align-items: center;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid rgb(255 255 255 / 78%);
+  border-radius: 13px;
+  background: rgb(255 255 255 / 54%);
+  box-shadow: 0 8px 22px rgb(48 75 110 / 6%);
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-mark {
+  display: inline-flex;
+  width: 44px;
+  height: 44px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgb(57 115 230 / 13%);
+  border-radius: 11px;
+  background: rgb(237 244 253 / 88%);
+  color: var(--accent);
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-mark svg {
+  width: 21px;
+  height: 21px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.65;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-copy {
+  min-width: 0;
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-copy strong,
+html[data-ui-theme="modern"] .modern-docker-tool-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-copy strong {
+  color: var(--text);
+  font-size: .8rem;
+  font-weight: 700;
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-copy small {
+  margin-top: 4px;
+  color: var(--text3);
+  font-size: .67rem;
+  line-height: 1.35;
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-copy small span + span::before {
+  content: " · ";
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-row > .status-pill {
+  grid-column: 2;
+  justify-self: start;
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-actions {
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+html[data-ui-theme="modern"] .modern-docker-tool-actions > .btn,
+html[data-ui-theme="modern"] .modern-docker-tool-actions .docker-card-menu > summary {
+  min-height: 44px;
+}
+
+@media (min-width: 640px) {
+  html[data-ui-theme="modern"] .modern-docker-app-card {
+    padding: 18px;
+  }
+
+  html[data-ui-theme="modern"] .modern-docker-app-head {
+    grid-template-columns: 44px minmax(0, 1fr) auto;
+  }
+
+  html[data-ui-theme="modern"] .modern-docker-app-state {
+    grid-column: auto;
+    justify-self: end;
+  }
+
+  html[data-ui-theme="modern"] .modern-docker-app-overview {
+    grid-template-columns: minmax(0, .72fr) minmax(0, .72fr) minmax(150px, 1.1fr);
+  }
+
+  html[data-ui-theme="modern"] .modern-docker-app-access {
+    grid-column: auto;
+    margin-top: 0;
+    padding: 0 0 0 14px;
+    border-top: 0;
+    border-left: 1px solid var(--border);
+  }
+
+  html[data-ui-theme="modern"] .modern-docker-service-row {
+    grid-template-columns: minmax(180px, 1.2fr) minmax(120px, .8fr) auto;
+    align-items: center;
+  }
+
+  html[data-ui-theme="modern"] .modern-docker-service-actions {
+    justify-content: flex-end;
+  }
+
+  html[data-ui-theme="modern"] .modern-docker-tool-row {
+    grid-template-columns: 44px minmax(0, 1fr) auto auto;
+    gap: 12px;
+  }
+
+  html[data-ui-theme="modern"] .modern-docker-tool-row > .status-pill,
+  html[data-ui-theme="modern"] .modern-docker-tool-actions {
+    grid-column: auto;
+  }
+
+  html[data-ui-theme="modern"] .modern-docker-tool-actions {
+    justify-content: flex-end;
+  }
+}
+
 html[data-ui-theme="modern"] .nx-view-intro {
   border: 1px solid rgb(57 115 230 / 14%);
   background:

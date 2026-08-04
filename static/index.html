@@ -20,6 +20,7 @@ try{document.documentElement.dataset.uiTheme=localStorage.getItem('runvard_ui_th
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<script src="/static/docker-modern.js"></script>
 <style>
 :root{--bg:#0a0b14;--bg2:rgba(13,14,26,.85);--bg3:rgba(17,18,33,.65);--glass:rgba(255,255,255,.04);--glass-hover:rgba(122,74,255,.08);--border:rgba(255,255,255,.08);--border-accent:rgba(122,74,255,.3);--text:#f0f0ff;--text2:rgba(240,240,255,.55);--text3:rgba(240,240,255,.28);--accent:#7a4aff;--accent-light:#9d7aff;--green:#22c55e;--yellow:#eab308;--red:#ef4444;--radius:12px;--blur:blur(16px)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -938,7 +939,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .ice-bg{background:radial-gradient(ellipse at 60% 30%,#818cf8,transparent 50%),radial-gradient(ellipse at 20% 70%,#3730a3,transparent 55%),radial-gradient(ellipse at 85% 75%,#0284c7,transparent 45%),#03051a!important;background-attachment:fixed!important}
 .galaxy-bg{background:radial-gradient(ellipse at 40% 40%,#4c1d95,transparent 55%),radial-gradient(ellipse at 75% 20%,#1e1b4b,transparent 50%),radial-gradient(ellipse at 20% 80%,#0f172a,transparent 50%),#020108!important;background-attachment:fixed!important}
 </style>
-<link rel="stylesheet" href="/static/modern-theme.css?v=5dbbc5656367">
+<link rel="stylesheet" href="/static/modern-theme.css?v=9ebda9091630">
 </head>
 <body>
 
@@ -10942,6 +10943,7 @@ function updateDockerCardStats(body,stats){
     setPath('ram-line',ramChart.line);setPath('ram-area',ramChart.area);
     panel.querySelectorAll('.docker-resource-sparkline').forEach(el=>{el.classList.remove('is-loading','is-idle');});
   });
+  if(typeof updateDockerModernAppStats==='function')updateDockerModernAppStats(body,stats);
 }
 function stopDockerCardStats(clearHistory=false){
   if(_dockerCardStatsTimer){clearInterval(_dockerCardStatsTimer);_dockerCardStatsTimer=null;}
@@ -10950,7 +10952,7 @@ function stopDockerCardStats(clearHistory=false){
 }
 function startDockerCardStats(body){
   stopDockerCardStats();
-  if(!isModernUi()||!body.querySelector('.docker-service-resources'))return;
+  if(!isModernUi()||!body.querySelector('.docker-service-resources, .modern-docker-app-card'))return;
   const load=async()=>{
     if(_dockerCardStatsLoading||document.hidden)return;
     if(!body.isConnected||currentTile?.id!=='docker'){stopDockerCardStats();return;}
@@ -13113,6 +13115,10 @@ const APP_UI={
   stopping:{de:'Wird gestoppt…',en:'Stopping...',fr:'Arrêt...',it:'Arresto...',es:'Deteniendo...',pt:'A parar...'},
   restarting:{de:'Wird neu gestartet…',en:'Restarting...',fr:'Redémarrage...',it:'Riavvio...',es:'Reiniciando...',pt:'A reiniciar...'},
   updating:{de:'Wird aktualisiert…',en:'Updating...',fr:'Mise à jour...',it:'Aggiornamento...',es:'Actualizando...',pt:'A atualizar...'},
+  partlyRunning:{de:'Teilweise aktiv',en:'Partly running',fr:'Partiellement actif',it:'Parzialmente attivo',es:'Parcialmente activo',pt:'Parcialmente ativo'},
+  service:{de:'Dienst',en:'service',fr:'service',it:'servizio',es:'servicio',pt:'serviço'},
+  services:{de:'Dienste',en:'services',fr:'services',it:'servizi',es:'servicios',pt:'serviços'},
+  resourceUnavailable:{de:'Noch keine Messwerte',en:'No readings yet',fr:'Aucune mesure pour le moment',it:'Nessun valore disponibile',es:'Aún no hay mediciones',pt:'Ainda sem medições'},
 };
 const APP_CATEGORY_LABELS={
   all:{de:'Alle',en:'All',fr:'Toutes',it:'Tutte',es:'Todas',pt:'Todas'},
@@ -14572,8 +14578,161 @@ window.mountVolumeForm=dev=>openForm('Mount volume: '+dev,'💿',[
 window.zpoolDestroy=name=>typedConfirm('Destroy ZFS pool',`Pool "${name}" and its data will be removed permanently.`,name,async()=>{try{const r=await post('/storage/zfs/destroy',{name});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Pool destroyed');renderStorage($('#modal-body'),'ZFS/Btrfs');}catch(e){toast('Error: '+e.message,'error');}});
 window.lvRemove=lvpath=>typedConfirm('Delete logical volume',`Logical volume "${lvpath}" will be deleted permanently.`,lvpath,async()=>{try{const r=await post('/storage/lvm/lv-remove',{lv_path:lvpath});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Volume deleted');renderStorage($('#modal-body'),'LVM');}catch(e){toast('Error: '+e.message,'error');}});
 
+let _modernDockerGroups=new Map();
+function dockerModernCatalogEntry(group,catalog){
+  const ids=[group.key,group.project,String(group.key||'').replace(/^compose:/,'')].filter(Boolean);
+  return (catalog||[]).find(app=>ids.includes(String(app.id||'')))||null;
+}
+function dockerModernAppIcon(app){
+  const icon=String(app?.icon||'').trim();
+  const glyph='<span class="modern-docker-app-icon-glyph" aria-hidden="true"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="17" height="16" rx="4"/><path d="M7.5 8h3v3h-3zM13.5 8h3v3h-3zM7.5 14h3v2h-3zM13.5 14h3v2h-3z"/></svg></span>';
+  if(!icon||(!/^https?:\/\//.test(icon)&&!icon.startsWith('/')))return glyph;
+  return `<span class="modern-docker-app-icon"><img src="${esc(icon)}" alt="" aria-hidden="true" loading="lazy" onerror="this.hidden=true;this.nextElementSibling.hidden=false"><span hidden>${glyph}</span></span>`;
+}
+function dockerModernStatePresentation(group){
+  const pending=group.containers.map(container=>dockerPendingActions.get(container.id)).find(Boolean);
+  if(pending)return {key:'pending',label:appPendingLabel(pending),tone:'warn'};
+  const key=RunvardDockerModern.groupState(group.containers);
+  if(key==='running')return {key,label:uiText('Running'),tone:'good'};
+  if(key==='partial')return {key,label:appUi('partlyRunning'),tone:'warn'};
+  if(key==='error')return {key,label:uiText('Error'),tone:'bad'};
+  return {key:'stopped',label:uiText('Stopped'),tone:'neutral'};
+}
+function dockerModernGroupWebPort(group){
+  for(const container of group.containers){
+    if(container.state!=='running')continue;
+    const port=dockerPublishedWebPort(container.ports||[]);
+    if(port)return port;
+  }
+  return null;
+}
+function dockerModernServiceRow(container){
+  const pending=dockerPendingActions.get(container.id);
+  const state=dockerStatePresentation(container.state,pending);
+  const idArg=esc(JSON.stringify(container.id));
+  const nameArg=esc(JSON.stringify(container.name));
+  const ports=(container.ports||[]).slice(0,3);
+  const webPort=dockerPublishedWebPort(ports);
+  const service=container.app_group?.service||container.name;
+  return `<article class="modern-docker-service-row">
+    <div class="modern-docker-service-main"><strong title="${esc(container.name)}">${esc(service)}</strong><span class="modern-docker-service-state ${state.tone}"><i aria-hidden="true"></i>${esc(uiText(state.label))}</span><small class="mono" title="${esc(container.image)}">${esc(container.image)}</small></div>
+    <div class="modern-docker-service-ports" aria-label="${esc(uiText('Ports'))}">${ports.map(port=>`<span title="${esc(port)}">${esc(port)}</span>`).join('')||`<span>${esc(uiText('No public ports'))}</span>`}</div>
+    <div class="modern-docker-service-actions">
+      ${webPort&&container.state==='running'?`<button class="btn ghost sm" onclick="dockerOpenPort(${webPort})">${esc(uiText('Open'))}</button>`:''}
+      <button class="btn ghost sm" onclick="dockerLogs(${idArg},${nameArg})">${esc(uiText('Logs'))}</button>
+      <details class="docker-card-menu modern-docker-row-menu"><summary title="${esc(uiText('Actions'))}" aria-label="${esc(uiText('Actions'))}"><span class="docker-card-menu-dots" aria-hidden="true"><i></i><i></i><i></i></span></summary><div class="docker-card-menu-list">
+        ${container.state==='running'?`<button onclick="dockerAct(${idArg},'restart')">${esc(uiText('Restart'))}</button><button onclick="dockerAct(${idArg},'stop')">${esc(uiText('Stop'))}</button>`:`<button onclick="dockerAct(${idArg},'start')">${esc(uiText('Start'))}</button>`}
+        <button onclick="dockerStats(${idArg},${nameArg})">${esc(uiText('Stats'))}</button><button class="danger" onclick="dockerDel(${idArg},${nameArg})">${esc(uiText('Delete'))}</button>
+      </div></details>
+    </div>
+  </article>`;
+}
+function dockerModernAppCard(group,catalog,index){
+  const app=dockerModernCatalogEntry(group,catalog);
+  const state=dockerModernStatePresentation(group);
+  const keyArg=esc(JSON.stringify(group.key));
+  const webPort=dockerModernGroupWebPort(group);
+  const serviceCount=group.containers.length;
+  const serviceLabel=appUi(serviceCount===1?'service':'services');
+  const detailId=`modern-docker-details-${index}`;
+  const description=app?localizedAppDesc(app):'';
+  const first=group.containers[0];
+  const primary=state.key==='stopped'||state.key==='partial'||state.key==='error'
+    ?`<button class="btn sm modern-docker-primary" onclick="dockerModernAppAct(${keyArg},'start')">${esc(uiText('Start'))}</button>`
+    :webPort
+      ?`<button class="btn sm modern-docker-primary" onclick="dockerOpenPort(${webPort})">${esc(uiText('Open'))}</button>`
+      :serviceCount===1
+        ?`<button class="btn sm modern-docker-primary" onclick="dockerLogs(${esc(JSON.stringify(first.id))},${esc(JSON.stringify(first.name))})">${esc(uiText('Logs'))}</button>`
+        :`<button class="btn ghost sm modern-docker-primary" onclick="dockerModernOpenDetails('${detailId}')">${esc(uiText('Details'))}</button>`;
+  const menuItems=[
+    state.key!=='stopped'?`<button onclick="dockerModernAppAct(${keyArg},'restart')">${esc(uiText('Restart'))}</button>`:'',
+    state.key!=='stopped'?`<button onclick="dockerModernAppAct(${keyArg},'stop')">${esc(uiText('Stop'))}</button>`:'',
+    group.kind==='compose'?`<button onclick="composeEdit(${esc(JSON.stringify(group.project))})">${esc(uiText('Edit'))}</button>`:'',
+    group.kind==='container'?`<button class="danger" onclick="dockerDel(${esc(JSON.stringify(first.id))},${esc(JSON.stringify(first.name))})">${esc(uiText('Delete'))}</button>`:'',
+  ].join('');
+  return `<article class="modern-docker-app-card" data-docker-app-key="${esc(group.key)}" data-state="${esc(state.key)}">
+    <header class="modern-docker-app-head">${dockerModernAppIcon(app)}<div class="modern-docker-app-identity"><h4 title="${esc(group.name)}">${esc(app?.name||group.name)}</h4><p>${serviceCount} ${esc(serviceLabel)} · ${group.kind==='compose'?'Compose':esc(uiText('Container'))}</p></div><span class="modern-docker-app-state ${state.tone}"><i aria-hidden="true"></i>${esc(state.label)}</span></header>
+    ${description?`<p class="modern-docker-app-description">${esc(description)}</p>`:''}
+    <div class="modern-docker-app-overview">
+      <div class="modern-docker-app-metric"><span>CPU</span><strong data-app-stat="cpu">${state.key==='running'?'…':'—'}</strong></div>
+      <div class="modern-docker-app-metric"><span>RAM</span><strong data-app-stat="ram">${state.key==='running'?'…':'—'}</strong></div>
+      <div class="modern-docker-app-access"><span>${esc(uiText('Ports'))}</span><strong>${webPort?`:${webPort}`:esc(uiText('No public ports'))}</strong></div>
+    </div>
+    <footer class="modern-docker-app-footer">${primary}<span class="docker-card-spacer"></span><details class="docker-card-menu"><summary title="${esc(uiText('Actions'))}" aria-label="${esc(uiText('Actions'))}"><span class="docker-card-menu-dots" aria-hidden="true"><i></i><i></i><i></i></span></summary><div class="docker-card-menu-list">${menuItems}</div></details></footer>
+    <details class="modern-docker-app-details" id="${detailId}"><summary><span>${serviceCount} ${esc(serviceLabel)}</span><span>${esc(uiText('Details'))}</span></summary><div class="modern-docker-service-list">${group.containers.map(dockerModernServiceRow).join('')}</div></details>
+  </article>`;
+}
+function updateDockerModernAppStats(body,stats){
+  body.querySelectorAll('.modern-docker-app-card[data-docker-app-key]').forEach(card=>{
+    const group=_modernDockerGroups.get(card.dataset.dockerAppKey);
+    if(!group)return;
+    const totals=RunvardDockerModern.aggregateStats(group.containers,stats);
+    const cpu=card.querySelector('[data-app-stat="cpu"]'),ram=card.querySelector('[data-app-stat="ram"]');
+    if(cpu)cpu.textContent=totals.available?totals.cpu_percent.toLocaleString(localeCode(),{minimumFractionDigits:1,maximumFractionDigits:1})+' %':'—';
+    if(ram)ram.textContent=totals.available?fmtBytes(totals.mem_used):'—';
+  });
+}
+window.dockerModernOpenDetails=id=>{const details=document.getElementById(id);if(!details)return;details.open=true;details.querySelector('summary')?.focus();};
+window.dockerModernAppAct=async(key,action)=>{
+  const group=_modernDockerGroups.get(key);if(!group)return;
+  const targets=action==='start'?group.containers.filter(container=>container.state!=='running'):group.containers;
+  const ids=targets.map(container=>container.id);
+  if(!ids.length)return;
+  ids.forEach(id=>dockerPendingActions.set(id,action));
+  await renderDocker($('#modal-body'),'Container');
+  try{for(const id of ids)requireOk(await post('/docker/action',{container_id:id,action}),'Docker action failed');toast(uiText(action==='stop'?'Stopped':'Running'));}
+  catch(e){toast('Error: '+e.message,'error');}
+  finally{ids.forEach(id=>dockerPendingActions.delete(id));renderDocker($('#modal-body'),'Container');}
+};
+function modernDockerToolIcon(kind){
+  const paths={
+    compose:'<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="8.5" y="13" width="7" height="7" rx="2"/>',
+    image:'<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9"/>',
+    volume:'<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/>',
+  };
+  return `<span class="modern-docker-tool-mark" aria-hidden="true"><svg viewBox="0 0 24 24">${paths[kind]||paths.compose}</svg></span>`;
+}
+function modernComposeProjectRows(projects){
+  const running=(projects||[]).filter(project=>project.running).length;
+  return `<div class="nx-summary-grid modern-docker-tool-summary">${summaryCard('Compose projects',(projects||[]).length,'Total')}${summaryCard('Running',running,'Active now')}</div><div class="modern-docker-tool-list">${(projects||[]).map(project=>{
+    const pending=composePendingActions.get(project.name),nameArg=esc(JSON.stringify(project.name)),port=Number(project.port||0);
+    const primary=project.running&&port?`<button class="btn sm" onclick="composeOpen(${nameArg})">${esc(uiText('Open'))}</button>`:`<button class="btn sm" onclick="composeAct(${nameArg},'${project.running?'restart':'up'}')" ${pending?'disabled':''}>${esc(uiText(project.running?'Restart':'Start'))}</button>`;
+    return `<article class="modern-docker-tool-row">${modernDockerToolIcon('compose')}<div class="modern-docker-tool-copy"><strong>${esc(project.name)}</strong><small class="mono">docker-compose.yml${port?' · :'+port:''}</small></div>${pending?statusBadge(appPendingLabel(pending),'warn'):statusBadge(project.running?'Running':'Stopped',project.running?'good':'neutral')}<div class="modern-docker-tool-actions">${primary}<details class="docker-card-menu"><summary title="${esc(uiText('Actions'))}" aria-label="${esc(uiText('Actions'))}"><span class="docker-card-menu-dots" aria-hidden="true"><i></i><i></i><i></i></span></summary><div class="docker-card-menu-list">${project.running?`<button onclick="composeAct(${nameArg},'stop')">${esc(uiText('Stop'))}</button>`:''}<button onclick="composeEdit(${nameArg})">${esc(uiText('Edit'))}</button><button onclick="composeAddToDashboard(${nameArg},${port})">Dashboard</button><button class="danger" onclick="composeDelete(${nameArg})">${esc(uiText('Delete'))}</button></div></details></div></article>`;
+  }).join('')||emptyState('No projects')}</div>`;
+}
+function modernDockerImageRows(images){
+  return `<div class="modern-docker-tool-list">${(images||[]).map(image=>{
+    const label=(image.tags||[]).join(', ')||String(image.id||'').slice(0,12);
+    return `<article class="modern-docker-tool-row">${modernDockerToolIcon('image')}<div class="modern-docker-tool-copy"><strong class="mono" title="${esc(label)}">${esc(label)}</strong><small>${fmtBytes(image.size)}</small></div><div class="modern-docker-tool-actions"><details class="docker-card-menu"><summary title="${esc(uiText('Actions'))}" aria-label="${esc(uiText('Actions'))}"><span class="docker-card-menu-dots" aria-hidden="true"><i></i><i></i><i></i></span></summary><div class="docker-card-menu-list"><button class="danger" onclick="imageDel(${esc(JSON.stringify(image.id))},${esc(JSON.stringify(label))})">${esc(uiText('Delete'))}</button></div></details></div></article>`;
+  }).join('')||emptyState('No images')}</div>`;
+}
+function modernDockerVolumeRows(volumes){
+  return `<div class="modern-docker-tool-list">${(volumes||[]).map(volume=>`<article class="modern-docker-tool-row">${modernDockerToolIcon('volume')}<div class="modern-docker-tool-copy"><strong title="${esc(volume.name)}">${esc(volume.name)}</strong><small><span>${esc(volume.driver||'local')}</span><span class="mono" title="${esc(volume.mountpoint)}">${esc(volume.mountpoint)}</span></small></div><div class="modern-docker-tool-actions"><details class="docker-card-menu"><summary title="${esc(uiText('Actions'))}" aria-label="${esc(uiText('Actions'))}"><span class="docker-card-menu-dots" aria-hidden="true"><i></i><i></i><i></i></span></summary><div class="docker-card-menu-list"><button class="danger" onclick="volumeDel(${esc(JSON.stringify(volume.name))})">${esc(uiText('Delete'))}</button></div></details></div></article>`).join('')||emptyState('No volumes')}</div>`;
+}
+async function renderDockerModern(body,tab){
+  stopDockerCardStats();
+  const available=await api('/docker/available');if(!available.available){body.innerHTML=viewIntro('Containers','Docker is not available on this server.','')+emptyState('Docker unavailable');return;}
+  if(tab==='Compose'){
+    const projects=await api('/docker/compose');body.innerHTML=viewIntro('Compose projects','Advanced multi-container projects. Editing Compose files can break services.',`<button class="btn" onclick="composeForm()">${esc(uiText('Create project'))}</button>`)+modernComposeProjectRows(projects);translateRenderedText(body);return;
+  }
+  if(tab==='Images'){
+    const images=await api('/docker/images');body.innerHTML=viewIntro('Images','Images are templates used to create containers.',`<button class="btn" onclick="pullForm()">${esc(uiText('Pull image'))}</button>`)+modernDockerImageRows(images);translateRenderedText(body);return;
+  }
+  if(tab==='Volumes'){
+    const volumes=await api('/docker/volumes');body.innerHTML=viewIntro('Volumes','Volumes hold persistent container data. Delete only when you know the data is no longer needed.','')+modernDockerVolumeRows(volumes);translateRenderedText(body);return;
+  }
+  const [containers,catalogData]=await Promise.all([api('/docker/containers'),api('/apps/catalog').catch(()=>({apps:[]}))]);
+  const groups=RunvardDockerModern.groupContainers(containers);
+  _modernDockerGroups=new Map(groups.map(group=>[group.key,group]));
+  const counts=groups.reduce((result,group)=>{result[RunvardDockerModern.groupState(group.containers)]++;return result;},{running:0,partial:0,error:0,stopped:0});
+  body.innerHTML=viewIntro('Container services','Start, stop and inspect services running in Docker. Advanced image and volume tools are in the other tabs.',`<button class="btn" onclick="dockerCreateForm()">${esc(uiText('Create container'))}</button>`)
+    +`<div class="nx-summary-grid modern-docker-summary">${summaryCard('Apps',groups.length,'Total')}${summaryCard('Running',counts.running,'Active now')}${summaryCard('Attention',counts.partial+counts.error,counts.partial+counts.error?appUi('partlyRunning'):'OK')}</div><div class="modern-docker-app-grid">${groups.map((group,index)=>dockerModernAppCard(group,catalogData.apps||[],index)).join('')||emptyState('No containers')}</div>`;
+  translateRenderedText(body);startDockerCardStats(body);
+}
+
 async function renderDocker(body,tab){
   stopDockerCardStats();
+  if(isModernUi())return renderDockerModern(body,tab);
   const av=await api('/docker/available');if(!av.available){body.innerHTML=viewIntro('Containers','Docker is not available on this server.','')+emptyState('Docker unavailable');return;}
   if(tab==='Container'||!tab){
     const c=await api('/docker/containers');
