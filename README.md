@@ -12,7 +12,7 @@ runvard is built for people who operate their own servers, homelabs, and small
 infrastructure setups and want direct control without constantly switching between
 terminal commands, log files, Docker tools, and separate admin interfaces.
 
-<img width="3726" height="2120" alt="image" src="https://github.com/user-attachments/assets/74697af4-ce6f-4ce7-b215-d23b6dcf414f" />
+<img width="1855" height="1044" alt="Bildschirmfoto 2026-08-04 um 20 39 22" src="https://github.com/user-attachments/assets/0983f613-f7e7-4581-9f8b-d82539e1f92f" />
 
 
 ## What is runvard?
