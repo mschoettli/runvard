@@ -98,5 +98,7 @@ def record_event(
         "remote": remote,
         "payload": sanitize_payload(payload),
     }
-    with open(path, "a", encoding="utf-8") as handle:
+    fd = os.open(path, os.O_WRONLY | os.O_APPEND | os.O_CREAT, 0o600)
+    os.chmod(path, 0o600)
+    with os.fdopen(fd, "a", encoding="utf-8") as handle:
         handle.write(json.dumps(event, sort_keys=True) + "\n")

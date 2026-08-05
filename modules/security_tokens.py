@@ -100,7 +100,7 @@ def issue_terminal_token(user: str) -> dict[str, object]:
     return {"token": token, "expires_at": expires}
 
 
-def consume_terminal_token(token: str) -> str:
+def consume_terminal_token(token: str, user: str | None = None) -> str:
     """
     Validate and consume a terminal token.
 
@@ -123,4 +123,16 @@ def consume_terminal_token(token: str) -> str:
     meta = _terminal_tokens.pop(token or "", None)
     if not meta:
         raise PermissionError("Missing or invalid terminal token")
+    if user is not None and meta["user"] != user:
+        raise PermissionError("Terminal token does not match user")
     return str(meta["user"])
+
+
+def clear_terminal_tokens(user: str | None = None) -> None:
+    """Revoke all terminal grants, or only grants owned by one user."""
+    if user is None:
+        _terminal_tokens.clear()
+        return
+    for token, meta in list(_terminal_tokens.items()):
+        if meta.get("user") == user:
+            _terminal_tokens.pop(token, None)

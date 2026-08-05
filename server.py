@@ -13,6 +13,7 @@ import time
 import html
 import requests
 import subprocess
+import ipaddress
 
 from fastapi import FastAPI, Request, Depends, HTTPException, WebSocket, \
     WebSocketDisconnect, UploadFile, File, Form
@@ -25,7 +26,7 @@ from modules import (system, terminal, files, storage, docker_mgr, services,
                      vms, backup, shares, network, security, monitoring,
                      system_mgr, apps, dashboard, metrics, accounts, audit,
                      ports, time_machine, path_picker)
-from modules import security_tokens
+from modules import security_tokens, auth_config
 from modules.external_servers import ExternalServerManager
 from modules.external_servers.service import error_category
 from modules.federation import FederationManager
@@ -50,7 +51,7 @@ async def _audit_mw(request: Request, call_next):
         m = request.method
         if m in ("POST", "PUT", "DELETE") and request.url.path.startswith("/api"):
             parsed = _parse_token(request.cookies.get(COOKIE_NAME))
-            who = parsed[0] if parsed else ("guest" if not login_enabled() else "?")
+            who = parsed[0] if parsed else "?"
             audit.record_event(
                 user=who,
                 action=f"{m} {request.url.path}",
@@ -73,17 +74,17 @@ try:
 except Exception:
     pass
 
-RUNVARD_USER = os.environ.get("RUNVARD_USER", "admin")
-RUNVARD_PASS = os.environ.get("RUNVARD_PASS", "runvard")
 RUNVARD_LANG = os.environ.get("RUNVARD_LANG", "en")
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 
 # ============ Auth: Session-Cookies + Login an/aus ============
 DATA_DIR = os.environ.get("RUNVARD_DATA_DIR", os.path.join(BASE_DIR, "data"))
-os.makedirs(DATA_DIR, exist_ok=True)
+os.makedirs(DATA_DIR, mode=0o700, exist_ok=True)
+os.chmod(DATA_DIR, 0o700)
 backup.configure_data_dir(DATA_DIR)
 SECRET_FILE = os.path.join(DATA_DIR, "secret.key")
 AUTH_CFG_FILE = os.path.join(DATA_DIR, "auth.json")
+accounts.STORE = os.path.join(DATA_DIR, "users.json")
 COOKIE_NAME = "runvard_session"
 SESSION_TTL = 8 * 3600              # 8 Stunden
 SESSION_TTL_REMEMBER = 30 * 86400   # 30 Tage
@@ -96,6 +97,8 @@ EXTERNAL_SERVERS = ExternalServerManager(
 
 @app.on_event("startup")
 def _start_federation_worker():
+    auth_config.enforce_authentication(AUTH_CFG_FILE)
+    accounts.ensure_bootstrap_account()
     if FEDERATION.state.get("enabled") and \
             os.environ.get("RUNVARD_FEDERATION_NO_WORKER") != "1":
         FEDERATION.start()
@@ -105,6 +108,7 @@ def _start_federation_worker():
 
 @app.on_event("shutdown")
 def _stop_federation_worker():
+    terminal.kill_all_sessions()
     FEDERATION.stop()
     EXTERNAL_SERVERS.stop()
 
@@ -167,26 +171,17 @@ def _secret():
             return f.read()
     except FileNotFoundError:
         key = secrets.token_bytes(32)
-        with open(SECRET_FILE, "wb") as f:
+        fd = os.open(SECRET_FILE, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+        with os.fdopen(fd, "wb") as f:
             f.write(key)
-        try:
-            os.chmod(SECRET_FILE, 0o600)
-        except OSError:
-            pass
+            f.flush()
+            os.fsync(f.fileno())
         return key
 
 
 def login_enabled():
-    try:
-        with open(AUTH_CFG_FILE) as f:
-            return bool(json.load(f).get("login_enabled", True))
-    except (FileNotFoundError, ValueError):
-        return True
-
-
-def set_login_enabled(val):
-    with open(AUTH_CFG_FILE, "w") as f:
-        json.dump({"login_enabled": bool(val)}, f)
+    """Compatibility status: authentication is always mandatory."""
+    return True
 
 
 def _b64e(b):
@@ -253,10 +248,24 @@ def _current_user(request: Request):
     return verify_token(request.cookies.get(COOKIE_NAME))
 
 
+def _is_https(request: Request) -> bool:
+    if request.url.scheme == "https":
+        return True
+    configured = os.environ.get("RUNVARD_TRUSTED_PROXIES", "")
+    if not configured or not request.client:
+        return False
+    try:
+        remote = ipaddress.ip_address(request.client.host)
+        networks = [ipaddress.ip_network(item.strip(), strict=False)
+                    for item in configured.split(",") if item.strip()]
+    except ValueError:
+        return False
+    return any(remote in network for network in networks) and \
+        request.headers.get("x-forwarded-proto", "").split(",", 1)[0].strip().lower() == "https"
+
+
 def auth(request: Request):
-    """Session-Cookie-Auth. Bei deaktiviertem Login freier Zugriff. Readonly darf nur lesen."""
-    if not login_enabled():
-        return "guest"
+    """Session-Cookie authentication. Readonly accounts may only read."""
     parsed = _parse_token(request.cookies.get(COOKIE_NAME))
     if not parsed:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -268,8 +277,6 @@ def auth(request: Request):
 
 def require_admin(request: Request):
     """Wie auth, verlangt aber Admin-Rolle."""
-    if not login_enabled():
-        return "guest"
     parsed = _parse_token(request.cookies.get(COOKIE_NAME))
     if not parsed:
         raise HTTPException(status_code=401, detail="Unauthorized")
@@ -279,8 +286,6 @@ def require_admin(request: Request):
 
 
 def is_expert_request(request: Request):
-    if not login_enabled():
-        return True
     parsed = _parse_token(request.cookies.get(COOKIE_NAME))
     return bool(parsed and parsed[1] == "admin" and parsed[2])
 
@@ -360,10 +365,6 @@ def _danger_confirm_meta(path, form):
         "/api/time-machine/replications/import":
             ("time-machine:promote-received", "source_replication_id"),
     }
-    if path == "/api/auth/toggle":
-        if str(form.get("enabled", "")) == "1":
-            return None
-        return ("auth:disable", "login")
     if path == "/api/docker/action":
         action = _form_value(form, "action")
         if action == "remove":
@@ -448,14 +449,14 @@ def _frontend_html(name: str) -> str:
 
 @app.get("/", response_class=HTMLResponse)
 def index(request: Request):
-    if login_enabled() and not _current_user(request):
+    if not _current_user(request):
         return RedirectResponse("/login", status_code=302)
     return HTMLResponse(_frontend_html("index.html"), headers={"Cache-Control": "no-store"})
 
 
 @app.get("/login", response_class=HTMLResponse)
 def login_page(request: Request):
-    if login_enabled() and _current_user(request):
+    if _current_user(request):
         return RedirectResponse("/", status_code=302)
     return HTMLResponse(_frontend_html("login.html"), headers={"Cache-Control": "no-store"})
 
@@ -564,21 +565,22 @@ def api_login(request: Request, username: str = Form(...),
     if not _rate_ok(ip):
         raise HTTPException(status_code=429, detail="Too many attempts")
     role = accounts.verify(username, password)
-    if not role and secrets.compare_digest(username, RUNVARD_USER) \
-            and secrets.compare_digest(password, RUNVARD_PASS):
-        role = "admin"
     if not role:
         raise HTTPException(status_code=401, detail="Unauthorized")
     ttl = SESSION_TTL_REMEMBER if remember == "1" else SESSION_TTL
     resp = JSONResponse({"ok": True})
     resp.set_cookie(COOKIE_NAME, make_token(username, ttl, role), max_age=ttl,
                     httponly=True, samesite="strict",
-                    secure=(request.url.scheme == "https"), path="/")
+                    secure=_is_https(request), path="/")
     return resp
 
 
 @app.post("/api/logout")
-def api_logout():
+def api_logout(request: Request):
+    parsed = _parse_token(request.cookies.get(COOKIE_NAME))
+    if parsed:
+        security_tokens.clear_terminal_tokens(parsed[0])
+        terminal.kill_user_sessions(parsed[0])
     resp = JSONResponse({"ok": True})
     resp.delete_cookie(COOKIE_NAME, path="/")
     return resp
@@ -586,8 +588,6 @@ def api_logout():
 
 @app.get("/api/auth/status")
 def api_auth_status(request: Request):
-    if not login_enabled():
-        return {"login_enabled": False, "user": None, "role": "admin", "expert": True}
     parsed = _parse_token(request.cookies.get(COOKIE_NAME))
     return {"login_enabled": True,
             "user": parsed[0] if parsed else None,
@@ -606,20 +606,22 @@ def api_expert_mode(request: Request, enabled: str = Form(...),
                     user: str = Depends(require_admin)):
     on = str(enabled).lower() in ("1", "true", "on", "yes")
     resp = JSONResponse({"ok": True, "expert": on})
-    if login_enabled():
-        parsed = _parse_token(request.cookies.get(COOKIE_NAME))
-        role = parsed[1] if parsed else "admin"
-        resp.set_cookie(COOKIE_NAME, make_token(user, SESSION_TTL, role, on),
-                        max_age=SESSION_TTL, httponly=True, samesite="strict",
-                        secure=(request.url.scheme == "https"),
-                        path="/")
+    parsed = _parse_token(request.cookies.get(COOKIE_NAME))
+    role = parsed[1] if parsed else "admin"
+    resp.set_cookie(COOKIE_NAME, make_token(user, SESSION_TTL, role, on),
+                    max_age=SESSION_TTL, httponly=True, samesite="strict",
+                    secure=_is_https(request), path="/")
     return resp
 
 
-@app.post("/api/auth/toggle")
-def api_auth_toggle(enabled: str = Form(...), user: str = Depends(confirmed_admin)):
-    set_login_enabled(enabled == "1")
-    return {"ok": True, "login_enabled": login_enabled()}
+@app.post("/api/terminal/authorize")
+def api_terminal_authorize(password: str = Form(...),
+                           user: str = Depends(require_admin)):
+    if accounts.verify(user, password) != "admin":
+        audit.record_event(user=user, action="terminal:authorize", ok=False)
+        raise HTTPException(status_code=401, detail="Authentication failed")
+    audit.record_event(user=user, action="terminal:authorize", ok=True)
+    return security_tokens.issue_terminal_token(user)
 
 
 # ============ runvard-Konten (RBAC) ============
@@ -2602,7 +2604,7 @@ def federation_sso_accept(request: Request, ticket: str = Form(...)):
             claim["username"], SESSION_TTL, claim["role"], claim["expert"],
         ),
         max_age=SESSION_TTL, httponly=True, samesite="strict",
-        secure=(request.url.scheme == "https"), path="/",
+        secure=_is_https(request), path="/",
     )
     response.headers["Cache-Control"] = "no-store"
     response.headers["Referrer-Policy"] = "no-referrer"
@@ -2787,25 +2789,59 @@ def external_servers_delete(
 
 @app.websocket("/ws/terminal")
 async def ws_terminal(websocket: WebSocket):
-    # Auth über Session-Cookie (bei deaktiviertem Login freier Zugriff); Readonly verboten
-    if login_enabled():
-        parsed = _parse_token(websocket.cookies.get(COOKIE_NAME))
-        if not parsed or parsed[1] == "readonly":
-            await websocket.close(code=1008)
-            return
+    parsed = _parse_token(websocket.cookies.get(COOKIE_NAME))
+    if not parsed or parsed[1] != "admin":
+        await websocket.close(code=1008)
+        return
     await websocket.accept()
-    session = terminal.TerminalSession(persistent=True)
+    try:
+        first = await asyncio.wait_for(websocket.receive_json(), timeout=10)
+        if first.get("type") != "authorize":
+            raise PermissionError("Missing terminal authorization")
+        security_tokens.consume_terminal_token(str(first.get("token", "")), parsed[0])
+    except Exception:
+        audit.record_event(user=parsed[0], action="terminal:start", ok=False)
+        await websocket.close(code=1008)
+        return
+    session = terminal.TerminalSession(owner=parsed[0])
+    try:
+        terminal.register_session(session)
+    except PermissionError as exc:
+        audit.record_event(user=parsed[0], action="terminal:start", ok=False,
+                           payload={"reason": "parallel_limit"})
+        await websocket.send_text(str(exc))
+        await websocket.close(code=1008)
+        return
+    audit.record_event(user=parsed[0], action="terminal:start", target=session.audit_id,
+                       ok=True)
     try:
         session.start()
     except Exception as e:
+        terminal.unregister_session(session)
         await websocket.send_text(f"\r\nFehler: {e}\r\n")
         await websocket.close()
+        audit.record_event(user=parsed[0], action="terminal:end",
+                           target=session.audit_id, ok=False,
+                           payload={"reason": "start_failed"})
         return
 
     reader = asyncio.create_task(terminal.pty_to_ws(session, websocket))
+    started = time.monotonic()
+    end_reason = "websocket_closed"
     try:
         while True:
-            msg = await websocket.receive_text()
+            remaining = terminal.MAX_SESSION_SECONDS - (time.monotonic() - started)
+            if remaining <= 0:
+                end_reason = "maximum_duration"
+                break
+            try:
+                msg = await asyncio.wait_for(
+                    websocket.receive_text(),
+                    timeout=min(terminal.IDLE_TIMEOUT_SECONDS, remaining),
+                )
+            except asyncio.TimeoutError:
+                end_reason = "idle_timeout" if remaining > terminal.IDLE_TIMEOUT_SECONDS else "maximum_duration"
+                break
             data = json.loads(msg)
             if data["type"] == "input":
                 session.write(data["data"])
@@ -2814,20 +2850,23 @@ async def ws_terminal(websocket: WebSocket):
             elif data["type"] == "ping":
                 await websocket.send_text("\0runvard:pong")
     except WebSocketDisconnect:
-        pass
+        end_reason = "websocket_disconnect"
     finally:
         reader.cancel()
         session.kill()
+        terminal.unregister_session(session)
+        audit.record_event(user=parsed[0], action="terminal:end",
+                           target=session.audit_id, ok=True,
+                           payload={"reason": end_reason})
 
 
 @app.websocket("/ws/docker-exec")
 async def ws_docker_exec(websocket: WebSocket):
-    # Auth über Session-Cookie (bei deaktiviertem Login freier Zugriff); Readonly verboten
-    if login_enabled():
-        parsed = _parse_token(websocket.cookies.get(COOKIE_NAME))
-        if not parsed or parsed[1] == "readonly":
-            await websocket.close(code=1008)
-            return
+    # Privileged WebSockets require an authenticated administrator.
+    parsed = _parse_token(websocket.cookies.get(COOKIE_NAME))
+    if not parsed or parsed[1] != "admin":
+        await websocket.close(code=1008)
+        return
     import re as _re
     cid = websocket.query_params.get("id", "")
     if not _re.match(r"^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$", cid):
@@ -2863,12 +2902,11 @@ async def ws_docker_exec(websocket: WebSocket):
 @app.websocket("/ws/btop")
 async def ws_btop(websocket: WebSocket):
     """Startet btop direkt im PTY (Fallback btop -> htop -> top), ohne Eingabe-Rennen."""
-    # Auth über Session-Cookie (bei deaktiviertem Login freier Zugriff); Readonly verboten
-    if login_enabled():
-        parsed = _parse_token(websocket.cookies.get(COOKIE_NAME))
-        if not parsed or parsed[1] == "readonly":
-            await websocket.close(code=1008)
-            return
+    # Privileged WebSockets require an authenticated administrator.
+    parsed = _parse_token(websocket.cookies.get(COOKIE_NAME))
+    if not parsed or parsed[1] != "admin":
+        await websocket.close(code=1008)
+        return
     await websocket.accept()
     session = terminal.TerminalSession(
         cwd="/",
@@ -2901,11 +2939,10 @@ async def ws_btop(websocket: WebSocket):
 @app.websocket("/ws/vnc")
 async def ws_vnc(websocket: WebSocket):
     """Bridge zwischen Browser-WebSocket (noVNC) und dem VNC-TCP-Port einer VM."""
-    if login_enabled():
-        parsed = _parse_token(websocket.cookies.get(COOKIE_NAME))
-        if not parsed or parsed[1] == "readonly":
-            await websocket.close(code=1008)
-            return
+    parsed = _parse_token(websocket.cookies.get(COOKIE_NAME))
+    if not parsed or parsed[1] != "admin":
+        await websocket.close(code=1008)
+        return
     import re as _re
     name = websocket.query_params.get("name", "")
     if not _re.match(r"^[A-Za-z0-9][A-Za-z0-9_.\- ]{0,127}$", name):

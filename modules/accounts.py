@@ -4,6 +4,8 @@ import json
 import hmac
 import hashlib
 import secrets
+import logging
+import tempfile
 
 STORE = "/opt/runvard/data/users.json"
 ROLES = ("admin", "readonly")
@@ -18,13 +20,22 @@ def _load():
 
 
 def _save(d):
-    os.makedirs(os.path.dirname(STORE), exist_ok=True)
-    with open(STORE, "w") as f:
-        json.dump(d, f, indent=2)
+    directory = os.path.dirname(STORE)
+    os.makedirs(directory, mode=0o700, exist_ok=True)
+    os.chmod(directory, 0o700)
+    fd, tmp = tempfile.mkstemp(prefix=".users-", dir=directory)
     try:
-        os.chmod(STORE, 0o600)
-    except OSError:
-        pass
+        os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w") as f:
+            json.dump(d, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, STORE)
+    finally:
+        try:
+            os.unlink(tmp)
+        except FileNotFoundError:
+            pass
 
 
 def _hash(password, salt):
@@ -93,3 +104,30 @@ def verify(username, password):
     if hmac.compare_digest(calc, u.get("hash", "")):
         return u.get("role", "admin")
     return None
+
+
+def ensure_bootstrap_account():
+    """Require an account, migrating explicitly configured legacy credentials once."""
+    existing = _load()
+    if existing:
+        admins = [name for name, meta in existing.items() if meta.get("role") == "admin"]
+        if not admins:
+            raise RuntimeError("runvard has no administrator account")
+        return admins[0]
+    username = os.environ.get("RUNVARD_USER")
+    password = os.environ.get("RUNVARD_PASS")
+    if username is None and password is None:
+        raise RuntimeError(
+            "runvard has no administrator account; configure secure bootstrap credentials"
+        )
+    if not username or not username.strip() or not password:
+        raise RuntimeError("RUNVARD_USER and RUNVARD_PASS must both be non-empty")
+    if username.strip() == "admin" and password == "runvard":
+        raise RuntimeError("the insecure legacy admin/runvard credentials are rejected")
+    logging.getLogger(__name__).warning(
+        "RUNVARD_USER/RUNVARD_PASS are deprecated; migrating them to the account database"
+    )
+    result = add_user(username, password, "admin")
+    if not result.get("ok"):
+        raise RuntimeError(str(result.get("error") or "account migration failed"))
+    return username.strip()

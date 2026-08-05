@@ -7,6 +7,9 @@ import struct
 import signal
 import shutil
 import shlex
+import secrets
+import threading
+import hashlib
 
 try:
     import ptyprocess
@@ -15,9 +18,50 @@ except ImportError:
     HAS_PTY = False
 
 
-TMUX_SESSION = "runvard"
 DATA_DIR = os.environ.get("RUNVARD_DATA_DIR", "/opt/runvard/data")
 TERMINAL_BASHRC = os.path.join(DATA_DIR, "terminal.bashrc")
+IDLE_TIMEOUT_SECONDS = 15 * 60
+MAX_SESSION_SECONDS = 60 * 60
+_ACTIVE_SESSIONS = {}
+_ACTIVE_LOCK = threading.Lock()
+
+
+def register_session(session):
+    with _ACTIVE_LOCK:
+        if session.owner and any(
+            current.owner == session.owner for current in _ACTIVE_SESSIONS.values()
+        ):
+            raise PermissionError("A root terminal is already active for this user")
+        _ACTIVE_SESSIONS[session.session_id] = session
+
+
+def unregister_session(session):
+    with _ACTIVE_LOCK:
+        _ACTIVE_SESSIONS.pop(session.session_id, None)
+
+
+def active_session_count(owner=None):
+    with _ACTIVE_LOCK:
+        if owner is None:
+            return len(_ACTIVE_SESSIONS)
+        return sum(session.owner == owner for session in _ACTIVE_SESSIONS.values())
+
+
+def kill_user_sessions(owner):
+    with _ACTIVE_LOCK:
+        sessions = [s for s in _ACTIVE_SESSIONS.values() if s.owner == owner]
+        for session in sessions:
+            _ACTIVE_SESSIONS.pop(session.session_id, None)
+    for session in sessions:
+        session.kill()
+
+
+def kill_all_sessions():
+    with _ACTIVE_LOCK:
+        sessions = list(_ACTIVE_SESSIONS.values())
+        _ACTIVE_SESSIONS.clear()
+    for session in sessions:
+        session.kill()
 
 
 def ensure_terminal_bashrc(path=None):
@@ -56,11 +100,15 @@ esac
 class TerminalSession:
     """Eine PTY-Shell-Session, an einen WebSocket gebunden."""
 
-    def __init__(self, shell="/bin/bash", cwd="/root", argv=None, persistent=False):
+    def __init__(self, shell="/bin/bash", cwd="/root", argv=None, persistent=False,
+                 owner=None):
         self.shell = shell
         self.cwd = cwd if os.path.isdir(cwd) else "/"
         self.argv = argv
-        self.persistent = persistent
+        self.persistent = persistent or owner is not None
+        self.owner = owner
+        self.session_id = "rv-" + secrets.token_hex(16)
+        self.audit_id = hashlib.sha256(self.session_id.encode()).hexdigest()[:12]
         self.proc = None
 
     def command(self):
@@ -70,15 +118,15 @@ class TerminalSession:
             rcfile = ensure_terminal_bashrc()
             shell_cmd = f"{shlex.quote(self.shell)} --rcfile {shlex.quote(rcfile)}"
             script = "\n".join([
-                f"if ! tmux has-session -t {shlex.quote(TMUX_SESSION)} 2>/dev/null; then",
+                f"if ! tmux has-session -t {shlex.quote(self.session_id)} 2>/dev/null; then",
                 "  tmux new-session -d "
-                f"-s {shlex.quote(TMUX_SESSION)} "
+                f"-s {shlex.quote(self.session_id)} "
                 f"-c {shlex.quote(self.cwd)} "
                 f"{shlex.quote(shell_cmd)}",
                 "fi",
-                f"tmux set-option -t {shlex.quote(TMUX_SESSION)} status off",
-                f"tmux set-option -t {shlex.quote(TMUX_SESSION)} mouse on",
-                f"exec tmux attach-session -t {shlex.quote(TMUX_SESSION)}",
+                f"tmux set-option -t {shlex.quote(self.session_id)} status off",
+                f"tmux set-option -t {shlex.quote(self.session_id)} mouse on",
+                f"exec tmux attach-session -t {shlex.quote(self.session_id)}",
             ])
             return ["/bin/bash", "-lc", script]
         return [self.shell]
@@ -119,6 +167,12 @@ class TerminalSession:
                 self.proc.kill(signal.SIGTERM)
             except Exception:
                 pass
+        if self.persistent and shutil.which("tmux"):
+            subprocess = __import__("subprocess")
+            subprocess.run(
+                ["tmux", "kill-session", "-t", self.session_id],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, check=False,
+            )
 
 
 async def pty_to_ws(session: TerminalSession, websocket):

@@ -9,7 +9,7 @@ from modules import apps, jobs
 
 
 def _client(monkeypatch):
-    monkeypatch.setattr(server, "login_enabled", lambda: False)
+    monkeypatch.setattr(server, "_parse_token", lambda token: ("test-admin", "admin", True))
     return TestClient(server.app)
 
 

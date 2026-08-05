@@ -13,7 +13,6 @@ import urllib.request
 RUNVARD_REPO_API = "https://api.github.com/repos/mschoettli/runvard/commits/main"
 RUNVARD_REPO_URL = "https://github.com/mschoettli/runvard"
 RUNVARD_REPO_GIT_URL = "https://github.com/mschoettli/runvard.git"
-RUNVARD_INSTALL_URL = "https://raw.githubusercontent.com/mschoettli/runvard/main/install.sh"
 RUNVARD_UPDATE_LOG = "/opt/runvard/data/runvard-update.log"
 VERSION_FILE = os.environ.get(
     "RUNVARD_VERSION_FILE",
@@ -113,18 +112,9 @@ echo "runvard update started: $(date -Is)"
 WORK_DIR="$(mktemp -d)"
 cleanup() {{ rm -rf "$WORK_DIR"; }}
 trap cleanup EXIT
-echo "Downloading latest runvard release..."
-curl -fsSL "{RUNVARD_INSTALL_URL}" -o "$WORK_DIR/install.sh"
-chmod +x "$WORK_DIR/install.sh"
-REMOTE_COMMIT="$(curl -fsSL {RUNVARD_REPO_API} 2>/dev/null | sed -n 's/.*"sha": "\\([0-9a-f]\\{{40\\}}\\)".*/\\1/p' | head -n 1 || true)"
-echo "Latest commit: ${{REMOTE_COMMIT:-unknown}}"
-echo "Running installer in update mode..."
-if [ -f /opt/runvard/data/runvard.env ]; then
-  set -a
-  . /opt/runvard/data/runvard.env
-  set +a
-fi
-RUNVARD_SOURCE_COMMIT="$REMOTE_COMMIT" bash "$WORK_DIR/install.sh" --yes
+echo "Running the installed verified-release bootstrap..."
+[ -f /opt/runvard/install.sh ] || {{ echo "Verified installer is missing" >&2; exit 1; }}
+bash "/opt/runvard/install.sh" --verified-release --yes
 echo "runvard update finished: $(date -Is)"
 """
     with tempfile.NamedTemporaryFile(

@@ -9,6 +9,9 @@ def test_start_runvard_update_uses_systemd(monkeypatch, tmp_path):
 
     def fake_run(cmd, **kwargs):
         assert cmd[:3] == ["systemd-run", "--unit=runvard-self-update", "--collect"]
+        script = open(cmd[-1], encoding="utf-8").read()
+        assert 'bash "/opt/runvard/install.sh" --verified-release --yes' in script
+        assert "raw.githubusercontent.com" not in script
         return subprocess.CompletedProcess(cmd, 0, stdout="started\n", stderr="")
 
     monkeypatch.setattr(system_mgr.subprocess, "run", fake_run)

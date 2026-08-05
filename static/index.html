@@ -987,10 +987,6 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
           <button class="um-action" type="button" onclick="closeUserMenu();toggleBgPanel()"><span aria-hidden="true">⬡</span><span data-i18n="backgroundTitle">Hintergrund</span></button>
         </div>
         <div class="um-row">
-          <span data-i18n="loginPage">Login-Seite</span>
-          <label class="um-switch"><input type="checkbox" id="um-login-toggle" onchange="toggleLogin(this.checked)"><span class="um-slider"></span></label>
-        </div>
-        <div class="um-row">
           <span>Expert Mode</span>
           <label class="um-switch"><input type="checkbox" id="um-expert-toggle" onchange="setExpertMode(this.checked)"><span class="um-slider"></span></label>
         </div>
@@ -1162,7 +1158,6 @@ function valueOf(d,...names){
 function boolish(v){return v===true||v===1||['1','true','on','yes'].includes(String(v).toLowerCase());}
 function dangerConfirmMeta(p,d){
   const simple={
-    '/auth/toggle':['auth:disable','login'],
     '/accounts/password':['accounts:password','username'],
     '/accounts/role':['accounts:role','username'],
     '/accounts/delete':['accounts:delete','username'],
@@ -1209,7 +1204,6 @@ function dangerConfirmMeta(p,d){
     '/time-machine/replications/promote':['time-machine:promote-replica','replication_id'],
     '/time-machine/replications/import':['time-machine:promote-received','source_replication_id'],
   };
-  if(p==='/auth/toggle'&&String(d.enabled)==='1')return null;
   if(p==='/docker/action'&&d.action!=='remove')return null;
   if(p==='/docker/action')return {action:'docker:remove-container',target:valueOf(d,'container_id')};
   if(p==='/docker/networks/prune')return {action:'docker:network-prune',target:'Docker'};
@@ -8107,7 +8101,7 @@ function resetSearch(){searchEnabled=false;$('#modal-search').classList.remove('
 setInterval(updateClock,1000);
 api('/system/info').then(i=>{$('#hostname').textContent=i.hostname;setTopbarUser(i.user||'admin');});
 
-// ── Benutzer-Menü: Status, Login-Schalter, Abmelden ──
+// ── Benutzer-Menü: Status und Abmelden ──
 function setTopbarUser(name){
   const trigger=$('#topbar-user');
   const label=trigger?.querySelector('.topbar-user-label');
@@ -8135,7 +8129,6 @@ async function loadAuthStatus(){
     currentAuthStatus=s;
     setTopbarUser(s.user||tr('loginDisabled'));
     const h=$('#um-head'); if(h) h.innerHTML=s.user?`${esc(tr('signedInAs'))} <strong>${esc(s.user)}</strong>`:tr('loginDisabledHead');
-    const t=$('#um-login-toggle'); if(t) t.checked=!!s.login_enabled;
     const acc=$('#um-accounts'); if(acc) acc.style.display=(s.role==='admin')?'block':'none';
     expertModeActive=!!s.expert;
     const ex=$('#um-expert-toggle');
@@ -8149,14 +8142,6 @@ async function doLogout(){
   try{await post('/logout',{});}catch(e){}
   location.href='/login';
 }
-async function toggleLogin(on){
-  try{
-    await post('/auth/toggle',{enabled:on?'1':'0'});
-    toast(on?tr('loginEnabled'):tr('loginDisabled'));
-    loadAuthStatus();
-  }catch(e){toast('Error: '+e.message,'error');const t=$('#um-login-toggle');if(t)t.checked=!on;}
-}
-
 // ── runvard-Konten (RBAC) ──
 let _accts=[];
 window.accountsManage=async()=>{closeUserMenu();await renderAccounts();};
@@ -9307,7 +9292,24 @@ const TERM_SEARCH_DECO={
   activeMatchBackground:'#9d7aff',activeMatchBorder:'#c4b5fd',activeMatchColorOverviewRuler:'#c4b5fd',
 };
 
+const TERMINAL_AUTH_I18N={
+  de:{title:'Root-Terminal entsperren',password:'Aktuelles Passwort',hint:'Dieses Terminal besitzt Root-Rechte. Bestätige dein Passwort, um eine kurzlebige Einmalfreigabe zu erstellen.'},
+  en:{title:'Unlock root terminal',password:'Current password',hint:'This terminal has root privileges. Confirm your password to create a short-lived, single-use authorization.'},
+  fr:{title:'Déverrouiller le terminal root',password:'Mot de passe actuel',hint:'Ce terminal dispose des privilèges root. Confirmez votre mot de passe pour créer une autorisation brève et à usage unique.'},
+  it:{title:'Sblocca il terminale root',password:'Password attuale',hint:'Questo terminale dispone dei privilegi root. Conferma la password per creare un’autorizzazione breve e monouso.'},
+  es:{title:'Desbloquear el terminal root',password:'Contraseña actual',hint:'Este terminal tiene privilegios root. Confirma tu contraseña para crear una autorización breve y de un solo uso.'},
+  pt:{title:'Desbloquear o terminal root',password:'Palavra-passe atual',hint:'Este terminal tem privilégios root. Confirme a palavra-passe para criar uma autorização breve e de utilização única.'},
+};
 function renderTerminal(body){
+  const tx=TERMINAL_AUTH_I18N[currentLanguage()]||TERMINAL_AUTH_I18N.en;
+  openForm(tx.title,'⌨',[{name:'password',label:tx.password,type:'password',hint:tx.hint}],async d=>{
+    try{
+      const grant=await post('/terminal/authorize',{password:d.password});
+      closeForm();renderAuthorizedTerminal(body,grant.token);
+    }catch(e){toast(e.message,'error');}
+  });
+}
+function renderAuthorizedTerminal(body,terminalToken){
   body.style.display='flex';
   body.style.flexDirection='column';
   body.style.padding='0';
@@ -9438,6 +9440,7 @@ function renderTerminal(body){
     ws.onopen=()=>{
       if(!terminalActive||seq!==connectSeq||termWs!==ws)return;
       opened=true;
+      ws.send(JSON.stringify({type:'authorize',token:terminalToken}));
       reconnectAttempts=0;
       if(hasConnected){try{term.write('\r\n\x1b[2m\x1b[32m── Reconnected ──\x1b[0m\r\n');}catch(_){}}
       hasConnected=true;

@@ -198,6 +198,10 @@ Recommended practices:
 - Do not expose it directly to the public internet without protection
 - Keep the system updated and maintain regular backups
 
+The built-in terminal is an isolated, time-limited root shell and requires a fresh
+administrator password confirmation before each connection. Do not expose runvard's
+upstream HTTP port directly to an untrusted network.
+
 ## Installation
 
 Installation instructions are available in [INSTALLATION.md](INSTALLATION.md).
