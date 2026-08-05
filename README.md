@@ -33,11 +33,12 @@ runvard combines many common server administration tasks in one interface:
 - Manage system services
 - Control Docker containers and Docker Compose projects
 - Install and manage apps
-- Work with files and shares directly in the browser
+- Work with files and shares directly in the browser using a secure path picker
 - Administer storage, disks, and filesystems
 - Configure networking, firewall rules, and interfaces
 - Manage users, groups, SSH keys, and permissions
 - Schedule and run backups
+- Create and manage Time Machine backups for Macs
 - Inspect logs, alerts, and audit entries
 - Apply system updates and maintenance tasks
 - Manage virtual machines
@@ -52,6 +53,10 @@ runvard combines many common server administration tasks in one interface:
 The dashboard is the main starting point in runvard. It shows important services,
 installed apps, Compose projects, and custom links as tiles. Ordering and visibility
 can be adjusted so frequently used services stay easy to reach.
+
+runvard offers an Original and a Modern interface theme. The selected theme also
+applies to the sign-in page, is remembered in the browser, and can be changed
+before or after signing in. Both variants are responsive and keyboard accessible.
 
 ### Multi-server federation
 
@@ -90,9 +95,9 @@ in English or German, and the selected installer language is stored as the initi
 web interface language. Users can still switch the interface language later from
 the web UI.
 
-The main web interface includes language options for English, German, French,
-Italian, Spanish, and Portuguese. Translation coverage may vary in deeper system
-tools, but the interface is designed to fall back safely to English where needed.
+The main web interface includes complete language options for English, German,
+French, Italian, Spanish, and Portuguese. Translation consistency is checked as
+part of the project's automated quality gates.
 
 ### System monitoring
 
@@ -103,11 +108,15 @@ spot load, bottlenecks, and unusual behavior.
 ### Docker and apps
 
 Docker containers can be started, stopped, created, and monitored. runvard shows
-container logs, runtime information, images, volumes, and resource limits. Docker
-Compose projects can also be created, edited, and managed.
+container logs, runtime information, images, volumes, resource limits, and live CPU
+and memory usage. In the Modern theme, Compose services are grouped into compact
+app cards with aggregated health and resource information. Docker Compose projects
+can also be created, edited, and managed.
 
 runvard also includes an app section for self-hosted services based on Docker
-Compose, making common homelab and server applications easier to deploy.
+Compose, making common homelab and server applications easier to deploy. App cards
+show available updates and keep the current update state visible while an update
+is running.
 
 ### Files and shares
 
@@ -117,6 +126,12 @@ downloaded, archived, and extracted.
 
 runvard also supports share and mount workflows, including Samba- and NFS-related
 operations.
+
+A shared path picker helps select local folders, files, and block devices for
+backups, shares, mounts, Docker volumes, virtual machines, and other workflows.
+Normal mode is limited to safe storage locations, while Expert Mode can browse the
+full filesystem. Selections are validated for type, access, and write permissions
+before they are accepted.
 
 ### Storage management
 
@@ -161,14 +176,30 @@ energy options, hostname management, and additional system utilities.
 
 ### Backups
 
-Backup jobs can be created, scheduled, and run manually. A backup history shows
-successful and failed runs.
+Backup jobs can be created with a four-step assistant that guides users through
+source, destination, schedule, and review. The assistant validates paths and warns
+about same-disk copies and mirror jobs that may delete files at the destination.
+Jobs can be scheduled or run manually, and the history shows successful and failed
+runs.
+
+### Time Machine backups
+
+runvard can create and manage dedicated Time Machine backup targets for Macs over
+encrypted SMB. Each Mac receives its own share and capacity policy. The interface
+shows target health, available capacity, protection state, and recent backup
+activity, while LAN discovery makes the target available to macOS.
+
+Where supported, runvard uses native ZFS or Btrfs quotas and snapshots to protect
+the backup storage. Targets can also be copied to a passive remote replica that is
+activated only through an explicit failover. Time Machine scheduling, client-side
+encryption, backup integrity, and restore remain controlled by macOS.
 
 ### Virtual machines
 
 When virtualization is available on the server, runvard can manage virtual machines.
 This includes starting and stopping VMs, snapshots, storage pools, virtual disks,
-network interfaces, and ISO files.
+network interfaces, ISO files, and CPU or memory allocation. Shutdown first uses a
+graceful guest request and offers a forced stop as a fallback when needed.
 
 ## Who is runvard for?
 
