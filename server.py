@@ -615,11 +615,7 @@ def api_expert_mode(request: Request, enabled: str = Form(...),
 
 
 @app.post("/api/terminal/authorize")
-def api_terminal_authorize(password: str = Form(...),
-                           user: str = Depends(require_admin)):
-    if accounts.verify(user, password) != "admin":
-        audit.record_event(user=user, action="terminal:authorize", ok=False)
-        raise HTTPException(status_code=401, detail="Authentication failed")
+def api_terminal_authorize(user: str = Depends(require_admin)):
     audit.record_event(user=user, action="terminal:authorize", ok=True)
     return security_tokens.issue_terminal_token(user)
 

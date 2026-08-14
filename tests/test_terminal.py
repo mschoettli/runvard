@@ -1,6 +1,10 @@
 import shutil
+from pathlib import Path
 
 from modules import terminal
+
+
+ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_terminal_uses_random_isolated_tmux_session(monkeypatch, tmp_path):
@@ -36,6 +40,17 @@ def test_explicit_terminal_command_is_not_replaced_by_tmux(monkeypatch):
     session = terminal.TerminalSession(argv=["docker", "exec", "-it", "abc", "/bin/sh"], persistent=True)
 
     assert session.command() == ["docker", "exec", "-it", "abc", "/bin/sh"]
+
+
+def test_terminal_opens_without_password_prompt_and_requests_one_time_grant():
+    html = (ROOT / "static" / "index.html").read_text(encoding="utf-8")
+    terminal_section = html.split("// ═══ Terminal ═══", 1)[1].split(
+        "function renderAuthorizedTerminal", 1
+    )[0]
+
+    assert "openForm(" not in terminal_section
+    assert "type:'password'" not in terminal_section
+    assert "await post('/terminal/authorize',{})" in terminal_section
 
 
 def test_only_one_root_terminal_per_user_and_users_are_isolated():

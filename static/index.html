@@ -9314,22 +9314,11 @@ const TERM_SEARCH_DECO={
   activeMatchBackground:'#9d7aff',activeMatchBorder:'#c4b5fd',activeMatchColorOverviewRuler:'#c4b5fd',
 };
 
-const TERMINAL_AUTH_I18N={
-  de:{title:'Root-Terminal entsperren',password:'Aktuelles Passwort',hint:'Dieses Terminal besitzt Root-Rechte. Bestätige dein Passwort, um eine kurzlebige Einmalfreigabe zu erstellen.'},
-  en:{title:'Unlock root terminal',password:'Current password',hint:'This terminal has root privileges. Confirm your password to create a short-lived, single-use authorization.'},
-  fr:{title:'Déverrouiller le terminal root',password:'Mot de passe actuel',hint:'Ce terminal dispose des privilèges root. Confirmez votre mot de passe pour créer une autorisation brève et à usage unique.'},
-  it:{title:'Sblocca il terminale root',password:'Password attuale',hint:'Questo terminale dispone dei privilegi root. Conferma la password per creare un’autorizzazione breve e monouso.'},
-  es:{title:'Desbloquear el terminal root',password:'Contraseña actual',hint:'Este terminal tiene privilegios root. Confirma tu contraseña para crear una autorización breve y de un solo uso.'},
-  pt:{title:'Desbloquear o terminal root',password:'Palavra-passe atual',hint:'Este terminal tem privilégios root. Confirme a palavra-passe para criar uma autorização breve e de utilização única.'},
-};
-function renderTerminal(body){
-  const tx=TERMINAL_AUTH_I18N[currentLanguage()]||TERMINAL_AUTH_I18N.en;
-  openForm(tx.title,'⌨',[{name:'password',label:tx.password,type:'password',hint:tx.hint}],async d=>{
-    try{
-      const grant=await post('/terminal/authorize',{password:d.password});
-      closeForm();renderAuthorizedTerminal(body,grant.token);
-    }catch(e){toast(e.message,'error');}
-  });
+async function renderTerminal(body){
+  try{
+    const grant=await post('/terminal/authorize',{});
+    renderAuthorizedTerminal(body,grant.token);
+  }catch(e){toast(e.message,'error');}
 }
 function renderAuthorizedTerminal(body,terminalToken){
   body.style.display='flex';

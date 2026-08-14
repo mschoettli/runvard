@@ -112,6 +112,8 @@ set -euo pipefail
 LOG="{RUNVARD_UPDATE_LOG}"
 STATUS="{RUNVARD_UPDATE_STATUS}"
 LOCK="${{LOG}}.lock"
+export HOME="${{HOME:-/root}}"
+export GH_CONFIG_DIR="${{GH_CONFIG_DIR:-${{HOME}}/.config/gh}}"
 exec > "$LOG" 2>&1
 exec 9>"$LOCK"
 write_status() {{

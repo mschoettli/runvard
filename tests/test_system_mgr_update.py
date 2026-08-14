@@ -14,6 +14,8 @@ def test_start_runvard_update_uses_systemd(monkeypatch, tmp_path):
         script = open(cmd[-1], encoding="utf-8").read()
         assert 'bash "/opt/runvard/install.sh" --verified-release --yes' in script
         assert "flock -n 9" in script
+        assert 'export HOME="${HOME:-/root}"' in script
+        assert 'export GH_CONFIG_DIR="${GH_CONFIG_DIR:-${HOME}/.config/gh}"' in script
         assert "write_status running 0" in script
         assert "raw.githubusercontent.com" not in script
         return subprocess.CompletedProcess(cmd, 0, stdout="started\n", stderr="")
