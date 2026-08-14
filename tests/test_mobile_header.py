@@ -27,11 +27,18 @@ def test_secondary_header_tools_are_available_in_the_mobile_menu():
     assert 'closeUserMenu();toggleBgPanel()' in INDEX
 
 
-def test_mobile_menu_theme_toggle_uses_translated_modern_label():
-    assert '<span>Modern</span>' in INDEX
+def test_mobile_menu_theme_toggle_uses_tech_label():
+    assert '<span>Tech</span>' in INDEX
     assert 'id="um-theme-toggle"' in INDEX
-    assert 'aria-label="Modern"' in INDEX
+    assert 'aria-label="Tech"' in INDEX
     assert 'Modernes Design' not in INDEX
+
+
+def test_modern_is_default_and_legacy_original_preference_migrates_to_tech():
+    assert "theme==='original'||theme==='tech'?'tech':'modern'" in INDEX
+    assert "dataset.uiTheme='modern'" in INDEX
+    assert "const theme=techEnabled?'tech':'modern'" in INDEX
+    assert "toggle.checked=document.documentElement.dataset.uiTheme==='tech'" in INDEX
 
 
 def test_mobile_header_has_one_stable_touch_friendly_row():

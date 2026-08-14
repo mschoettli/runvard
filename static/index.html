@@ -7,7 +7,7 @@
 <link rel="icon" type="image/png" href="/static/runvard-icon.png">
 <link rel="apple-touch-icon" href="/static/runvard-icon.png">
 <script>
-try{document.documentElement.dataset.uiTheme=localStorage.getItem('runvard_ui_theme')==='modern'?'modern':'original';}catch(e){}
+try{const theme=localStorage.getItem('runvard_ui_theme');document.documentElement.dataset.uiTheme=theme==='original'||theme==='tech'?'tech':'modern';}catch(e){document.documentElement.dataset.uiTheme='modern';}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -996,8 +996,8 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
           <label class="um-switch"><input type="checkbox" id="um-expert-toggle" onchange="setExpertMode(this.checked)"><span class="um-slider"></span></label>
         </div>
         <div class="um-row">
-          <span>Modern</span>
-          <label class="um-switch"><input type="checkbox" id="um-theme-toggle" onchange="setUiTheme(this.checked)" aria-label="Modern"><span class="um-slider"></span></label>
+          <span>Tech</span>
+          <label class="um-switch"><input type="checkbox" id="um-theme-toggle" onchange="setUiTheme(this.checked)" aria-label="Tech"><span class="um-slider"></span></label>
         </div>
         <button class="um-action" onclick="openLanguageModal()">🌐 <span data-i18n="language">Language</span></button>
         <button class="um-action" onclick="openConnectedServersModal()">⬡ <span id="um-connected-servers-label">Connected servers</span></button>
@@ -1333,6 +1333,7 @@ const UI_PHRASES={
     "Pakete":"Packages",
     "Speicher-Pools":"Storage pools",
     "Modern":"Modern",
+    "Tech":"Tech",
     "Wartung":"Maintenance"},
   de:{" (not mounted)":" (nicht eingehängt)",
     " added":" hinzugefügt",
@@ -1433,6 +1434,7 @@ const UI_PHRASES={
     "Available:":"Verfügbar:",
     "Available: ":"Verfügbar: ",
     "Modern":"Modern",
+    "Tech":"Tech",
     "Back":"Zurück",
     "Background set":"Hintergrund gesetzt",
     "Backup complete":"Sicherung abgeschlossen",
@@ -2437,6 +2439,7 @@ const UI_PHRASES={
     "Available:":"Disponible :",
     "Available: ":"Disponible : ",
     "Modern":"Moderne",
+    "Tech":"Tech",
     "Back":"Retour",
     "Background set":"Arrière-plan défini",
     "Backup complete":"Sauvegarde terminée",
@@ -3404,6 +3407,7 @@ const UI_PHRASES={
     "Available:":"Disponibile:",
     "Available: ":"Disponibile: ",
     "Modern":"Moderno",
+    "Tech":"Tech",
     "Back":"Indietro",
     "Background set":"Sfondo impostato",
     "Backup complete":"Backup completato",
@@ -4370,6 +4374,7 @@ const UI_PHRASES={
     "Available:":"Disponible:",
     "Available: ":"Disponible: ",
     "Modern":"Moderno",
+    "Tech":"Tech",
     "Back":"Atrás",
     "Background set":"Fondo establecido",
     "Backup complete":"Copia de seguridad completada",
@@ -5340,6 +5345,7 @@ const UI_PHRASES={
     "Available:":"Disponível:",
     "Available: ":"Disponível: ",
     "Modern":"Moderno",
+    "Tech":"Tech",
     "Back":"Voltar",
     "Background set":"Fundo definido",
     "Backup complete":"Cópia de segurança concluída",
@@ -7688,13 +7694,13 @@ const UI_THEME_KEY='runvard_ui_theme';
 let expertModeActive=false;
 function syncUiThemeToggle(){
   const toggle=$('#um-theme-toggle');
-  if(toggle)toggle.checked=document.documentElement.dataset.uiTheme==='modern';
+  if(toggle)toggle.checked=document.documentElement.dataset.uiTheme==='tech';
 }
 function isModernUi(){
   return document.documentElement.dataset.uiTheme==='modern';
 }
-function setUiTheme(enabled){
-  const theme=enabled?'modern':'original';
+function setUiTheme(techEnabled){
+  const theme=techEnabled?'tech':'modern';
   document.documentElement.dataset.uiTheme=theme;
   try{localStorage.setItem(UI_THEME_KEY,theme);}catch(e){}
   syncUiThemeToggle();

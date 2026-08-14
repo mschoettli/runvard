@@ -17,21 +17,22 @@ def test_login_bootstraps_the_saved_theme_before_styles_render():
 
     assert bootstrap < styles
     assert "document.documentElement.dataset.uiTheme" in html[:styles]
-    assert "theme==='modern'?'modern':'original'" in html[:styles]
+    assert "theme==='original'||theme==='tech'?'tech':'modern'" in html[:styles]
+    assert "dataset.uiTheme='modern'" in html[:styles]
 
 
-def test_login_exposes_an_accessible_original_modern_switch():
+def test_login_exposes_an_accessible_tech_modern_switch():
     html = login_html()
 
     assert 'class="theme-picker"' in html
     assert 'role="group"' in html
-    assert 'data-theme="original"' in html
+    assert 'data-theme="tech"' in html
     assert 'data-theme="modern"' in html
     assert 'aria-pressed="true"' in html
     assert "localStorage.setItem(UI_THEME_KEY,theme)" in html
 
 
-def test_modern_login_styles_are_scoped_and_original_login_is_retained():
+def test_modern_login_styles_are_scoped_and_tech_login_is_retained():
     html = login_html()
 
     assert ".card{background:var(--bg2)" in html

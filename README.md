@@ -54,7 +54,7 @@ The dashboard is the main starting point in runvard. It shows important services
 installed apps, Compose projects, and custom links as tiles. Ordering and visibility
 can be adjusted so frequently used services stay easy to reach.
 
-runvard offers an Original and a Modern interface theme. The selected theme also
+runvard offers a Tech and a Modern interface theme, with Modern as the default. The selected theme also
 applies to the sign-in page, is remembered in the browser, and can be changed
 before or after signing in. Both variants are responsive and keyboard accessible.
 
