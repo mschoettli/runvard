@@ -309,6 +309,17 @@ if (JSON.stringify(result) !== JSON.stringify(expected)) {{
     )
 
 
+def test_app_store_sort_renders_visual_groups():
+    html = Path("static/index.html").read_text()
+
+    assert "function groupAppsCatalog(items)" in html
+    assert "function appCatalogGridHtml(items)" in html
+    assert 'class="apps-group"' in html
+    assert ".apps-group+.apps-group" in html
+    for key in ("myApps", "appCatalog", "installedApps", "availableApps"):
+        assert re.search(rf"{key}:\{{de:.*?en:.*?fr:.*?it:.*?es:.*?pt:", html)
+
+
 def test_readonly_users_cannot_read_app_compose_secrets(monkeypatch):
     monkeypatch.setattr(server, "login_enabled", lambda: True)
     monkeypatch.setattr(

@@ -16,7 +16,7 @@ def test_terminal_uses_random_isolated_tmux_session(monkeypatch, tmp_path):
     assert "runvard" not in session.session_id
     assert f"/bin/bash --rcfile {rcfile}" in cmd[2]
     assert f"tmux set-option -t {session.session_id} status off" in cmd[2]
-    assert f"tmux set-option -t {session.session_id} mouse on" in cmd[2]
+    assert f"tmux set-option -t {session.session_id} mouse off" in cmd[2]
     assert f"exec tmux attach-session -t {session.session_id}" in cmd[2]
     assert rcfile.exists()
     assert "history -a" in rcfile.read_text()

@@ -2115,6 +2115,11 @@ def sysmgr_runvard_update_log(user: str = Depends(auth)):
     return system_mgr.runvard_update_log()
 
 
+@app.get("/api/sysmgr/runvard-update/status")
+def sysmgr_runvard_update_status(user: str = Depends(auth)):
+    return system_mgr.runvard_update_status()
+
+
 @app.post("/api/sysmgr/updates/apply")
 def sysmgr_updates_apply(user: str = Depends(require_admin)):
     from modules import jobs

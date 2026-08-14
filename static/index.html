@@ -563,6 +563,11 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .apps-cat:hover{background:var(--glass-hover);color:var(--text)}
 .apps-cat.active{background:rgba(122,74,255,.2);color:var(--accent-light);border-color:var(--border-accent)}
 .apps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
+.apps-group{grid-column:1/-1;display:grid;grid-template-columns:subgrid;gap:12px;padding:4px 0 12px}
+.apps-group+.apps-group{margin-top:8px;padding-top:20px;border-top:1px solid var(--border)}
+.apps-group-head{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;padding:0 2px}
+.apps-group-title{font-size:13px;font-weight:700;color:var(--text);letter-spacing:.01em}
+.apps-group-count{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
 .app-card{position:relative;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;transition:border-color .15s,transform .15s}
 .app-card:hover{border-color:var(--border-accent);transform:translateY(-2px)}
 .app-card-head{display:flex;align-items:flex-start;gap:12px}
@@ -6972,6 +6977,8 @@ const VM_PHRASES={
     "Saved persistently. Live update is attempted while the VM is running.":"Wird dauerhaft gespeichert. Während die VM läuft, wird Live-Update versucht.",
     "Saved persistently. Live update may require guest support.":"Wird dauerhaft gespeichert. Live-Update kann Gast-Unterstützung benötigen.",
     "Shut down":"Herunterfahren",
+    "Force power off":"Sofort ausschalten",
+    "Power off VM \"$1\" immediately? Unsaved guest data may be lost.":"VM \"$1\" sofort ausschalten? Nicht gespeicherte Daten im Gast können verloren gehen.",
     "Shutting down":"Wird heruntergefahren",
     "Source":"Quelle",
     "Source image/device":"Quellabbild/-gerät",
@@ -7042,6 +7049,8 @@ const VM_PHRASES={
     "Saved persistently. Live update is attempted while the VM is running.":"Enregistré durablement. Une mise à jour en direct est tentée pendant que la VM fonctionne.",
     "Saved persistently. Live update may require guest support.":"Enregistré durablement. La mise à jour en direct peut nécessiter la prise en charge de l’invité.",
     "Shut down":"Arrêter",
+    "Force power off":"Forcer l’arrêt",
+    "Power off VM \"$1\" immediately? Unsaved guest data may be lost.":"Éteindre immédiatement la VM \"$1\" ? Les données non enregistrées dans le système invité peuvent être perdues.",
     "Shutting down":"Arrêt",
     "Source":"Source",
     "Source image/device":"Image/périphérique source",
@@ -7112,6 +7121,8 @@ const VM_PHRASES={
     "Saved persistently. Live update is attempted while the VM is running.":"Salvato in modo persistente. L’aggiornamento live viene tentato mentre la VM è in esecuzione.",
     "Saved persistently. Live update may require guest support.":"Salvato in modo persistente. L’aggiornamento live può richiedere supporto del guest.",
     "Shut down":"Spegni",
+    "Force power off":"Forza spegnimento",
+    "Power off VM \"$1\" immediately? Unsaved guest data may be lost.":"Spegnere immediatamente la VM \"$1\"? I dati non salvati nel sistema guest potrebbero andare persi.",
     "Shutting down":"Spegnimento",
     "Source":"Origine",
     "Source image/device":"Immagine/dispositivo origine",
@@ -7182,6 +7193,8 @@ const VM_PHRASES={
     "Saved persistently. Live update is attempted while the VM is running.":"Guardado de forma persistente. Se intenta actualizar en vivo mientras la VM se ejecuta.",
     "Saved persistently. Live update may require guest support.":"Guardado de forma persistente. La actualización en vivo puede requerir soporte del invitado.",
     "Shut down":"Apagar",
+    "Force power off":"Forzar apagado",
+    "Power off VM \"$1\" immediately? Unsaved guest data may be lost.":"¿Apagar inmediatamente la VM \"$1\"? Los datos no guardados del sistema invitado pueden perderse.",
     "Shutting down":"Apagando",
     "Source":"Origen",
     "Source image/device":"Imagen/dispositivo de origen",
@@ -7252,6 +7265,8 @@ const VM_PHRASES={
     "Saved persistently. Live update is attempted while the VM is running.":"Guardado de forma persistente. A atualização em direto é tentada enquanto a VM está em execução.",
     "Saved persistently. Live update may require guest support.":"Guardado de forma persistente. A atualização em direto pode exigir suporte do convidado.",
     "Shut down":"Desligar",
+    "Force power off":"Forçar encerramento",
+    "Power off VM \"$1\" immediately? Unsaved guest data may be lost.":"Desligar imediatamente a VM \"$1\"? Os dados não guardados no sistema convidado podem perder-se.",
     "Shutting down":"A desligar",
     "Source":"Origem",
     "Source image/device":"Imagem/dispositivo de origem",
@@ -7513,6 +7528,7 @@ const TOAST_PATTERNS=[
   {re:new RegExp("^VM restarted: (.+)$"),t:{"de":"VM neu gestartet: $1","en":"VM restarted: $1","fr":"VM redémarrée : $1","it":"VM riavviata: $1","es":"VM reiniciada: $1","pt":"VM reiniciada: $1"}},
   {re:new RegExp("^VM heruntergefahren: (.+)$"),t:{"de":"VM heruntergefahren: $1","en":"VM shut down: $1","fr":"VM arrêtée : $1","it":"VM arrestata: $1","es":"VM apagada: $1","pt":"VM desligada: $1"}},
   {re:new RegExp("^VM shut down: (.+)$"),t:{"de":"VM heruntergefahren: $1","en":"VM shut down: $1","fr":"VM arrêtée : $1","it":"VM arrestata: $1","es":"VM apagada: $1","pt":"VM desligada: $1"}},
+  {re:new RegExp('^Power off VM "(.+)" immediately\\? Unsaved guest data may be lost\\.$'),t:{"de":"VM \"$1\" sofort ausschalten? Nicht gespeicherte Daten im Gast können verloren gehen.","en":"Power off VM \"$1\" immediately? Unsaved guest data may be lost.","fr":"Éteindre immédiatement la VM \"$1\" ? Les données non enregistrées dans le système invité peuvent être perdues.","it":"Spegnere immediatamente la VM \"$1\"? I dati non salvati nel sistema guest potrebbero andare persi.","es":"¿Apagar inmediatamente la VM \"$1\"? Los datos no guardados del sistema invitado pueden perderse.","pt":"Desligar imediatamente a VM \"$1\"? Os dados não guardados no sistema convidado podem perder-se."}},
   {re:new RegExp("^VM deleted: (.+)$"),t:{"de":"VM gelöscht: $1","en":"VM deleted: $1","fr":"VM supprimée : $1","it":"VM eliminata: $1","es":"VM eliminada: $1","pt":"VM eliminada: $1"}},
   {re:new RegExp("^Snapshot restored: (.+)$"),t:{"de":"Snapshot wiederhergestellt: $1","en":"Snapshot restored: $1","fr":"Instantané restauré : $1","it":"Snapshot ripristinato: $1","es":"Instantánea restaurada: $1","pt":"Snapshot restaurado: $1"}},
   {re:new RegExp("^Snapshot deleted: (.+)$"),t:{"de":"Snapshot gelöscht: $1","en":"Snapshot deleted: $1","fr":"Instantané supprimé : $1","it":"Snapshot eliminato: $1","es":"Instantánea eliminada: $1","pt":"Snapshot eliminado: $1"}},
@@ -11292,6 +11308,7 @@ async function renderVMs(body,tab){
     <td style="display:flex;gap:6px;flex-wrap:wrap">
       <button class="btn icon play" title="${x.active?'Restart':'Start'}" onclick="vmAct('${esc(x.name)}','${x.active?'reboot':'start'}')">${x.active?'↻':'▶'}</button>
       <button class="btn icon stop" title="Shut down" onclick="vmAct('${esc(x.name)}','shutdown')" ${!x.active?'disabled style="opacity:.4"':''}>⏹</button>
+      ${x.active&&isExpertMode()?`<button class="btn icon danger" title="Force power off" onclick="vmForceOffConfirm('${esc(x.name)}')">⏻</button>`:''}
       <button class="btn icon" title="Console" onclick="vmConsole('${esc(x.name)}')" ${!x.active?'disabled style="opacity:.4"':''}>🖥</button>
       <button class="btn icon" title="Hardware (Disks/NICs)" onclick="vmHardware('${esc(x.name)}')">🔌</button>
       <button class="btn icon" title="Snapshots" onclick="vmSnaps('${esc(x.name)}')">📸</button>
@@ -11301,7 +11318,8 @@ async function renderVMs(body,tab){
     </td></tr>`).join('')||'<tr><td colspan="5" class="loading">No VMs</td></tr>'}</tbody></table>`;
   translateRenderedText(body);
 }
-window.vmAct=async(name,action)=>{try{await post('/vms/action',{name,action});const msgs={start:'VM started: '+name,shutdown:'VM shut down: '+name,reboot:'VM restarted: '+name,delete:'VM deleted: '+name};toast(msgs[action]||'OK');renderVMs($('#modal-body'));loadDashboard();}catch(e){toast('Error: '+e.message,'error');}};
+window.vmAct=async(name,action)=>{try{requireOk(await post('/vms/action',{name,action}),'VM action failed');const msgs={start:'VM started: '+name,shutdown:'VM shut down: '+name,reboot:'VM restarted: '+name,'force-off':'VM shut down: '+name,delete:'VM deleted: '+name};toast(msgs[action]||'OK');renderVMs($('#modal-body'));loadDashboard();}catch(e){toast('Error: '+e.message,'error');}};
+window.vmForceOffConfirm=name=>confirmDelete('Force power off',`Power off VM "${name}" immediately? Unsaved guest data may be lost.`,()=>vmAct(name,'force-off'));
 
 window.vmConsole=name=>{
   const url='/vm-console?name='+encodeURIComponent(name);
@@ -12862,10 +12880,20 @@ function pollRunvardUpdateLog(until,baselineLog=''){
   const btn=$('#runvard-upd-go');
   const tick=async()=>{
     try{
-      const r=await api('/sysmgr/runvard-update/log');
+      const [r,state]=await Promise.all([
+        api('/sysmgr/runvard-update/log'),
+        api('/sysmgr/runvard-update/status').catch(()=>({status:'idle'})),
+      ]);
       const log=r.log||'';
       const hasNewLog=!!log&&log!==baselineLog;
-      const hasStarted=hasNewLog&&/runvard update started|Downloading latest|Latest commit|Running installer/i.test(log);
+      const hasStarted=state.status==='running'||(hasNewLog&&/runvard update started|Downloading latest|Latest commit|Running installer/i.test(log));
+      if(state.status==='failed'){
+        const detail=summarizeRunvardUpdateLog(log)||`Update process exited with code ${state.exit_code??'?'}.`;
+        toast('runvard update failed: '+detail,'error');
+        if(out)out.innerHTML=runvardUpdateTerminalHtml('error','Failed','The update stopped before completion.',detail,100);
+        if(btn){btn.disabled=false;btn.textContent=uiText('Update runvard');btn.onclick=runvardUpdateInstall;btn.classList.remove('ghost','danger');btn.style.opacity='';btn.style.cursor='';}
+        return;
+      }
       if(out){
         const summary=hasNewLog?summarizeRunvardUpdateLog(log):uiText('Waiting for the new update log...');
         out.innerHTML=runvardUpdateTerminalHtml(
@@ -12876,7 +12904,7 @@ function pollRunvardUpdateLog(until,baselineLog=''){
           hasStarted?runvardUpdateProgress(log):8
         );
       }
-      if(hasStarted&&/runvard update finished/i.test(log)){
+      if(state.status==='succeeded'||(hasStarted&&/runvard update finished/i.test(log))){
         toast('runvard update completed');
         if(out){
           out.innerHTML=runvardUpdateTerminalHtml(
@@ -13125,6 +13153,10 @@ const APP_UI={
   sortApps:{de:'Apps sortieren',en:'Sort apps',fr:'Trier les apps',it:'Ordina le app',es:'Ordenar apps',pt:'Ordenar apps'},
   myAppsFirst:{de:'Meine Apps zuerst',en:'My apps first',fr:'Mes apps d’abord',it:'Le mie app prima',es:'Mis apps primero',pt:'As minhas apps primeiro'},
   installedFirst:{de:'Installierte Apps zuerst',en:'Installed first',fr:'Installées d’abord',it:'Installate prima',es:'Instaladas primero',pt:'Instaladas primeiro'},
+  myApps:{de:'Meine Apps',en:'My apps',fr:'Mes apps',it:'Le mie app',es:'Mis apps',pt:'As minhas apps'},
+  appCatalog:{de:'App-Katalog',en:'App catalog',fr:'Catalogue d’apps',it:'Catalogo app',es:'Catálogo de apps',pt:'Catálogo de apps'},
+  installedApps:{de:'Installierte Apps',en:'Installed apps',fr:'Apps installées',it:'App installate',es:'Apps instaladas',pt:'Apps instaladas'},
+  availableApps:{de:'Verfügbare Apps',en:'Available apps',fr:'Apps disponibles',it:'App disponibili',es:'Apps disponibles',pt:'Apps disponíveis'},
   update:{de:'Update',en:'update',fr:'mise à jour',it:'aggiornamento',es:'actualización',pt:'atualização'},
   updates:{de:'Updates',en:'updates',fr:'mises à jour',it:'aggiornamenti',es:'actualizaciones',pt:'atualizações'},
   checkUpdates:{de:'Updates prüfen',en:'Check updates',fr:'Vérifier les mises à jour',it:'Controlla aggiornamenti',es:'Buscar actualizaciones',pt:'Verificar atualizações'},
@@ -13333,6 +13365,21 @@ function sortAppsCatalog(items){
     return a.index-b.index;
   }).map(item=>item.app);
 }
+function groupAppsCatalog(items){
+  const sorted=sortAppsCatalog(items);
+  const definitions=appsSort==='installed'
+    ? [['installedApps',app=>Boolean(app.installed)],['availableApps',app=>!app.installed]]
+    : [['myApps',app=>Boolean(app.first_party)],['appCatalog',app=>!app.first_party]];
+  return definitions.map(([labelKey,matches])=>({labelKey,items:sorted.filter(matches)})).filter(group=>group.items.length);
+}
+function appCatalogGridHtml(items){
+  const groups=groupAppsCatalog(items);
+  if(!groups.length)return `<div class="empty-state" style="grid-column:1/-1">${esc(appUi('noAppsFound'))}</div>`;
+  return groups.map(group=>`<section class="apps-group" aria-labelledby="apps-group-${esc(group.labelKey)}">
+    <div class="apps-group-head"><h3 class="apps-group-title" id="apps-group-${esc(group.labelKey)}">${esc(appUi(group.labelKey))}</h3><span class="apps-group-count">${group.items.length}</span></div>
+    ${group.items.map(appCardHtml).join('')}
+  </section>`).join('');
+}
 function appPendingLabel(action){
   return appUi(({up:'starting',start:'starting',stop:'stopping',down:'stopping',restart:'restarting',update:'updating'})[action]||'starting');
 }
@@ -13504,7 +13551,7 @@ function renderAppsView(body,categories){
       ${categoryKeys.map(c=>`<div class="apps-cat${c===appsActiveCat?' active':''}" onclick="appsSetCat('${esc(c)}')">${esc(appCategoryLabel(c))}</div>`).join('')}
     </div>
     <div class="apps-grid" id="apps-grid">
-      ${filtered.length?filtered.map(appCardHtml).join(''):`<div class="empty-state" style="grid-column:1/-1">${esc(appUi('noAppsFound'))}</div>`}
+      ${appCatalogGridHtml(filtered)}
     </div>`;
   nxDecorateSearch(body);
   translateRenderedText(body);
@@ -13576,7 +13623,7 @@ window.appsDoSearch=v=>{appsSearch=v;const grid=$('#apps-grid');if(!grid)return;
     const catOk=appsActiveCat==='all'||appCategoryKey(a.category)===appsActiveCat;
     return catOk&&appMatchesSearch(a,q);
   }));
-  grid.innerHTML=filtered.length?filtered.map(appCardHtml).join(''):`<div class="empty-state" style="grid-column:1/-1">${esc(appUi('noAppsFound'))}</div>`;
+  grid.innerHTML=appCatalogGridHtml(filtered);
   translateRenderedText(grid);
 };
 

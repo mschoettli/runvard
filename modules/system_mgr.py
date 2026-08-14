@@ -6,6 +6,7 @@ import shutil
 import tempfile
 import subprocess
 import time
+import uuid
 import urllib.error
 import urllib.request
 
@@ -14,6 +15,7 @@ RUNVARD_REPO_API = "https://api.github.com/repos/mschoettli/runvard/commits/main
 RUNVARD_REPO_URL = "https://github.com/mschoettli/runvard"
 RUNVARD_REPO_GIT_URL = "https://github.com/mschoettli/runvard.git"
 RUNVARD_UPDATE_LOG = "/opt/runvard/data/runvard-update.log"
+RUNVARD_UPDATE_STATUS = "/opt/runvard/data/runvard-update.status.json"
 VERSION_FILE = os.environ.get(
     "RUNVARD_VERSION_FILE",
     "/opt/runvard/data/runvard.version",
@@ -68,10 +70,11 @@ def _start_detached_update_script(script_path):
 
 
 def _start_systemd_update_script(script_path):
+    unit_name = f"runvard-self-update-{uuid.uuid4().hex[:12]}"
     result = subprocess.run(
         [
             "systemd-run",
-            "--unit=runvard-self-update",
+            f"--unit={unit_name}",
             "--collect",
             "/bin/bash",
             script_path,
@@ -83,7 +86,7 @@ def _start_systemd_update_script(script_path):
     if result.returncode != 0:
         detail = result.stderr.strip() or result.stdout.strip() or "systemd-run failed"
         raise RuntimeError(detail)
-    return {"stdout": result.stdout, "method": "systemd"}
+    return {"stdout": result.stdout, "method": "systemd", "unit": unit_name}
 
 
 def start_runvard_update():
@@ -107,11 +110,24 @@ def start_runvard_update():
     script = f"""#!/usr/bin/env bash
 set -euo pipefail
 LOG="{RUNVARD_UPDATE_LOG}"
+STATUS="{RUNVARD_UPDATE_STATUS}"
+LOCK="${{LOG}}.lock"
 exec > "$LOG" 2>&1
+exec 9>"$LOCK"
+write_status() {{
+  printf '{{"status":"%s","updated_at":"%s","exit_code":%s}}\n' "$1" "$(date -Is)" "$2" > "${{STATUS}}.tmp"
+  mv "${{STATUS}}.tmp" "$STATUS"
+}}
+finish() {{
+  code=$?
+  if [ "$code" -eq 0 ]; then write_status succeeded 0; else write_status failed "$code"; fi
+  rm -f "$0"
+  exit "$code"
+}}
+flock -n 9 || {{ echo "Another runvard update is already running" >&2; rm -f "$0"; exit 75; }}
+trap finish EXIT
+write_status running 0
 echo "runvard update started: $(date -Is)"
-WORK_DIR="$(mktemp -d)"
-cleanup() {{ rm -rf "$WORK_DIR"; }}
-trap cleanup EXIT
 echo "Running the installed verified-release bootstrap..."
 [ -f /opt/runvard/install.sh ] || {{ echo "Verified installer is missing" >&2; exit 1; }}
 bash "/opt/runvard/install.sh" --verified-release --yes
@@ -140,6 +156,7 @@ echo "runvard update finished: $(date -Is)"
         "log": RUNVARD_UPDATE_LOG,
         "stdout": start_result["stdout"],
         "method": start_result["method"],
+        "unit": start_result.get("unit", ""),
         "warning": systemd_error,
     }
 
@@ -159,6 +176,24 @@ def runvard_update_log():
     except OSError:
         return {"ok": False, "log": ""}
     return {"ok": True, "log": data}
+
+
+def runvard_update_status():
+    """Return the durable state written atomically by the detached updater."""
+    try:
+        with open(RUNVARD_UPDATE_STATUS, encoding="utf-8") as status_file:
+            data = json.load(status_file)
+    except (OSError, json.JSONDecodeError):
+        return {"ok": False, "status": "idle", "updated_at": "", "exit_code": None}
+    status = data.get("status")
+    if status not in {"running", "succeeded", "failed"}:
+        status = "failed"
+    return {
+        "ok": True,
+        "status": status,
+        "updated_at": str(data.get("updated_at") or ""),
+        "exit_code": data.get("exit_code"),
+    }
 
 
 def _git_commit():

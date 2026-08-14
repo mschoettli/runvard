@@ -125,7 +125,10 @@ class TerminalSession:
                 f"{shlex.quote(shell_cmd)}",
                 "fi",
                 f"tmux set-option -t {shlex.quote(self.session_id)} status off",
-                f"tmux set-option -t {shlex.quote(self.session_id)} mouse on",
+                # Let xterm.js own mouse selection and scrollback. tmux mouse mode
+                # consumes drag events, which makes selecting a partial region for
+                # copy/paste impossible unless users know tmux's modifier keys.
+                f"tmux set-option -t {shlex.quote(self.session_id)} mouse off",
                 f"exec tmux attach-session -t {shlex.quote(self.session_id)}",
             ])
             return ["/bin/bash", "-lc", script]
