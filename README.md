@@ -229,9 +229,9 @@ Recommended practices:
 - Do not expose it directly to the public internet without protection
 - Keep the system updated and maintain regular backups
 
-The built-in terminal is an isolated, time-limited root shell and requires a fresh
-administrator password confirmation before each connection. Do not expose runvard's
-upstream HTTP port directly to an untrusted network.
+The built-in terminal is an isolated, time-limited root shell available only to an
+authenticated administrator and protected by a short-lived, single-use connection
+token. Do not expose runvard's upstream HTTP port directly to an untrusted network.
 
 ## Installation
 
@@ -248,3 +248,8 @@ permission. See [LICENSE](LICENSE) for details.
 runvard turns a Debian or Ubuntu server into a private control center for system
 operations, Docker, apps, storage, networking, security, backups, monitoring, and
 maintenance.
+
+## Problems and solutions
+
+Known installation and update problems are documented in
+[TROUBLESHOOTING.md](TROUBLESHOOTING.md).
