@@ -2,7 +2,12 @@ name: Signed release
 
 on:
   push:
+    branches: [main]
     tags: ["v*.*.*"]
+
+concurrency:
+  group: runvard-release
+  cancel-in-progress: false
 
 permissions:
   contents: write
@@ -14,6 +19,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Determine release version
+        id: version
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_REF" == refs/tags/* ]]; then
+            version="$GITHUB_REF_NAME"
+          else
+            latest="$(git tag --list 'v[0-9]*.[0-9]*.[0-9]*' --sort=-version:refname | head -n 1)"
+            if [[ -z "$latest" ]]; then
+              version="v1.0.0"
+            elif [[ "$latest" =~ ^v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]; then
+              version="v${BASH_REMATCH[1]}.${BASH_REMATCH[2]}.$((BASH_REMATCH[3] + 1))"
+            else
+              echo "Latest stable tag has an invalid version: $latest" >&2
+              exit 1
+            fi
+          fi
+          echo "version=$version" >> "$GITHUB_OUTPUT"
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
@@ -25,19 +51,21 @@ jobs:
       - run: python -m pytest -q
       - name: Build immutable release archive
         shell: bash
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         run: |
           set -euo pipefail
-          root="runvard-${GITHUB_REF_NAME}"
+          root="runvard-${VERSION}"
           mkdir -p "dist/${root}"
           git archive HEAD | tar -x -C "dist/${root}"
           printf '%s\n' "$GITHUB_SHA" > "dist/${root}/RELEASE_COMMIT"
-          tar -czf "dist/runvard-${GITHUB_REF_NAME}.tar.gz" -C dist "$root"
-          sha256sum "dist/runvard-${GITHUB_REF_NAME}.tar.gz" > "dist/runvard-${GITHUB_REF_NAME}.tar.gz.sha256"
+          tar -czf "dist/runvard-${VERSION}.tar.gz" -C dist "$root"
+          sha256sum "dist/runvard-${VERSION}.tar.gz" > "dist/runvard-${VERSION}.tar.gz.sha256"
           cp install.sh dist/install.sh
       - name: Attest release provenance
         uses: actions/attest@v4
         with:
-          subject-path: "dist/runvard-${{ github.ref_name }}.tar.gz"
+          subject-path: "dist/runvard-${{ steps.version.outputs.version }}.tar.gz"
       - name: Attest bootstrap provenance
         uses: actions/attest@v4
         with:
@@ -45,7 +73,8 @@ jobs:
       - name: Publish verified assets
         uses: softprops/action-gh-release@v2
         with:
+          tag_name: ${{ steps.version.outputs.version }}
           files: |
-            dist/runvard-${{ github.ref_name }}.tar.gz
-            dist/runvard-${{ github.ref_name }}.tar.gz.sha256
+            dist/runvard-${{ steps.version.outputs.version }}.tar.gz
+            dist/runvard-${{ steps.version.outputs.version }}.tar.gz.sha256
             dist/install.sh
