@@ -11,7 +11,8 @@ import urllib.error
 import urllib.request
 
 
-RUNVARD_REPO_API = "https://api.github.com/repos/mschoettli/runvard/commits/main"
+RUNVARD_RELEASES_API = "https://api.github.com/repos/mschoettli/runvard/releases/latest"
+RUNVARD_COMMITS_API = "https://api.github.com/repos/mschoettli/runvard/commits"
 RUNVARD_REPO_URL = "https://github.com/mschoettli/runvard"
 RUNVARD_REPO_GIT_URL = "https://github.com/mschoettli/runvard.git"
 RUNVARD_UPDATE_LOG = "/opt/runvard/data/runvard-update.log"
@@ -217,17 +218,31 @@ def _stored_commit():
     return ""
 
 
-def _remote_commit():
+def _remote_release_commit():
     def git_fallback(error="", rate_limited=False):
-        r = _run(["git", "ls-remote", RUNVARD_REPO_GIT_URL, "refs/heads/main"], timeout=20)
-        line = r["stdout"].strip().splitlines()[0] if r["ok"] and r["stdout"].strip() else ""
-        commit = line.split(None, 1)[0] if line else ""
-        if re.fullmatch(r"[0-9a-f]{40}", commit):
+        r = _run(["git", "ls-remote", "--tags", RUNVARD_REPO_GIT_URL], timeout=20)
+        tags = {}
+        if r["ok"]:
+            for line in r["stdout"].splitlines():
+                parts = line.split(None, 1)
+                if len(parts) != 2:
+                    continue
+                commit, ref = parts
+                match = re.fullmatch(r"refs/tags/(v(\d+)\.(\d+)\.(\d+))(\^\{\})?", ref)
+                if match and re.fullmatch(r"[0-9a-f]{40}", commit):
+                    version = tuple(int(match.group(i)) for i in range(2, 5))
+                    peeled = ref.endswith("^{}")
+                    previous = tags.get(version)
+                    if previous is None or peeled:
+                        tags[version] = (match.group(1), commit, peeled)
+        if tags:
+            tag, commit, _ = tags[max(tags)]
             return {
                 "ok": True,
                 "commit": commit,
                 "short": commit[:7],
-                "url": f"{RUNVARD_REPO_URL}/commit/{commit}",
+                "url": f"{RUNVARD_REPO_URL}/releases/tag/{tag}",
+                "tag": tag,
                 "message": "",
                 "date": "",
                 "source": "git",
@@ -240,15 +255,27 @@ def _remote_commit():
             "rate_limited": rate_limited,
         }
 
-    req = urllib.request.Request(
-        RUNVARD_REPO_API,
+    release_req = urllib.request.Request(
+        RUNVARD_RELEASES_API,
         headers={
             "Accept": "application/vnd.github+json",
             "User-Agent": "runvard-Update-Check",
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=15) as res:
+        with urllib.request.urlopen(release_req, timeout=15) as res:
+            release = json.loads(res.read().decode("utf-8"))
+        tag = release.get("tag_name", "")
+        if not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
+            return git_fallback("Latest GitHub release has an invalid tag.")
+        commit_req = urllib.request.Request(
+            f"{RUNVARD_COMMITS_API}/{tag}",
+            headers={
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "runvard-Update-Check",
+            },
+        )
+        with urllib.request.urlopen(commit_req, timeout=15) as res:
             data = json.loads(res.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         if e.code == 403:
@@ -264,7 +291,8 @@ def _remote_commit():
         "ok": bool(re.fullmatch(r"[0-9a-f]{40}", commit)),
         "commit": commit,
         "short": commit[:7] if commit else "",
-        "url": data.get("html_url") or f"{RUNVARD_REPO_URL}/commit/{commit}",
+        "url": release.get("html_url") or f"{RUNVARD_REPO_URL}/releases/tag/{tag}",
+        "tag": tag,
         "message": (info.get("message") or "").splitlines()[0],
         "date": ((info.get("committer") or {}).get("date") or ""),
     }
@@ -273,7 +301,7 @@ def _remote_commit():
 def runvard_release_status():
     """Return local and GitHub release status for runvard."""
     local = _stored_commit() or _git_commit()
-    remote = _remote_commit()
+    remote = _remote_release_commit()
     remote_commit = remote.get("commit", "") if remote.get("ok") else ""
     return {
         "repo": RUNVARD_REPO_URL,
