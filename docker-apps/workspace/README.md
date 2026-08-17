@@ -9,7 +9,12 @@ akzeptiert.
 Der Startpfad akzeptiert ausschließlich die bereits lokal vorhandenen Images
 `workspace-web:local` und `workspace-migrator:local`. Er prüft beide Images,
 startet PostgreSQL, führt die Migration aus und startet danach Web und Gateway.
-Der Gateway bindet ausschließlich an `127.0.0.1:3100`.
+Der Gateway bindet sicher voreingestellt an `127.0.0.1:3100`. Für einen
+ausdrücklich freigegebenen Zugriff aus dem lokalen Netzwerk enthält die lokale
+Datei `/opt/runvard/data/apps/workspace/bind-address` ausschließlich die
+private LAN-Adresse des Runvard-Servers, zum Beispiel `192.168.178.60`.
+Öffentliche und fehlerhafte IP-Adressen lehnt Runvard fail-closed ab; andere
+Interfaces werden nicht automatisch freigegeben.
 
 Die Images werden im Nushira-Checkout lokal gebaut:
 

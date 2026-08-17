@@ -1,7 +1,7 @@
 """Fail-closed lifecycle for Runvard's locally catalogued Workspace app."""
 from __future__ import annotations
 
-import fcntl, hashlib, json, os, platform, re, shutil, stat, subprocess, tempfile, time, urllib.request, uuid
+import fcntl, hashlib, ipaddress, json, os, platform, re, shutil, stat, subprocess, tempfile, time, urllib.request, uuid
 from pathlib import Path
 from typing import Callable, Mapping
 from cryptography.hazmat.primitives import serialization
@@ -18,6 +18,7 @@ COSIGN_BIN = Path("/opt/runvard/bin/cosign")
 STATUS_FILE, AUDIT_FILE, LOCK_FILE = APP_DIR / "update-status.json", APP_DIR / "update-audit.jsonl", APP_DIR / "update.lock"
 BACKUP_DIR, PROBE_DUMP = APP_DIR / "backups", APP_DIR / "probe" / "source.dump"
 BOOTSTRAP_MARKER = APP_DIR / ".synthetic-bootstrap-complete"
+BIND_ADDRESS_FILE = APP_DIR / "bind-address"
 LOCAL_IMAGES = {"web": "workspace-web:local", "migrator": "workspace-migrator:local"}
 REPOSITORIES = {"web": "local.workspace/workspace-web", "migrator": "local.workspace/workspace-migrator"}
 STATES = ("requested", "locked", "resolved", "verified", "preflight", "backed-up", "migration-validated", "migrating", "switching", "readiness", "succeeded", "failed", "manual-recovery-required")
@@ -153,8 +154,15 @@ def _run(command, *, env=None, stdout_path=None):
         if handle: handle.close()
     if result.returncode: raise WorkspaceUpdateError("command-failed")
 
+def _bind_address():
+    if not BIND_ADDRESS_FILE.exists(): return "127.0.0.1"
+    try: address = ipaddress.ip_address(BIND_ADDRESS_FILE.read_text(encoding="ascii").strip())
+    except (OSError, UnicodeError, ValueError) as exc: raise WorkspaceUpdateError("bind-address-invalid") from exc
+    if not (address.is_loopback or address.is_private): raise WorkspaceUpdateError("bind-address-not-local")
+    return str(address)
+
 def _local_env():
-    env = os.environ.copy(); env.update(WORKSPACE_WEB_IMAGE=LOCAL_IMAGES["web"], WORKSPACE_MIGRATOR_IMAGE=LOCAL_IMAGES["migrator"]); return env
+    env = os.environ.copy(); env.update(WORKSPACE_WEB_IMAGE=LOCAL_IMAGES["web"], WORKSPACE_MIGRATOR_IMAGE=LOCAL_IMAGES["migrator"], WORKSPACE_BIND_ADDRESS=_bind_address()); return env
 
 def start(*, initiator_role, runner=_run):
     if initiator_role != "admin": raise WorkspaceUpdateError("administrator-required")
@@ -177,7 +185,7 @@ def stop(*, initiator_role, runner=_run):
 
 def health():
     try:
-        with urllib.request.urlopen("http://127.0.0.1:3100/health", timeout=3) as response: return {"health": "healthy" if 200 <= response.status < 300 else "unhealthy"}
+        with urllib.request.urlopen(f"http://{_bind_address()}:3100/health", timeout=3) as response: return {"health": "healthy" if 200 <= response.status < 300 else "unhealthy"}
     except Exception: return {"health": "unhealthy"}
 
 def run_update(*, initiator_role, verifier=_verify_artifacts, runner=_run):
@@ -191,7 +199,7 @@ def run_update(*, initiator_role, verifier=_verify_artifacts, runner=_run):
             _persist(state, "locked"); _persist(state, "resolved"); release = verifier()
             state["targetRelease"] = release["releaseId"]; state["targetDigests"] = {name: release["images"][name]["digest"] for name in ("web", "migrator")}; _persist(state, "verified")
             if not COMPOSE_FILE.is_file(): raise WorkspaceUpdateError("compose-bundle-missing")
-            env = os.environ.copy(); env.update(WORKSPACE_WEB_IMAGE=_image_ref(release, "web"), WORKSPACE_MIGRATOR_IMAGE=_image_ref(release, "migrator")); backup = BACKUP_DIR / f'{state["runId"]}.dump'; _persist(state, "preflight")
+            env = os.environ.copy(); env.update(WORKSPACE_WEB_IMAGE=_image_ref(release, "web"), WORKSPACE_MIGRATOR_IMAGE=_image_ref(release, "migrator"), WORKSPACE_BIND_ADDRESS=_bind_address()); backup = BACKUP_DIR / f'{state["runId"]}.dump'; _persist(state, "preflight")
             # Runvard's local Workspace policy never resolves or pulls from a
             # registry. Both verified digest references must already exist.
             runner(("docker", "image", "inspect", _image_ref(release, "web"))); runner(("docker", "image", "inspect", _image_ref(release, "migrator")))

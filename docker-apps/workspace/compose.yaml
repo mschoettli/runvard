@@ -144,7 +144,7 @@ services:
           request.pipe(upstream);
         }).listen(3100,'0.0.0.0');
     ports:
-      - "127.0.0.1:${WORKSPACE_PORT:-3100}:3100"
+      - "${WORKSPACE_BIND_ADDRESS:-127.0.0.1}:${WORKSPACE_PORT:-3100}:3100"
     read_only: true
     tmpfs:
       - /tmp:size=16m,mode=1777,noexec,nosuid,nodev

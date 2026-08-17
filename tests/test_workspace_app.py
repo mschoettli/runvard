@@ -11,7 +11,7 @@ def release():
 @pytest.fixture
 def handler(monkeypatch, tmp_path):
     app = tmp_path / "workspace"; app.mkdir(); (app / "compose.yaml").write_text("services: {}\n")
-    for name, value in {"APP_DIR":app,"COMPOSE_FILE":app/"compose.yaml","STATUS_FILE":app/"status.json","AUDIT_FILE":app/"audit.jsonl","LOCK_FILE":app/"lock","BACKUP_DIR":app/"backups","PROBE_DUMP":app/"probe/source.dump","BOOTSTRAP_MARKER":app/".synthetic-bootstrap-complete"}.items(): monkeypatch.setattr(workspace_app,name,value)
+    for name, value in {"APP_DIR":app,"COMPOSE_FILE":app/"compose.yaml","STATUS_FILE":app/"status.json","AUDIT_FILE":app/"audit.jsonl","LOCK_FILE":app/"lock","BACKUP_DIR":app/"backups","PROBE_DUMP":app/"probe/source.dump","BOOTSTRAP_MARKER":app/".synthetic-bootstrap-complete","BIND_ADDRESS_FILE":app/"bind-address"}.items(): monkeypatch.setattr(workspace_app,name,value)
     return app
 
 def test_start_uses_only_local_images_and_fixed_order(handler, monkeypatch):
@@ -22,6 +22,26 @@ def test_start_uses_only_local_images_and_fixed_order(handler, monkeypatch):
     assert calls[2][0][-1]=="postgres" and calls[3][0][-1]=="migrator" and calls[4][0][-1]=="bootstrap-development" and calls[5][0][-2:]==("web","gateway")
     assert workspace_app.BOOTSTRAP_MARKER.read_text()=="synthetic-only\n"
     assert all(call[1]["env"]["WORKSPACE_WEB_IMAGE"]=="workspace-web:local" for call in calls)
+    assert all(call[1]["env"]["WORKSPACE_BIND_ADDRESS"]=="127.0.0.1" for call in calls)
+
+def test_bind_address_accepts_only_loopback_or_private_ip(handler):
+    workspace_app.BIND_ADDRESS_FILE.write_text("192.168.178.60\n")
+    assert workspace_app._bind_address()=="192.168.178.60"
+    workspace_app.BIND_ADDRESS_FILE.write_text("8.8.8.8\n")
+    with pytest.raises(workspace_app.WorkspaceUpdateError,match="bind-address-not-local"): workspace_app._bind_address()
+    workspace_app.BIND_ADDRESS_FILE.write_text("all-interfaces\n")
+    with pytest.raises(workspace_app.WorkspaceUpdateError,match="bind-address-invalid"): workspace_app._bind_address()
+
+def test_health_uses_the_validated_bind_address(handler, monkeypatch):
+    workspace_app.BIND_ADDRESS_FILE.write_text("192.168.178.60\n")
+    requested=[]
+    class Response:
+        status=200
+        def __enter__(self): return self
+        def __exit__(self,*args): return False
+    monkeypatch.setattr(workspace_app.urllib.request,"urlopen",lambda url,timeout: requested.append((url,timeout)) or Response())
+    assert workspace_app.health()=={"health":"healthy"}
+    assert requested==[("http://192.168.178.60:3100/health",3)]
 
 def test_stop_is_managed(handler):
     calls=[]; assert workspace_app.stop(initiator_role="admin",runner=lambda command,**kwargs:calls.append(command))=={"state":"stopped"}

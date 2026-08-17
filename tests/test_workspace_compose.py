@@ -82,7 +82,9 @@ def test_application_services_are_least_privilege_and_database_is_internal():
 
     assert COMPOSE["networks"]["workspace_internal"]["internal"] is True
     assert "ports" not in services["postgres"]
-    assert services["gateway"]["ports"] == ["127.0.0.1:${WORKSPACE_PORT:-3100}:3100"]
+    assert services["gateway"]["ports"] == [
+        "${WORKSPACE_BIND_ADDRESS:-127.0.0.1}:${WORKSPACE_PORT:-3100}:3100"
+    ]
     assert "workspace_frontend" not in services["web"]["networks"]
 
 
