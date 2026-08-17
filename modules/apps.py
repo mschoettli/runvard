@@ -1100,6 +1100,8 @@ def _write_private_secret_once(path):
         os.fsync(fd)
     finally:
         os.close(fd)
+    os.chown(path, 0, 0)
+    os.chmod(path, 0o444)
 
 
 def _prepare_workspace_install(path):
@@ -1119,18 +1121,23 @@ def _prepare_workspace_install(path):
     except OSError:
         pass
     for name in ("migration-password", "app-password"):
-        _write_private_secret_once(os.path.join(secrets_dir, name))
+        secret_path = os.path.join(secrets_dir, name)
+        _write_private_secret_once(secret_path)
+        os.chown(secret_path, 0, 0)
+        os.chmod(secret_path, 0o444)
 
     for name in ("postgres-init.sh", "restore-probe.sh"):
         target = os.path.join(path, name)
         content = _read_workspace_bundle_file(name)
         if not os.path.exists(target):
-            fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o700)
+            fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o500)
             try:
                 os.write(fd, content.encode("utf-8"))
                 os.fsync(fd)
             finally:
                 os.close(fd)
+        os.chown(target, 999, 999)
+        os.chmod(target, 0o500)
 
 
 def _app_install_draft(app):

@@ -105,11 +105,14 @@ def test_workspace_install_discards_browser_compose_and_preserves_secrets(
     assert installed == (bundle / "compose.yaml").read_text()
     assert "attacker" not in installed
     assert existing.read_text() == "keep-this-secret\n"
+    assert existing.stat().st_mode & 0o777 == 0o444
     migration_secret = secret_dir / "migration-password"
     assert migration_secret.read_text().strip()
-    assert migration_secret.stat().st_mode & 0o777 == 0o600
+    assert migration_secret.stat().st_mode & 0o777 == 0o444
     assert (app_dir / "postgres-init.sh").read_text() == "#!/bin/sh\nset -eu\n"
     assert (app_dir / "restore-probe.sh").read_text() == "#!/bin/sh\nset -eu\n"
+    assert (app_dir / "postgres-init.sh").stat().st_mode & 0o777 == 0o500
+    assert (app_dir / "restore-probe.sh").stat().st_mode & 0o777 == 0o500
 
 
 def test_workspace_update_uses_managed_handler_without_request_release(
@@ -200,5 +203,7 @@ def test_runvard_update_preinstalls_workspace_without_overwriting_secrets():
     installer = (ROOT / "scripts" / "install-full.sh").read_text()
     assert "install_workspace_catalog_app" in installer
     assert 'install -m 0600 "${bundle}/compose.yaml"' in installer
+    assert 'install -o 999 -g 999 -m 0500 "${bundle}/postgres-init.sh"' in installer
     assert 'if [ ! -e "${secret_dir}/${name}" ]' in installer
     assert 'openssl rand -base64 48' in installer
+    assert 'chmod 0444 "${secret_dir}/${name}"' in installer

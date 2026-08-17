@@ -409,13 +409,14 @@ install_workspace_catalog_app() {
   umask 077
   install -d -m 0700 "$app_dir" "$secret_dir" "$trust_keys_dir"
   install -m 0600 "${bundle}/compose.yaml" "${app_dir}/docker-compose.yml"
-  install -m 0700 "${bundle}/postgres-init.sh" "${app_dir}/postgres-init.sh"
-  install -m 0700 "${bundle}/restore-probe.sh" "${app_dir}/restore-probe.sh"
+  install -o 999 -g 999 -m 0500 "${bundle}/postgres-init.sh" "${app_dir}/postgres-init.sh"
+  install -o 999 -g 999 -m 0500 "${bundle}/restore-probe.sh" "${app_dir}/restore-probe.sh"
   for name in migration-password app-password; do
     if [ ! -e "${secret_dir}/${name}" ]; then
       openssl rand -base64 48 > "${secret_dir}/${name}"
-      chmod 0600 "${secret_dir}/${name}"
     fi
+    chown 0:0 "${secret_dir}/${name}"
+    chmod 0444 "${secret_dir}/${name}"
   done
 }
 
