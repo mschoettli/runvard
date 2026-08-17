@@ -24,6 +24,7 @@ except ImportError:
 
 APPS_DIR = "/opt/runvard/data/apps"
 UPDATE_CACHE = "/opt/runvard/data/apps_updates.json"
+WORKSPACE_BUNDLE_DIR = "/opt/runvard/docker-apps/workspace"
 UPDATE_INTERVAL = 12 * 3600  # 12 Stunden
 ICON_BASE = "https://cdn.jsdelivr.net/gh/selfhst/icons/svg"
 DEFAULT_RUNVARD_PORT = 8080
@@ -204,6 +205,14 @@ volumes:
      "install_timeout": 900,
      "tpl": _c("ghcr.io/mschoettli/papervard:latest", ["3000:3000", "8081:80"],
                ["./config:/config", "./data:/data"])},
+    {"id": "workspace", "name": "Workspace", "icon": "/static/runvard-icon.png",
+     "category": "Produktivität", "desc": "Workspace", "port": 3100,
+     "first_party": True,
+     "managed_handler": "workspace",
+     "managed_directories": ["secrets", "trust-root/keys"],
+     "preflight_ports": True,
+     "install_timeout": 1800,
+     "tpl": _c("managed-by-runvard", ["3100:3100"], [])},
     {"id": "joplin-server", "name": "Joplin Server", "icon": "joplin", "category": "Produktivität",
      "desc": "Synchronisierungs-Server für Joplin-Notizen", "port": 22300,
      "tpl": _c("joplin/server:latest", ["22300:22300"], [],
@@ -1060,9 +1069,75 @@ services:
     }
 
 
+def _workspace_bundle_file(name):
+    """Resolve one allowlisted first-party bundle file without request input."""
+    if name not in {"compose.yaml", "postgres-init.sh", "restore-probe.sh"}:
+        raise ValueError("Unbekannte Workspace-Bundle-Datei")
+    return os.path.join(WORKSPACE_BUNDLE_DIR, name)
+
+
+def _read_workspace_bundle_file(name):
+    path = _workspace_bundle_file(name)
+    if os.path.islink(path):
+        raise ValueError("Workspace-Bundle darf keine Symlinks enthalten")
+    with open(path, encoding="utf-8") as f:
+        return f.read()
+
+
+def _workspace_install_draft(app):
+    del app
+    return _read_workspace_bundle_file("compose.yaml"), None
+
+
+def _write_private_secret_once(path):
+    """Create a persistent secret without ever replacing an existing value."""
+    try:
+        fd = os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o600)
+    except FileExistsError:
+        return
+    try:
+        os.write(fd, (secrets.token_urlsafe(48) + "\n").encode("ascii"))
+        os.fsync(fd)
+    finally:
+        os.close(fd)
+
+
+def _prepare_workspace_install(path):
+    """Materialize only Runvard-owned bundle assets and persistent secrets."""
+    os.makedirs(path, exist_ok=True)
+    secrets_dir = os.path.join(path, "secrets")
+    os.makedirs(secrets_dir, mode=0o700, exist_ok=True)
+    try:
+        os.chmod(secrets_dir, 0o700)
+    except OSError:
+        pass
+    trust_keys_dir = os.path.join(path, "trust-root", "keys")
+    os.makedirs(trust_keys_dir, mode=0o700, exist_ok=True)
+    try:
+        os.chmod(os.path.join(path, "trust-root"), 0o700)
+        os.chmod(trust_keys_dir, 0o700)
+    except OSError:
+        pass
+    for name in ("migration-password", "app-password"):
+        _write_private_secret_once(os.path.join(secrets_dir, name))
+
+    for name in ("postgres-init.sh", "restore-probe.sh"):
+        target = os.path.join(path, name)
+        content = _read_workspace_bundle_file(name)
+        if not os.path.exists(target):
+            fd = os.open(target, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o700)
+            try:
+                os.write(fd, content.encode("utf-8"))
+                os.fsync(fd)
+            finally:
+                os.close(fd)
+
+
 def _app_install_draft(app):
     if app.get("compose_builder") == "papervard":
         return _papervard_install_draft(app)
+    if app.get("managed_handler") == "workspace":
+        return _workspace_install_draft(app)
     return _build_standard_compose(app), None
 
 
@@ -1174,6 +1249,8 @@ def get_catalog():
             "desc": app["desc"],
             "port": port,
             "first_party": bool(app.get("first_party")),
+            **({"repository_url": app["repository_url"]}
+               if app.get("repository_url") else {}),
             "installed": installed,
             "running": running,
             "update_available": app["id"] in updates,
@@ -1239,6 +1316,8 @@ def get_app(app_id):
         "desc": app["desc"],
         "port": _first_host_port_from_compose(compose, app["port"]),
         "first_party": bool(app.get("first_party")),
+        **({"repository_url": app["repository_url"]}
+           if app.get("repository_url") else {}),
         "installed": installed,
         "running": _running(app["id"]),
         "compose": compose,
@@ -1279,6 +1358,10 @@ def install(app_id, content):
     app = next((a for a in CATALOG if a["id"] == app_id), None)
     if not app:
         raise ValueError("App nicht gefunden")
+    if app.get("managed_handler") == "workspace":
+        # Browser-supplied Compose, commands, paths and image references are
+        # intentionally discarded for this managed first-party application.
+        content, _ = _workspace_install_draft(app)
     content = _normalize_app_compose(app, content)
     content = _prepare_host_network_content(app, content)
     if app.get("preflight_ports"):
@@ -1300,12 +1383,20 @@ def install(app_id, content):
 
     def run():
         path = _app_dir(app_id)
+        if app.get("managed_handler") == "workspace":
+            _prepare_workspace_install(path)
         os.makedirs(path, exist_ok=True)
         for directory in app.get("managed_directories", []):
             os.makedirs(os.path.join(path, directory), exist_ok=True)
         with open(_compose_file(app_id), "w") as f:
             f.write(content)
         job = _install_jobs[job_id]
+        if app.get("managed_handler") == "workspace":
+            job["status"] = "done"
+            job["ok"] = True
+            job["step"] = "Workspace-Bundle vorbereitet"
+            job["step_key"] = "bundle_prepared"
+            return
         uses_build = _compose_uses_build(content)
         if not uses_build:
             job["status"] = "pulling"
@@ -1384,6 +1475,14 @@ def install_status(job_id):
     job = _install_jobs.get(job_id)
     if not job:
         return {"status": "unknown"}
+    if job.get("app_id") == "workspace":
+        return {
+            "status": job["status"],
+            "step_key": job.get("step_key", ""),
+            "ok": job["ok"],
+            "app_id": "workspace",
+            "app_name": "Workspace",
+        }
     return {
         "status": job["status"],
         "step": job["step"],
@@ -1403,6 +1502,8 @@ def save_compose(app_id, content):
     app = next((a for a in CATALOG if a["id"] == app_id), None)
     if not app:
         raise ValueError("App nicht gefunden")
+    if app.get("managed_handler") == "workspace":
+        raise ValueError("Workspace-Compose wird ausschliesslich von Runvard verwaltet")
     path = _app_dir(app_id)
     os.makedirs(path, exist_ok=True)
     with open(_compose_file(app_id), "w") as f:
@@ -1447,6 +1548,18 @@ def action(app_id, act):
     path = _app_dir(app_id)
     if not os.path.isdir(path):
         raise ValueError("App nicht installiert")
+    if app_id == "workspace" and act in {"start", "stop", "restart", "update"}:
+        # The API route authenticates and confirms the administrator. The
+        # handler obtains its release exclusively from Runvard-owned state.
+        from modules import workspace_app
+        if act == "start":
+            return workspace_app.start(initiator_role="admin")
+        if act == "stop":
+            return workspace_app.stop(initiator_role="admin")
+        if act == "restart":
+            workspace_app.stop(initiator_role="admin")
+            return workspace_app.start(initiator_role="admin")
+        return workspace_app.update(initiator_role="admin")
     cmds = {
         "start":   [["docker", "compose", "up", "-d"]],
         "stop":    [["docker", "compose", "stop"]],          # pausieren

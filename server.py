@@ -26,7 +26,7 @@ from modules import (system, terminal, files, storage, docker_mgr, services,
                      vms, backup, shares, network, security, monitoring,
                      system_mgr, apps, dashboard, metrics, accounts, audit,
                      ports, time_machine, path_picker)
-from modules import security_tokens, auth_config
+from modules import security_tokens, auth_config, workspace_app
 from modules.external_servers import ExternalServerManager
 from modules.external_servers.service import error_category
 from modules.federation import FederationManager
@@ -2365,6 +2365,16 @@ def apps_action_job(id: str, user: str = Depends(auth)):
         return jobs.get_job(id)
     except KeyError:
         raise HTTPException(404, "Job nicht gefunden")
+
+
+@app.get("/api/apps/workspace/update-status")
+def apps_workspace_update_status(user: str = Depends(require_admin)):
+    return workspace_app.status()
+
+
+@app.get("/api/apps/workspace/health")
+def apps_workspace_health(user: str = Depends(require_admin)):
+    return workspace_app.health()
 
 
 @app.get("/api/apps/check-updates")

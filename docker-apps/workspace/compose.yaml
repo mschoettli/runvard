@@ -1,0 +1,182 @@
+name: workspace
+
+services:
+  postgres:
+    image: postgres:18.4-bookworm@sha256:882236b897e39051d2368c5ccc6cda944904723506b2dfc97f2a8f5bc9afa382
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: workspace
+      POSTGRES_USER: nushira_migration
+      POSTGRES_PASSWORD_FILE: /run/secrets/workspace_migration_password
+    secrets:
+      - workspace_migration_password
+      - workspace_app_password
+    volumes:
+      - workspace_postgres:/var/lib/postgresql
+      - ./postgres-init.sh:/docker-entrypoint-initdb.d/010-workspace-roles.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nushira_migration -d workspace"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+      start_period: 10s
+    networks: [workspace_internal]
+    security_opt: ["no-new-privileges:true"]
+
+  migrator:
+    image: ${WORKSPACE_MIGRATOR_IMAGE:?Runvard must provide a verified workspace-migrator digest reference}
+    profiles: [update]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    secrets: [workspace_migration_password]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [workspace_internal]
+
+  bootstrap-development:
+    image: ${WORKSPACE_MIGRATOR_IMAGE:?Runvard must provide the local workspace-migrator image}
+    profiles: [bootstrap]
+    entrypoint: ["/usr/local/bin/workspace-bootstrap"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    secrets: [workspace_migration_password]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [workspace_internal]
+
+  postgres-probe:
+    image: postgres:18.4-bookworm@sha256:882236b897e39051d2368c5ccc6cda944904723506b2dfc97f2a8f5bc9afa382
+    profiles: [update]
+    restart: "no"
+    environment:
+      POSTGRES_DB: workspace
+      POSTGRES_USER: nushira_migration
+      POSTGRES_PASSWORD_FILE: /run/secrets/workspace_migration_password
+    secrets:
+      - workspace_migration_password
+      - workspace_app_password
+    volumes:
+      - ./postgres-init.sh:/docker-entrypoint-initdb.d/010-workspace-roles.sh:ro
+      - ./restore-probe.sh:/docker-entrypoint-initdb.d/020-workspace-restore.sh:ro
+      - ./probe/source.dump:/run/workspace-probe/source.dump:ro
+    tmpfs:
+      - /var/lib/postgresql:size=1g,mode=0700,noexec,nosuid,nodev
+      - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U nushira_migration -d workspace"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+      start_period: 10s
+    networks:
+      workspace_probe:
+        aliases: [postgres]
+    security_opt: ["no-new-privileges:true"]
+
+  migration-probe:
+    image: ${WORKSPACE_MIGRATOR_IMAGE:?Runvard must provide a verified workspace-migrator digest reference}
+    profiles: [update]
+    restart: "no"
+    depends_on:
+      postgres-probe:
+        condition: service_healthy
+    secrets: [workspace_migration_password]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [workspace_probe]
+
+  web:
+    image: ${WORKSPACE_WEB_IMAGE:?Runvard must provide a verified workspace-web digest reference}
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      NODE_ENV: production
+      WORKSPACE_APP_ORIGIN: ${WORKSPACE_APP_ORIGIN:-http://localhost:3100}
+    secrets: [workspace_app_password]
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,mode=1777,noexec,nosuid,nodev
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [workspace_internal]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3100/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+  gateway:
+    image: node:24-bookworm-slim@sha256:3638d9a6fe4030bd716be989438248074489337ba3275657f93595428be4fc03
+    restart: unless-stopped
+    depends_on:
+      web:
+        condition: service_healthy
+    entrypoint:
+      - node
+      - -e
+      - |
+        const http=require('http');
+        http.createServer((request,response)=>{
+          const upstream=http.request({hostname:'web',port:3100,path:request.url,method:request.method,headers:{...request.headers,host:'localhost:3100'}},incoming=>{response.writeHead(incoming.statusCode||502,incoming.headers);incoming.pipe(response)});
+          upstream.on('error',()=>{response.writeHead(503,{'content-type':'text/plain'});response.end('unavailable')});
+          request.pipe(upstream);
+        }).listen(3100,'0.0.0.0');
+    ports:
+      - "127.0.0.1:${WORKSPACE_PORT:-3100}:3100"
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777,noexec,nosuid,nodev
+    cap_drop: [ALL]
+    security_opt: ["no-new-privileges:true"]
+    networks: [workspace_internal, workspace_frontend]
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "node",
+          "-e",
+          "fetch('http://127.0.0.1:3100/health').then(r=>{if(!r.ok)process.exit(1)}).catch(()=>process.exit(1))",
+        ]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
+
+networks:
+  workspace_internal:
+    internal: true
+  workspace_probe:
+    internal: true
+  workspace_frontend: {}
+
+volumes:
+  workspace_postgres:
+    name: nushira_workspace_postgres
+
+secrets:
+  workspace_migration_password:
+    file: ./secrets/migration-password
+  workspace_app_password:
+    file: ./secrets/app-password

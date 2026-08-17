@@ -392,6 +392,33 @@ sync_program_files() {
     "$SRC"/ "$INSTALL_DIR"/
 }
 
+install_workspace_catalog_app() {
+  local bundle="${INSTALL_DIR}/docker-apps/workspace"
+  local app_dir="${INSTALL_DIR}/data/apps/workspace"
+  local secret_dir="${app_dir}/secrets"
+  local trust_keys_dir="${app_dir}/trust-root/keys"
+
+  [ -f "${bundle}/compose.yaml" ] || return 0
+  [ -f "${bundle}/postgres-init.sh" ] || die "Workspace postgres-init.sh is missing."
+  [ -f "${bundle}/restore-probe.sh" ] || die "Workspace restore-probe.sh is missing."
+  [ ! -L "$bundle" ] && [ ! -L "${bundle}/compose.yaml" ] \
+    && [ ! -L "${bundle}/postgres-init.sh" ] \
+    && [ ! -L "${bundle}/restore-probe.sh" ] \
+    || die "Workspace bundle must not contain symbolic links."
+
+  umask 077
+  install -d -m 0700 "$app_dir" "$secret_dir" "$trust_keys_dir"
+  install -m 0600 "${bundle}/compose.yaml" "${app_dir}/docker-compose.yml"
+  install -m 0700 "${bundle}/postgres-init.sh" "${app_dir}/postgres-init.sh"
+  install -m 0700 "${bundle}/restore-probe.sh" "${app_dir}/restore-probe.sh"
+  for name in migration-password app-password; do
+    if [ ! -e "${secret_dir}/${name}" ]; then
+      openssl rand -base64 48 > "${secret_dir}/${name}"
+      chmod 0600 "${secret_dir}/${name}"
+    fi
+  done
+}
+
 # ---------------------------- preflight --------------------------------
 [ "$(id -u)" -eq 0 ] || die "$(t root_required)"
 command -v apt-get >/dev/null 2>&1 || die "$(t apt_required)"
@@ -517,6 +544,7 @@ if [ "$SRC" != "$INSTALL_DIR" ]; then
 else
   info "Source already matches target; skipping file sync."
 fi
+install_workspace_catalog_app
 
 SOURCE_COMMIT="${RUNVARD_SOURCE_COMMIT:-}"
 if [ -z "$SOURCE_COMMIT" ] && [ -d "$SRC/.git" ] && command -v git >/dev/null 2>&1; then
