@@ -251,5 +251,56 @@ maintenance.
 
 ## Problems and solutions
 
-Known installation and update problems are documented in
-[TROUBLESHOOTING.md](TROUBLESHOOTING.md).
+### Verified update fails with exit code 4
+
+runvard verifies release archives with `gh attestation verify`. The update fails
+with exit code `4` when the GitHub CLI is too old to provide the `attestation`
+command or when the root account is not authenticated with GitHub. Debian and
+Ubuntu packages in the `2.45.x`/`2.46.x` series are known to be unsuitable for
+this update path.
+
+Check both requirements as `root`:
+
+```bash
+gh --version
+gh attestation --help
+GH_CONFIG_DIR=/root/.config/gh gh auth status
+```
+
+If `gh attestation` is missing, install the current GitHub CLI from GitHub's
+official Debian repository:
+
+```bash
+apt update
+apt install -y wget
+mkdir -p -m 755 /etc/apt/keyrings
+wget -nv -O /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+  https://cli.github.com/packages/githubcli-archive-keyring.gpg
+chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+  > /etc/apt/sources.list.d/github-cli.list
+apt update
+apt install -y gh
+```
+
+Then authenticate the root account. On a headless server, complete the displayed
+device code on a trusted device at <https://github.com/login/device>. Never share
+the device code or access token.
+
+```bash
+BROWSER=true gh auth login --hostname github.com --git-protocol https --web
+chmod 700 /root/.config/gh
+chmod 600 /root/.config/gh/hosts.yml
+GH_CONFIG_DIR=/root/.config/gh gh auth status
+```
+
+Retry the verified update:
+
+```bash
+GH_CONFIG_DIR=/root/.config/gh bash /opt/runvard/install.sh --verified-release --yes
+```
+
+Detailed diagnostics and recovery notes are available in
+[TROUBLESHOOTING.md](TROUBLESHOOTING.md). The upstream package installation
+commands are maintained in GitHub's
+[official Linux installation guide](https://github.com/cli/cli/blob/trunk/docs/install_linux.md).
