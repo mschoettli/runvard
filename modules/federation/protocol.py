@@ -119,9 +119,12 @@ def validate_internal_url(value, allowed_cidrs):
         raise ValueError("internal URL must include a literal IP address and port")
     try:
         address = ipaddress.ip_address(parsed.hostname)
-        networks = [ipaddress.ip_network(cidr, strict=False) for cidr in allowed_cidrs]
     except ValueError as exc:
         raise ValueError("internal URL must contain a literal IP address") from exc
+    try:
+        networks = [ipaddress.ip_network(cidr, strict=False) for cidr in allowed_cidrs]
+    except ValueError as exc:
+        raise ValueError("allowed network CIDR is invalid") from exc
     if not any(
         address.version == network.version and address in network
         for network in networks

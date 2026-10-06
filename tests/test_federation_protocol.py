@@ -105,3 +105,10 @@ def test_internal_urls_must_be_literal_addresses_in_allowed_networks():
     ):
         with pytest.raises(ValueError):
             validate_internal_url(value, allowed)
+
+
+def test_internal_url_reports_invalid_allowed_network_separately():
+    with pytest.raises(ValueError, match="allowed network CIDR is invalid"):
+        validate_internal_url(
+            "http://10.0.0.4:8765", ["10.0.0.0/not-a-prefix"],
+        )

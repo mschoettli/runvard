@@ -2,6 +2,7 @@ import json
 import os
 
 import pytest
+from modules.federation import crypto
 
 from modules.federation.crypto import (
     canonical_json,
@@ -28,6 +29,17 @@ def test_canonical_json_is_order_independent():
 
     assert left == right
     assert json.loads(left) == {"a": {"x": "ok", "z": 1}, "b": 2}
+
+
+def test_public_key_fingerprint_is_stable_and_human_checkable(tmp_path):
+    identity = create_or_load_identity(tmp_path)
+    assert hasattr(crypto, "public_key_fingerprint")
+
+    fingerprint = crypto.public_key_fingerprint(identity.public_key)
+
+    assert fingerprint.startswith("SHA256:")
+    assert "=" not in fingerprint
+    assert fingerprint == crypto.public_key_fingerprint(identity.public_key)
 
 
 def test_signed_payload_rejects_tampering(tmp_path):

@@ -15,8 +15,8 @@ import requests
 
 from .client import PeerClient
 from .crypto import (
-    create_or_load_identity, node_id_from_public_key, sign_payload,
-    verify_payload,
+    create_or_load_identity, node_id_from_public_key, public_key_fingerprint,
+    sign_payload, verify_payload,
 )
 from .membership import apply_event, create_event
 from .pairing import PairingCodes
@@ -33,6 +33,24 @@ STATUS_PATH = "/api/federation/v1/peer/status"
 REDEEM_PATH = "/api/federation/v1/peer/sso/redeem"
 PAIR_PATH = "/api/federation/v1/peer/pair"
 MAX_NODES = 20
+
+
+def _peer_rejection(response, action):
+    if response.status_code < 400:
+        return
+    detail = ""
+    try:
+        payload = response.json()
+        if isinstance(payload, dict):
+            detail = str(
+                payload.get("detail") or payload.get("error")
+                or payload.get("message") or ""
+            ).strip()
+    except (TypeError, ValueError):
+        detail = ""
+    if not detail:
+        detail = f"HTTP {response.status_code}"
+    raise ValueError(f"{action}: {detail}")
 
 
 def validate_browser_url(value):
@@ -147,21 +165,42 @@ class FederationManager:
             self._save()
             return code
 
-    def pairing_payload(self, code, name, internal_url, browser_url):
+    def pairing_payload(
+        self, code, name, internal_url, browser_url,
+        expected_responder_fingerprint,
+    ):
         identity = self._ensure_identity()
         node = self._metadata(name, internal_url, browser_url)
-        proof = {"code": code, "node": node}
+        proof = {
+            "code": code,
+            "expected_responder_fingerprint": expected_responder_fingerprint,
+            "node": node,
+        }
         return {**proof, "proof": sign_payload(identity, proof)}
 
     def accept_pair(self, payload, remote):
         with self.lock:
             self._require_enabled()
             node = copy.deepcopy(payload.get("node") or {})
-            proof_payload = {"code": payload.get("code"), "node": node}
+            expected_fingerprint = str(
+                payload.get("expected_responder_fingerprint") or ""
+            ).strip()
+            proof_payload = {
+                "code": payload.get("code"),
+                "expected_responder_fingerprint": expected_fingerprint,
+                "node": node,
+            }
             verify_payload(
                 str(node.get("public_key") or ""), proof_payload,
                 str(payload.get("proof") or ""),
             )
+            actual_fingerprint = public_key_fingerprint(
+                self.identity.public_key,
+            )
+            if not expected_fingerprint or not secrets.compare_digest(
+                expected_fingerprint, actual_fingerprint,
+            ):
+                raise ValueError("existing server fingerprint does not match")
             if len([n for n in self.state["nodes"].values() if not n.get("revoked")]) >= MAX_NODES:
                 raise ValueError("federation node limit reached")
             if node.get("node_id") != node_id_from_public_key(
@@ -194,7 +233,7 @@ class FederationManager:
 
     def join(
         self, peer_url, code, name, internal_url, browser_url,
-        allowed_cidrs=None,
+        allowed_cidrs=None, peer_fingerprint=None,
     ):
         with self.lock:
             if self.state.get("enabled") and self.state.get("federation_id"):
@@ -208,8 +247,12 @@ class FederationManager:
                 internal_url, self.state["settings"]["allowed_cidrs"],
             )
             browser_url = validate_browser_url(browser_url)
+            expected_fingerprint = str(peer_fingerprint or "").strip()
+            if not expected_fingerprint:
+                raise ValueError("existing server fingerprint is required")
             payload = self.pairing_payload(
                 code, name, internal_url, browser_url,
+                expected_fingerprint,
             )
         response = self.session.post(
             peer_url + PAIR_PATH, json=payload, timeout=(3, 10),
@@ -217,10 +260,14 @@ class FederationManager:
         )
         if 300 <= response.status_code < 400:
             raise ValueError("peer redirects are not allowed")
-        response.raise_for_status()
+        _peer_rejection(response, "existing server rejected pairing")
         result = response.json()
         signature = result.pop("signature", "")
-        verify_payload(result.get("responder_public_key", ""), result, signature)
+        responder_public_key = str(result.get("responder_public_key") or "")
+        actual_fingerprint = public_key_fingerprint(responder_public_key)
+        if not secrets.compare_digest(expected_fingerprint, actual_fingerprint):
+            raise ValueError("existing server fingerprint does not match")
+        verify_payload(responder_public_key, result, signature)
         with self.lock:
             self.state["enabled"] = True
             self.state["federation_id"] = result["federation_id"]
@@ -397,6 +444,7 @@ class FederationManager:
                 health = "online" if current else peer.get("health", "unknown")
                 rows.append({
                     **{k: v for k, v in node.items() if not k.startswith("_") and k != "public_key"},
+                    "fingerprint": public_key_fingerprint(node["public_key"]),
                     "current": current,
                     "health": health,
                     "last_contact": int(time.time()) if current else peer.get("last_success"),

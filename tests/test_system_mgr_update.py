@@ -73,6 +73,9 @@ def test_remote_release_git_fallback_uses_highest_stable_tag(monkeypatch):
 def test_start_runvard_update_uses_systemd(monkeypatch, tmp_path):
     log_path = tmp_path / "runvard-update.log"
     monkeypatch.setattr(system_mgr, "RUNVARD_UPDATE_LOG", str(log_path))
+    monkeypatch.setattr(
+        system_mgr, "RUNVARD_UPDATE_STATUS", str(tmp_path / "runvard-update.status.json")
+    )
 
     def fake_run(cmd, **kwargs):
         assert cmd[0] == "systemd-run"
@@ -101,6 +104,9 @@ def test_start_runvard_update_uses_systemd(monkeypatch, tmp_path):
 def test_start_runvard_update_falls_back_to_detached_process(monkeypatch, tmp_path):
     log_path = tmp_path / "runvard-update.log"
     monkeypatch.setattr(system_mgr, "RUNVARD_UPDATE_LOG", str(log_path))
+    monkeypatch.setattr(
+        system_mgr, "RUNVARD_UPDATE_STATUS", str(tmp_path / "runvard-update.status.json")
+    )
     popen_calls = []
 
     def fake_run(cmd, **kwargs):
@@ -121,6 +127,30 @@ def test_start_runvard_update_falls_back_to_detached_process(monkeypatch, tmp_pa
     assert popen_calls
     assert popen_calls[0][0][0] == "/bin/bash"
     assert popen_calls[0][1]["start_new_session"] is True
+
+
+def test_start_runvard_update_replaces_stale_failure_before_launch(monkeypatch, tmp_path):
+    log_path = tmp_path / "runvard-update.log"
+    status_path = tmp_path / "runvard-update.status.json"
+    status_path.write_text(
+        '{"status":"failed","updated_at":"2026-08-14T10:00:00+02:00","exit_code":23}',
+        encoding="utf-8",
+    )
+    monkeypatch.setattr(system_mgr, "RUNVARD_UPDATE_LOG", str(log_path))
+    monkeypatch.setattr(system_mgr, "RUNVARD_UPDATE_STATUS", str(status_path))
+    observed_statuses = []
+
+    def fake_start(_script_path):
+        observed_statuses.append(system_mgr.runvard_update_status()["status"])
+        return {"stdout": "started\n", "method": "systemd", "unit": "test-unit"}
+
+    monkeypatch.setattr(system_mgr, "_start_systemd_update_script", fake_start)
+
+    result = system_mgr.start_runvard_update()
+
+    assert result["ok"] is True
+    assert observed_statuses == ["running"]
+    assert system_mgr.runvard_update_status()["status"] == "running"
 
 
 def test_runvard_update_status_reads_durable_state(monkeypatch, tmp_path):

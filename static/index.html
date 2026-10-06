@@ -8251,12 +8251,12 @@ const FED_I18N={
   pt:{connectedServers:'Servidores ligados',network:'Rede',showMore:'Mostrar mais',showLess:'Mostrar menos',connectServer:'Ligar servidor',openNewTab:'Abrir num novo separador',servers:'Servidores',externalServer:'Servidor externo',serverType:'Tipo de servidor',testConnection:'Testar ligação',setup:'Ligar instâncias runvard',setupCopy:'Crie aqui um grupo de servidores ou adira a um servidor existente.',create:'Criar grupo de servidores',join:'Aderir ao grupo',refresh:'Atualizar',pair:'Código de emparelhamento',settings:'Definições',current:'Este servidor',open:'Abrir',revoke:'Revogar',online:'Online',degraded:'Degradado',offline:'Offline',incompatible:'Incompatível',unknown:'A aguardar',last:'Último contacto',updates:'Atualizações',alerts:'Alertas',version:'Versão',expires:'Válido por 10 minutos · utilização única'},
 };
 const FED_FORM_I18N={
-  en:{displayName:'Display name',internalUrl:'Internal URL',browserUrl:'Browser URL',allowedNetworks:'Allowed private networks',existingInternalUrl:'Existing server internal URL',internalUrlHint:'Literal LAN/VPN IP and port, e.g. http://10.0.0.12:8080',browserUrlHint:'The URL users open; reverse-proxy hostnames are supported.',copy:'Copy',copied:'Copied',disk:'Disk'},
-  de:{displayName:'Anzeigename',internalUrl:'Interne URL',browserUrl:'Browser-URL',allowedNetworks:'Erlaubte private Netze',existingInternalUrl:'Interne URL des vorhandenen Servers',internalUrlHint:'Direkte LAN-/VPN-IP und Port, z. B. http://10.0.0.12:8080',browserUrlHint:'Die URL, die Benutzer öffnen; Reverse-Proxy-Hostnamen werden unterstützt.',copy:'Kopieren',copied:'Kopiert',disk:'Datenträger'},
-  fr:{displayName:'Nom affiché',internalUrl:'URL interne',browserUrl:'URL du navigateur',allowedNetworks:'Réseaux privés autorisés',existingInternalUrl:'URL interne du serveur existant',internalUrlHint:'Adresse IP LAN/VPN directe et port, p. ex. http://10.0.0.12:8080',browserUrlHint:'L’URL ouverte par les utilisateurs ; les noms d’hôte du proxy inverse sont pris en charge.',copy:'Copier',copied:'Copié',disk:'Disque'},
-  it:{displayName:'Nome visualizzato',internalUrl:'URL interno',browserUrl:'URL del browser',allowedNetworks:'Reti private consentite',existingInternalUrl:'URL interno del server esistente',internalUrlHint:'Indirizzo IP LAN/VPN diretto e porta, ad es. http://10.0.0.12:8080',browserUrlHint:'L’URL aperto dagli utenti; sono supportati i nomi host del reverse proxy.',copy:'Copia',copied:'Copiato',disk:'Disco'},
-  es:{displayName:'Nombre visible',internalUrl:'URL interna',browserUrl:'URL del navegador',allowedNetworks:'Redes privadas permitidas',existingInternalUrl:'URL interna del servidor existente',internalUrlHint:'IP LAN/VPN directa y puerto, p. ej., http://10.0.0.12:8080',browserUrlHint:'La URL que abren los usuarios; se admiten nombres de host de proxy inverso.',copy:'Copiar',copied:'Copiado',disk:'Disco'},
-  pt:{displayName:'Nome apresentado',internalUrl:'URL interno',browserUrl:'URL do navegador',allowedNetworks:'Redes privadas permitidas',existingInternalUrl:'URL interno do servidor existente',internalUrlHint:'IP LAN/VPN direto e porta, por ex., http://10.0.0.12:8080',browserUrlHint:'O URL aberto pelos utilizadores; são suportados nomes de anfitrião de proxy inverso.',copy:'Copiar',copied:'Copiado',disk:'Disco'},
+  en:{displayName:'Display name',internalUrl:'Internal URL',browserUrl:'Browser URL',allowedNetworks:'Allowed private networks',existingInternalUrl:'Existing server internal URL',existingFingerprint:'Existing server fingerprint',fingerprint:'Fingerprint',internalUrlHint:'Literal LAN/VPN IP and explicit port, e.g. http://10.0.0.12:8080.',browserUrlHint:'Browser-facing HTTP(S) origin only, without a path; reverse-proxy hostnames are supported.',allowedNetworksHint:'Comma-separated CIDRs. They must include this server and every peer it must reach.',fingerprintHint:'Copy the SHA256 fingerprint shown with the pairing code on the existing server.',copy:'Copy',copied:'Copied',disk:'Disk'},
+  de:{displayName:'Anzeigename',internalUrl:'Interne URL',browserUrl:'Browser-URL',allowedNetworks:'Erlaubte private Netze',existingInternalUrl:'Interne URL des vorhandenen Servers',existingFingerprint:'Fingerprint des vorhandenen Servers',fingerprint:'Fingerprint',internalUrlHint:'Direkte LAN-/VPN-IP mit explizitem Port, z. B. http://10.0.0.12:8080.',browserUrlHint:'Nur der HTTP(S)-Ursprung für den Browser, ohne Pfad; Reverse-Proxy-Hostnamen werden unterstützt.',allowedNetworksHint:'Kommagetrennte CIDRs. Sie müssen diesen Server und alle erreichbaren Peers einschließen.',fingerprintHint:'Den SHA256-Fingerprint übernehmen, der mit dem Pairing-Code auf dem vorhandenen Server angezeigt wird.',copy:'Kopieren',copied:'Kopiert',disk:'Datenträger'},
+  fr:{displayName:'Nom affiché',internalUrl:'URL interne',browserUrl:'URL du navigateur',allowedNetworks:'Réseaux privés autorisés',existingInternalUrl:'URL interne du serveur existant',existingFingerprint:'Empreinte du serveur existant',fingerprint:'Empreinte',internalUrlHint:'Adresse IP LAN/VPN directe avec port explicite, p. ex. http://10.0.0.12:8080.',browserUrlHint:'Origine HTTP(S) du navigateur uniquement, sans chemin ; les noms du proxy inverse sont acceptés.',allowedNetworksHint:'CIDR séparés par des virgules. Ils doivent inclure ce serveur et tous les pairs à joindre.',fingerprintHint:'Copiez l’empreinte SHA256 affichée avec le code de jumelage sur le serveur existant.',copy:'Copier',copied:'Copié',disk:'Disque'},
+  it:{displayName:'Nome visualizzato',internalUrl:'URL interno',browserUrl:'URL del browser',allowedNetworks:'Reti private consentite',existingInternalUrl:'URL interno del server esistente',existingFingerprint:'Impronta del server esistente',fingerprint:'Impronta',internalUrlHint:'IP LAN/VPN diretto con porta esplicita, ad es. http://10.0.0.12:8080.',browserUrlHint:'Solo origine HTTP(S) per il browser, senza percorso; sono supportati i nomi del reverse proxy.',allowedNetworksHint:'CIDR separati da virgole. Devono includere questo server e ogni peer da raggiungere.',fingerprintHint:'Copia l’impronta SHA256 mostrata con il codice di abbinamento sul server esistente.',copy:'Copia',copied:'Copiato',disk:'Disco'},
+  es:{displayName:'Nombre visible',internalUrl:'URL interna',browserUrl:'URL del navegador',allowedNetworks:'Redes privadas permitidas',existingInternalUrl:'URL interna del servidor existente',existingFingerprint:'Huella del servidor existente',fingerprint:'Huella',internalUrlHint:'IP LAN/VPN directa con puerto explícito, p. ej. http://10.0.0.12:8080.',browserUrlHint:'Solo el origen HTTP(S) del navegador, sin ruta; se admiten nombres de proxy inverso.',allowedNetworksHint:'CIDR separados por comas. Deben incluir este servidor y todos los pares que deba alcanzar.',fingerprintHint:'Copia la huella SHA256 mostrada con el código de emparejamiento en el servidor existente.',copy:'Copiar',copied:'Copiado',disk:'Disco'},
+  pt:{displayName:'Nome apresentado',internalUrl:'URL interno',browserUrl:'URL do navegador',allowedNetworks:'Redes privadas permitidas',existingInternalUrl:'URL interno do servidor existente',existingFingerprint:'Impressão do servidor existente',fingerprint:'Impressão',internalUrlHint:'IP LAN/VPN direto com porta explícita, por ex. http://10.0.0.12:8080.',browserUrlHint:'Apenas a origem HTTP(S) do navegador, sem caminho; são aceites nomes de proxy inverso.',allowedNetworksHint:'CIDR separados por vírgulas. Devem incluir este servidor e todos os pares a alcançar.',fingerprintHint:'Copie a impressão SHA256 mostrada com o código de emparelhamento no servidor existente.',copy:'Copiar',copied:'Copiado',disk:'Disco'},
 };
 const EXTERNAL_SERVER_I18N={
   en:{
@@ -9038,12 +9038,19 @@ async function renderTab(id,tab){const body=$('#modal-body');body.style.padding=
 // ═══ Federation / Servers ═══
 let _fedOverview=null;
 function fedDefaultName(){return ($('#hostname')?.textContent||'runvard').trim()||'runvard';}
+function fedInternalUrlDefault(){
+  const host=String(location.hostname||'').replace(/^\[|\]$/g,'');
+  const ipv4=/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host);
+  const ipv6=host.includes(':');
+  if(!ipv4&&!ipv6)return'';
+  return location.origin;
+}
 function fedSetupFields(){
   return [
     {name:'name',label:fedText('displayName'),value:fedDefaultName()},
-    {name:'internal_url',label:fedText('internalUrl'),value:location.origin,hint:fedText('internalUrlHint')},
+    {name:'internal_url',label:fedText('internalUrl'),value:fedInternalUrlDefault(),hint:fedText('internalUrlHint')},
     {name:'browser_url',label:fedText('browserUrl'),value:location.origin,hint:fedText('browserUrlHint')},
-    {name:'allowed_cidrs',label:fedText('allowedNetworks'),value:'10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,fd00::/8'},
+    {name:'allowed_cidrs',label:fedText('allowedNetworks'),value:'10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,fd00::/8',hint:fedText('allowedNetworksHint')},
   ];
 }
 async function renderServers(body){
@@ -9238,7 +9245,8 @@ function fedNodeHtml(node,admin){
   const metric=(value,label)=>`<div class="fed-metric"><b>${esc(String(value??'—'))}</b><span>${esc(label)}</span></div>`;
   return `<article class="fed-node">
     <div class="fed-node-main"><div class="fed-node-name"><span class="fed-health ${esc(health)}"></span>${esc(node.name||node.hostname||node.node_id)} ${node.current?`<span class="status-pill run">${esc(fedText('current'))}</span>`:''}</div>
-      <div class="fed-node-meta">${esc(status)} · ${esc(fedText('last'))}: ${esc(last)} · ${esc(node.browser_url||'')}</div></div>
+      <div class="fed-node-meta">${esc(status)} · ${esc(fedText('last'))}: ${esc(last)} · ${esc(node.browser_url||'')}</div>
+      ${node.fingerprint?`<div class="fed-node-meta">${esc(fedText('fingerprint'))}: <code>${esc(node.fingerprint)}</code></div>`:''}</div>
     <div class="fed-metrics">
       ${metric((s.cpu_percent??'—')+(s.cpu_percent==null?'':'%'),'CPU')}
       ${metric((s.ram_percent??'—')+(s.ram_percent==null?'':'%'),'RAM')}
@@ -9259,8 +9267,9 @@ window.fedEnableForm=()=>openForm(fedText('create'),'⬡',fedSetupFields(),async
 });
 window.fedJoinForm=()=>{
   const fields=[
-    {name:'peer_url',label:fedText('existingInternalUrl'),placeholder:'http://10.0.0.11:8080'},
-    {name:'code',label:'Pairing code'},
+    {name:'peer_url',label:fedText('existingInternalUrl'),placeholder:'http://10.0.0.11:8080',hint:fedText('internalUrlHint')},
+    {name:'code',label:fedText('pair')},
+    {name:'peer_fingerprint',label:fedText('existingFingerprint'),placeholder:'SHA256:…',hint:fedText('fingerprintHint')},
     ...fedSetupFields(),
   ];
   openForm(fedText('join'),'⇄',fields,async d=>{
@@ -9273,7 +9282,7 @@ window.fedSettingsForm=()=>{
     {name:'name',label:fedText('displayName'),value:s.name||''},
     {name:'internal_url',label:fedText('internalUrl'),value:s.internal_url||''},
     {name:'browser_url',label:fedText('browserUrl'),value:s.browser_url||''},
-    {name:'allowed_cidrs',label:fedText('allowedNetworks'),value:(s.allowed_cidrs||[]).join(',')},
+    {name:'allowed_cidrs',label:fedText('allowedNetworks'),value:(s.allowed_cidrs||[]).join(','),hint:fedText('allowedNetworksHint')},
   ],async d=>{try{await post('/federation/v1/admin/settings',d);closeForm();toast(tr('saved'));renderServers($('#modal-body'));}catch(e){toast(e.message,'error');}});
 };
 window.fedPairCode=async()=>{
@@ -9282,8 +9291,11 @@ window.fedPairCode=async()=>{
     $('#form-head').innerHTML=`<span>⇄</span> ${esc(fedText('pair'))}`;
     $('#form-body').innerHTML=`<div class="form-field"><label>${esc(fedText('expires'))}</label>
       <input id="fed-pair-value" readonly value="${esc(r.code)}" style="font-family:'JetBrains Mono',monospace"></div>
+      <div class="form-field"><label>${esc(fedText('fingerprint'))}</label>
+      <input id="fed-fingerprint-value" readonly value="${esc(r.fingerprint)}" style="font-family:'JetBrains Mono',monospace"></div>
       <div class="form-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('close'))}</button>
-      <button class="btn" onclick="navigator.clipboard.writeText($('#fed-pair-value').value);toast(fedText('copied'))">${esc(fedText('copy'))}</button></div>`;
+      <button class="btn ghost" onclick="navigator.clipboard.writeText($('#fed-fingerprint-value').value);toast(fedText('copied'))">${esc(fedText('copy'))} · ${esc(fedText('fingerprint'))}</button>
+      <button class="btn" onclick="navigator.clipboard.writeText($('#fed-pair-value').value);toast(fedText('copied'))">${esc(fedText('copy'))} · ${esc(fedText('pair'))}</button></div>`;
     $('#form-overlay').classList.add('open');
   }catch(e){toast(e.message,'error');}
 };
@@ -12902,6 +12914,10 @@ function runvardUpdateProgress(log){
   if(/runvard update started/i.test(log))return 14;
   return 8;
 }
+function runvardUpdateHasFinished(state,log,baselineLog){
+  const hasNewLog=!!log&&log!==baselineLog;
+  return state.status==='succeeded'||(hasNewLog&&/runvard update finished/i.test(log));
+}
 function pollRunvardUpdateLog(until,baselineLog=''){
   const out=$('#runvard-upd-status');
   const btn=$('#runvard-upd-go');
@@ -12913,7 +12929,8 @@ function pollRunvardUpdateLog(until,baselineLog=''){
       ]);
       const log=r.log||'';
       const hasNewLog=!!log&&log!==baselineLog;
-      const hasStarted=state.status==='running'||(hasNewLog&&/runvard update started|Downloading latest|Latest commit|Running installer/i.test(log));
+      const currentLog=hasNewLog?log:'';
+      const hasStarted=state.status==='running'||/runvard update started|Downloading latest|Latest commit|Running installer/i.test(currentLog);
       if(state.status==='failed'){
         const detail=summarizeRunvardUpdateLog(log)||`Update process exited with code ${state.exit_code??'?'}.`;
         toast('runvard update failed: '+detail,'error');
@@ -12928,17 +12945,17 @@ function pollRunvardUpdateLog(until,baselineLog=''){
           'Update running',
           hasStarted?'Installing latest runvard release.':'Waiting for update job output.',
           summary||uiText('runvard update is still running.'),
-          hasStarted?runvardUpdateProgress(log):8
+          hasNewLog?runvardUpdateProgress(currentLog):8
         );
       }
-      if(state.status==='succeeded'||(hasStarted&&/runvard update finished/i.test(log))){
+      if(runvardUpdateHasFinished(state,log,baselineLog)){
         toast('runvard update completed');
         if(out){
           out.innerHTML=runvardUpdateTerminalHtml(
             'done',
             'Ready to reload',
             'Update finished. Reload now to use the new version.',
-            summarizeRunvardUpdateLog(log)||'runvard update finished.',
+            summarizeRunvardUpdateLog(currentLog)||'runvard update finished.',
             100
           );
         }

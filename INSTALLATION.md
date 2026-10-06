@@ -83,8 +83,9 @@ runvard can run behind Nginx Proxy Manager, OpenResty, Nginx, Caddy, or another 
 Keep runvard itself on plain HTTP unless you have a specific reason to terminate TLS in the app.
 Terminate TLS at the proxy and prevent direct untrusted access to the upstream port.
 Runvard does not trust `Forwarded` or `X-Forwarded-*` headers for client identity.
-Session cookies remain `HttpOnly` and `SameSite=Strict`; HTTPS requests receive the
-`Secure` cookie flag.
+Session cookies remain `HttpOnly`; ordinary login cookies use `SameSite=Strict`
+and the intentional cross-site federation handoff uses `SameSite=Lax`. HTTPS
+requests receive the `Secure` cookie flag.
 Set `RUNVARD_TRUSTED_PROXIES` to a comma-separated list of the proxy IP addresses or
 CIDR networks only when the upstream is reachable exclusively through those trusted
 proxies. Only then is `X-Forwarded-Proto: https` used for the cookie security flag;
@@ -143,6 +144,13 @@ location / {
     proxy_set_header Connection "upgrade";
 }
 ```
+
+For a browser-facing federation URL, the proxy must pass
+`/api/federation/v1/sso/accept` so the signed handoff can finish. Peer traffic
+uses each node's separate literal-IP internal URL; keep
+`/api/federation/v1/peer/*` off public proxy routes when the proxy supports
+path restrictions. Browser URLs must be origins without a path, query, or
+fragment.
 
 ## Uninstall
 

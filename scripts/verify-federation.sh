@@ -16,7 +16,10 @@ RUNVARD_FEDERATION_NO_WORKER=1 "$PYTEST" -q \
   tests/test_federation_status.py \
   tests/test_federation_sso.py \
   tests/test_federation_api.py \
-  tests/test_federation_mesh.py
+  tests/test_federation_mesh.py \
+  tests/test_federation_join_errors.py \
+  tests/test_connected_servers_dashboard.py \
+  tests/test_server_connection_guide.py
 
 node -e '
 const fs = require("fs");

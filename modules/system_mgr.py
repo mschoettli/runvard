@@ -90,6 +90,25 @@ def _start_systemd_update_script(script_path):
     return {"stdout": result.stdout, "method": "systemd", "unit": unit_name}
 
 
+def _write_runvard_update_status(status, exit_code=None):
+    """Atomically replace the durable updater state before returning to the UI."""
+    status_dir = os.path.dirname(RUNVARD_UPDATE_STATUS)
+    os.makedirs(status_dir, exist_ok=True)
+    payload = {
+        "status": status,
+        "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "exit_code": exit_code,
+    }
+    with tempfile.NamedTemporaryFile(
+        "w", delete=False, encoding="utf-8", dir=status_dir,
+        prefix="runvard-update-status-", suffix=".tmp",
+    ) as tmp:
+        json.dump(payload, tmp, separators=(",", ":"))
+        tmp.write("\n")
+        status_tmp = tmp.name
+    os.replace(status_tmp, RUNVARD_UPDATE_STATUS)
+
+
 def start_runvard_update():
     """
     Start a detached runvard self-update.
@@ -142,6 +161,10 @@ echo "runvard update finished: $(date -Is)"
         tmp.write(script)
         script_path = tmp.name
     os.chmod(script_path, 0o700)
+    # systemd-run returns after queuing the unit, before the script necessarily
+    # gets CPU time. Replace any stale terminal state before the API responds so
+    # the first UI poll cannot mistake a previous failure for this attempt.
+    _write_runvard_update_status("running")
     systemd_error = ""
     try:
         start_result = _start_systemd_update_script(script_path)
@@ -150,6 +173,7 @@ echo "runvard update finished: $(date -Is)"
         try:
             start_result = _start_detached_update_script(script_path)
         except Exception as fallback_error:
+            _write_runvard_update_status("failed")
             raise RuntimeError(
                 f"systemd-run failed: {systemd_error}; {fallback_error}"
             ) from fallback_error

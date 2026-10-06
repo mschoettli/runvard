@@ -30,6 +30,7 @@ from modules import security_tokens, auth_config, workspace_app
 from modules.external_servers import ExternalServerManager
 from modules.external_servers.service import error_category
 from modules.federation import FederationManager
+from modules.federation.crypto import public_key_fingerprint
 from modules.federation.service import REDEEM_PATH, STATUS_PATH, SYNC_PATH
 
 app = FastAPI(title="runvard", docs_url=None, redoc_url=None)
@@ -2472,7 +2473,12 @@ def federation_settings(
 @app.post("/api/federation/v1/admin/pairing-code")
 def federation_pairing_code(user: str = Depends(require_admin)):
     try:
-        return {"code": FEDERATION.issue_pairing_code(), "expires_in": 600}
+        code = FEDERATION.issue_pairing_code()
+        return {
+            "code": code,
+            "expires_in": 600,
+            "fingerprint": public_key_fingerprint(FEDERATION.identity.public_key),
+        }
     except ValueError as exc:
         raise HTTPException(400, str(exc))
 
@@ -2480,6 +2486,7 @@ def federation_pairing_code(user: str = Depends(require_admin)):
 @app.post("/api/federation/v1/admin/join")
 def federation_join(
     peer_url: str = Form(...), code: str = Form(...),
+    peer_fingerprint: str = Form(...),
     name: str = Form(...), internal_url: str = Form(...),
     browser_url: str = Form(...), allowed_cidrs: str = Form(""),
     user: str = Depends(confirmed_admin),
@@ -2488,6 +2495,7 @@ def federation_join(
         result = FEDERATION.join(
             peer_url, code, name, internal_url, browser_url,
             _federation_cidrs(allowed_cidrs) or None,
+            peer_fingerprint=peer_fingerprint,
         )
         if os.environ.get("RUNVARD_FEDERATION_NO_WORKER") != "1":
             FEDERATION.start()
@@ -2614,7 +2622,7 @@ def federation_sso_accept(request: Request, ticket: str = Form(...)):
         make_token(
             claim["username"], SESSION_TTL, claim["role"], claim["expert"],
         ),
-        max_age=SESSION_TTL, httponly=True, samesite="strict",
+        max_age=SESSION_TTL, httponly=True, samesite="lax",
         secure=_is_https(request), path="/",
     )
     response.headers["Cache-Control"] = "no-store"
