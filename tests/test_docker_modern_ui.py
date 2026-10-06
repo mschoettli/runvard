@@ -82,7 +82,7 @@ def test_modern_docker_renderer_is_isolated_from_original_theme():
     html = INDEX_HTML.read_text()
     css = MODERN_CSS.read_text()
 
-    assert '<script src="/static/docker-modern.js"></script>' in html
+    assert '<script src="/static/docker-modern.js?v=20261005-dashboard"></script>' in html
     assert "if(isModernUi())return renderDockerModern(body,tab);" in html
     assert "async function renderDockerModern(body,tab)" in html
     assert 'class="modern-docker-app-card"' in html
@@ -114,3 +114,43 @@ def test_modern_docker_mobile_summary_stays_compact():
     assert "grid-template-columns: repeat(3, minmax(0, 1fr));" in css
     assert 'class="nx-summary-grid modern-docker-tool-summary"' in html
     assert 'html[data-ui-theme="modern"] .modern-docker-tool-summary {' in css
+
+
+def test_modern_docker_dashboard_tile_uses_catalog_apps_and_generic_containers():
+    tiles = run_modern_docker_helper(
+        "["
+        "RunvardDockerModern.dashboardTile("
+        "{key:'compose:paperless',kind:'compose',name:'paperless'},"
+        "{id:'paperless',name:'Paperless',icon:'/paperless.svg',installed:true},"
+        "8000),"
+        "RunvardDockerModern.dashboardTile("
+        "{key:'container:caddy',kind:'container',name:'caddy'},null,8080)"
+        "]"
+    )
+
+    assert tiles == [
+        {
+            "tile_type": "app",
+            "tile_id": "paperless",
+            "name": "Paperless",
+            "icon": "/paperless.svg",
+            "port": 8000,
+        },
+        {
+            "tile_type": "docker",
+            "tile_id": "container:caddy",
+            "name": "caddy",
+            "icon": "🐳",
+            "port": 8080,
+        },
+    ]
+
+
+def test_modern_docker_app_menu_can_save_group_to_dashboard():
+    html = INDEX_HTML.read_text()
+
+    assert "window.dockerModernAddToDashboard=async key=>" in html
+    assert "dockerModernAddToDashboard(${keyArg})" in html
+    assert "window.dockerContainerAddToDashboard=async(" in html
+    assert "dockerContainerAddToDashboard(${groupKeyArg}" in html
+    assert "uiText('Show on dashboard')" in html

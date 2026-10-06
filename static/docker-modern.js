@@ -61,8 +61,20 @@
     return totals;
   }
 
+  function dashboardTile(group, catalogApp, port) {
+    const app = catalogApp && catalogApp.installed ? catalogApp : null;
+    return {
+      tile_type: app ? (app.type === "compose" ? "compose" : "app") : "docker",
+      tile_id: String(app?.id || group?.key || ""),
+      name: String(app?.name || group?.name || "Docker"),
+      icon: String(app?.icon || "🐳"),
+      port: Number(port) || 0,
+    };
+  }
+
   global.RunvardDockerModern = {
     aggregateStats,
+    dashboardTile,
     groupContainers,
     groupState,
   };

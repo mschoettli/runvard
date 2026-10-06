@@ -132,3 +132,43 @@ def test_get_dashboard_adds_custom_health_and_keeps_app_status(monkeypatch, tmp_
     assert custom["health"]["state"] == "run"
     assert app["running"] is True
     assert app["installed"] is True
+
+
+def test_get_dashboard_adds_live_state_to_docker_tiles(monkeypatch, tmp_path):
+    dash_file = tmp_path / "dashboard.json"
+    dash_file.write_text(json.dumps({
+        "tiles": [
+            {
+                "id": "container:caddy",
+                "type": "docker",
+                "name": "caddy",
+                "port": 8080,
+            },
+        ],
+    }))
+
+    monkeypatch.setattr(dashboard, "DASH_FILE", str(dash_file))
+    monkeypatch.setattr(dashboard.docker_mgr, "list_containers", lambda: [
+        {
+            "id": "abc123",
+            "name": "caddy",
+            "state": "running",
+            "app_group": {
+                "id": "container:caddy",
+                "type": "container",
+            },
+        },
+    ])
+
+    result = dashboard.get_dashboard()
+
+    assert result["tiles"] == [
+        {
+            "id": "container:caddy",
+            "type": "docker",
+            "name": "caddy",
+            "port": 8080,
+            "running": True,
+            "installed": True,
+        },
+    ]
