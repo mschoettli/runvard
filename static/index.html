@@ -8121,7 +8121,7 @@ function resetSearch(){searchEnabled=false;$('#modal-search').classList.remove('
 
 // ═══ Clock & Sys-Info ═══
 setInterval(updateClock,1000);
-api('/system/info').then(i=>{$('#hostname').textContent=i.hostname;setTopbarUser(i.user||'admin');});
+api('/system/info').then(i=>{$('#hostname').textContent=i.hostname;setRunvardComputerName(i.hostname);setTopbarUser(i.user||'admin');});
 
 // ── Benutzer-Menü: Status und Abmelden ──
 function setTopbarUser(name){
@@ -8886,8 +8886,14 @@ setInterval(loadConnectedServers,10000);
 let _systemUpdateBadgeNext=0,_systemUpdateBadgeHasUpdates=false;
 let _appsUpdateBadgeHasUpdates=false;
 const RUNVARD_DOCUMENT_TITLE='runvard';
+let runvardComputerName='';
+function setRunvardComputerName(name){
+  runvardComputerName=String(name||'').trim();
+  updateDocumentTitle();
+}
 function updateDocumentTitle(){
-  document.title=_systemUpdateBadgeHasUpdates?`${uiText('Update available')} · ${RUNVARD_DOCUMENT_TITLE}`:RUNVARD_DOCUMENT_TITLE;
+  const title=runvardComputerName?`${runvardComputerName} · ${RUNVARD_DOCUMENT_TITLE}`:RUNVARD_DOCUMENT_TITLE;
+  document.title=_systemUpdateBadgeHasUpdates?`${uiText('Update available')} · ${title}`:title;
 }
 function applySystemUpdateBadge(){
   const el=$('#badge-system');
