@@ -85,6 +85,7 @@ def test_workspace_install_discards_browser_compose_and_preserves_secrets(
         "run",
         lambda *args, **kwargs: SimpleNamespace(returncode=0, stdout="", stderr=""),
     )
+    monkeypatch.setattr(apps.os, "chown", lambda path, uid, gid: None)
     monkeypatch.setattr(apps, "_running", lambda app_id: True)
     monkeypatch.setattr(apps.time, "sleep", lambda seconds: None)
 
