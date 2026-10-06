@@ -20,7 +20,7 @@ try{const theme=localStorage.getItem('runvard_ui_theme');document.documentElemen
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
-<script src="/static/docker-modern.js"></script>
+<script src="/static/docker-modern.js?v=20261005-dashboard"></script>
 <style>
 :root{--bg:#0a0b14;--bg2:rgba(13,14,26,.85);--bg3:rgba(17,18,33,.65);--glass:rgba(255,255,255,.04);--glass-hover:rgba(122,74,255,.08);--border:rgba(255,255,255,.08);--border-accent:rgba(122,74,255,.3);--text:#f0f0ff;--text2:rgba(240,240,255,.55);--text3:rgba(240,240,255,.28);--accent:#7a4aff;--accent-light:#9d7aff;--green:#22c55e;--yellow:#eab308;--red:#ef4444;--radius:12px;--blur:blur(16px)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -11008,6 +11008,13 @@ function dockerServiceCard(container){
   const composeProject=container.app_group?.type==='compose'?container.app_group.project:'';
   const composeService=container.app_group?.service||'';
   const composeId=composeProject?esc(JSON.stringify('compose:'+composeProject)):'';
+  const groupKey=container.app_group?.id||`container:${container.name}`;
+  const groupName=composeProject||container.name;
+  const groupKind=composeProject?'compose':'container';
+  const groupKeyArg=esc(JSON.stringify(groupKey));
+  const groupNameArg=esc(JSON.stringify(groupName));
+  const groupKindArg=esc(JSON.stringify(groupKind));
+  const groupProjectArg=esc(JSON.stringify(composeProject));
   const ports=(container.ports||[]).slice(0,3);
   const webPort=dockerPublishedWebPort(ports);
   const context=composeProject?`Compose · ${composeProject}${composeService?' / '+composeService:''}`:'Container';
@@ -11029,6 +11036,7 @@ function dockerServiceCard(container){
     running?`<button onclick="dockerAct('${container.id}','stop')">${esc(uiText('Stop'))}</button>`:'',
     webPort&&running?`<button onclick="dockerStats('${container.id}','${esc(container.name)}')">${esc(uiText('Stats'))}</button>`:'',
     composeProject?`<button onclick="dashCompose(${composeId})">${esc(uiText('Edit'))}</button>`:'',
+    `<button onclick="dockerContainerAddToDashboard(${groupKeyArg},${groupNameArg},${groupKindArg},${groupProjectArg},${webPort||0})">${esc(uiText('Show on dashboard'))}</button>`,
     `<button class="danger" onclick="dockerDel('${container.id}','${esc(container.name)}')">${esc(uiText('Delete'))}</button>`,
   ].join('');
   return `<article class="docker-service-card" data-state="${esc(String(container.state||''))}">
@@ -11058,6 +11066,24 @@ function dockerServiceCard(container){
 window.dockerOpenPort=port=>{
   const value=Number(port);
   if(Number.isInteger(value)&&value>0&&value<=65535)window.open(`http://${location.hostname}:${value}`,'_blank','noopener,noreferrer');
+};
+async function dockerSaveGroupToDashboard(group,catalogApp,port){
+  const tile=RunvardDockerModern.dashboardTile(group,catalogApp,port);
+  const dashboard=await api('/dashboard');
+  if((dashboard.tiles||[]).some(item=>item.id===tile.tile_id)){
+    toast(uiText('Already on dashboard'));
+    return;
+  }
+  await post('/dashboard/add',tile);
+  loadDashboard();
+  toast(uiText('Added to dashboard'));
+}
+window.dockerContainerAddToDashboard=async(key,name,kind,project,port)=>{
+  try{
+    const group={key,name,kind,project};
+    const catalog=await api('/apps/catalog').catch(()=>({apps:[]}));
+    await dockerSaveGroupToDashboard(group,dockerModernCatalogEntry(group,catalog.apps||[]),port);
+  }catch(e){toast('Error: '+e.message,'error');}
 };
 async function renderDocker(body,tab){
  const av=await api('/docker/available');if(!av.available){body.innerHTML='<div class="empty-state">🐳 Docker unavailable</div>';return;}
@@ -13825,6 +13851,9 @@ async function loadDashboard(){
     renderDashboard();
   }catch(e){}
 }
+function dashIsServiceTile(t){
+  return ['app','compose','docker'].includes(t?.type);
+}
 
 function renderDashboard(){
   const grid=$('#dash-grid');
@@ -13834,7 +13863,7 @@ function renderDashboard(){
   if(!dashTiles.length){grid.innerHTML='';return;}
   grid.innerHTML=dashTiles.map(t=>{
     const status=dashTileStatus(t);
-    const url=(t.type==='app'||t.type==='compose')?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');
+    const url=dashIsServiceTile(t)?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');
     const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
     return `<div class="dash-tile" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')">
       <div class="dash-tile-body${t.show_url?' has-url':''}">
@@ -13862,7 +13891,7 @@ window.dashClick=(e,id)=>{
   const t=dashTiles.find(x=>x.id===id);
   if(!t)return;
   if(t.type==='custom'&&t.url){window.open(t.url,'_blank');return;}
-  if((t.type==='app'||t.type==='compose')&&t.port){window.open(dashTileUrl(t),'_blank');}
+  if(dashIsServiceTile(t)&&t.port){window.open(dashTileUrl(t),'_blank');}
 };
 
 function dashComposeProject(t){
@@ -13885,7 +13914,7 @@ function dashTileUrl(t){
 function dashTileStatus(t){
   const pending=dashPendingActions.get(t?.id);
   if(pending)return {cls:'pending',title:appPendingLabel(pending)};
-  if(t?.type==='app'||t?.type==='compose'){
+  if(dashIsServiceTile(t)){
     return t.running?{cls:'run',title:uiText('Running')}:{cls:'stop',title:uiText('Stopped')};
   }
   if(t?.type==='custom'){
@@ -13909,7 +13938,7 @@ window.dashCtx=(e,id)=>{
   const old=document.querySelector('.dash-ctx');
   if(old)old.remove();
   const isCompose=t.type==='compose';
-  const canRun=t.type==='app'||isCompose;
+  const canRun=dashIsServiceTile(t);
   const pending=dashPendingActions.get(id);
   const menu=document.createElement('div');
   menu.className='dash-ctx';
@@ -13938,13 +13967,14 @@ window.dashOpen=id=>{
   const t=dashTiles.find(x=>x.id===id);
   if(!t)return;
   if(t.type==='custom'&&t.url)window.open(t.url,'_blank');
-  else if((t.type==='app'||t.type==='compose')&&t.port)window.open(dashTileUrl(t),'_blank');
+  else if(dashIsServiceTile(t)&&t.port)window.open(dashTileUrl(t),'_blank');
   document.querySelector('.dash-ctx')?.remove();
 };
 window.dashAppAction=async(id,action)=>{
   document.querySelector('.dash-ctx')?.remove();
   const t=dashTiles.find(x=>x.id===id);
   const isCompose=t?.type==='compose';
+  const isDocker=t?.type==='docker';
   const msgs={start:'App started',stop:'App stopped',restart:'App restarted'};
   const pending={start:'Starting…',stop:'Stopping…',restart:'Restarting…'};
   toast(uiText(pending[action]||'…'));
@@ -13954,6 +13984,16 @@ window.dashAppAction=async(id,action)=>{
     if(isCompose){
       const composeAction={start:'up',stop:'stop',restart:'restart'}[action]||action;
       await post('/docker/compose/action',{name:dashComposeProject(t),action:composeAction});
+    }else if(isDocker){
+      const containers=await api('/docker/containers');
+      const matches=(containers||[]).filter(container=>{
+        const groupId=container.app_group?.id||`container:${container.name||''}`;
+        return groupId===id;
+      });
+      const targets=action==='start'?matches.filter(container=>container.state!=='running'):matches;
+      for(const container of targets){
+        requireOk(await post('/docker/action',{container_id:container.id,action}),'Docker action failed');
+      }
     }else{
       await post('/apps/action',{app_id:id,action});
     }
@@ -13978,7 +14018,7 @@ window.dashLogs=async id=>{
   }
   try{
     const c=await api('/docker/containers');
-    const match=(c||[]).find(x=>x.name===t.id||x.name===t.name||String(x.name||'').includes(t.id)||String(x.id||'')===t.id);
+    const match=(c||[]).find(x=>(x.app_group?.id||`container:${x.name||''}`)===t.id||x.name===t.id||x.name===t.name||String(x.name||'').includes(t.id)||String(x.id||'')===t.id);
     if(match)await dockerLogs(match.id,match.name);
     else{await renderDocker(body,'Container');toast(uiText('Container logs are available in Docker'), 'error');}
   }catch(e){toast('Error: '+e.message,'error');}
@@ -14171,7 +14211,7 @@ window.dashEditTile=id=>{
   document.querySelector('.dash-ctx')?.remove();
   const t=dashTiles.find(x=>x.id===id);
   if(!t)return;
-  const isService=t.type==='app'||t.type==='compose';
+  const isService=dashIsServiceTile(t);
   const address=isService?dashTileAddress(t):String(t.url||'').replace(/^https?:\/\//,'');
   const accent=t.accent||DASH_DEFAULT_ACCENT;
   const previewStatus=dashTileStatus(t);
@@ -14671,6 +14711,13 @@ function dockerModernGroupWebPort(group){
   }
   return null;
 }
+function dockerModernGroupPublishedPort(group){
+  for(const container of group.containers){
+    const port=dockerPublishedWebPort(container.ports||[]);
+    if(port)return port;
+  }
+  return null;
+}
 function dockerModernServiceRow(container){
   const pending=dockerPendingActions.get(container.id);
   const state=dockerStatePresentation(container.state,pending);
@@ -14694,6 +14741,7 @@ function dockerModernServiceRow(container){
 }
 function dockerModernAppCard(group,catalog,index){
   const app=dockerModernCatalogEntry(group,catalog);
+  group.catalogApp=app;
   const state=dockerModernStatePresentation(group);
   const keyArg=esc(JSON.stringify(group.key));
   const webPort=dockerModernGroupWebPort(group);
@@ -14713,6 +14761,7 @@ function dockerModernAppCard(group,catalog,index){
     state.key!=='stopped'?`<button onclick="dockerModernAppAct(${keyArg},'restart')">${esc(uiText('Restart'))}</button>`:'',
     state.key!=='stopped'?`<button onclick="dockerModernAppAct(${keyArg},'stop')">${esc(uiText('Stop'))}</button>`:'',
     group.kind==='compose'?`<button onclick="composeEdit(${esc(JSON.stringify(group.project))})">${esc(uiText('Edit'))}</button>`:'',
+    `<button onclick="dockerModernAddToDashboard(${keyArg})">${esc(uiText('Show on dashboard'))}</button>`,
     group.kind==='container'?`<button class="danger" onclick="dockerDel(${esc(JSON.stringify(first.id))},${esc(JSON.stringify(first.name))})">${esc(uiText('Delete'))}</button>`:'',
   ].join('');
   return `<article class="modern-docker-app-card" data-docker-app-key="${esc(group.key)}" data-state="${esc(state.key)}">
@@ -14738,6 +14787,12 @@ function updateDockerModernAppStats(body,stats){
   });
 }
 window.dockerModernOpenDetails=id=>{const details=document.getElementById(id);if(!details)return;details.open=true;details.querySelector('summary')?.focus();};
+window.dockerModernAddToDashboard=async key=>{
+  const group=_modernDockerGroups.get(key);if(!group)return;
+  try{
+    await dockerSaveGroupToDashboard(group,group.catalogApp,dockerModernGroupPublishedPort(group));
+  }catch(e){toast('Error: '+e.message,'error');}
+};
 window.dockerModernAppAct=async(key,action)=>{
   const group=_modernDockerGroups.get(key);if(!group)return;
   const targets=action==='start'?group.containers.filter(container=>container.state!=='running'):group.containers;
@@ -15746,7 +15801,7 @@ function renderDashboard(){
   section.style.display='block';
   if(!dashTiles.length){grid.innerHTML=`<div class="nx-view-intro" style="grid-column:1/-1"><div><h3>Ready for apps</h3><p>Install apps or add custom shortcuts.</p></div><button class="btn" onclick="openTileById('apps')">Open apps</button></div>`;return;}
   grid.innerHTML=dashTiles.map(t=>{
-    const isService=t.type==='app'||t.type==='compose';const status=dashTileStatus(t);const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=dashTileIconHtml(t.icon,t.name);const accent=t.accent||'#7a4aff';
+    const isService=dashIsServiceTile(t);const status=dashTileStatus(t);const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=dashTileIconHtml(t.icon,t.name);const accent=t.accent||'#7a4aff';
     return `<div class="dash-tile" style="--tile-accent:${esc(accent)}" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')"><div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${status.cls}" title="${esc(status.title)}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div>${t.note?`<div class="dash-tile-note">${esc(t.note)}</div>`:''}</div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
   }).join('');
   if(typeof Sortable!=='undefined'){Sortable.create(grid,{animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:()=>{const order=[...grid.querySelectorAll('.dash-tile')].map(el=>el.dataset.id);post('/dashboard/order',{order:JSON.stringify(order)});}});}

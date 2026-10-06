@@ -12,6 +12,7 @@ from urllib.parse import urlparse
 
 import requests
 
+from modules import docker_mgr
 from modules.compose_utils import best_web_port_from_compose
 
 DATA_DIR = os.getenv("RUNVARD_DATA_DIR", "/opt/runvard/data")
@@ -183,6 +184,12 @@ def get_dashboard():
     """Gibt alle Dashboard-Kacheln mit Live-Status zurück."""
     data = _load()
     tiles = []
+    docker_containers = None
+    if any(t.get("type") == "docker" for t in data.get("tiles", [])):
+        try:
+            docker_containers = docker_mgr.list_containers()
+        except Exception:
+            docker_containers = None
     for t in data.get("tiles", []):
         tile = dict(t)
         if tile.get("type") == "app":
@@ -204,6 +211,23 @@ def get_dashboard():
             if not tile["installed"]:
                 continue
             tile["port"] = _compose_port_from_path(path)
+        elif tile.get("type") == "docker":
+            if docker_containers is None:
+                tile["running"] = False
+                tile["installed"] = True
+            else:
+                matches = [
+                    container for container in docker_containers
+                    if str((container.get("app_group") or {}).get("id") or
+                           f"container:{container.get('name', '')}") == tile.get("id")
+                ]
+                tile["running"] = any(
+                    str(container.get("state", "")).lower() == "running"
+                    for container in matches
+                )
+                tile["installed"] = bool(matches)
+                if not tile["installed"]:
+                    continue
         tiles.append(tile)
     _attach_custom_health(tiles)
     return {"tiles": tiles}
