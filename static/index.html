@@ -13911,10 +13911,7 @@ function renderDashboard(){
 
 window.dashClick=(e,id)=>{
   if(e.target.closest('.dash-dots'))return;
-  const t=dashTiles.find(x=>x.id===id);
-  if(!t)return;
-  if(t.type==='custom'&&t.url){window.open(t.url,'_blank');return;}
-  if(dashIsServiceTile(t)&&t.port){window.open(dashTileUrl(t),'_blank');}
+  dashOpen(id);
 };
 
 function dashComposeProject(t){
@@ -13991,6 +13988,7 @@ window.dashOpen=id=>{
   if(!t)return;
   if(t.type==='custom'&&t.url)window.open(t.url,'_blank');
   else if(dashIsServiceTile(t)&&t.port)window.open(dashTileUrl(t),'_blank');
+  else if(dashIsServiceTile(t))dashLogs(id);
   document.querySelector('.dash-ctx')?.remove();
 };
 window.dashAppAction=async(id,action)=>{

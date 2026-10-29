@@ -13,7 +13,7 @@ from urllib.parse import urlparse
 import requests
 
 from modules import docker_mgr
-from modules.compose_utils import best_web_port_from_compose
+from modules.compose_utils import NON_WEB_PORTS, WEB_TARGET_PORTS, best_web_port_from_compose
 
 DATA_DIR = os.getenv("RUNVARD_DATA_DIR", "/opt/runvard/data")
 DASH_FILE = os.path.join(DATA_DIR, "dashboard.json")
@@ -180,6 +180,28 @@ def _attach_custom_health(tiles):
                 }
 
 
+def _docker_web_port(containers):
+    """Resolve a published TCP web port, excluding database and internal ports."""
+    candidates = []
+    for container in containers:
+        for mapping in container.get("ports") or []:
+            binding, _, protocol = str(mapping).partition("/")
+            if protocol and protocol != "tcp":
+                continue
+            try:
+                published, target = map(int, binding.split(":"))
+            except (TypeError, ValueError):
+                continue
+            if not (0 < published <= 65535 and 0 < target <= 65535):
+                continue
+            if published in NON_WEB_PORTS or target in NON_WEB_PORTS:
+                continue
+            known_web = target in WEB_TARGET_PORTS or published in WEB_TARGET_PORTS
+            candidates.append((known_web, published))
+    candidates.sort(key=lambda candidate: candidate[0], reverse=True)
+    return candidates[0][1] if candidates else 0
+
+
 def get_dashboard():
     """Gibt alle Dashboard-Kacheln mit Live-Status zurück."""
     data = _load()
@@ -210,7 +232,7 @@ def get_dashboard():
                 os.path.join(path, "docker-compose.yml"))
             if not tile["installed"]:
                 continue
-            tile["port"] = _compose_port_from_path(path)
+            tile["port"] = _compose_port_from_path(path) or tile.get("port", 0)
         elif tile.get("type") == "docker":
             if docker_containers is None:
                 tile["running"] = False
@@ -228,6 +250,8 @@ def get_dashboard():
                 tile["installed"] = bool(matches)
                 if not tile["installed"]:
                     continue
+                if not tile.get("port"):
+                    tile["port"] = _docker_web_port(matches)
         tiles.append(tile)
     _attach_custom_health(tiles)
     return {"tiles": tiles}
