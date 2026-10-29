@@ -709,6 +709,8 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .dash-add-btn:hover{background:rgba(122,74,255,.25)}
 .dash-grid{display:grid;grid-template-columns:repeat(9,1fr);gap:10px}
 .dash-tile{--tile-accent:var(--accent);background:var(--bg3);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:var(--radius);overflow:visible;cursor:pointer;transition:all .15s;user-select:none;-webkit-user-select:none;position:relative}
+.dash-tile-link{position:absolute;inset:0;z-index:1;border-radius:inherit}
+.dash-tile-link:focus-visible{outline:2px solid var(--tile-accent);outline-offset:3px}
 .dash-tile:hover{border-color:color-mix(in srgb,var(--tile-accent) 48%,transparent);transform:translateY(-2px)}
 .dash-tile-body{padding:14px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;position:relative;min-height:88px}
 .dash-tile-body.has-url{padding-bottom:0}
@@ -717,7 +719,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .dash-status.stop{background:var(--red);box-shadow:0 0 6px rgba(239,68,68,.4)}
 .dash-status.pending{background:#93c5fd;box-shadow:0 0 6px rgba(96,165,250,.45)}
 .dash-status.ext{background:rgba(96,165,250,.6);box-shadow:0 0 6px rgba(96,165,250,.3)}
-.dash-tile .dash-dots{position:absolute;top:7px;left:7px;width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,.35);cursor:pointer;letter-spacing:-1px;transition:all .15s;opacity:0}
+.dash-tile .dash-dots{position:absolute;z-index:2;top:7px;left:7px;width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,.35);cursor:pointer;letter-spacing:-1px;transition:all .15s;opacity:0}
 .dash-tile:hover .dash-dots{opacity:1}
 .dash-dots:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.6)}
 .dash-tile-icon{width:34px;height:34px;border-radius:9px;background:color-mix(in srgb,var(--tile-accent) 16%,rgba(255,255,255,.05));border:.5px solid color-mix(in srgb,var(--tile-accent) 38%,var(--border));display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden}
@@ -13888,7 +13890,7 @@ function renderDashboard(){
     const status=dashTileStatus(t);
     const url=dashIsServiceTile(t)?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');
     const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
-    return `<div class="dash-tile" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')">
+    return `<div class="dash-tile" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')">${dashTileLinkHtml(t)}
       <div class="dash-tile-body${t.show_url?' has-url':''}">
         <div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div>
         <div class="dash-status ${status.cls}" title="${esc(status.title)}"></div>
@@ -13910,9 +13912,14 @@ function renderDashboard(){
 }
 
 window.dashClick=(e,id)=>{
-  if(e.target.closest('.dash-dots'))return;
+  if(e.target.closest('.dash-dots,.dash-tile-link'))return;
   dashOpen(id);
 };
+
+function dashTileLinkHtml(t){
+  const url=t.type==='custom'?t.url:dashIsServiceTile(t)&&t.port?dashTileUrl(t):'';
+  return url?`<a class="dash-tile-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(t.name||t.id)}" draggable="false"></a>`:'';
+}
 
 function dashComposeProject(t){
   return t?.project||String(t?.id||'').replace(/^compose:/,'');
@@ -15823,7 +15830,7 @@ function renderDashboard(){
   if(!dashTiles.length){grid.innerHTML=`<div class="nx-view-intro" style="grid-column:1/-1"><div><h3>Ready for apps</h3><p>Install apps or add custom shortcuts.</p></div><button class="btn" onclick="openTileById('apps')">Open apps</button></div>`;return;}
   grid.innerHTML=dashTiles.map(t=>{
     const isService=dashIsServiceTile(t);const status=dashTileStatus(t);const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=dashTileIconHtml(t.icon,t.name);const accent=t.accent||'#7a4aff';
-    return `<div class="dash-tile" style="--tile-accent:${esc(accent)}" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')"><div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${status.cls}" title="${esc(status.title)}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div>${t.note?`<div class="dash-tile-note">${esc(t.note)}</div>`:''}</div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
+    return `<div class="dash-tile" style="--tile-accent:${esc(accent)}" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')">${dashTileLinkHtml(t)}<div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${status.cls}" title="${esc(status.title)}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div>${t.note?`<div class="dash-tile-note">${esc(t.note)}</div>`:''}</div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
   }).join('');
   if(typeof Sortable!=='undefined'){Sortable.create(grid,{animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:()=>{const order=[...grid.querySelectorAll('.dash-tile')].map(el=>el.dataset.id);post('/dashboard/order',{order:JSON.stringify(order)});}});}
 }
