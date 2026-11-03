@@ -737,33 +737,41 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .dash-ctx-item.danger .dash-ctx-icon{color:#ff8a8a}
 .dash-ctx-item.danger:hover{background:rgba(239,68,68,.12);color:#ffb4b4}
 .dash-ctx-sep{height:.5px;background:rgba(255,255,255,.08);margin:5px 8px}
-.tile-edit-card{width:min(560px,95vw)}
-.tile-edit-preview-wrap{display:flex;justify-content:center;margin-bottom:18px;padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.035)}
-.tile-edit-preview{--tile-accent:var(--accent);width:150px;background:var(--bg3);border:1px solid color-mix(in srgb,var(--tile-accent) 38%,var(--border));border-radius:14px;overflow:hidden;text-align:center;box-shadow:0 10px 28px rgba(0,0,0,.28)}
-.tile-edit-preview-body{min-height:100px;padding:16px 10px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;position:relative}
-.tile-edit-preview-dot{position:absolute;top:9px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--green)}
-.tile-edit-preview-icon{width:38px;height:38px;border-radius:10px;background:color-mix(in srgb,var(--tile-accent) 16%,rgba(255,255,255,.05));border:.5px solid color-mix(in srgb,var(--tile-accent) 38%,var(--border));display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden}
-.tile-edit-preview-icon img{width:24px;height:24px;object-fit:contain}
-.tile-edit-preview-name{max-width:126px;color:var(--text);font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tile-edit-preview-note{max-width:126px;color:var(--text3);font-size:9px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tile-edit-preview-url{padding:5px 9px;border-top:.5px solid rgba(255,255,255,.06);background:rgba(0,0,0,.16);font:8px 'JetBrains Mono',monospace;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tile-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.tile-edit-grid .form-field{margin-bottom:0}
-.tile-edit-control{display:flex;align-items:center;gap:8px}
-.tile-edit-control input{min-width:0}
-.tile-edit-icon-btn{width:38px;height:38px;flex:0 0 38px;border:1px solid var(--border);border-radius:9px;background:rgba(255,255,255,.045);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;font:15px/1 inherit;transition:background .15s,border-color .15s,color .15s}
-.tile-edit-icon-btn:hover,.tile-edit-icon-btn:focus{background:var(--glass-hover);border-color:rgba(122,74,255,.34);color:var(--text);outline:none}
-.tile-edit-icon-btn.visible{display:flex}
-.tile-edit-upload-btn{display:none}
-.tile-edit-upload-btn.visible{display:flex}
-.tile-edit-wide{grid-column:1/-1}
-.tile-edit-options{display:grid;gap:10px;margin-top:16px}
-.tile-edit-option{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px;background:rgba(255,255,255,.035)}
-.tile-edit-option strong{display:block;font-size:12px;color:var(--text);margin-bottom:3px}
-.tile-edit-option span{display:block;font-size:11px;color:var(--text3);line-height:1.35}
-.tile-edit-option input{width:auto}
-.tile-edit-actions{display:flex;justify-content:space-between;gap:10px;margin-top:20px}
-.tile-edit-actions-main{display:flex;gap:10px}
+.tile-edit-card{width:min(760px,calc(100vw - 32px));display:flex;flex-direction:column;overflow:hidden}
+.tile-edit-card .form-body{padding:0;min-height:0;overflow:auto}
+.tile-edit-card .form-head{padding:16px 24px;justify-content:space-between;flex-shrink:0}
+.tile-edit-card .form-head button{min-width:40px;min-height:40px}
+.tile-edit-layout{display:grid;grid-template-columns:168px minmax(0,1fr);gap:24px;padding:24px}
+.tile-edit-preview-wrap{min-width:0}
+.tile-edit-preview-label{margin:0 0 12px;font-size:12px;font-weight:600;color:var(--text2)}
+.tile-edit-preview{width:100%;pointer-events:none}
+.tile-edit-preview [hidden]{display:none!important}
+.tile-edit-preview .dash-tile-name,.tile-edit-preview .dash-tile-note{max-width:100%}
+.tile-edit-preview-caption{font-size:11px;line-height:1.5;color:var(--text3);margin:12px 0 0}
+.tile-edit-fields{min-width:0;display:grid;gap:24px}
+.tile-edit-section{border:0;padding:0;margin:0;min-width:0}
+.tile-edit-section legend{padding:0;margin-bottom:16px;font-size:13px;font-weight:600;color:var(--text)}
+.tile-edit-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.tile-edit-grid .form-field{margin:0;min-width:0}
+.tile-edit-control{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tile-edit-control input{min-width:0;flex:1 1 140px}
+.tile-edit-control input[type=color]{flex:0 0 56px;width:56px;height:40px;padding:4px}
+.tile-edit-card .btn{min-height:40px;white-space:normal}
+.tile-edit-card input:not([type=checkbox]){min-height:40px}
+.tile-edit-card :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.tile-edit-upload-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.tile-edit-hint{font-size:11px;line-height:1.5;color:var(--text3);margin:6px 0 0}
+.tile-edit-status{font-size:12px;line-height:1.5;color:var(--text2);margin:0}
+.tile-edit-status:empty{display:none}
+.tile-edit-error{color:var(--red);font-size:12px;line-height:1.5;margin:12px 24px}
+.tile-edit-error:empty{display:none}
+.tile-edit-option{display:flex;align-items:flex-start;gap:12px;cursor:pointer}
+.tile-edit-option input{width:18px;height:18px;flex:0 0 18px;margin:2px 0 0;accent-color:var(--accent)}
+.tile-edit-option strong{display:block;font-size:12px;color:var(--text)}
+.tile-edit-option span span{display:block;font-size:11px;line-height:1.5;color:var(--text3);margin-top:4px}
+.tile-edit-actions{position:sticky;bottom:0;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding:16px 24px;background:var(--bg3);border-top:1px solid var(--border);z-index:1}
+@media(max-width:640px){.tile-edit-layout{grid-template-columns:minmax(0,1fr);gap:24px;padding:16px}.tile-edit-preview-wrap{display:grid;grid-template-columns:minmax(0,1fr) 132px;column-gap:16px;align-items:start}.tile-edit-preview-label{grid-column:1;grid-row:1}.tile-edit-preview{grid-column:2;grid-row:1/3}.tile-edit-preview-caption{grid-column:1;grid-row:2;margin:0}.tile-edit-card .form-head,.tile-edit-actions{padding:12px 16px}.tile-edit-error{margin:12px 16px}}
+@media(prefers-reduced-motion:reduce){.tile-edit-card{animation:none}}
 
 /* ── Connected servers on dashboard ── */
 .connected-servers{--connected-server-card-height:6.5rem;width:100%;max-width:1200px;margin:0 auto;padding:0 1rem 1.75rem}
@@ -856,7 +864,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .external-server-admin-meta{margin:.25rem 0 0 .8125rem;font-size:.6875rem;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .external-server-admin-actions{display:flex;gap:.375rem;align-items:center;flex-wrap:wrap}
 .external-server-empty{padding:1rem;border:1px dashed var(--border);border-radius:.75rem;color:var(--text3);font-size:.75rem;text-align:center}
-@media (max-width: 640px){.tile-edit-grid{grid-template-columns:1fr}.tile-edit-actions{flex-direction:column}.tile-edit-actions-main{justify-content:flex-end}}
+
 .sortable-ghost{opacity:.3}
 .sortable-chosen{transform:scale(1.05)}
 
@@ -8011,6 +8019,7 @@ function openForm(title,icon,fields,onSubmit){
   openFormOverlay('input:not([type="checkbox"]),select,textarea');
 }
 function closeForm(){
+  dashCancelTileEdit();
   resetFormCardClasses();
   $('#form-overlay').classList.remove('open');
   const returnFocus=formReturnFocus;
@@ -14107,11 +14116,231 @@ window.dashToggleUrl=async(id,show)=>{
   renderDashboard();
 };
 const DASH_DEFAULT_ACCENT='#7a4aff';
-let dashIconLookupTimer=null,dashIconLookupSeq=0;
-function dashTileIconHtml(icon,name){
+let dashIconLookupSeq=0,dashEditState=null;
+const TILE_EDIT_I18N={
+  "appearance": {
+    "de": "Darstellung",
+    "en": "Appearance",
+    "fr": "Apparence",
+    "it": "Aspetto",
+    "es": "Apariencia",
+    "pt": "Aparência"
+  },
+  "link": {
+    "de": "Link & Adresse",
+    "en": "Link & address",
+    "fr": "Lien et adresse",
+    "it": "Link e indirizzo",
+    "es": "Enlace y dirección",
+    "pt": "Ligação e endereço"
+  },
+  "preview": {
+    "de": "Vorschau",
+    "en": "Preview",
+    "fr": "Aperçu",
+    "it": "Anteprima",
+    "es": "Vista previa",
+    "pt": "Pré-visualização"
+  },
+  "previewHint": {
+    "de": "So erscheint deine Kachel im Dashboard.",
+    "en": "How your tile appears on the dashboard.",
+    "fr": "Voici votre tuile dans le tableau de bord.",
+    "it": "Ecco come appare il riquadro nella dashboard.",
+    "es": "Así se verá tu tarjeta en el panel.",
+    "pt": "Assim aparece o seu bloco no painel."
+  },
+  "findIcon": {
+    "de": "Icon suchen",
+    "en": "Find icon",
+    "fr": "Rechercher une icône",
+    "it": "Cerca icona",
+    "es": "Buscar icono",
+    "pt": "Procurar ícone"
+  },
+  "searchHint": {
+    "de": "App-Name, z. B. Plex",
+    "en": "App name, e.g. Plex",
+    "fr": "Nom de l’application, p. ex. Plex",
+    "it": "Nome dell’app, ad es. Plex",
+    "es": "Nombre de la app, p. ej. Plex",
+    "pt": "Nome da aplicação, p. ex. Plex"
+  },
+  "search": {
+    "de": "Suchen",
+    "en": "Search",
+    "fr": "Rechercher",
+    "it": "Cerca",
+    "es": "Buscar",
+    "pt": "Procurar"
+  },
+  "iconSource": {
+    "de": "Bildadresse oder Symbol",
+    "en": "Image URL or symbol",
+    "fr": "URL de l’image ou symbole",
+    "it": "URL immagine o simbolo",
+    "es": "URL de imagen o símbolo",
+    "pt": "URL da imagem ou símbolo"
+  },
+  "iconHint": {
+    "de": "Bildadresse einfügen, ein Symbol eingeben oder ein Bild hochladen.",
+    "en": "Paste an image URL, enter a symbol or upload an image.",
+    "fr": "Collez l’URL d’une image, saisissez un symbole ou importez une image.",
+    "it": "Incolla l’URL di un’immagine, inserisci un simbolo o carica un’immagine.",
+    "es": "Pega la URL de una imagen, introduce un símbolo o sube una imagen.",
+    "pt": "Cole o URL de uma imagem, introduza um símbolo ou carregue uma imagem."
+  },
+  "faviconHint": {
+    "de": "Bei Diensten wird zuerst das Favicon verwendet. Dieses Icon dient als Ersatz.",
+    "en": "Services use their favicon first. This icon is the fallback.",
+    "fr": "Les services utilisent d’abord leur favicon. Cette icône sert de remplacement.",
+    "it": "I servizi usano prima la favicon. Questa icona è usata in alternativa.",
+    "es": "Los servicios usan primero su favicon. Este icono es la alternativa.",
+    "pt": "Os serviços usam primeiro o favicon. Este ícone é a alternativa."
+  },
+  "upload": {
+    "de": "Bild hochladen",
+    "en": "Upload image",
+    "fr": "Importer une image",
+    "it": "Carica immagine",
+    "es": "Subir imagen",
+    "pt": "Carregar imagem"
+  },
+  "clear": {
+    "de": "Icon zurücksetzen",
+    "en": "Reset icon",
+    "fr": "Réinitialiser l’icône",
+    "it": "Reimposta icona",
+    "es": "Restablecer icono",
+    "pt": "Repor ícone"
+  },
+  "uploaded": {
+    "de": "Hochgeladenes Bild",
+    "en": "Uploaded image",
+    "fr": "Image importée",
+    "it": "Immagine caricata",
+    "es": "Imagen subida",
+    "pt": "Imagem carregada"
+  },
+  "searching": {
+    "de": "Icon wird gesucht …",
+    "en": "Searching for an icon…",
+    "fr": "Recherche d’une icône…",
+    "it": "Ricerca dell’icona…",
+    "es": "Buscando un icono…",
+    "pt": "A procurar um ícone…"
+  },
+  "found": {
+    "de": "Icon übernommen.",
+    "en": "Icon selected.",
+    "fr": "Icône sélectionnée.",
+    "it": "Icona selezionata.",
+    "es": "Icono seleccionado.",
+    "pt": "Ícone selecionado."
+  },
+  "notFound": {
+    "de": "Kein Icon gefunden. Lade ein Bild hoch oder füge eine Bildadresse ein.",
+    "en": "No icon found. Upload an image or paste an image URL.",
+    "fr": "Aucune icône trouvée. Importez une image ou collez son URL.",
+    "it": "Nessuna icona trovata. Carica un’immagine o incolla il suo URL.",
+    "es": "No se encontró ningún icono. Sube una imagen o pega su URL.",
+    "pt": "Nenhum ícone encontrado. Carregue uma imagem ou cole o respetivo URL."
+  },
+  "showAddress": {
+    "de": "Adresse anzeigen",
+    "en": "Show address",
+    "fr": "Afficher l’adresse",
+    "it": "Mostra indirizzo",
+    "es": "Mostrar dirección",
+    "pt": "Mostrar endereço"
+  },
+  "addressHint": {
+    "de": "Die Adresse erscheint unter der Kachel.",
+    "en": "The address appears below the tile.",
+    "fr": "L’adresse s’affiche sous la tuile.",
+    "it": "L’indirizzo appare sotto il riquadro.",
+    "es": "La dirección aparece debajo de la tarjeta.",
+    "pt": "O endereço aparece por baixo do bloco."
+  },
+  "nameRequired": {
+    "de": "Gib einen Anzeigenamen ein.",
+    "en": "Enter a display name.",
+    "fr": "Saisissez un nom d’affichage.",
+    "it": "Inserisci un nome visualizzato.",
+    "es": "Introduce un nombre para mostrar.",
+    "pt": "Introduza um nome a apresentar."
+  },
+  "urlRequired": {
+    "de": "Gib eine vollständige HTTP- oder HTTPS-Adresse ein.",
+    "en": "Enter a complete HTTP or HTTPS URL.",
+    "fr": "Saisissez une URL HTTP ou HTTPS complète.",
+    "it": "Inserisci un URL HTTP o HTTPS completo.",
+    "es": "Introduce una URL HTTP o HTTPS completa.",
+    "pt": "Introduza um URL HTTP ou HTTPS completo."
+  },
+  "imageError": {
+    "de": "Wähle eine Bilddatei mit höchstens 2 MB.",
+    "en": "Choose an image file up to 2 MB.",
+    "fr": "Choisissez une image de 2 Mo maximum.",
+    "it": "Scegli un’immagine di massimo 2 MB.",
+    "es": "Elige una imagen de hasta 2 MB.",
+    "pt": "Escolha uma imagem até 2 MB."
+  },
+  "saving": {
+    "de": "Wird gespeichert …",
+    "en": "Saving…",
+    "fr": "Enregistrement…",
+    "it": "Salvataggio…",
+    "es": "Guardando…",
+    "pt": "A guardar…"
+  },
+  "saveError": {
+    "de": "Speichern fehlgeschlagen. Deine Änderungen bleiben erhalten. Versuche es erneut.",
+    "en": "Could not save. Your changes are preserved. Try again.",
+    "fr": "Échec de l’enregistrement. Vos modifications sont conservées. Réessayez.",
+    "it": "Salvataggio non riuscito. Le modifiche sono conservate. Riprova.",
+    "es": "No se pudo guardar. Tus cambios se conservan. Inténtalo de nuevo.",
+    "pt": "Não foi possível guardar. As alterações foram preservadas. Tente novamente."
+  },
+  "copyError": {
+    "de": "Kopieren fehlgeschlagen. Markiere die Adresse und kopiere sie manuell.",
+    "en": "Could not copy. Select the address and copy it manually.",
+    "fr": "Échec de la copie. Sélectionnez l’adresse et copiez-la manuellement.",
+    "it": "Copia non riuscita. Seleziona l’indirizzo e copialo manualmente.",
+    "es": "No se pudo copiar. Selecciona la dirección y cópiala manualmente.",
+    "pt": "Não foi possível copiar. Selecione o endereço e copie-o manualmente."
+  },
+  "noteLimit": {
+    "de": "Höchstens 80 Zeichen",
+    "en": "Up to 80 characters",
+    "fr": "80 caractères maximum",
+    "it": "Massimo 80 caratteri",
+    "es": "Hasta 80 caracteres",
+    "pt": "Até 80 caracteres"
+  }
+};
+function tileEditText(key){return TILE_EDIT_I18N[key][currentLanguage()]||TILE_EDIT_I18N[key].en;}
+function dashCancelTileEdit(){dashIconLookupSeq++;dashEditState=null;}
+function dashTileFaviconUrl(t){
+  if(!dashIsServiceTile(t)||!t.port)return'';
+  try{
+    const url=new URL(dashTileUrl(t));
+    url.pathname='/favicon.ico';
+    url.search='';
+    url.hash='';
+    return url.href;
+  }catch(e){return'';}
+}
+function dashApplyTileIconFallback(img){
+  const parent=img?.parentElement;if(!parent)return;
+  parent.innerHTML=dashTileIconHtml(img.dataset.fallbackIcon||'',img.dataset.fallbackName||'?');
+}
+function dashTileIconHtml(icon,name,faviconUrl=''){
   const value=String(icon||'').trim();
+  const favicon=String(faviconUrl||'').trim();
+  if(favicon)return `<img src="${esc(favicon)}" loading="lazy" referrerpolicy="no-referrer" data-fallback-icon="${esc(value)}" data-fallback-name="${esc(name||'?')}" onerror="dashApplyTileIconFallback(this)">`;
   if(value&&value.length<=2)return esc(value);
-  if(value)return `<img src="${esc(value)}" onerror="this.parentElement.textContent='${esc((name||'?')[0])}'">`;
+  if(value)return `<img src="${esc(value)}" loading="lazy" referrerpolicy="no-referrer" data-fallback-name="${esc(name||'?')}" onerror="dashApplyTileIconFallback(this)">`;
   return esc((name||'?')[0]);
 }
 function dashSelfhstSlug(value){
@@ -14160,8 +14389,10 @@ function dashIconSearchTerms(...values){
 function dashProbeIcon(url){
   return new Promise(resolve=>{
     const img=new Image();
-    img.onload=()=>resolve(true);
-    img.onerror=()=>resolve(false);
+    const timer=setTimeout(()=>finish(false),3500);
+    function finish(ok){clearTimeout(timer);img.onload=null;img.onerror=null;resolve(ok);}
+    img.onload=()=>finish(true);
+    img.onerror=()=>finish(false);
     img.referrerPolicy='no-referrer';
     img.src=url;
   });
@@ -14175,137 +14406,183 @@ async function dashFindSelfhstIconForTerms(terms,seq){
   }
   return '';
 }
-function dashShowIconUpload(show){
-  const btn=$('#tile-edit-upload-btn');
-  if(!btn)return;
-  btn.classList.toggle('visible',!!show);
-  btn.setAttribute('aria-hidden',show?'false':'true');
-}
 async function dashFindSelfhstIcon(value,seq){
   return dashFindSelfhstIconForTerms(dashIconSearchTerms(value),seq);
 }
+function dashSetIconStatus(text=''){$('#tile-edit-icon-status').textContent=text;}
+function dashSetIconPending(pending){
+  if(!dashEditState)return;
+  dashEditState.iconPending=pending;
+  $('#tile-edit-save').disabled=pending||dashEditState.saving;
+}
 function dashHandleIconInput(){
-  const inp=$('#tile-edit-icon');if(!inp)return;
-  const value=inp.value.trim();
+  dashIconLookupSeq++;
+  if(dashEditState)dashEditState.uploadedIcon='';
+  dashSetIconPending(false);
+  $('#tile-edit-icon-search-go').disabled=false;
+  dashSetIconStatus();
   dashUpdateEditPreview();
-  clearTimeout(dashIconLookupTimer);
-  if(!value||value.length<=2||/^https?:\/\//i.test(value)||value.startsWith('data:image/')){
-    dashShowIconUpload(false);
-    return;
-  }
+}
+window.dashSearchTileIcon=async()=>{
+  const state=dashEditState;if(!state||state.saving)return;
+  const value=$('#tile-edit-icon-search').value.trim();
+  if(!value)return;
   const seq=++dashIconLookupSeq;
-  dashIconLookupTimer=setTimeout(async()=>{
+  $('#tile-edit-icon-search-go').disabled=true;
+  dashSetIconPending(true);
+  dashSetIconStatus(tileEditText('searching'));
+  try{
     const found=await dashFindSelfhstIcon(value,seq);
-    if(seq!==dashIconLookupSeq||found===null)return;
+    if(state!==dashEditState||seq!==dashIconLookupSeq)return;
     if(found){
-      inp.value=found;
-      dashShowIconUpload(false);
-      dashUpdateEditPreview();
-    }else{
-      dashShowIconUpload(true);
+      state.uploadedIcon='';
+      $('#tile-edit-icon').value=found;
       dashUpdateEditPreview();
     }
-  },320);
-}
+    dashSetIconStatus(tileEditText(found?'found':'notFound'));
+  }catch(e){
+    if(state===dashEditState&&seq===dashIconLookupSeq)dashSetIconStatus(tileEditText('notFound'));
+  }finally{
+    if(state===dashEditState&&seq===dashIconLookupSeq){$('#tile-edit-icon-search-go').disabled=false;dashSetIconPending(false);}
+  }
+};
 window.dashResetTileAccent=()=>{
-  const inp=$('#tile-edit-accent');if(!inp)return;
-  inp.value=DASH_DEFAULT_ACCENT;
+  $('#tile-edit-accent').value=DASH_DEFAULT_ACCENT;
   dashUpdateEditPreview();
 };
-window.dashUploadTileIcon=()=>{
-  $('#tile-edit-icon-file')?.click();
+window.dashUploadTileIcon=()=>$('#tile-edit-icon-file')?.click();
+window.dashClearTileIcon=()=>{
+  $('#tile-edit-icon').value='';
+  $('#tile-edit-icon-file').value='';
+  dashHandleIconInput();
 };
 window.dashReadTileIconFile=file=>{
-  if(!file||!file.type.startsWith('image/'))return;
+  const state=dashEditState;if(!file||!state||state.saving)return;
+  const seq=++dashIconLookupSeq;
+  $('#tile-edit-icon-search-go').disabled=false;
+  dashSetIconPending(false);
+  if(!file.type.startsWith('image/')||file.size>2*1024*1024){dashSetIconStatus(tileEditText('imageError'));return;}
+  dashSetIconPending(true);
+  dashSetIconStatus();
   const reader=new FileReader();
   reader.onload=()=>{
-    const inp=$('#tile-edit-icon');if(!inp)return;
-    inp.value=String(reader.result||'');
-    dashShowIconUpload(false);
+    if(state!==dashEditState||seq!==dashIconLookupSeq)return;
+    dashSetIconPending(false);
+    state.uploadedIcon=String(reader.result||'');
+    $('#tile-edit-icon').value='';
+    dashSetIconStatus(tileEditText('uploaded'));
     dashUpdateEditPreview();
   };
+  reader.onerror=()=>{if(state===dashEditState&&seq===dashIconLookupSeq){dashSetIconPending(false);dashSetIconStatus(tileEditText('imageError'));}};
   reader.readAsDataURL(file);
 };
+function dashEditedIcon(){return dashEditState?.uploadedIcon||$('#tile-edit-icon').value.trim();}
+function dashEditedAddress(){
+  const t=dashEditState?.tile;if(!t)return '';
+  return dashIsServiceTile(t)?dashTileAddress(t):$('#tile-edit-url').value.trim().replace(/^https?:\/\//i,'');
+}
 function dashUpdateEditPreview(){
-  const card=$('#tile-edit-preview');if(!card)return;
-  const name=$('#tile-edit-name')?.value||'Tile';
-  const icon=$('#tile-edit-icon')?.value||'';
-  const note=$('#tile-edit-note')?.value||'';
-  const accent=$('#tile-edit-accent')?.value||DASH_DEFAULT_ACCENT;
-  const showUrl=!!$('#tile-edit-show-url')?.checked;
-  const address=$('#tile-edit-address')?.dataset.address||'';
-  card.style.setProperty('--tile-accent',accent);
-  $('#tile-edit-preview-icon').innerHTML=dashTileIconHtml(icon,name);
+  const state=dashEditState,card=$('#tile-edit-preview');if(!state||!card)return;
+  const name=$('#tile-edit-name').value.trim()||state.tile.name;
+  const icon=dashEditedIcon(),note=$('#tile-edit-note').value;
+  const showUrl=$('#tile-edit-show-url').checked,address=dashEditedAddress();
+  card.style.setProperty('--tile-accent',$('#tile-edit-accent').value||DASH_DEFAULT_ACCENT);
+  $('#tile-edit-preview-icon').innerHTML=dashTileIconHtml(icon,name,dashTileFaviconUrl(state.tile));
   $('#tile-edit-preview-name').textContent=name;
-  const noteEl=$('#tile-edit-preview-note');
-  noteEl.textContent=note;
-  noteEl.style.display=note?'block':'none';
-  const urlEl=$('#tile-edit-preview-url');
-  urlEl.textContent=address;
-  urlEl.style.display=showUrl&&address?'block':'none';
+  $('#tile-edit-preview-name').title=name;
+  $('#tile-edit-preview-note').textContent=note;
+  $('#tile-edit-preview-note').title=note;
+  $('#tile-edit-preview-note').hidden=!note;
+  $('#tile-edit-preview-body').classList.toggle('has-url',showUrl);
+  $('#tile-edit-preview-url').textContent=address;
+  $('#tile-edit-preview-footer').hidden=!showUrl;
+  $('#tile-edit-address').value=address;
+  $('#tile-edit-copy').disabled=!address;
+  $('#tile-edit-note-count').textContent=note.length+'/80';
 }
 window.dashCopyTileAddress=async()=>{
-  const value=$('#tile-edit-address')?.dataset.address||'';
-  if(!value)return;
+  const value=dashEditedAddress();if(!value)return;
   try{await navigator.clipboard.writeText(value);toast(uiText('Copied'));}
-  catch(e){toast(value);}
+  catch(e){$('#tile-edit-error').textContent=tileEditText('copyError');$('#tile-edit-address').focus();$('#tile-edit-address').select();}
 };
 window.dashEditTile=id=>{
   document.querySelector('.dash-ctx')?.remove();
-  const t=dashTiles.find(x=>x.id===id);
-  if(!t)return;
-  const isService=dashIsServiceTile(t);
-  const address=isService?dashTileAddress(t):String(t.url||'').replace(/^https?:\/\//,'');
-  const accent=t.accent||DASH_DEFAULT_ACCENT;
-  const previewStatus=dashTileStatus(t);
-  const formCard=document.querySelector('#form-overlay .form-card');
-  if(formCard){formCard.classList.remove('compose-install-card');formCard.classList.add('tile-edit-card');}
-  $('#form-head').innerHTML=`<span>✎</span> ${esc(uiText('Edit tile'))}`;
-  $('#form-body').innerHTML=`
-    <div class="tile-edit-preview-wrap">
-      <div class="tile-edit-preview" id="tile-edit-preview" style="--tile-accent:${esc(accent)}">
-        <div class="tile-edit-preview-body">
-          <div class="tile-edit-preview-dot dash-status ${previewStatus.cls}" title="${esc(previewStatus.title)}" style="position:static"></div>
-          <div class="tile-edit-preview-icon" id="tile-edit-preview-icon">${dashTileIconHtml(t.icon,t.name)}</div>
-          <div class="tile-edit-preview-name" id="tile-edit-preview-name">${esc(t.name)}</div>
-          <div class="tile-edit-preview-note" id="tile-edit-preview-note" style="${t.note?'':'display:none'}">${esc(t.note||'')}</div>
+  const t=dashTiles.find(x=>x.id===id);if(!t)return;
+  dashCancelTileEdit();
+  const state=dashEditState={tile:t,saving:false,uploadedIcon:String(t.icon||'').startsWith('data:image/')?t.icon:''};
+  const isService=dashIsServiceTile(t),accent=t.accent||DASH_DEFAULT_ACCENT,status=dashTileStatus(t);
+  const address=isService?dashTileAddress(t):String(t.url||'').replace(/^https?:\/\//i,'');
+  const formCard=resetFormCardClasses();formCard?.classList.add('tile-edit-card');
+  const text=key=>esc(tileEditText(key));
+  $('#form-head').innerHTML=`<span>${esc(uiText('Edit tile'))}</span><button type="button" class="btn ghost" onclick="closeForm()" aria-label="${esc(uiText('Close'))}"><span aria-hidden="true">×</span></button>`;
+  $('#form-body').innerHTML=`<form id="tile-edit-form" novalidate>
+    <div class="tile-edit-layout">
+      <aside class="tile-edit-preview-wrap" aria-label="${text('preview')}">
+        <p class="tile-edit-preview-label">${text('preview')}</p>
+        <div class="dash-tile tile-edit-preview" id="tile-edit-preview" style="--tile-accent:${esc(accent)}">
+          <div class="dash-tile-body${t.show_url?' has-url':''}" id="tile-edit-preview-body">
+            <div class="dash-status ${status.cls}" title="${esc(status.title)}" role="img" aria-label="${esc(status.title)}"></div>
+            <div class="dash-tile-icon" id="tile-edit-preview-icon" aria-hidden="true">${dashTileIconHtml(t.icon,t.name,dashTileFaviconUrl(t))}</div>
+            <div class="dash-tile-name" id="tile-edit-preview-name">${esc(t.name)}</div>
+            <div class="dash-tile-note" id="tile-edit-preview-note" ${t.note?'':'hidden'}>${esc(t.note||'')}</div>
+          </div>
+          <div class="dash-tile-footer" id="tile-edit-preview-footer" ${t.show_url?'':'hidden'}><div class="dash-tile-url" id="tile-edit-preview-url">${esc(address)}</div></div>
         </div>
-        <div class="tile-edit-preview-url" id="tile-edit-preview-url" style="${t.show_url&&address?'':'display:none'}">${esc(address)}</div>
+        <p class="tile-edit-preview-caption">${text('previewHint')}</p>
+      </aside>
+      <div class="tile-edit-fields">
+        <fieldset class="tile-edit-section"><legend>${text('appearance')}</legend><div class="tile-edit-grid">
+          <div class="form-field"><label for="tile-edit-name">${esc(uiText('Display name'))}</label><input id="tile-edit-name" required value="${esc(t.name||'')}" aria-describedby="tile-edit-error"></div>
+          <div class="form-field"><label for="tile-edit-note">${esc(uiText('Note'))}</label><input id="tile-edit-note" maxlength="80" value="${esc(t.note||'')}" placeholder="${esc(uiText('Optional short note'))}" aria-describedby="tile-edit-note-hint"><p class="tile-edit-hint" id="tile-edit-note-hint">${text('noteLimit')} · <span id="tile-edit-note-count">${String(t.note||'').length}/80</span></p></div>
+          <div class="form-field"><label for="tile-edit-accent">${esc(uiText('Accent color'))}</label><div class="tile-edit-control"><input id="tile-edit-accent" type="color" value="${esc(accent)}"><button type="button" class="btn ghost" onclick="dashResetTileAccent()">${esc(uiText('Use default color'))}</button></div></div>
+          <div class="form-field"><label for="tile-edit-icon-search">${text('findIcon')}</label><div class="tile-edit-control"><input id="tile-edit-icon-search" placeholder="${text('searchHint')}" aria-describedby="tile-edit-icon-status"><button type="button" class="btn ghost" id="tile-edit-icon-search-go" onclick="dashSearchTileIcon()">${text('search')}</button></div></div>
+          <div class="form-field"><label for="tile-edit-icon">${text('iconSource')}</label><input id="tile-edit-icon" value="${esc(state.uploadedIcon?'':t.icon||'')}" aria-describedby="tile-edit-icon-hint"><p class="tile-edit-hint" id="tile-edit-icon-hint">${text('iconHint')}${isService?' '+text('faviconHint'):''}</p><div class="tile-edit-upload-actions"><button type="button" class="btn ghost" onclick="dashUploadTileIcon()">${text('upload')}</button><button type="button" class="btn ghost" onclick="dashClearTileIcon()">${text('clear')}</button></div><input id="tile-edit-icon-file" type="file" accept="image/*" hidden onchange="dashReadTileIconFile(this.files&&this.files[0])"></div>
+          <p class="tile-edit-status" id="tile-edit-icon-status" role="status">${state.uploadedIcon?text('uploaded'):''}</p>
+        </div></fieldset>
+        <fieldset class="tile-edit-section"><legend>${text('link')}</legend><div class="tile-edit-grid">
+          ${t.type==='custom'?`<div class="form-field"><label for="tile-edit-url">URL</label><input id="tile-edit-url" type="url" required value="${esc(t.url||'')}" placeholder="https://example.com" aria-describedby="tile-edit-error"></div>`:''}
+          <label class="tile-edit-option"><input id="tile-edit-show-url" type="checkbox" ${t.show_url?'checked':''}><span><strong>${text('showAddress')}</strong><span>${text('addressHint')}</span></span></label>
+          <div class="form-field"><label for="tile-edit-address">${esc(uiText('Visible address'))}</label><div class="tile-edit-control"><input id="tile-edit-address" class="mono" value="${esc(address)}" readonly><button type="button" class="btn ghost" id="tile-edit-copy" onclick="dashCopyTileAddress()" ${address?'':'disabled'}>${esc(uiText('Copy address'))}</button></div></div>
+        </div></fieldset>
       </div>
     </div>
-    <div class="tile-edit-grid">
-      <div class="form-field"><label>${esc(uiText('Display name'))}</label><input id="tile-edit-name" value="${esc(t.name||'')}" placeholder="${esc(uiText('Name'))}"></div>
-      <div class="form-field"><label>${esc(uiText('Icon'))}</label><div class="tile-edit-control"><input id="tile-edit-icon" value="${esc(t.icon||'')}" placeholder="home assistant, plex or https://..."><button type="button" class="tile-edit-icon-btn tile-edit-upload-btn" id="tile-edit-upload-btn" onclick="dashUploadTileIcon()" title="${esc(uiText('Upload icon'))}" aria-label="${esc(uiText('Upload icon'))}">⇧</button><input id="tile-edit-icon-file" type="file" accept="image/*" hidden onchange="dashReadTileIconFile(this.files&&this.files[0])"></div></div>
-      <div class="form-field"><label>${esc(uiText('Accent color'))}</label><div class="tile-edit-control"><input id="tile-edit-accent" type="color" value="${esc(accent)}" style="height:38px;padding:4px"><button type="button" class="tile-edit-icon-btn" onclick="dashResetTileAccent()" title="${esc(uiText('Use default color'))}" aria-label="${esc(uiText('Use default color'))}">↺</button></div></div>
-      <div class="form-field"><label>${esc(uiText('Visible address'))}</label><input id="tile-edit-address" data-address="${esc(address)}" value="${esc(address)}" readonly></div>
-      <div class="form-field tile-edit-wide"><label>${esc(uiText('Note'))}</label><input id="tile-edit-note" value="${esc(t.note||'')}" placeholder="${esc(uiText('Optional short note'))}"></div>
-      ${t.type==='custom'?`<div class="form-field tile-edit-wide"><label>URL</label><input id="tile-edit-url" value="${esc(t.url||'')}" placeholder="http://192.168.1.50:8123"></div>`:''}
-    </div>
-    <div class="tile-edit-options">
-      <label class="tile-edit-option"><span><strong>${esc(uiText('Show IP'))}</strong><span>${esc(uiText('Show the address under this dashboard tile.'))}</span></span><input id="tile-edit-show-url" type="checkbox" ${t.show_url?'checked':''}></label>
-    </div>
-    <div class="tile-edit-actions">
-      <button class="btn ghost" onclick="dashCopyTileAddress()">${esc(uiText('Copy address'))}</button>
-      <div class="tile-edit-actions-main"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="tile-edit-save">${esc(tr('save'))}</button></div>
-    </div>`;
-  ['tile-edit-name','tile-edit-note','tile-edit-accent','tile-edit-show-url'].forEach(sel=>$('#'+sel)?.addEventListener(sel==='tile-edit-show-url'?'change':'input',dashUpdateEditPreview));
-  $('#tile-edit-icon')?.addEventListener('input',dashHandleIconInput);
-  $('#tile-edit-save').onclick=async()=>{
-    const payload={
-      tile_id:id,
-      name:$('#tile-edit-name').value.trim()||t.name,
-      icon:$('#tile-edit-icon').value.trim(),
-      show_url:$('#tile-edit-show-url').checked,
-      accent:$('#tile-edit-accent').value,
-      note:$('#tile-edit-note').value.trim()
-    };
-    if(t.type==='custom')payload.url=$('#tile-edit-url').value.trim();
+    <p class="tile-edit-error" id="tile-edit-error" role="alert"></p>
+    <div class="tile-edit-actions"><button type="button" class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button type="submit" class="btn" id="tile-edit-save">${esc(tr('save'))}</button></div>
+  </form>`;
+  ['tile-edit-name','tile-edit-note','tile-edit-accent','tile-edit-show-url','tile-edit-url'].forEach(sel=>$('#'+sel)?.addEventListener(sel==='tile-edit-show-url'?'change':'input',dashUpdateEditPreview));
+  $('#tile-edit-icon').addEventListener('input',dashHandleIconInput);
+  $('#tile-edit-icon-search').addEventListener('input',()=>{dashIconLookupSeq++;$('#tile-edit-icon-search-go').disabled=false;dashSetIconPending(false);dashSetIconStatus();});
+  $('#tile-edit-icon-search').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();dashSearchTileIcon();}});
+  const save=async event=>{
+    event?.preventDefault();if(state.saving||state.iconPending||state!==dashEditState)return;
+    const error=$('#tile-edit-error'),name=$('#tile-edit-name'),url=$('#tile-edit-url');
+    error.textContent='';name.removeAttribute('aria-invalid');url?.removeAttribute('aria-invalid');
+    const fail=(input,key)=>{error.textContent=tileEditText(key);input.setAttribute('aria-invalid','true');input.focus();};
+    if(!name.value.trim()){fail(name,'nameRequired');return;}
+    if(t.type==='custom'){
+      try{const parsed=new URL(url.value.trim());if(!['http:','https:'].includes(parsed.protocol)||!parsed.hostname)throw new Error();}
+      catch(e){fail(url,'urlRequired');return;}
+    }
+    const payload={tile_id:id,name:name.value.trim(),icon:dashEditedIcon(),show_url:$('#tile-edit-show-url').checked,accent:$('#tile-edit-accent').value,note:$('#tile-edit-note').value.trim()};
+    if(t.type==='custom')payload.url=url.value.trim();
+    dashIconLookupSeq++;
+    state.saving=true;
+    const button=$('#tile-edit-save');button.disabled=true;button.textContent=tileEditText('saving');
+    const form=$('#tile-edit-form');form.setAttribute('aria-busy','true');
+    const controls=[...form.querySelectorAll('input,button')];controls.forEach(control=>control.disabled=true);
     try{
-      await post('/dashboard/update',payload);
-      closeForm();toast(uiText('Saved'));loadDashboard();
-    }catch(e){toast('Error: '+e.message,'error');}
+      const result=await post('/dashboard/update',payload);
+      if(result?.ok===false)throw new Error();
+      if(state===dashEditState){closeForm();toast(uiText('Saved'));loadDashboard();}
+    }catch(e){if(state===dashEditState)error.textContent=tileEditText('saveError');}
+    finally{
+      state.saving=false;
+      if(state===dashEditState){form.removeAttribute('aria-busy');controls.forEach(control=>control.disabled=false);button.disabled=false;button.textContent=tr('save');$('#tile-edit-copy').disabled=!dashEditedAddress();}
+    }
   };
-  $('#form-overlay').classList.add('open');
+  $('#tile-edit-form').onsubmit=save;
+  $('#tile-edit-save').onclick=save;
+  openFormOverlay('#tile-edit-name');
 };
 window.dashRemove=(id,name)=>{
   document.querySelector('.dash-ctx')?.remove();
@@ -15845,7 +16122,7 @@ function renderDashboard(){
   section.style.display='block';
   if(!dashTiles.length){dashApplyGrid(grid,`<div class="nx-view-intro" style="grid-column:1/-1"><div><h3>Ready for apps</h3><p>Install apps or add custom shortcuts.</p></div><button class="btn" onclick="openTileById('apps')">Open apps</button></div>`);return;}
   const html=dashTiles.map(t=>{
-    const isService=dashIsServiceTile(t);const status=dashTileStatus(t);const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=dashTileIconHtml(t.icon,t.name);const accent=t.accent||'#7a4aff';
+    const isService=dashIsServiceTile(t);const status=dashTileStatus(t);const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=dashTileIconHtml(t.icon,t.name,dashTileFaviconUrl(t));const accent=t.accent||'#7a4aff';
     return `<div class="dash-tile" style="--tile-accent:${esc(accent)}" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')">${dashTileLinkHtml(t)}<div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${status.cls}" title="${esc(status.title)}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div>${t.note?`<div class="dash-tile-note">${esc(t.note)}</div>`:''}</div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
   }).join('');
   dashApplyGrid(grid,html);

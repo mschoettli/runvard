@@ -179,10 +179,15 @@ for (const key of [
 
 for (const name of [
   "TOAST_PHRASES", "PROGRESS_PHRASES", "FILE_I18N", "APP_UI",
-  "APP_CATEGORY_LABELS", "APP_INSTALL_STEP_PHRASES", "PATH_PICKER_I18N",
+  "APP_CATEGORY_LABELS", "APP_INSTALL_STEP_PHRASES", "PATH_PICKER_I18N", "TILE_EDIT_I18N",
 ]) {
   requireLocalizedLeaves(name, evaluate(indexSource, name, context));
 }
+const tileEditorI18n = evaluate(indexSource, "TILE_EDIT_I18N", context);
+requireExpectedTranslations("TILE_EDIT_I18N.showAddress", tileEditorI18n.showAddress, {
+  de: "Adresse anzeigen", en: "Show address", fr: "Afficher l’adresse",
+  it: "Mostra indirizzo", es: "Mostrar dirección", pt: "Mostrar endereço",
+});
 const backupWizardI18n = evaluate(indexSource, "BACKUP_WIZARD_I18N", context);
 mergeLocales(backupWizardI18n, evaluate(indexSource, "BACKUP_WIZARD_I18N_COMPLETIONS", context));
 requireKeyParity("BACKUP_WIZARD_I18N", backupWizardI18n, "en", locales);

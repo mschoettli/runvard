@@ -23,7 +23,7 @@ const Sortable={create:()=>{created++;return {destroy:()=>destroyed++};}};
 let dashTiles=[{id:'web',name:'Web',type:'docker',port:8088}];
 const esc=s=>String(s??''),dashIsServiceTile=()=>true;
 const dashTileStatus=t=>({cls:'run',title:'Running'}),dashTileAddress=()=> 'server:8088';
-const dashTileIconHtml=()=>'',dashTileLinkHtml=()=>'<a href="http://server:8088">Web</a>';
+const dashTileFaviconUrl=()=>'',dashTileIconHtml=()=>'',dashTileLinkHtml=()=>'<a href="http://server:8088">Web</a>';
 const post=()=>Promise.resolve(),loadDashboard=()=>{};
 ''' + shared + '\n' + render + r'''
 renderDashboard();
