@@ -8146,6 +8146,13 @@ function toggleUserMenu(e){
 }
 document.addEventListener('click',e=>{if(!e.target.closest('.user-menu-wrap'))closeUserMenu();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#user-menu')?.classList.contains('open')){closeUserMenu();$('#topbar-user')?.focus();}});
+function closeDockerCardMenusAfterClick(target){
+  const clickedSummary=target instanceof Element?target.closest('.docker-card-menu > summary'):null;
+  document.querySelectorAll('.docker-card-menu[open]').forEach(menu=>{
+    if(menu!==clickedSummary?.parentElement)menu.removeAttribute('open');
+  });
+}
+document.addEventListener('click',e=>closeDockerCardMenusAfterClick(e.target));
 let currentAuthStatus={role:null,expert:false};
 async function loadAuthStatus(){
   try{
@@ -11099,6 +11106,7 @@ async function dockerSaveGroupToDashboard(group,catalogApp,port){
   toast(uiText('Added to dashboard'));
 }
 window.dockerContainerAddToDashboard=async(key,name,kind,project,port)=>{
+  closeDockerCardMenusAfterClick(null);
   try{
     const group={key,name,kind,project};
     const catalog=await api('/apps/catalog').catch(()=>({apps:[]}));
@@ -14822,6 +14830,7 @@ function updateDockerModernAppStats(body,stats){
 }
 window.dockerModernOpenDetails=id=>{const details=document.getElementById(id);if(!details)return;details.open=true;details.querySelector('summary')?.focus();};
 window.dockerModernAddToDashboard=async key=>{
+  closeDockerCardMenusAfterClick(null);
   const group=_modernDockerGroups.get(key);if(!group)return;
   try{
     await dockerSaveGroupToDashboard(group,group.catalogApp,dockerModernGroupPublishedPort(group));
