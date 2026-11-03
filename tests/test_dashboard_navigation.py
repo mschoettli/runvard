@@ -86,10 +86,12 @@ def test_dashboard_renders_native_links_without_javascript_popup_dependency():
 
     index = (Path(__file__).resolve().parents[1] / 'static/index.html').read_text()
     render = index[index.rindex('function renderDashboard(){'):].split('// ═══ Lösch-X')[0]
+    shared = index.split('let dashTiles=[];', 1)[1].split('async function loadDashboard()', 1)[0]
     helper = index.split('function dashTileLinkHtml(t){', 1)
     helper_body = helper[1].split('\n}', 1)[0] if len(helper) == 2 else 'return "";'
     script = f"""
-const grid={{innerHTML:''}},section={{style:{{}}}};
+const grid={{innerHTML:'',addEventListener:()=>{{}}}},section={{style:{{}}}};
+const document={{addEventListener:()=>{{}}}};
 const $=s=>s==='#dash-grid'?grid:section;
 const esc=s=>String(s??'').replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;');
 const dashTiles=[{{id:'web',name:'Web',type:'docker',port:8088}},{{id:'custom',name:'Custom',type:'custom',url:'https://example.test/?a=1&b=2'}},{{id:'no-port',name:'No port',type:'docker',port:0}}];
@@ -98,6 +100,7 @@ const dashTileUrl=t=>'http://server.test:'+t.port;
 const dashTileStatus=t=>({{cls:'run',title:'Running'}}),dashTileAddress=t=>'server.test:'+t.port;
 const dashTileIconHtml=()=>'',dashTileFaviconUrl=()=>'';
 function dashTileLinkHtml(t) {{{helper_body}\n}}
+{shared}
 {render}
 renderDashboard();console.log(JSON.stringify(grid.innerHTML));
 """

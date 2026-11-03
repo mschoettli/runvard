@@ -13869,6 +13869,43 @@ function openBtop(){
 
 // ═══ Dashboard ═══
 let dashTiles=[];
+const dashGridStates=new WeakMap();
+function dashApplyGrid(grid,html){
+  let state=dashGridStates.get(grid);
+  if(!state){
+    state={html:null,pending:null,pointerActive:false,dragging:false,sortable:null};
+    dashGridStates.set(grid,state);
+    const release=()=>{
+      state.pointerActive=false;
+      // A native link click follows pointerup; keep its element alive until then.
+      setTimeout(()=>{
+        if(state.pointerActive||state.dragging||state.pending===null)return;
+        const pending=state.pending;state.pending=null;
+        dashApplyGrid(grid,pending);
+      },0);
+    };
+    grid.addEventListener('pointerdown',()=>{state.pointerActive=true;},true);
+    document.addEventListener('pointerup',release);
+    document.addEventListener('pointercancel',release);
+  }
+  if(state.pointerActive||state.dragging){state.pending=html;return;}
+  state.pending=null;
+  if(state.html===html)return;
+  state.sortable?.destroy();state.sortable=null;
+  grid.innerHTML=html;state.html=html;
+  if(typeof Sortable!=='undefined'&&grid.querySelector('.dash-tile')){
+    state.sortable=Sortable.create(grid,{
+      animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',
+      onStart:()=>{state.dragging=true;},
+      onEnd:()=>{
+        state.dragging=false;state.pending=null;state.html=null;
+        const order=[...grid.querySelectorAll('.dash-tile')].map(el=>el.dataset.id);
+        post('/dashboard/order',{order:JSON.stringify(order)}).finally(()=>loadDashboard());
+      }
+    });
+  }
+}
+
 async function loadDashboard(){
   try{
     const d=await api('/dashboard');
@@ -13878,37 +13915,6 @@ async function loadDashboard(){
 }
 function dashIsServiceTile(t){
   return ['app','compose','docker'].includes(t?.type);
-}
-
-function renderDashboard(){
-  const grid=$('#dash-grid');
-  const section=$('#dash-section');
-  if(!grid||!section)return;
-  section.style.display='block';
-  if(!dashTiles.length){grid.innerHTML='';return;}
-  grid.innerHTML=dashTiles.map(t=>{
-    const status=dashTileStatus(t);
-    const url=dashIsServiceTile(t)?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');
-    const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
-    return `<div class="dash-tile" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')">${dashTileLinkHtml(t)}
-      <div class="dash-tile-body${t.show_url?' has-url':''}">
-        <div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div>
-        <div class="dash-status ${status.cls}" title="${esc(status.title)}"></div>
-        <div class="dash-tile-icon">${iconHtml}</div>
-        <div class="dash-tile-name">${esc(t.name)}</div>
-      </div>
-      ${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}
-    </div>`;
-  }).join('');
-  // Drag & Drop
-  if(typeof Sortable!=='undefined'){
-    Sortable.create(grid,{animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',
-      onEnd:()=>{
-        const order=[...grid.querySelectorAll('.dash-tile')].map(el=>el.dataset.id);
-        post('/dashboard/order',{order:JSON.stringify(order)});
-      }
-    });
-  }
 }
 
 window.dashClick=(e,id)=>{
@@ -15827,12 +15833,12 @@ const renderSystemOriginalFallback=async(body,tab)=>{
 function renderDashboard(){
   const grid=$('#dash-grid');const section=$('#dash-section');if(!grid||!section)return;
   section.style.display='block';
-  if(!dashTiles.length){grid.innerHTML=`<div class="nx-view-intro" style="grid-column:1/-1"><div><h3>Ready for apps</h3><p>Install apps or add custom shortcuts.</p></div><button class="btn" onclick="openTileById('apps')">Open apps</button></div>`;return;}
-  grid.innerHTML=dashTiles.map(t=>{
+  if(!dashTiles.length){dashApplyGrid(grid,`<div class="nx-view-intro" style="grid-column:1/-1"><div><h3>Ready for apps</h3><p>Install apps or add custom shortcuts.</p></div><button class="btn" onclick="openTileById('apps')">Open apps</button></div>`);return;}
+  const html=dashTiles.map(t=>{
     const isService=dashIsServiceTile(t);const status=dashTileStatus(t);const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=dashTileIconHtml(t.icon,t.name);const accent=t.accent||'#7a4aff';
     return `<div class="dash-tile" style="--tile-accent:${esc(accent)}" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')">${dashTileLinkHtml(t)}<div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${status.cls}" title="${esc(status.title)}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div>${t.note?`<div class="dash-tile-note">${esc(t.note)}</div>`:''}</div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
   }).join('');
-  if(typeof Sortable!=='undefined'){Sortable.create(grid,{animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:()=>{const order=[...grid.querySelectorAll('.dash-tile')].map(el=>el.dataset.id);post('/dashboard/order',{order:JSON.stringify(order)});}});}
+  dashApplyGrid(grid,html);
 }
 
 // ═══ Lösch-X für Suchleisten (generisch, auch für dynamisch gerenderte Felder) ═══
