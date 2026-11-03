@@ -13903,6 +13903,7 @@ function dashApplyGrid(grid,html){
   grid.innerHTML=html;state.html=html;
   if(typeof Sortable!=='undefined'&&grid.querySelector('.dash-tile')){
     state.sortable=Sortable.create(grid,{
+      handle:'.dash-dots',filter:'.dash-tile-link',preventOnFilter:false,
       animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',
       onStart:()=>{state.dragging=true;},
       onEnd:()=>{
