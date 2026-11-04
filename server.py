@@ -4,6 +4,7 @@ Haupt-Anwendung: FastAPI mit allen Routen, Auth und WebSocket-Terminal.
 """
 import os
 import secrets
+import sys
 import asyncio
 import json
 import hmac
@@ -27,6 +28,7 @@ from modules import (system, terminal, files, storage, docker_mgr, services,
                      system_mgr, apps, dashboard, metrics, accounts, audit,
                      ports, time_machine, path_picker)
 from modules import security_tokens, auth_config, workspace_app
+from modules.network_map import NetworkMap
 from modules.external_servers import ExternalServerManager
 from modules.external_servers.service import error_category
 from modules.federation import FederationManager
@@ -90,6 +92,8 @@ COOKIE_NAME = "runvard_session"
 SESSION_TTL = 8 * 3600              # 8 Stunden
 SESSION_TTL_REMEMBER = 30 * 86400   # 30 Tage
 
+NETWORK_MAP = NetworkMap(DATA_DIR)
+
 FEDERATION = FederationManager(os.path.join(DATA_DIR, "federation"))
 EXTERNAL_SERVERS = ExternalServerManager(
     os.path.join(DATA_DIR, "external-servers"),
@@ -100,6 +104,8 @@ EXTERNAL_SERVERS = ExternalServerManager(
 def _start_federation_worker():
     auth_config.enforce_authentication(AUTH_CFG_FILE)
     accounts.ensure_bootstrap_account()
+    if os.environ.get("RUNVARD_NETWORK_MAP_NO_WORKER") != "1" and sys.platform.startswith("linux"):
+        NETWORK_MAP.start()
     if FEDERATION.state.get("enabled") and \
             os.environ.get("RUNVARD_FEDERATION_NO_WORKER") != "1":
         FEDERATION.start()
@@ -109,6 +115,7 @@ def _start_federation_worker():
 
 @app.on_event("shutdown")
 def _stop_federation_worker():
+    NETWORK_MAP.stop()
     terminal.kill_all_sessions()
     FEDERATION.stop()
     EXTERNAL_SERVERS.stop()
@@ -453,6 +460,49 @@ def index(request: Request):
     if not _current_user(request):
         return RedirectResponse("/login", status_code=302)
     return HTMLResponse(_frontend_html("index.html"), headers={"Cache-Control": "no-store"})
+
+
+@app.get("/network-map", response_class=HTMLResponse)
+def network_map_page(request: Request):
+    if not _current_user(request):
+        return RedirectResponse("/login", status_code=302)
+    return HTMLResponse(_frontend_html("network-map.html"), headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/network-map")
+def network_map_data(request: Request, user: str = Depends(auth)):
+    result = NETWORK_MAP.snapshot()
+    result["can_edit"] = _parse_token(request.cookies.get(COOKIE_NAME))[1] == "admin"
+    return JSONResponse(result, headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/network-map/{action}")
+async def network_map_action(action: str, request: Request, user: str = Depends(require_admin)):
+    if request.headers.get("content-type", "").split(";", 1)[0] != "application/json":
+        raise HTTPException(status_code=415, detail="json_required")
+    origin = request.headers.get("origin")
+    if origin and origin != str(request.base_url).rstrip("/"):
+        raise HTTPException(status_code=403, detail="origin_rejected")
+    try:
+        data = await request.json()
+        if not isinstance(data, dict):
+            raise ValueError("invalid_request")
+        if action == "scan":
+            NETWORK_MAP.request_scan()
+        elif action == "settings":
+            NETWORK_MAP.configure(data)
+        elif action == "device":
+            NETWORK_MAP.edit_device(str(data.get("id", "")), data)
+        elif action == "mesh":
+            if not NETWORK_MAP.connected:
+                raise ValueError("zigbee_failed")
+            # Explicit user request: the only command sent to Zigbee2MQTT.
+            NETWORK_MAP.mesh_request.set()
+        else:
+            raise HTTPException(status_code=404, detail="unknown_action")
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"ok": True}
 
 
 @app.get("/login", response_class=HTMLResponse)

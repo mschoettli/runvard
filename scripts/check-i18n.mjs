@@ -310,6 +310,20 @@ for (const match of indexSource.matchAll(/data-i18n(?:-title|-placeholder)?=["']
 const unknownKeys = [...trKeys].filter((key) => !(key in i18nBase));
 if (unknownKeys.length) failures.push(`unknown i18n keys: ${unknownKeys.join(" | ")}`);
 
+// Standalone network map: the catalog is optional only for isolated legacy checker fixtures.
+const networkMapCatalog = new URL("static/network-map-i18n.json", root);
+if (fs.existsSync(networkMapCatalog)) {
+  const maps = JSON.parse(fs.readFileSync(networkMapCatalog, "utf8"));
+  requireKeyParity("network-map", maps, "en", locales);
+  for (const locale of locales) {
+    const extras = Object.keys(maps[locale] || {}).filter(key => !(key in maps.en));
+    if (extras.length) failures.push(`network-map.${locale} extra keys: ${extras.join(", ")}`);
+    for (const [key, value] of Object.entries(maps[locale] || {})) {
+      if (typeof value !== "string" || !value.trim()) failures.push(`network-map.${locale}.${key} empty`);
+    }
+  }
+}
+
 if (failures.length) {
   console.error(`i18n check failed (${failures.length}):`);
   failures.forEach((failure) => console.error(`- ${failure}`));
