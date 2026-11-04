@@ -1442,6 +1442,9 @@ const UI_PHRASES={
     "Automatic":"Automatisch",
     "Automatic restart if needed":"Automatischer Neustart bei Bedarf",
     "Automatic security updates":"Automatische Sicherheitsupdates",
+    "unattended-upgrades is not installed":"unattended-upgrades ist nicht installiert",
+    "Install unattended-upgrades to enable automatic security updates.":"Installiere unattended-upgrades, um automatische Sicherheitsupdates zu aktivieren.",
+    "Security updates are installed daily using the system package policy. Restart time uses the server time zone. runvard updates remain manual.":"Sicherheitsupdates werden täglich gemäß den Paketregeln des Systems installiert. Die Neustartzeit gilt in der Zeitzone des Servers. runvard-Updates bleiben manuell.",
     "Already on dashboard":"Bereits auf dem Dashboard",
     "Available":"Verfügbar",
     "Available updates":"Verfügbare Updates",
@@ -2447,6 +2450,9 @@ const UI_PHRASES={
     "Automatic":"Automatique",
     "Automatic restart if needed":"Redémarrage automatique si nécessaire",
     "Automatic security updates":"Mises à jour de sécurité automatiques",
+    "unattended-upgrades is not installed":"unattended-upgrades n’est pas installé",
+    "Install unattended-upgrades to enable automatic security updates.":"Installez unattended-upgrades pour activer les mises à jour de sécurité automatiques.",
+    "Security updates are installed daily using the system package policy. Restart time uses the server time zone. runvard updates remain manual.":"Les mises à jour de sécurité sont installées chaque jour selon la politique des paquets du système. L’heure de redémarrage utilise le fuseau horaire du serveur. Les mises à jour de runvard restent manuelles.",
     "Already on dashboard":"Déjà sur le tableau de bord",
     "Available":"Disponible",
     "Available updates":"Mises à jour disponibles",
@@ -3415,6 +3421,9 @@ const UI_PHRASES={
     "Automatic":"Automatico",
     "Automatic restart if needed":"Riavvio automatico se necessario",
     "Automatic security updates":"Aggiornamenti di sicurezza automatici",
+    "unattended-upgrades is not installed":"unattended-upgrades non è installato",
+    "Install unattended-upgrades to enable automatic security updates.":"Installa unattended-upgrades per attivare gli aggiornamenti di sicurezza automatici.",
+    "Security updates are installed daily using the system package policy. Restart time uses the server time zone. runvard updates remain manual.":"Gli aggiornamenti di sicurezza vengono installati ogni giorno secondo le regole dei pacchetti di sistema. L’ora di riavvio usa il fuso orario del server. Gli aggiornamenti di runvard restano manuali.",
     "Already on dashboard":"Già nella dashboard",
     "Available":"Disponibile",
     "Available updates":"Aggiornamenti disponibili",
@@ -4382,6 +4391,9 @@ const UI_PHRASES={
     "Automatic":"Automático",
     "Automatic restart if needed":"Reinicio automático si es necesario",
     "Automatic security updates":"Actualizaciones de seguridad automáticas",
+    "unattended-upgrades is not installed":"unattended-upgrades no está instalado",
+    "Install unattended-upgrades to enable automatic security updates.":"Instala unattended-upgrades para activar las actualizaciones de seguridad automáticas.",
+    "Security updates are installed daily using the system package policy. Restart time uses the server time zone. runvard updates remain manual.":"Las actualizaciones de seguridad se instalan a diario según las reglas de paquetes del sistema. La hora de reinicio usa la zona horaria del servidor. Las actualizaciones de runvard siguen siendo manuales.",
     "Already on dashboard":"Ya está en el panel",
     "Available":"Disponible",
     "Available updates":"Actualizaciones disponibles",
@@ -5353,6 +5365,9 @@ const UI_PHRASES={
     "Automatic":"Automático",
     "Automatic restart if needed":"Reinício automático se necessário",
     "Automatic security updates":"Atualizações de segurança automáticas",
+    "unattended-upgrades is not installed":"unattended-upgrades não está instalado",
+    "Install unattended-upgrades to enable automatic security updates.":"Instale unattended-upgrades para ativar as atualizações de segurança automáticas.",
+    "Security updates are installed daily using the system package policy. Restart time uses the server time zone. runvard updates remain manual.":"As atualizações de segurança são instaladas diariamente segundo as regras de pacotes do sistema. A hora de reinício usa o fuso horário do servidor. As atualizações do runvard continuam a ser manuais.",
     "Already on dashboard":"Já está no painel",
     "Available":"Disponível",
     "Available updates":"Atualizações disponíveis",
@@ -12571,29 +12586,36 @@ window.aaSetForm=()=>openForm('Set AppArmor profile','🛡',[
   {name:'mode',label:'Modus',type:'select',options:[{value:'enforce',label:'Enforce (erzwingen)'},{value:'complain',label:'Complain (protokollieren)'},{value:'disable',label:'Disable'}]},
 ],async d=>{try{const r=await post('/sysmgr/apparmor/set',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}closeForm();toast('Profile updated');renderSystem($('#modal-body'),'AppArmor');}catch(e){toast('Error: '+e.message,'error');}});
 
+function automaticUpdatesCard(uu,tab='Wartung'){
+  const text=value=>esc(uiText(value));
+  let controls;
+  if(!uu){
+    controls=`<div class="empty-state">${text('Check failed')}</div>`;
+  }else if(!uu.installed){
+    controls=`<p class="nx-action-sub">${text('Install unattended-upgrades to enable automatic security updates.')}</p>
+      <button class="btn sm" id="uu-install" onclick="uuInstall('${tab}')">${text('Install package')}</button>`;
+  }else{
+    controls=`<label style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><input type="checkbox" id="uu-enable" ${uu.enabled?'checked':''} style="width:auto">${text('Unattended updates active')}</label>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><input type="checkbox" id="uu-reboot" ${uu.auto_reboot?'checked':''} style="width:auto">${text('Automatic restart if needed')}</label>
+      <div class="nx-action-row" style="flex-wrap:wrap"><label for="uu-time">${text('Restart time')}</label><input type="time" id="uu-time" value="${esc(uu.reboot_time||'02:00')}" required style="width:120px;max-width:100%"></div>
+      <div class="nx-action-row" style="justify-content:flex-end"><button class="btn sm" id="uu-save" onclick="uuSave('${tab}')">${text('Save')}</button></div>`;
+  }
+  return `<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${text('Automatic security updates')}</div></div>
+    <p class="nx-action-sub">${text('Security updates are installed daily using the system package policy. Restart time uses the server time zone. runvard updates remain manual.')}</p>${controls}</div>`;
+}
+
 // ── Wartung: unattended-upgrades / tuned / kdump / sosreport ──
 async function renderMaintenance(body){
   body.innerHTML='<div class="loading">Loading…</div>';
   const [uu,tu,kd,sos]=await Promise.all([
-    api('/sysmgr/unattended').catch(()=>({})),
+    api('/sysmgr/unattended').catch(()=>null),
     api('/sysmgr/tuned').catch(()=>({available:false})),
     api('/sysmgr/kdump').catch(()=>({available:false})),
     api('/sysmgr/sosreport').catch(()=>({available:false,reports:[]})),
   ]);
   let html='<div style="display:flex;flex-direction:column;gap:16px">';
 
-  // unattended-upgrades
-  html+=`<div><div class="section-label" style="margin-bottom:10px">Automatic security updates</div><div class="nx-card-inner">`;
-  if(!uu.installed){
-    html+=`<div style="font-size:12px;color:var(--text2);margin-bottom:10px">The package <span class="mono">unattended-upgrades</span> is not installed.</div><button class="btn sm" onclick="uuInstall()">Install package</button>`;
-  }else{
-    html+=`
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;margin-bottom:10px"><input type="checkbox" id="uu-enable" ${uu.enabled?'checked':''} style="width:auto"> Unattended updates active</label>
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;margin-bottom:10px"><input type="checkbox" id="uu-reboot" ${uu.auto_reboot?'checked':''} style="width:auto"> Automatic restart if needed</label>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:12px;color:var(--text2)">Restart time</span><input id="uu-time" value="${esc(uu.reboot_time||'02:00')}" placeholder="HH:MM" style="width:90px;font-family:'JetBrains Mono',monospace"></div>
-      <div style="text-align:right"><button class="btn sm" onclick="uuSave()">Save</button></div>`;
-  }
-  html+=`</div></div>`;
+  html+=automaticUpdatesCard(uu);
 
   // tuned
   html+=`<div><div class="section-label" style="margin-bottom:10px">Performance profile (tuned)</div><div class="nx-card-inner">`;
@@ -12647,8 +12669,36 @@ async function renderMaintenance(body){
   html+='</div>';
   body.innerHTML=html;
 }
-window.uuInstall=async()=>{toast('Installation started…');try{const r=await post('/sysmgr/packages/install',{name:'unattended-upgrades'});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Installing – wait a moment, then reopen the tab');}catch(e){toast('Error: '+e.message,'error');}};
-window.uuSave=async()=>{const d={enable:$('#uu-enable').checked?'true':'false',auto_reboot:$('#uu-reboot').checked?'true':'false',reboot_time:$('#uu-time').value};try{const r=await post('/sysmgr/unattended/set',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Gespeichert');renderSystem($('#modal-body'),'Wartung');}catch(e){toast('Error: '+e.message,'error');}};
+window.uuInstall=async(tab='Wartung')=>{
+  const btn=$('#uu-install');if(btn)btn.disabled=true;
+  toast(uiText('Installation started…'));
+  try{
+    let r=await post('/sysmgr/packages/install',{name:'unattended-upgrades'});
+    if(r&&r.job_id){
+      while(true){
+        const job=await api('/sysmgr/job?id='+encodeURIComponent(r.job_id));
+        if(job.status==='failed')throw new Error(job.error||uiText('Error'));
+        if(job.status==='succeeded'){r=job.result;break;}
+        await new Promise(resolve=>setTimeout(resolve,1500));
+      }
+    }
+    if(!r||r.ok===false)throw new Error(r?.stderr||uiText('Error'));
+    toast(uiText('Fertig'));
+    await renderSystem($('#modal-body'),tab);
+  }catch(e){toast(uiText('Error: ')+uiText(e.message),'error');}
+  finally{if(btn)btn.disabled=false;}
+};
+window.uuSave=async(tab='Wartung')=>{
+  const btn=$('#uu-save');if(btn)btn.disabled=true;
+  const d={enable:$('#uu-enable').checked?'true':'false',auto_reboot:$('#uu-reboot').checked?'true':'false',reboot_time:$('#uu-time').value};
+  try{
+    const r=await post('/sysmgr/unattended/set',d);
+    if(!r||r.ok===false)throw new Error(r?.stderr||uiText('Error'));
+    toast(uiText('Gespeichert'));
+    await renderSystem($('#modal-body'),tab);
+  }catch(e){toast(uiText('Error: ')+uiText(e.message),'error');}
+  finally{if(btn)btn.disabled=false;}
+};
 window.tunedSet=async()=>{const profile=$('#tuned-sel').value;toast('Applying profile…');try{const r=await post('/sysmgr/tuned/set',{profile});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Profile active: '+profile);renderSystem($('#modal-body'),'Wartung');}catch(e){toast('Error: '+e.message,'error');}};
 window.kdumpAct=async action=>{try{const r=await post('/sysmgr/kdump/action',{action});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('OK');renderSystem($('#modal-body'),'Wartung');}catch(e){toast('Error: '+e.message,'error');}};
 window.sosRun=async()=>{const out=$('#sos-out');if(out){out.style.display='block';out.textContent='Starte sosreport …';}toast('Generating diagnostic report…');try{const r=await post('/sysmgr/sosreport/run',{});if(!r||!r.job_id){toast('Start fehlgeschlagen','error');return;}sosPoll(r.job_id);}catch(e){toast('Error: '+e.message,'error');}};
@@ -16080,8 +16130,9 @@ async function renderServicesSimple(body){
 const renderSystemOriginalFallback=async(body,tab)=>{
   if(tab==='Updates'){
     body.innerHTML='<div class="loading">Checking updates…</div>';
-    const [u,runvard]=await Promise.all([
+    const [u,uu,runvard]=await Promise.all([
       api('/sysmgr/updates'),
+      api('/sysmgr/unattended').catch(()=>null),
       api('/sysmgr/runvard-release').catch(e=>({remote:{ok:false,error:e.message}})),
     ]);
     const remote=runvard.remote||{};
@@ -16099,6 +16150,7 @@ const renderSystemOriginalFallback=async(body,tab)=>{
         ${summaryCard('runvard GitHub',statusBadge(runvardLabel,runvardTone),remoteSub)}
       </div>
       <div class="nx-card-grid">
+        ${automaticUpdatesCard(uu,'Updates')}
         <div class="nx-action-card">
           <div class="nx-action-head"><div class="nx-action-title">runvard repository</div></div>
           <div class="nx-kv">

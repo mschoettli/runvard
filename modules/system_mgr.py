@@ -683,8 +683,9 @@ def _conf_flag(path, key):
             text = f.read()
     except OSError:
         return ""
-    m = re.search(re.escape(key) + r'\s+"([^"]*)"', text)
-    return m.group(1) if m else ""
+    text = re.sub(r'/\*.*?\*/|//[^\n]*', '', text, flags=re.DOTALL)
+    values = re.findall(r'^\s*' + re.escape(key) + r'\s+"([^"]*)"', text, re.MULTILINE)
+    return values[-1] if values else ""
 
 
 def unattended_status():
@@ -707,8 +708,16 @@ def unattended_status():
 
 
 def unattended_set(enable, auto_reboot=False, reboot_time="02:00"):
-    if reboot_time and not _TIME_RE.fullmatch(reboot_time):
+    if not _TIME_RE.fullmatch(reboot_time or ""):
         return {"ok": False, "stderr": "Uhrzeit muss HH:MM sein"}
+    if enable:
+        installed = _run(["dpkg-query", "-W", "-f=${Status}", "unattended-upgrades"])
+        if not installed["ok"] or "install ok installed" not in installed["stdout"]:
+            return {"ok": False, "stderr": "unattended-upgrades is not installed"}
+        # APT's daily timers keep running independently of the runvard process.
+        timers = _run(["systemctl", "enable", "--now", "apt-daily.timer", "apt-daily-upgrade.timer"])
+        if not timers["ok"]:
+            return timers
     on = "1" if enable else "0"
     try:
         with open(_AUTO_UPGRADES, "w") as f:
