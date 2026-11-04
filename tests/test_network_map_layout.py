@@ -31,3 +31,20 @@ const mixed=layoutNetwork([...devices,...zigbee],[],1240);assert.equal(mixed.gro
 assert.equal(layoutNetwork([],[],340).height>=200,true);
 '''],cwd=ROOT,capture_output=True,text=True)
     assert result.returncode == 0, result.stdout + result.stderr
+
+
+def test_group_topology_never_invents_connections_and_handles_mesh_cycles():
+    result=subprocess.run(['node','-e',r'''
+const assert=require('assert');const {layoutGroups}=require('./static/network-map-layout.js');
+const devices=[{id:'g',name:'FRITZ!Box',gateway:true,network:'lan'},{id:'s',network:'lan',connection_type:'lan'},{id:'a',network:'lan',connection_type:'wlan'},{id:'n',network:'lan'},...Array.from({length:15},(_,i)=>({id:'z'+i,network:'zigbee',kind:i?'EndDevice':'Coordinator'}))];
+const edges=[{source:'g',target:'s',origin:'fritz',type:'lan'},{source:'g',target:'a',origin:'fritz',type:'wlan'},{source:'z0',target:'z1',origin:'zigbee'},{source:'z1',target:'z2',origin:'zigbee'},{source:'z2',target:'z0',origin:'zigbee'}];
+for(const width of [340,800,1400]){
+ const layout=layoutGroups(devices,edges,width,new Set());assert.equal(layout.gateway,'g');assert.equal(layout.deviceGroups.s,'lan');assert.equal(layout.deviceGroups.a,'wlan');assert.equal(layout.deviceGroups.n,'unknown');
+ assert.equal(layout.groups.filter(g=>['lan','wlan','zigbee'].includes(g.network)).length,3);
+ assert.equal(layout.groups.find(g=>g.network==='zigbee').count,15);assert(layout.groups.find(g=>g.network==='zigbee').hidden>0);
+ for(const [id,p] of Object.entries(layout.positions))for(const [other,q] of Object.entries(layout.positions))if(id!==other)assert(Math.abs(p.x-q.x)>=210||Math.abs(p.y-q.y)>=96,'overlap '+id+' '+other);
+ const full=layoutGroups(devices,edges,width,new Set(['zigbee']));assert.equal(Object.keys(full.positions).length,devices.length);assert(!layout.edges,'layout must not invent evidence');
+}
+const empty=layoutGroups([{id:'x',network:'lan'}],[],1000,new Set());assert.equal(empty.deviceGroups.x,'unknown');assert(!empty.gateway);assert(empty.positions.x);
+'''],cwd=ROOT,capture_output=True,text=True)
+    assert result.returncode==0,result.stdout+result.stderr

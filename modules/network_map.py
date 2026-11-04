@@ -17,6 +17,7 @@ import psutil
 import requests
 import websockets
 from modules.external_servers.storage import _atomic_json, SecretStore
+from modules.network_map_fritz import read_topology, parse_topology
 
 PRIVATE = [ipaddress.ip_network(n) for n in ('10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16')]
 
@@ -134,7 +135,8 @@ class NetworkMap:
         self.connected = False
         self.error = ''
         self.zerror = ''
-        self.state = {'devices': {}, 'edges': [], 'settings': {'networks': [], 'zigbee_url': ''}, 'scan_at': 0, 'mesh_at': 0}
+        self.fritz_error = ''
+        self.state = {'devices': {}, 'edges': [], 'settings': {'networks': [], 'zigbee_url': ''}, 'scan_at': 0, 'mesh_at': 0, 'fritz_at': 0}
         try:
             value = json.loads(self.path.read_text())
             self.state.update({k: value[k] for k in self.state if k in value})
@@ -148,7 +150,8 @@ class NetworkMap:
         with self.lock:
             result = copy.deepcopy(self.state)
             result['devices'] = list(result['devices'].values())
-            result.update(scanning=self.scanning, connected=self.connected, error=self.error, zigbee_error=self.zerror)
+            result.update(scanning=self.scanning, connected=self.connected, error=self.error, zigbee_error=self.zerror, fritz_error=self.fritz_error)
+            result['settings']['fritz_password_saved'] = bool(self.secrets.get('fritz').get('password'))
             result['settings']['token_saved'] = bool(self.secrets.get('zigbee').get('token'))
             return result
 
@@ -161,6 +164,18 @@ class NetworkMap:
                 settings['networks'] = [str(validate_network(n)) for n in data['networks']]
             if 'zigbee_url' in data:
                 settings['zigbee_url'] = zigbee_endpoint(data['zigbee_url']) if data['zigbee_url'] else ''
+            if 'fritz_host' in data:
+                settings['fritz_host'] = str(private_ip(data['fritz_host'])) if data['fritz_host'] else ''
+            if 'fritz_user' in data:
+                if not isinstance(data['fritz_user'], str) or len(data['fritz_user']) > 160:
+                    raise ValueError('invalid_request')
+                settings['fritz_user'] = data['fritz_user']
+            if data.get('fritz_password'):
+                if not isinstance(data['fritz_password'], str) or len(data['fritz_password']) > 2048:
+                    raise ValueError('invalid_request')
+                self.secrets.set('fritz', {'password':data['fritz_password']})
+            if data.get('clear_fritz_password'):
+                self.secrets.delete('fritz')
             if 'token' in data and data['token']:
                 if not isinstance(data['token'], str) or len(data['token']) > 2048:
                     raise ValueError('invalid_token')
@@ -181,6 +196,14 @@ class NetworkMap:
                     if not isinstance(data[key], str) or len(data[key]) > (1000 if key == 'notes' else 160):
                         raise ValueError('invalid_device')
                     patch[key] = data[key].strip()
+            if 'layout_group' in data:
+                if data['layout_group'] not in ('gateway','lan','wlan','zigbee','unknown'):
+                    raise ValueError('invalid_device')
+                patch['layout_group'] = data['layout_group']
+            if 'connection_type' in data:
+                if data['connection_type'] not in ('lan','wlan','unknown'):
+                    raise ValueError('invalid_device')
+                patch['connection_type'] = data['connection_type']
             for key in ('x', 'y'):
                 if key in data:
                     v = float(data[key])
@@ -198,8 +221,31 @@ class NetworkMap:
             device.update(patch)
             self.state['edges'] = [e for e in self.state['edges'] if not (e['origin'] == 'manual' and e['target'] == identity)]
             if parent:
-                self.state['edges'].append({'source': parent, 'target': identity, 'origin': 'manual'})
+                self.state['edges'].append({'source': parent, 'target': identity, 'origin': 'manual', **({'type':device['connection_type']} if device.get('connection_type') else {})})
             self.save()
+
+    def ingest_fritz(self, report, hosts, gateway_ip):
+        with self.lock:
+            devices, edges = parse_topology(report, hosts, self.state['devices'], gateway_ip)
+            manual = {d['id'] for d in self.state['devices'].values() if d.get('parent')}
+            for item in devices:
+                d = self.state['devices'].setdefault(item['id'], {})
+                if item['id'] in manual: item.pop('connection_type', None)
+                d.update(item)
+            self.state['edges'] = [e for e in self.state['edges'] if e['origin'] != 'fritz'] + [e for e in edges if e['target'] not in manual]
+            self.state['fritz_at'] = time.time()
+            self.fritz_error = ''
+            self.save()
+
+    def refresh_fritz(self):
+        with self.lock:
+            settings = dict(self.state['settings'])
+        if not settings.get('fritz_host'): return
+        try:
+            topology, hosts = read_topology(settings['fritz_host'], settings.get('fritz_user',''), self.secrets.get('fritz').get('password',''))
+            self.ingest_fritz(topology, hosts, settings['fritz_host'])
+        except Exception:
+            self.fritz_error = 'fritz_failed'
 
     def merge_lan(self, found):
         with self.lock:
@@ -241,6 +287,7 @@ class NetworkMap:
             for item in found:
                 if item['ip'] in macs: item['mac'] = macs[item['ip']]
             self.merge_lan(found)
+            self.refresh_fritz()
             self.error = ''
             return True
         except Exception:
