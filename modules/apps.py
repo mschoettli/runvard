@@ -793,6 +793,23 @@ def _prepare_host_network_content(app, content):
 
 def _normalize_app_compose(app, content):
     """Apply catalog migrations to already saved app compose files."""
+    if app.get("id") == "nextcloud" and yaml is not None:
+        data = yaml.safe_load(content) or {}
+        services = data.get("services", {}) if isinstance(data, dict) else {}
+        changed = False
+        for service in services.values():
+            if (isinstance(service, dict) and "build" not in service
+                    and re.fullmatch(r"nextcloud-runvard:34(?:\.\d+){0,2}",
+                                     str(service.get("image", "")))):
+                service["build"] = {"context": os.path.join(
+                    os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
+                    "docker-apps", "nextcloud",
+                )}
+                service["pull_policy"] = "never"
+                service["x-runvard-base-image"] = "nextcloud:34-apache"
+                changed = True
+        if changed:
+            return yaml.safe_dump(data, sort_keys=False, allow_unicode=True)
     if app.get("id") == "papervard":
         content = str(content or "").replace(
             "fetch('http://127.0.0.1:3000/login')",
@@ -820,6 +837,105 @@ def _read_compose(app_id):
             return f.read()
     except OSError:
         return ""
+
+
+def _build_update_services(content):
+    """Opt-in upstream tracking for local images built by Compose."""
+    if yaml is None:
+        return {}
+    data = yaml.safe_load(content) or {}
+    services = data.get("services", {}) if isinstance(data, dict) else {}
+    return {
+        name: service for name, service in services.items()
+        if isinstance(service, dict) and "build" in service
+        and service.get("image") and service.get("x-runvard-base-image")
+    }
+
+
+def _image_metadata(path, image):
+    result = subprocess.run(
+        ["docker", "image", "inspect", image, "--format", "{{json .}}"],
+        cwd=path, capture_output=True, text=True, timeout=30,
+    )
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or f"Local image unavailable: {image}")
+    return json.loads(result.stdout)
+
+
+def _base_image_reference(path, service):
+    """Resolve the tracked tag to an immutable manifest for the local platform."""
+    image = service["x-runvard-base-image"]
+    local = _image_metadata(path, service["image"])
+    result = subprocess.run(
+        ["docker", "manifest", "inspect", "--verbose", image],
+        cwd=path, capture_output=True, text=True, timeout=120,
+    )
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or f"Registry manifest unavailable: {image}")
+    data = json.loads(result.stdout)
+    for entry in data if isinstance(data, list) else [data]:
+        descriptor = entry.get("Descriptor") or {}
+        platform = descriptor.get("platform") or {}
+        if (platform.get("os") == local.get("Os")
+                and platform.get("architecture") == local.get("Architecture")
+                and (not local.get("Variant")
+                     or platform.get("variant") == local["Variant"])):
+            digest = descriptor.get("digest")
+            if digest:
+                return image.split("@", 1)[0] + "@" + digest, local
+    raise RuntimeError(f"Image platform unavailable: {image}")
+
+
+def _build_update_commands(path, content):
+    tracked = _build_update_services(content)
+    commands = [["docker", "compose", "pull", "--ignore-buildable"]]
+    for name, service in tracked.items():
+        reference, _ = _base_image_reference(path, service)
+        commands.append(["docker", "compose", "build", "--pull", "--build-arg",
+                         "RUNVARD_BASE_IMAGE=" + reference, name])
+    if tracked:
+        services = (yaml.safe_load(content) or {}).get("services", {})
+        other = [name for name, service in services.items()
+                 if isinstance(service, dict) and "build" in service and name not in tracked]
+        if other:
+            commands.append(["docker", "compose", "build", "--pull", *other])
+    else:
+        commands.append(["docker", "compose", "build", "--pull"])
+    return commands + [["docker", "compose", "up", "-d"]]
+
+
+def _preserve_nextcloud_migration_mounts(original, updated):
+    """Keep bind mounts added outside the saved Compose file during migration."""
+    before = (yaml.safe_load(original) or {}).get("services", {})
+    after = yaml.safe_load(updated)
+    changed = False
+    for name in _build_update_services(updated):
+        previous = before.get(name) or {}
+        container = previous.get("container_name")
+        if "build" in previous or not container:
+            continue
+        result = subprocess.run(
+            ["docker", "inspect", container, "--format", "{{json .Mounts}}"],
+            capture_output=True, text=True, timeout=30,
+        )
+        if result.returncode:
+            if "No such" in result.stderr:
+                continue
+            raise RuntimeError(result.stderr.strip())
+        volumes = after["services"][name].setdefault("volumes", [])
+        destinations = {
+            volume.get("target") if isinstance(volume, dict)
+            else volume.split(":")[1] if ":" in volume else volume
+            for volume in volumes
+        }
+        for mount in json.loads(result.stdout):
+            if mount["Type"] == "bind" and mount["Destination"] not in destinations:
+                volumes.append({"type": "bind", "source": mount["Source"],
+                                "target": mount["Destination"],
+                                "read_only": not mount["RW"]})
+                destinations.add(mount["Destination"])
+                changed = True
+    return yaml.safe_dump(after, sort_keys=False, allow_unicode=True) if changed else updated
 
 
 def _last_output_line(output):
@@ -1582,6 +1698,8 @@ def action(app_id, act):
         if app:
             content = _read_compose(app_id)
             updated = _normalize_app_compose(app, content)
+            if app_id == "nextcloud" and updated != content:
+                updated = _preserve_nextcloud_migration_mounts(content, updated)
             updated = _prepare_host_network_content(app, updated)
             if updated != content:
                 with open(_compose_file(app_id), "w") as f:
@@ -1589,8 +1707,11 @@ def action(app_id, act):
             if _compose_uses_build(updated):
                 cmds["start"] = [["docker", "compose", "up", "--build", "-d"]]
                 cmds["restart"] = [["docker", "compose", "up", "--build", "-d"]]
-                cmds["update"] = [["docker", "compose", "build", "--pull"],
-                                  ["docker", "compose", "up", "-d"]]
+                if _build_update_services(updated):
+                    cmds["start"] = [["docker", "compose", "up", "--no-build", "-d"]]
+                    cmds["restart"] = [["docker", "compose", "restart"]]
+                if act == "update":
+                    cmds["update"] = _build_update_commands(path, updated)
     output = ""
     ok = True
     for cmd in cmds[act]:
@@ -1613,6 +1734,7 @@ def action(app_id, act):
     if act == "update" and ok:
         cache = _load_updates()
         cache["updates"] = [u for u in cache.get("updates", []) if u != app_id]
+        cache.get("errors", {}).pop(app_id, None)
         try:
             with open(UPDATE_CACHE, "w") as f:
                 json.dump(cache, f)
@@ -1633,6 +1755,23 @@ def action(app_id, act):
 
 def _check_image_update(path):
     """Compare local image IDs with published manifest config digests."""
+    try:
+        with open(os.path.join(path, "docker-compose.yml")) as compose:
+            content = compose.read()
+        app_id = os.path.basename(os.path.normpath(path))
+        app = next((app for app in CATALOG if app["id"] == app_id), None)
+        if app:
+            content = _normalize_app_compose(app, content)
+        tracked = _build_update_services(content)
+    except FileNotFoundError:
+        tracked = {}
+    built_images = set()
+    for service in tracked.values():
+        reference, local = _base_image_reference(path, service)
+        built_images.add(service["image"])
+        labels = (local.get("Config") or {}).get("Labels") or {}
+        if labels.get("io.runvard.base.image") != reference:
+            return True
     result = subprocess.run(
         ["docker", "compose", "config", "--images"],
         cwd=path,
@@ -1648,6 +1787,8 @@ def _check_image_update(path):
         line.strip() for line in result.stdout.splitlines() if line.strip()
     ))
     for image in images:
+        if image in built_images:
+            continue
         local = subprocess.run(
             ["docker", "image", "inspect", image, "--format", "{{json .Id}}"],
             cwd=path,
@@ -1731,3 +1872,4 @@ def start_update_checker():
             time.sleep(UPDATE_INTERVAL)
     t = threading.Thread(target=loop, daemon=True)
     t.start()
+
