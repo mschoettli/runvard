@@ -968,6 +968,24 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .flame-bg{background:radial-gradient(ellipse at 30% 40%,#e11d48,transparent 50%),radial-gradient(ellipse at 75% 65%,#9333ea,transparent 50%),radial-gradient(ellipse at 60% 20%,#be123c,transparent 40%),#0d0209!important;background-attachment:fixed!important}
 .ice-bg{background:radial-gradient(ellipse at 60% 30%,#818cf8,transparent 50%),radial-gradient(ellipse at 20% 70%,#3730a3,transparent 55%),radial-gradient(ellipse at 85% 75%,#0284c7,transparent 45%),#03051a!important;background-attachment:fixed!important}
 .galaxy-bg{background:radial-gradient(ellipse at 40% 40%,#4c1d95,transparent 55%),radial-gradient(ellipse at 75% 20%,#1e1b4b,transparent 50%),radial-gradient(ellipse at 20% 80%,#0f172a,transparent 50%),#020108!important;background-attachment:fixed!important}
+/* Device grants reuse the existing modal and palette. */
+.device-access-card{width:min(42rem,100%);max-width:100%;min-width:0}
+.device-access-card .form-head{overflow-wrap:anywhere}
+.device-access-card .form-actions,.device-actions{display:flex;flex-wrap:wrap;gap:.5rem}
+.device-access-card .form-actions .btn,.device-actions .btn{white-space:normal;min-height:2.75rem}
+.device-access-card fieldset{border:1px solid var(--border);border-radius:.625rem;margin:1rem 0;padding:.5rem .75rem;min-width:0}
+.device-access-card legend{font-size:.8125rem;color:var(--text2);padding:0 .25rem}
+.device-choice{display:flex;align-items:center;gap:.75rem;min-height:2.75rem;font-size:.8125rem;cursor:pointer;overflow-wrap:anywhere}
+.device-choice input{width:1rem;height:1rem;flex:0 0 1rem;accent-color:var(--accent)}
+.device-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr));gap:0 .75rem}
+.device-row{padding:1rem 0;border-bottom:1px solid var(--border);min-width:0;overflow-wrap:anywhere}
+.device-row-head{display:flex;gap:.75rem;align-items:baseline;justify-content:space-between;flex-wrap:wrap;margin-bottom:.5rem}
+.device-summary{font-size:.75rem;color:var(--text2);line-height:1.6;margin-bottom:.75rem}
+.device-access-card textarea{width:100%;box-sizing:border-box;resize:vertical;font-family:monospace;overflow-wrap:anywhere}
+.device-access-card code{display:block;overflow-wrap:anywhere;font-size:.75rem}
+.device-error{color:var(--danger,#ef4444);font-size:.8125rem;line-height:1.5}
+@media(max-width:480px){.device-access-card .form-body,.device-access-card .form-head{padding:1rem}}
+
 </style>
 <link rel="stylesheet" href="/static/modern-theme.css?v=92dc94616319">
 </head>
@@ -1014,6 +1032,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
         </div>
         <button class="um-action" onclick="openLanguageModal()">🌐 <span data-i18n="language">Language</span></button>
         <button class="um-action" onclick="openConnectedServersModal()">⬡ <span id="um-connected-servers-label">Connected servers</span></button>
+        <button id="um-devices" class="um-action" onclick="devicesManage()" style="display:none"><span data-device-i18n="title"></span></button>
         <button id="um-accounts" class="um-action" onclick="accountsManage()" style="display:none">👥 <span data-i18n="runvardAccounts">runvard-Konten</span></button>
         <button class="um-logout" onclick="doLogout()" data-i18n="logout">Sign out</button>
       </div>
@@ -7687,6 +7706,7 @@ function applyLanguage(){
   document.querySelectorAll('[data-i18n-title]').forEach(el=>{el.title=tr(el.dataset.i18nTitle);});
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{el.placeholder=tr(el.dataset.i18nPlaceholder);});
   translateRenderedText(document.body);
+  document.querySelectorAll('[data-device-i18n]').forEach(el=>{el.textContent=deviceText(el.dataset.deviceI18n);});
   updateClock();
   renderTiles();
   syncConnectedServerLabels();
@@ -7950,7 +7970,7 @@ let formReturnFocus=null;
 function resetFormCardClasses(){
   const formCard=document.querySelector('#form-overlay .form-card');
   if(formCard)formCard.classList.remove(
-    'compose-install-card','tile-edit-card',
+    'compose-install-card','tile-edit-card','device-access-card',
     'server-type-picker-card','external-server-form-card','backup-wizard-card',
   );
   $('#form-body')?.classList.remove('backup-wizard-body');
@@ -8038,6 +8058,7 @@ function openForm(title,icon,fields,onSubmit){
   openFormOverlay('input:not([type="checkbox"]),select,textarea');
 }
 function closeForm(){
+  const deviceSecret=document.getElementById("device-token");if(deviceSecret){deviceSecret.value="";$("#form-body").replaceChildren();}
   dashCancelTileEdit();
   resetFormCardClasses();
   $('#form-overlay').classList.remove('open');
@@ -8188,6 +8209,7 @@ async function loadAuthStatus(){
     currentAuthStatus=s;
     setTopbarUser(s.user||tr('loginDisabled'));
     const h=$('#um-head'); if(h) h.innerHTML=s.user?`${esc(tr('signedInAs'))} <strong>${esc(s.user)}</strong>`:tr('loginDisabledHead');
+    const devices=$('#um-devices');if(devices)devices.style.display=s.role==='admin'?'block':'none';
     const acc=$('#um-accounts'); if(acc) acc.style.display=(s.role==='admin')?'block':'none';
     expertModeActive=!!s.expert;
     const ex=$('#um-expert-toggle');
@@ -8233,6 +8255,358 @@ window.acctAddForm=()=>openForm('Create account','👥',[
 window.acctPass=username=>openForm('Change password: '+username,'⚿',[{name:'password',label:'New password',type:'password'}],async d=>{try{const r=await post('/accounts/password',{username,password:d.password});if(r&&r.ok===false){toast(r.error||'Error','error');return;}closeForm();toast('Password changed');}catch(e){toast(e.message,'error');}});
 window.acctRole=async(username,role)=>{try{const r=await post('/accounts/role',{username,role});if(r&&r.ok===false){toast(r.error||'Error','error');return;}toast(uiText('Role')+': '+(role==='admin'?'Admin':uiText('Read only')));renderAccounts();}catch(e){toast(e.message,'error');}};
 window.acctDel=username=>confirmDelete('Delete account',`Delete runvard account "${username}"?`,async()=>{try{await post('/accounts/delete',{username});toast('Account deleted');renderAccounts();}catch(e){toast(e.message,'error');}});
+
+// Read-only device access: dedicated tokens, no user accounts.
+const DEVICE_I18N={
+  "en": {
+    "title": "Device access",
+    "intro": "Share selected measurements with a device without creating a user account.",
+    "add": "Add device",
+    "empty": "No device access configured.",
+    "name": "Device name",
+    "servers": "Allowed servers",
+    "fields": "Allowed data",
+    "hint": "Nothing is shared by default. Missing measurements return null. Container and VM data contain counts; warnings contain a count; backups contain timestamps and status.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "edit": "Edit",
+    "disable": "Disable",
+    "enable": "Enable",
+    "delete": "Delete",
+    "deletePrompt": "Delete this device access? Its token will stop working immediately.",
+    "active": "Active",
+    "inactive": "Disabled",
+    "tokenTitle": "Save the device token",
+    "tokenHint": "This token is shown only once. Store it on your device and send it as an Authorization: Bearer header over HTTPS.",
+    "token": "Device token",
+    "copy": "Copy token",
+    "copied": "Copied",
+    "endpoint": "Measurements endpoint",
+    "error": "The request failed. Please try again.",
+    "invalid_name": "Enter a device name with 1–80 characters.",
+    "invalid_selection": "Select valid servers and data fields.",
+    "device_limit": "The limit of 100 devices has been reached.",
+    "device_not_found": "This device access no longer exists.",
+    "saved": "Saved",
+    "status": "Server status and uptime",
+    "cpu_percent": "CPU usage",
+    "ram_percent": "RAM usage",
+    "temperatures": "Temperatures",
+    "disk_percent": "Root disk usage",
+    "disk_health": "Drive health",
+    "network": "Network throughput",
+    "containers": "Container counts",
+    "vms": "VM counts",
+    "updates": "Available app updates",
+    "alerts": "Warning count",
+    "backups": "Backup status"
+  },
+  "de": {
+    "title": "Gerätefreigaben",
+    "intro": "Ausgewählte Messwerte mit einem Gerät teilen, ohne ein Benutzerkonto anzulegen.",
+    "add": "Gerät hinzufügen",
+    "empty": "Keine Gerätefreigaben eingerichtet.",
+    "name": "Gerätename",
+    "servers": "Erlaubte Server",
+    "fields": "Erlaubte Daten",
+    "hint": "Standardmäßig wird nichts freigegeben. Fehlende Messwerte liefern null. Container und VMs liefern Anzahlen, Warnungen eine Anzahl und Backups Zeitpunkte und Status.",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "edit": "Bearbeiten",
+    "disable": "Deaktivieren",
+    "enable": "Aktivieren",
+    "delete": "Löschen",
+    "deletePrompt": "Diese Gerätefreigabe löschen? Ihr Token wird sofort ungültig.",
+    "active": "Aktiv",
+    "inactive": "Deaktiviert",
+    "tokenTitle": "Geräte-Token sichern",
+    "tokenHint": "Dieser Token wird nur einmal angezeigt. Hinterlege ihn auf deinem Gerät und sende ihn über HTTPS im Header Authorization: Bearer.",
+    "token": "Geräte-Token",
+    "copy": "Token kopieren",
+    "copied": "Kopiert",
+    "endpoint": "Messwerte-Endpunkt",
+    "error": "Die Anfrage ist fehlgeschlagen. Bitte erneut versuchen.",
+    "invalid_name": "Gib einen Gerätenamen mit 1–80 Zeichen ein.",
+    "invalid_selection": "Wähle gültige Server und Datenfelder aus.",
+    "device_limit": "Die Grenze von 100 Geräten ist erreicht.",
+    "device_not_found": "Diese Gerätefreigabe existiert nicht mehr.",
+    "saved": "Gespeichert",
+    "status": "Serverstatus und Betriebszeit",
+    "cpu_percent": "CPU-Auslastung",
+    "ram_percent": "RAM-Auslastung",
+    "temperatures": "Temperaturen",
+    "disk_percent": "Belegung des Systemlaufwerks",
+    "disk_health": "Laufwerkszustand",
+    "network": "Netzwerkdurchsatz",
+    "containers": "Container-Anzahlen",
+    "vms": "VM-Anzahlen",
+    "updates": "Verfügbare App-Updates",
+    "alerts": "Anzahl der Warnungen",
+    "backups": "Backupstatus"
+  },
+  "fr": {
+    "title": "Accès des appareils",
+    "intro": "Partager des mesures sélectionnées avec un appareil sans créer de compte utilisateur.",
+    "add": "Ajouter un appareil",
+    "empty": "Aucun accès d’appareil configuré.",
+    "name": "Nom de l’appareil",
+    "servers": "Serveurs autorisés",
+    "fields": "Données autorisées",
+    "hint": "Aucune donnée n’est partagée par défaut. Les mesures absentes valent null. Les conteneurs, les VM et les avertissements sont des totaux ; les sauvegardes indiquent les dates et l’état.",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "edit": "Modifier",
+    "disable": "Désactiver",
+    "enable": "Activer",
+    "delete": "Supprimer",
+    "deletePrompt": "Supprimer cet accès ? Son jeton cessera immédiatement de fonctionner.",
+    "active": "Actif",
+    "inactive": "Désactivé",
+    "tokenTitle": "Conserver le jeton de l’appareil",
+    "tokenHint": "Ce jeton n’est affiché qu’une seule fois. Enregistrez-le sur votre appareil et transmettez-le via HTTPS dans l’en-tête Authorization: Bearer.",
+    "token": "Jeton de l’appareil",
+    "copy": "Copier le jeton",
+    "copied": "Copié",
+    "endpoint": "Point d’accès aux mesures",
+    "error": "La requête a échoué. Veuillez réessayer.",
+    "invalid_name": "Saisissez un nom d’appareil de 1 à 80 caractères.",
+    "invalid_selection": "Sélectionnez des serveurs et des champs de données valides.",
+    "device_limit": "La limite de 100 appareils est atteinte.",
+    "device_not_found": "Cet accès d’appareil n’existe plus.",
+    "saved": "Enregistré",
+    "status": "État du serveur et durée de fonctionnement",
+    "cpu_percent": "Utilisation du processeur",
+    "ram_percent": "Utilisation de la mémoire vive",
+    "temperatures": "Températures",
+    "disk_percent": "Occupation du disque système",
+    "disk_health": "État des disques",
+    "network": "Débit réseau",
+    "containers": "Nombre de conteneurs",
+    "vms": "Nombre de VM",
+    "updates": "Mises à jour d’applications disponibles",
+    "alerts": "Nombre d’avertissements",
+    "backups": "État des sauvegardes"
+  },
+  "it": {
+    "title": "Accessi dei dispositivi",
+    "intro": "Condividi le misurazioni selezionate con un dispositivo senza creare un account utente.",
+    "add": "Aggiungi dispositivo",
+    "empty": "Nessun accesso dispositivo configurato.",
+    "name": "Nome del dispositivo",
+    "servers": "Server consentiti",
+    "fields": "Dati consentiti",
+    "hint": "Nessun dato è condiviso per impostazione predefinita. Le misurazioni mancanti restituiscono null. Container, VM e avvisi sono conteggi; i backup riportano date e stato.",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "close": "Chiudi",
+    "edit": "Modifica",
+    "disable": "Disattiva",
+    "enable": "Attiva",
+    "delete": "Elimina",
+    "deletePrompt": "Eliminare questo accesso? Il relativo token smetterà subito di funzionare.",
+    "active": "Attivo",
+    "inactive": "Disattivato",
+    "tokenTitle": "Conserva il token del dispositivo",
+    "tokenHint": "Questo token viene mostrato una sola volta. Salvalo sul dispositivo e invialo tramite HTTPS nell’intestazione Authorization: Bearer.",
+    "token": "Token del dispositivo",
+    "copy": "Copia token",
+    "copied": "Copiato",
+    "endpoint": "Endpoint delle misurazioni",
+    "error": "La richiesta non è riuscita. Riprova.",
+    "invalid_name": "Inserisci un nome del dispositivo da 1 a 80 caratteri.",
+    "invalid_selection": "Seleziona server e campi dati validi.",
+    "device_limit": "È stato raggiunto il limite di 100 dispositivi.",
+    "device_not_found": "Questo accesso dispositivo non esiste più.",
+    "saved": "Salvato",
+    "status": "Stato del server e tempo di attività",
+    "cpu_percent": "Utilizzo della CPU",
+    "ram_percent": "Utilizzo della RAM",
+    "temperatures": "Temperature",
+    "disk_percent": "Utilizzo del disco di sistema",
+    "disk_health": "Stato delle unità",
+    "network": "Velocità di rete",
+    "containers": "Numero di container",
+    "vms": "Numero di VM",
+    "updates": "Aggiornamenti delle app disponibili",
+    "alerts": "Numero di avvisi",
+    "backups": "Stato dei backup"
+  },
+  "es": {
+    "title": "Accesos de dispositivos",
+    "intro": "Comparte las métricas seleccionadas con un dispositivo sin crear una cuenta de usuario.",
+    "add": "Añadir dispositivo",
+    "empty": "No hay accesos de dispositivos configurados.",
+    "name": "Nombre del dispositivo",
+    "servers": "Servidores permitidos",
+    "fields": "Datos permitidos",
+    "hint": "No se comparte ningún dato de forma predeterminada. Las métricas ausentes devuelven null. Los contenedores, las VM y las advertencias son recuentos; las copias de seguridad incluyen fechas y estado.",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "edit": "Editar",
+    "disable": "Desactivar",
+    "enable": "Activar",
+    "delete": "Eliminar",
+    "deletePrompt": "¿Eliminar este acceso? Su token dejará de funcionar inmediatamente.",
+    "active": "Activo",
+    "inactive": "Desactivado",
+    "tokenTitle": "Guarda el token del dispositivo",
+    "tokenHint": "Este token se muestra una sola vez. Guárdalo en tu dispositivo y envíalo mediante HTTPS en la cabecera Authorization: Bearer.",
+    "token": "Token del dispositivo",
+    "copy": "Copiar token",
+    "copied": "Copiado",
+    "endpoint": "Endpoint de métricas",
+    "error": "La solicitud ha fallado. Inténtalo de nuevo.",
+    "invalid_name": "Introduce un nombre de dispositivo de entre 1 y 80 caracteres.",
+    "invalid_selection": "Selecciona servidores y campos de datos válidos.",
+    "device_limit": "Se ha alcanzado el límite de 100 dispositivos.",
+    "device_not_found": "Este acceso de dispositivo ya no existe.",
+    "saved": "Guardado",
+    "status": "Estado del servidor y tiempo de actividad",
+    "cpu_percent": "Uso de CPU",
+    "ram_percent": "Uso de RAM",
+    "temperatures": "Temperaturas",
+    "disk_percent": "Uso del disco del sistema",
+    "disk_health": "Estado de las unidades",
+    "network": "Tráfico de red",
+    "containers": "Número de contenedores",
+    "vms": "Número de VM",
+    "updates": "Actualizaciones de aplicaciones disponibles",
+    "alerts": "Número de advertencias",
+    "backups": "Estado de las copias de seguridad"
+  },
+  "pt": {
+    "title": "Acessos de dispositivos",
+    "intro": "Partilhe as métricas selecionadas com um dispositivo sem criar uma conta de utilizador.",
+    "add": "Adicionar dispositivo",
+    "empty": "Nenhum acesso de dispositivo configurado.",
+    "name": "Nome do dispositivo",
+    "servers": "Servidores permitidos",
+    "fields": "Dados permitidos",
+    "hint": "Por predefinição, nenhum dado é partilhado. As métricas em falta devolvem null. Os contentores, as VM e os avisos são contagens; as cópias de segurança incluem datas e estado.",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "edit": "Editar",
+    "disable": "Desativar",
+    "enable": "Ativar",
+    "delete": "Eliminar",
+    "deletePrompt": "Eliminar este acesso? O respetivo token deixará de funcionar imediatamente.",
+    "active": "Ativo",
+    "inactive": "Desativado",
+    "tokenTitle": "Guarde o token do dispositivo",
+    "tokenHint": "Este token é apresentado apenas uma vez. Guarde-o no dispositivo e envie-o por HTTPS no cabeçalho Authorization: Bearer.",
+    "token": "Token do dispositivo",
+    "copy": "Copiar token",
+    "copied": "Copiado",
+    "endpoint": "Endpoint de métricas",
+    "error": "O pedido falhou. Tente novamente.",
+    "invalid_name": "Introduza um nome de dispositivo com 1 a 80 carateres.",
+    "invalid_selection": "Selecione servidores e campos de dados válidos.",
+    "device_limit": "Foi atingido o limite de 100 dispositivos.",
+    "device_not_found": "Este acesso de dispositivo já não existe.",
+    "saved": "Guardado",
+    "status": "Estado do servidor e tempo de atividade",
+    "cpu_percent": "Utilização da CPU",
+    "ram_percent": "Utilização da RAM",
+    "temperatures": "Temperaturas",
+    "disk_percent": "Utilização do disco do sistema",
+    "disk_health": "Estado das unidades",
+    "network": "Tráfego de rede",
+    "containers": "Número de contentores",
+    "vms": "Número de VM",
+    "updates": "Atualizações de aplicações disponíveis",
+    "alerts": "Número de avisos",
+    "backups": "Estado das cópias de segurança"
+  }
+};
+function deviceText(key){return (DEVICE_I18N[currentLanguage()]||DEVICE_I18N.en)[key]||DEVICE_I18N.en[key]||key;}
+function deviceError(error){const key=error?.body?.detail;return deviceText(typeof key==='string'&&key in DEVICE_I18N.en?key:'error');}
+let deviceCatalog={devices:[],servers:[],fields:[]};
+function deviceShell(title,markup,focus){
+  resetFormCardClasses()?.classList.add('device-access-card');
+  $('#form-head').textContent=title;
+  $('#form-body').innerHTML=markup;
+  formSubmitFn=null;
+  openFormOverlay(focus);
+}
+async function devicesManage(){
+  closeUserMenu();
+  try{deviceCatalog=await api('/devices/admin/list');deviceList();}
+  catch(error){toast(deviceError(error),'error');}
+}
+function deviceList(){
+  const t=key=>esc(deviceText(key));
+  const names=new Map(deviceCatalog.servers.map(server=>[server.id,server.name]));
+  deviceShell(deviceText('title'),`<p>${t('intro')}</p>
+    <div>${deviceCatalog.devices.length?deviceCatalog.devices.map((device,index)=>`
+      <section class="device-row">
+        <div class="device-row-head"><strong>${esc(device.name)}</strong><span>${t(device.enabled?'active':'inactive')}</span></div>
+        <div class="device-summary"><strong>${t('servers')}:</strong> ${device.servers.map(id=>esc(names.get(id)||id)).join(', ')||'—'}<br>
+        <strong>${t('fields')}:</strong> ${device.fields.map(field=>t(field)).join(', ')||'—'}</div>
+        <div class="device-actions"><button class="btn ghost" data-device-edit="${index}">${t('edit')}</button>
+        <button class="btn ghost" data-device-toggle="${index}">${t(device.enabled?'disable':'enable')}</button>
+        <button class="btn ghost danger" data-device-delete="${index}">${t('delete')}</button></div>
+      </section>`).join(''):`<p>${t('empty')}</p>`}</div>
+    <div class="form-actions"><button class="btn ghost" onclick="closeForm()">${t('close')}</button>
+    <button class="btn" id="device-add">${t('add')}</button></div>`,'#device-add');
+  $('#device-add').onclick=()=>deviceEdit();
+  document.querySelectorAll('[data-device-edit]').forEach(button=>button.onclick=()=>deviceEdit(deviceCatalog.devices[+button.dataset.deviceEdit]));
+  document.querySelectorAll('[data-device-toggle]').forEach(button=>button.onclick=async()=>{
+    const device=deviceCatalog.devices[+button.dataset.deviceToggle];button.disabled=true;
+    try{await post('/devices/admin/enabled',{device_id:device.id,enabled:!device.enabled});await devicesManage();}
+    catch(error){toast(deviceError(error),'error');button.disabled=false;}
+  });
+  document.querySelectorAll('[data-device-delete]').forEach(button=>button.onclick=()=>{
+    const device=deviceCatalog.devices[+button.dataset.deviceDelete];
+    confirmDelete(deviceText('delete'),deviceText('deletePrompt'),async()=>{
+      try{await post('/devices/admin/delete',{device_id:device.id});await devicesManage();}
+      catch(error){toast(deviceError(error),'error');}
+    });
+  });
+}
+function deviceEdit(device){
+  const t=key=>esc(deviceText(key));
+  deviceShell(device?deviceText('edit'):deviceText('add'),`
+    <form id="device-form"><div class="form-field"><label for="device-name">${t('name')}</label>
+      <input id="device-name" name="name" required maxlength="80" value="${esc(device?.name||'')}"></div>
+    <fieldset><legend>${t('servers')}</legend>${deviceCatalog.servers.map(server=>`
+      <label class="device-choice"><input type="checkbox" name="device-server" value="${esc(server.id)}" ${device?.servers.includes(server.id)?'checked':''}><span>${esc(server.name)}</span></label>`).join('')}</fieldset>
+    <fieldset><legend>${t('fields')}</legend><div class="device-fields">${deviceCatalog.fields.map(field=>`
+      <label class="device-choice"><input type="checkbox" name="device-field" value="${esc(field)}" ${device?.fields.includes(field)?'checked':''}><span>${t(field)}</span></label>`).join('')}</div></fieldset>
+    <p>${t('hint')}</p><p id="device-error" class="device-error" role="alert"></p>
+    <div class="form-actions"><button class="btn ghost" type="button" onclick="deviceList()">${t('cancel')}</button>
+      <button class="btn" id="device-save" type="submit">${t('save')}</button></div></form>`,'#device-name');
+  $('#device-form').onsubmit=async event=>{
+    event.preventDefault();const button=$('#device-save');button.disabled=true;
+    const data={name:$('#device-name').value,servers:JSON.stringify([...document.querySelectorAll('[name="device-server"]:checked')].map(el=>el.value)),
+      fields:JSON.stringify([...document.querySelectorAll('[name="device-field"]:checked')].map(el=>el.value))};
+    if(device)Object.assign(data,{device_id:device.id,enabled:device.enabled});
+    try{
+      const result=await post(device?'/devices/admin/update':'/devices/admin/create',data);
+      if(device){await devicesManage();toast(deviceText('saved'));}
+      else deviceTokenResult(result.token);
+    }catch(error){$('#device-error').textContent=deviceError(error);button.disabled=false;}
+  };
+}
+function deviceTokenResult(token){
+  const t=key=>esc(deviceText(key));
+  deviceShell(deviceText('tokenTitle'),`<p>${t('tokenHint')}</p>
+    <div class="form-field"><label for="device-token">${t('token')}</label><textarea id="device-token" rows="3" readonly spellcheck="false" autocomplete="off"></textarea></div>
+    <button class="btn ghost" id="device-copy">${t('copy')}</button><p id="device-copy-status" role="status"></p>
+    <p>${t('endpoint')}</p><code>GET ${esc(location.origin)}/api/devices/metrics</code>
+    <div class="form-actions"><button class="btn" id="device-token-done">${t('close')}</button></div>`,'#device-token');
+  $('#device-token').value=token;
+  $('#device-copy').onclick=async()=>{
+    const input=$('#device-token');input.select();
+    try{await navigator.clipboard.writeText(input.value);$('#device-copy-status').textContent=deviceText('copied');}
+    catch(error){input.focus();input.select();}
+  };
+  $('#device-token-done').onclick=()=>{closeForm();devicesManage();};
+}
 
 loadAuthStatus();
 

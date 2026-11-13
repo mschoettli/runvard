@@ -15,6 +15,7 @@ import html
 import requests
 import subprocess
 import ipaddress
+import socket
 
 from fastapi import FastAPI, Request, Depends, HTTPException, WebSocket, \
     WebSocketDisconnect, UploadFile, File, Form
@@ -28,6 +29,7 @@ from modules import (system, terminal, files, storage, docker_mgr, services,
                      system_mgr, apps, dashboard, metrics, accounts, audit,
                      ports, time_machine, path_picker)
 from modules import security_tokens, auth_config, workspace_app
+from modules.device_access import DeviceAccessStore, LocalTelemetry, FIELDS as DEVICE_FIELDS, snapshot_metrics, number
 from modules.network_map import NetworkMap
 from modules.external_servers import ExternalServerManager
 from modules.external_servers.service import error_category
@@ -91,6 +93,9 @@ accounts.STORE = os.path.join(DATA_DIR, "users.json")
 COOKIE_NAME = "runvard_session"
 SESSION_TTL = 8 * 3600              # 8 Stunden
 SESSION_TTL_REMEMBER = 30 * 86400   # 30 Tage
+
+DEVICE_ACCESS = DeviceAccessStore(os.path.join(DATA_DIR, "device-access.json"))
+DEVICE_TELEMETRY = LocalTelemetry()
 
 NETWORK_MAP = NetworkMap(DATA_DIR)
 
@@ -762,6 +767,122 @@ term.onData(d=>{if(ws.readyState===1)ws.send(JSON.stringify({type:'input',data:d
 window.addEventListener('resize',()=>{fit.fit();if(ws.readyState===1)ws.send(JSON.stringify({type:'resize',rows:term.rows,cols:term.cols}));});
 </script>
 </body></html>"""
+
+
+# ============ Read-only device access ============
+
+def _device_sources():
+    rows = [{"id": "local", "name": socket.gethostname(), "local": True}]
+    # Read existing cached peer data without triggering collection or network I/O.
+    with FEDERATION.lock:
+        for node in FEDERATION.state.get("nodes", {}).values():
+            if node.get("revoked") or node["node_id"] == FEDERATION.identity.node_id:
+                continue
+            if not FEDERATION.state.get("enabled"):
+                continue
+            status = FEDERATION.state.get("peer_status", {}).get(node["node_id"], {})
+            rows.append({"id": "peer:" + node["node_id"], "name": node.get("name") or node["node_id"],
+                         "health": status.get("health"), "last_contact": status.get("last_success"),
+                         "snapshot": status.get("snapshot") or {}})
+    for node in EXTERNAL_SERVERS.overview().get("nodes", []):
+        rows.append({"id": node["node_id"], "name": node["name"],
+                     "health": node.get("health"), "last_contact": node.get("last_contact"),
+                     "snapshot": node.get("snapshot") or {}})
+    return rows
+
+
+def _device_local_metrics(fields):
+    return DEVICE_TELEMETRY.collect(fields)
+
+
+def _device_selection(name, servers, fields):
+    try:
+        selected_servers, selected_fields = json.loads(servers), json.loads(fields)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "invalid_selection")
+    if not name.strip() or len(name.strip()) > 80:
+        raise HTTPException(400, "invalid_name")
+    for selected, allowed in ((selected_servers, {s["id"] for s in _device_sources()}),
+                              (selected_fields, set(DEVICE_FIELDS))):
+        if not isinstance(selected, list) or len(selected) > 100 or any(
+            not isinstance(item, str) or item not in allowed for item in selected
+        ):
+            raise HTTPException(400, "invalid_selection")
+    return name.strip(), list(dict.fromkeys(selected_servers)), list(dict.fromkeys(selected_fields))
+
+
+@app.get("/api/devices/admin/list")
+def device_access_list(user: str = Depends(require_admin)):
+    return JSONResponse({"devices": DEVICE_ACCESS.list(), "fields": DEVICE_FIELDS,
+                         "servers": [{"id": s["id"], "name": s["name"]} for s in _device_sources()]},
+                        headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/devices/admin/create")
+def device_access_create(name: str = Form(...), servers: str = Form("[]"), fields: str = Form("[]"),
+                         user: str = Depends(require_admin)):
+    selection = _device_selection(name, servers, fields)
+    try:
+        result = DEVICE_ACCESS.create(*selection)
+    except ValueError:
+        raise HTTPException(400, "device_limit")
+    return JSONResponse(result, headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/devices/admin/update")
+def device_access_update(device_id: str = Form(...), name: str = Form(...),
+                         servers: str = Form("[]"), fields: str = Form("[]"),
+                         enabled: bool = Form(True), user: str = Depends(require_admin)):
+    selection = _device_selection(name, servers, fields)
+    try:
+        result = DEVICE_ACCESS.update(device_id, *selection, enabled)
+    except KeyError:
+        raise HTTPException(404, "device_not_found")
+    return JSONResponse({"device": result}, headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/devices/admin/enabled")
+def device_access_enabled(device_id: str = Form(...), enabled: bool = Form(...),
+                          user: str = Depends(require_admin)):
+    try:
+        DEVICE_ACCESS.set_enabled(device_id, enabled)
+    except KeyError:
+        raise HTTPException(404, "device_not_found")
+    return {"ok": True}
+
+
+@app.post("/api/devices/admin/delete")
+def device_access_delete(device_id: str = Form(...), user: str = Depends(require_admin)):
+    try:
+        DEVICE_ACCESS.delete(device_id)
+    except KeyError:
+        raise HTTPException(404, "device_not_found")
+    return {"ok": True}
+
+
+@app.get("/api/devices/metrics")
+def device_access_metrics(request: Request):
+    authorization = request.headers.get("authorization", "")
+    scheme, _, token = authorization.partition(" ")
+    grant = DEVICE_ACCESS.authenticate(token) if scheme.lower() == "bearer" else None
+    if not grant:
+        raise HTTPException(401, "invalid_device_token", headers={"WWW-Authenticate": "Bearer", "Cache-Control": "no-store"})
+    rows = []
+    for source in _device_sources():
+        if source["id"] not in grant["servers"]:
+            continue
+        values = _device_local_metrics(grant["fields"]) if source.get("local") else snapshot_metrics(source, grant["fields"])
+        rows.append({"id": source["id"], "name": source["name"],
+                     "captured_at": int(time.time()) if source.get("local") else number(source.get("snapshot", {}).get("captured_at")),
+                     **{key: values.get(key) for key in grant["fields"]}})
+    # A grant can be restricted or revoked while an expensive reader is running.
+    current = DEVICE_ACCESS.authenticate(token)
+    if not current:
+        raise HTTPException(401, "invalid_device_token", headers={"Cache-Control": "no-store"})
+    result = [{key: value for key, value in row.items()
+               if key in ("id", "name", "captured_at") or key in current["fields"]}
+              for row in rows if row["id"] in current["servers"]]
+    return JSONResponse({"api_version": 1, "servers": result}, headers={"Cache-Control": "no-store"})
 
 
 # ============ System ============

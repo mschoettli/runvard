@@ -153,6 +153,16 @@ const i18n = evaluate(indexSource, "I18N", context);
 mergeLocales(i18n, evaluate(indexSource, "I18N_COMPLETIONS", context, true));
 requireKeyParity("I18N", i18n, "en");
 
+const deviceI18n = evaluate(indexSource, "DEVICE_I18N", context);
+requireKeyParity("DEVICE_I18N", deviceI18n, "en", locales);
+for (const locale of locales) {
+  const extra = Object.keys(deviceI18n[locale]).filter(key => !(key in deviceI18n.en));
+  if (extra.length) failures.push(`DEVICE_I18N.${locale} extra keys: ${extra.join(", ")}`);
+  for (const [key, value] of Object.entries(deviceI18n[locale])) {
+    if (typeof value !== "string" || !value.trim()) failures.push(`DEVICE_I18N.${locale}.${key} is empty`);
+  }
+}
+
 const uiPhrases = evaluate(indexSource, "UI_PHRASES", context);
 mergeLocales(uiPhrases, evaluate(indexSource, "UI_PHRASE_COMPLETIONS", context, true));
 requireKeyParity("UI_PHRASES", uiPhrases, "de", ["fr", "it", "es", "pt"]);
