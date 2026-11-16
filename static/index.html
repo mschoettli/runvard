@@ -14075,7 +14075,7 @@ function appCardHtml(a){
     const primary=pending
       ? pendingButton
       : a.running
-      ? `<button class="btn sm success" style="flex:1" onclick="appOpen('${safeId}',${a.port})">↗ ${esc(uiText('Open'))}</button>`
+      ? `<a class="btn sm success" style="flex:1;text-decoration:none" href="http://${location.hostname}:${a.port}" target="_blank" rel="noopener noreferrer">↗ ${esc(uiText('Open'))}</a>`
       : `<button class="btn sm" style="flex:1" onclick="appAct('${safeId}','start')">▶ ${esc(uiText('Start'))}</button>`;
     actions=`<div style="display:flex;gap:6px">
       ${primary}
@@ -14179,7 +14179,6 @@ window.appOpen=(id,port)=>{
   const url=`http://${location.hostname}:${port}`;
   const opened=window.open(url,'_blank');
   if(opened)opened.opener=null;
-  else window.location.assign(url);
 };
 
 async function renderPorts(body){
@@ -16230,7 +16229,7 @@ function appCardHtml(a){
     const primary=pending
       ? `<button class="btn sm ghost" style="flex:1" disabled>${esc(appPendingLabel(pending))}</button>`
       : a.running
-      ? `<button class="btn sm success" style="flex:1" onclick="appOpen('${a.id}',${a.port})">${esc(uiText('Open'))}</button>`
+      ? `<a class="btn sm success" style="flex:1;text-decoration:none" href="http://${location.hostname}:${a.port}" target="_blank" rel="noopener noreferrer">${esc(uiText('Open'))}</a>`
       : `<button class="btn sm" style="flex:1" onclick="appAct('${a.id}','start')">${esc(uiText('Start'))}</button>`;
     actions=`<div style="display:flex;gap:6px">${primary}<button class="btn icon" title="${esc(uiText('Actions'))}" onclick="appMenu(event,'${a.id}','${esc(a.name)}',${a.running?1:0},${a.update_available?1:0})" style="width:30px;height:30px;font-size:15px" ${pending?'disabled':''}>⋯</button></div>`;
   }
