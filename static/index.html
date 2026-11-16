@@ -14176,7 +14176,10 @@ window.appUninstall=(id,name)=>confirmDelete('Uninstall app',
 
 window.appOpen=(id,port)=>{
   if(!port){toast('No port defined','error');return;}
-  window.open(`http://${location.hostname}:${port}`,'_blank');
+  const url=`http://${location.hostname}:${port}`;
+  const opened=window.open(url,'_blank');
+  if(opened)opened.opener=null;
+  else window.location.assign(url);
 };
 
 async function renderPorts(body){
