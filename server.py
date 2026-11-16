@@ -167,8 +167,6 @@ EXPERT_ONLY_PATHS = {
     "/api/sysmgr/sosreport/run",
     "/api/sysmgr/tuned",
     "/api/sysmgr/tuned/set",
-    "/api/sysmgr/unattended",
-    "/api/sysmgr/unattended/set",
     "/api/vms/pool/action",
     "/api/vms/pool/create",
     "/api/vms/pool/vol-create",
@@ -360,7 +358,6 @@ def _danger_confirm_meta(path, form):
         "/api/sysmgr/power/logind/set": ("sysmgr:logind-power", "logind"),
         "/api/sysmgr/hostname": ("sysmgr:hostname", "name"),
         "/api/sysmgr/packages/remove": ("sysmgr:package-remove", "name"),
-        "/api/sysmgr/unattended/set": ("sysmgr:unattended", "unattended-upgrades"),
         "/api/sysmgr/tuned/set": ("sysmgr:tuned", "profile"),
         "/api/dashboard/remove": ("dashboard:remove", "tile_id"),
         "/api/federation/v1/admin/enable": ("federation:enable", "internal_url"),
@@ -378,6 +375,8 @@ def _danger_confirm_meta(path, form):
         "/api/time-machine/replications/import":
             ("time-machine:promote-received", "source_replication_id"),
     }
+    if path == "/api/sysmgr/unattended/set":
+        return ("sysmgr:unattended", "unattended-upgrades")
     if path == "/api/docker/action":
         action = _form_value(form, "action")
         if action == "remove":
