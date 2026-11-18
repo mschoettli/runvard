@@ -149,11 +149,13 @@ def _rows_from_services(services, project_name, source, fallback_ips):
         if not isinstance(service, dict):
             continue
         display_name = _service_display_name(project_name, service_name, service_count)
+        management = compose_utils.management_target_port(service_name, service)
         for raw in service.get("ports") or []:
             item = _parse_port_token(raw)
             if not item:
                 continue
-            if not _is_relevant_app_port(service_name, item["port"], item.get("target")):
+            is_management = bool(management and item.get("target") == management)
+            if not is_management and not _is_relevant_app_port(service_name, item["port"], item.get("target")):
                 continue
             targets = [item["bind_ip"]] if item["bind_ip"] and item["bind_ip"] != "0.0.0.0" else fallback_ips
             for ip in targets:
@@ -166,8 +168,8 @@ def _rows_from_services(services, project_name, source, fallback_ips):
                     "source": source,
                 })
         if service.get("network_mode") == "host":
-            port = _env_port(service.get("environment") or {})
-            if port and _is_relevant_app_port(service_name, port, port):
+            port = _env_port(service.get("environment") or {}) or management
+            if port and (port == management or _is_relevant_app_port(service_name, port, port)):
                 for ip in fallback_ips:
                     rows.append({
                         "ip": ip,
@@ -271,7 +273,7 @@ def _custom_dashboard_ports(dashboard_file=None):
         return []
     rows = []
     for tile in data.get("tiles", []):
-        if tile.get("type") != "custom":
+        if tile.get("type") not in {"custom", "app", "compose", "docker"}:
             continue
         url = str(tile.get("url") or "").strip()
         parsed = urlparse(url)

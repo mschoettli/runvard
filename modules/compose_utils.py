@@ -38,6 +38,35 @@ def _as_int(value):
         return None
 
 
+def management_target_port(service_name, service):
+    """Return an explicit management target, independently of host mappings."""
+    explicit = _as_int(service.get("x-runvard-web-port"))
+    if explicit and 0 < explicit <= 65535:
+        return explicit
+    image = str(service.get("image") or "").split("@", 1)[0].rsplit("/", 1)[-1].split(":", 1)[0]
+    name = image.lower() or str(service_name).lower()
+    if name == "nginx-proxy-manager":
+        return 81
+    if name != "zoraxy":
+        return None
+    env = service.get("environment") or {}
+    if isinstance(env, list):
+        env = dict(str(item).split("=", 1) for item in env if "=" in str(item))
+    port = _as_int(env.get("PORT")) if isinstance(env, dict) else None
+    return port if port and 0 < port <= 65535 else 8000
+
+
+def _compose_services(content):
+    if yaml is not None:
+        try:
+            data = yaml.safe_load(content)
+            services = data.get("services", {}) if isinstance(data, dict) else {}
+            return services if isinstance(services, dict) else {}
+        except Exception:
+            pass
+    return {}
+
+
 def _published_and_target(port_mapping):
     if isinstance(port_mapping, dict):
         return _as_int(port_mapping.get("published")), _as_int(port_mapping.get("target"))
@@ -94,11 +123,23 @@ def _compose_port_entries(content):
     return entries
 
 
-def best_web_port_from_compose(content, fallback=0):
+def best_web_port_from_compose(content, fallback=0, preferred_target=None):
+    services = _compose_services(content)
     candidates = []
     for service_name, entry in _compose_port_entries(content):
+        protocol = (entry.get("protocol", "tcp") if isinstance(entry, dict)
+                    else str(entry).partition("/")[2] or "tcp")
+        if str(protocol).lower() != "tcp":
+            continue
         published, target = _published_and_target(entry)
         if not published:
+            continue
+        management = management_target_port(service_name, services.get(service_name) or {})
+        if target and target == management:
+            candidates.append((1000, published))
+            continue
+        if target and target == preferred_target:
+            candidates.append((900, published))
             continue
         if published in NON_WEB_PORTS or target in NON_WEB_PORTS:
             continue
@@ -115,6 +156,11 @@ def best_web_port_from_compose(content, fallback=0):
             score += 20
         candidates.append((score, published))
     if not candidates:
+        for name, service in services.items():
+            if isinstance(service, dict) and service.get("network_mode") == "host":
+                management = management_target_port(name, service)
+                if management:
+                    return management
         return fallback
     candidates.sort(reverse=True)
     return candidates[0][1] if candidates[0][0] >= 0 else fallback

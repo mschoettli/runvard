@@ -222,3 +222,17 @@ services:
     monkeypatch.setattr(ports, "_tcp_reachable", lambda ip, port: True)
 
     assert ports.list_ports(apps_dir, compose_dir)["ports"] == []
+
+
+def test_ports_includes_explicit_service_main_address(monkeypatch, tmp_path):
+    path = tmp_path / 'dashboard.json'
+    path.write_text(json.dumps({'tiles': [{
+        'id': 'compose:zoraxy', 'type': 'docker', 'name': 'Zoraxy',
+        'port': 8080, 'url': 'http://192.0.2.10:8001',
+    }]}))
+    monkeypatch.setattr(ports, 'host_ips', lambda: ['192.0.2.10'])
+    monkeypatch.setattr(ports, '_tcp_reachable', lambda *args: True)
+    rows = ports.list_ports(tmp_path / 'apps', tmp_path / 'compose', path)['ports']
+    assert [(row['app'], row['port'], row['url']) for row in rows] == [
+        ('Zoraxy', 8001, 'http://192.0.2.10:8001'),
+    ]

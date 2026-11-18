@@ -21,6 +21,7 @@ try{document.documentElement.dataset.uiTheme=localStorage.getItem('runvard_ui_th
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="/static/docker-modern.js?v=20261005-dashboard"></script>
+<script src="/static/compose-editor.js?v=20261117c"></script>
 <style>
 :root{--bg:#0a0b14;--bg2:rgba(13,14,26,.85);--bg3:rgba(17,18,33,.65);--glass:rgba(255,255,255,.04);--glass-hover:rgba(122,74,255,.08);--border:rgba(255,255,255,.08);--border-accent:rgba(122,74,255,.3);--text:#f0f0ff;--text2:rgba(240,240,255,.55);--text3:rgba(240,240,255,.28);--accent:#7a4aff;--accent-light:#9d7aff;--green:#22c55e;--yellow:#eab308;--red:#ef4444;--radius:12px;--blur:blur(16px)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -63,6 +64,7 @@ body{font-family:'Plus Jakarta Sans',sans-serif;background:radial-gradient(ellip
 .logo-host::before{content:"·";margin-right:.75rem;color:var(--text3)}
 .topright{display:flex;align-items:center;gap:6px;justify-content:flex-end}.topbar-sep{width:1px;height:14px;background:rgba(255,255,255,.08);margin:0 4px}
 .ports-toplink{width:auto;min-width:48px;padding:0 10px;font-size:11px;font-weight:600;letter-spacing:.03em}
+.network-map-toplink{width:auto;flex:0 0 auto;padding:0 12px;white-space:nowrap;font-size:11px;font-weight:600;letter-spacing:.03em}
 .time{font-size:14px;color:var(--text2)}.uptime{font-size:12px;color:var(--text3)}
 .avatar-wrap{display:flex;align-items:center;gap:8px;padding:4px 10px;border-radius:8px;cursor:pointer;transition:background .15s;margin-left:6px}.avatar-wrap:hover{background:rgba(122,74,255,.08)}.avatar{width:30px;height:30px;border-radius:50%;background:rgba(122,74,255,.2);border:1.5px solid rgba(122,74,255,.4);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:600;color:#9d7aff;flex-shrink:0}.avatar-info{display:flex;flex-direction:column;line-height:1.2}.avatar-name{font-size:12px;font-weight:600;color:var(--text)}.avatar-role{font-size:10px;color:var(--text3)}
 .user-menu-wrap{position:relative}
@@ -704,6 +706,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .dash-add-btn:hover{background:rgba(122,74,255,.25)}
 .dash-grid{display:grid;grid-template-columns:repeat(9,1fr);gap:10px}
 .dash-tile{--tile-accent:var(--accent);background:var(--bg3);backdrop-filter:var(--blur);-webkit-backdrop-filter:var(--blur);border:1px solid var(--border);border-radius:var(--radius);overflow:visible;cursor:pointer;transition:all .15s;user-select:none;-webkit-user-select:none;position:relative}
+.dash-tile-link{display:block;color:inherit;text-decoration:none}
 .dash-tile:hover{border-color:color-mix(in srgb,var(--tile-accent) 48%,transparent);transform:translateY(-2px)}
 .dash-tile-body{padding:14px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;position:relative;min-height:88px}
 .dash-tile-body.has-url{padding-bottom:0}
@@ -730,33 +733,42 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .dash-ctx-item.danger .dash-ctx-icon{color:#ff8a8a}
 .dash-ctx-item.danger:hover{background:rgba(239,68,68,.12);color:#ffb4b4}
 .dash-ctx-sep{height:.5px;background:rgba(255,255,255,.08);margin:5px 8px}
-.tile-edit-card{width:min(560px,95vw)}
-.tile-edit-preview-wrap{display:flex;justify-content:center;margin-bottom:18px;padding:14px;border:1px solid rgba(255,255,255,.08);border-radius:12px;background:rgba(255,255,255,.035)}
-.tile-edit-preview{--tile-accent:var(--accent);width:150px;background:var(--bg3);border:1px solid color-mix(in srgb,var(--tile-accent) 38%,var(--border));border-radius:14px;overflow:hidden;text-align:center;box-shadow:0 10px 28px rgba(0,0,0,.28)}
-.tile-edit-preview-body{min-height:100px;padding:16px 10px 8px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;position:relative}
-.tile-edit-preview-dot{position:absolute;top:9px;right:9px;width:7px;height:7px;border-radius:50%;background:var(--green)}
-.tile-edit-preview-icon{width:38px;height:38px;border-radius:10px;background:color-mix(in srgb,var(--tile-accent) 16%,rgba(255,255,255,.05));border:.5px solid color-mix(in srgb,var(--tile-accent) 38%,var(--border));display:flex;align-items:center;justify-content:center;font-size:20px;overflow:hidden}
-.tile-edit-preview-icon img{width:24px;height:24px;object-fit:contain}
-.tile-edit-preview-name{max-width:126px;color:var(--text);font-size:12px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tile-edit-preview-note{max-width:126px;color:var(--text3);font-size:9px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tile-edit-preview-url{padding:5px 9px;border-top:.5px solid rgba(255,255,255,.06);background:rgba(0,0,0,.16);font:8px 'JetBrains Mono',monospace;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tile-edit-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
-.tile-edit-grid .form-field{margin-bottom:0}
-.tile-edit-control{display:flex;align-items:center;gap:8px}
-.tile-edit-control input{min-width:0}
-.tile-edit-icon-btn{width:38px;height:38px;flex:0 0 38px;border:1px solid var(--border);border-radius:9px;background:rgba(255,255,255,.045);color:var(--text2);display:flex;align-items:center;justify-content:center;cursor:pointer;font:15px/1 inherit;transition:background .15s,border-color .15s,color .15s}
-.tile-edit-icon-btn:hover,.tile-edit-icon-btn:focus{background:var(--glass-hover);border-color:rgba(122,74,255,.34);color:var(--text);outline:none}
-.tile-edit-icon-btn.visible{display:flex}
-.tile-edit-upload-btn{display:none}
-.tile-edit-upload-btn.visible{display:flex}
-.tile-edit-wide{grid-column:1/-1}
-.tile-edit-options{display:grid;gap:10px;margin-top:16px}
-.tile-edit-option{display:flex;align-items:center;justify-content:space-between;gap:12px;border:1px solid rgba(255,255,255,.08);border-radius:12px;padding:12px;background:rgba(255,255,255,.035)}
-.tile-edit-option strong{display:block;font-size:12px;color:var(--text);margin-bottom:3px}
-.tile-edit-option span{display:block;font-size:11px;color:var(--text3);line-height:1.35}
-.tile-edit-option input{width:auto}
-.tile-edit-actions{display:flex;justify-content:space-between;gap:10px;margin-top:20px}
-.tile-edit-actions-main{display:flex;gap:10px}
+.tile-edit-card{width:min(760px,calc(100vw - 32px));display:flex;flex-direction:column;overflow:hidden}
+.tile-edit-card .form-body{padding:0;min-height:0;overflow:auto}
+.tile-edit-card .form-head{padding:16px 24px;justify-content:space-between;flex-shrink:0}
+.tile-edit-card .form-head button{min-width:40px;min-height:40px}
+.tile-edit-layout{display:grid;grid-template-columns:168px minmax(0,1fr);gap:24px;padding:24px}
+.tile-edit-preview-wrap{min-width:0}
+.tile-edit-preview-label{margin:0 0 12px;font-size:12px;font-weight:600;color:var(--text2)}
+.tile-edit-preview{width:100%;pointer-events:none}
+.tile-edit-preview [hidden]{display:none!important}
+.tile-edit-preview .dash-tile-name,.tile-edit-preview .dash-tile-note{max-width:100%}
+.tile-edit-preview-caption{font-size:11px;line-height:1.5;color:var(--text3);margin:12px 0 0}
+.tile-edit-fields{min-width:0;display:grid;gap:24px}
+.tile-edit-section{border:0;padding:0;margin:0;min-width:0}
+.tile-edit-section legend{padding:0;margin-bottom:16px;font-size:13px;font-weight:600;color:var(--text)}
+.tile-edit-grid{display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
+.tile-edit-grid .form-field{margin:0;min-width:0}
+.tile-edit-control{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.tile-edit-control input{min-width:0;flex:1 1 140px}
+.tile-edit-control input[type=color]{flex:0 0 56px;width:56px;height:40px;padding:4px}
+.tile-edit-card .btn{min-height:40px;white-space:normal}
+.tile-edit-card input:not([type=checkbox]){min-height:40px}
+.tile-edit-card :focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.tile-edit-upload-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:8px}
+.tile-edit-hint{font-size:11px;line-height:1.5;color:var(--text3);margin:6px 0 0}
+.tile-edit-status{font-size:12px;line-height:1.5;color:var(--text2);margin:0}
+.tile-edit-status:empty{display:none}
+.tile-edit-error{color:var(--red);font-size:12px;line-height:1.5;margin:12px 24px}
+.tile-edit-error:empty{display:none}
+.tile-edit-option{display:flex;align-items:flex-start;gap:12px;cursor:pointer}
+.tile-edit-option input{width:18px;height:18px;flex:0 0 18px;margin:2px 0 0;accent-color:var(--accent)}
+.tile-edit-option strong{display:block;font-size:12px;color:var(--text)}
+.tile-edit-option span span{display:block;font-size:11px;line-height:1.5;color:var(--text3);margin-top:4px}
+.tile-edit-actions{position:sticky;bottom:0;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding:16px 24px;background:var(--bg3);border-top:1px solid var(--border);z-index:1}
+@media(max-width:640px){.tile-edit-layout{grid-template-columns:minmax(0,1fr);gap:24px;padding:16px}.tile-edit-preview-wrap{display:grid;grid-template-columns:minmax(0,1fr) 132px;column-gap:16px;align-items:start}.tile-edit-preview-label{grid-column:1;grid-row:1}.tile-edit-preview{grid-column:2;grid-row:1/3}.tile-edit-preview-caption{grid-column:1;grid-row:2;margin:0}.tile-edit-card .form-head,.tile-edit-actions{padding:12px 16px}.tile-edit-error{margin:12px 16px}}
+@media(prefers-reduced-motion:reduce){.tile-edit-card{animation:none}}
+
 
 /* ── Connected servers on dashboard ── */
 .connected-servers{--connected-server-card-height:6.5rem;width:100%;max-width:1200px;margin:0 auto;padding:0 1rem 1.75rem}
@@ -849,7 +861,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .external-server-admin-meta{margin:.25rem 0 0 .8125rem;font-size:.6875rem;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .external-server-admin-actions{display:flex;gap:.375rem;align-items:center;flex-wrap:wrap}
 .external-server-empty{padding:1rem;border:1px dashed var(--border);border-radius:.75rem;color:var(--text3);font-size:.75rem;text-align:center}
-@media (max-width: 640px){.tile-edit-grid{grid-template-columns:1fr}.tile-edit-actions{flex-direction:column}.tile-edit-actions-main{justify-content:flex-end}}
+
 .sortable-ghost{opacity:.3}
 .sortable-chosen{transform:scale(1.05)}
 
@@ -952,8 +964,27 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .flame-bg{background:radial-gradient(ellipse at 30% 40%,#e11d48,transparent 50%),radial-gradient(ellipse at 75% 65%,#9333ea,transparent 50%),radial-gradient(ellipse at 60% 20%,#be123c,transparent 40%),#0d0209!important;background-attachment:fixed!important}
 .ice-bg{background:radial-gradient(ellipse at 60% 30%,#818cf8,transparent 50%),radial-gradient(ellipse at 20% 70%,#3730a3,transparent 55%),radial-gradient(ellipse at 85% 75%,#0284c7,transparent 45%),#03051a!important;background-attachment:fixed!important}
 .galaxy-bg{background:radial-gradient(ellipse at 40% 40%,#4c1d95,transparent 55%),radial-gradient(ellipse at 75% 20%,#1e1b4b,transparent 50%),radial-gradient(ellipse at 20% 80%,#0f172a,transparent 50%),#020108!important;background-attachment:fixed!important}
+
+/* Device grants reuse the existing modal and palette. */
+.device-access-card{width:min(42rem,100%);max-width:100%;min-width:0}
+.device-access-card .form-head{overflow-wrap:anywhere}
+.device-access-card .form-actions,.device-actions{display:flex;flex-wrap:wrap;gap:.5rem}
+.device-access-card .form-actions .btn,.device-actions .btn{white-space:normal;min-height:2.75rem}
+.device-access-card fieldset{border:1px solid var(--border);border-radius:.625rem;margin:1rem 0;padding:.5rem .75rem;min-width:0}
+.device-access-card legend{font-size:.8125rem;color:var(--text2);padding:0 .25rem}
+.device-choice{display:flex;align-items:center;gap:.75rem;min-height:2.75rem;font-size:.8125rem;cursor:pointer;overflow-wrap:anywhere}
+.device-choice input{width:1rem;height:1rem;flex:0 0 1rem;accent-color:var(--accent)}
+.device-fields{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,15rem),1fr));gap:0 .75rem}
+.device-row{padding:1rem 0;border-bottom:1px solid var(--border);min-width:0;overflow-wrap:anywhere}
+.device-row-head{display:flex;gap:.75rem;align-items:baseline;justify-content:space-between;flex-wrap:wrap;margin-bottom:.5rem}
+.device-summary{font-size:.75rem;color:var(--text2);line-height:1.6;margin-bottom:.75rem}
+.device-access-card textarea{width:100%;box-sizing:border-box;resize:vertical;font-family:monospace;overflow-wrap:anywhere}
+.device-access-card code{display:block;overflow-wrap:anywhere;font-size:.75rem}
+.device-error{color:var(--danger,#ef4444);font-size:.8125rem;line-height:1.5}
+@media(max-width:480px){.device-access-card .form-body,.device-access-card .form-head{padding:1rem}}
+
 </style>
-<link rel="stylesheet" href="/static/modern-theme.css?v=7518ef0d761e">
+<link rel="stylesheet" href="/static/modern-theme.css?v=96d164153923">
 </head>
 <body>
 
@@ -970,6 +1001,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
     </div>
   </div>
   <div class="topright">
+    <button class="bg-btn-icon network-map-toplink desktop-header-action" onclick="window.open('/network-map','_blank','noopener')" data-i18n="networkMap"></button>
     <button class="bg-btn-icon ports-toplink desktop-header-action" onclick="openPortsView()" title="Ports">ports</button>
     <button class="bg-btn-icon desktop-header-action" onclick="openBtop()" title="btop – System Monitor" style="font-size:11px;font-weight:600;letter-spacing:.03em">btop</button>
     <button class="bg-btn-icon desktop-header-action" onclick="toggleBgPanel()" data-i18n-title="backgroundTitle" title="Hintergrund" style="font-size:14px">⬡</button>
@@ -983,6 +1015,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
         <div class="um-head" id="um-head">…</div>
         <div class="mobile-header-tools" aria-label="Tools">
           <button class="um-action" type="button" onclick="closeUserMenu();openPortsView()"><span aria-hidden="true">▦</span><span>Ports</span></button>
+          <button class="um-action" type="button" onclick="closeUserMenu();window.open('/network-map','_blank','noopener')"><span aria-hidden="true">⌘</span><span data-i18n="networkMap"></span></button>
           <button class="um-action" type="button" onclick="closeUserMenu();openBtop()"><span aria-hidden="true">▥</span><span>btop</span></button>
           <button class="um-action" type="button" onclick="closeUserMenu();toggleBgPanel()"><span aria-hidden="true">⬡</span><span data-i18n="backgroundTitle">Hintergrund</span></button>
         </div>
@@ -996,6 +1029,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
         </div>
         <button class="um-action" onclick="openLanguageModal()">🌐 <span data-i18n="language">Language</span></button>
         <button class="um-action" onclick="openConnectedServersModal()">⬡ <span id="um-connected-servers-label">Connected servers</span></button>
+        <button id="um-devices" class="um-action" onclick="devicesManage()" style="display:none"><span data-device-i18n="title"></span></button>
         <button id="um-accounts" class="um-action" onclick="accountsManage()" style="display:none">👥 <span data-i18n="runvardAccounts">runvard-Konten</span></button>
         <button class="um-logout" onclick="doLogout()" data-i18n="logout">Sign out</button>
       </div>
@@ -1256,6 +1290,7 @@ const LANGUAGES=[
   {code:'pt',name:'Português'},
 ];
 const I18N_BASE={
+  networkMap:'Network map',
   language:'Language',languageSettings:'Language settings',languageField:'Interface language',
   save:'Save',cancel:'Cancel',delete:'Delete',continue:'Continue',close:'Close',
   search:'Search',searchPlaceholder:'Search...',loading:'Loading...',error:'Error',
@@ -1289,11 +1324,11 @@ const I18N_BASE={
 };
 const I18N={
   en:I18N_BASE,
-  de:{language:'Sprache',languageSettings:'Spracheinstellungen',languageField:'Oberflächensprache',save:'Speichern',cancel:'Abbrechen',delete:'Löschen',continue:'Fortfahren',close:'Schließen',search:'Suchen',searchPlaceholder:'Suchen...',loading:'Lädt...',error:'Fehler',logout:'Abmelden',loginPage:'Login-Seite',runvardAccounts:'runvard-Konten',background:'Hintergrund',backgroundTitle:'Hintergrund',presets:'Vorlagen',uploadImage:'Bild hochladen',dropImage:'Klicken oder Bild hier ablegen',imageUrl:'Bild-URL',restoreDefault:'Standard wiederherstellen',addTile:'Verknüpfung hinzufügen',confirmDelete:'Löschen bestätigen',saved:'Gespeichert',languageSaved:'Sprache gespeichert',expertOn:'Expertenmodus aktiviert',expertOff:'Expertenmodus deaktiviert',loginEnabled:'Login aktiviert. Beim nächsten Besuch ist eine Anmeldung erforderlich.',loginDisabled:'Login deaktiviert',signedInAs:'Angemeldet als',loginDisabledHead:'Login ist deaktiviert',daySuffix:'Uhr',confirmCheckbox:'Ich habe verstanden und möchte fortfahren.',dangerConfirmTitle:'Bestätigung erforderlich',dangerConfirmMessage:'Diese Aktion ändert systemrelevante Einstellungen oder Daten. Bitte bestätige, bevor runvard fortfährt.',tileTerminal:'Terminal',tileFiles:'Dateien',tileStorage:'Speicher',tileDocker:'Docker',tileVms:'Virtuelle Maschinen',tileBackup:'Backup',tileMonitoring:'Monitoring',tileSystem:'System',tileApps:'Apps',descShell:'Shell-Zugriff',descFiles:'Durchsuchen · Hochladen · Freigeben',descStorage:'Laufwerke · Pools · Status',descDocker:'Container · Compose',descVms:'Gäste · Speicher',descBackup:'Aufgaben · Verlauf',descMonitoring:'Logs · Hinweise · Audit',descSystem:'Übersicht · Updates · Benutzer',tabDisks:'Laufwerke',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Container',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',tabMachines:'Virtuelle Maschinen',tabStoragePools:'Speicher-Pools',tabJobs:'Aufgaben',tabHistory:'Verlauf',tabLogs:'Logs',tabAlerts:'Hinweise',tabAudit:'Audit',tabOverview:'Übersicht',tabUpdates:'Updates',tabUsers:'Benutzer',tabNetwork:'Netzwerk',tabServices:'Dienste',tabShares:'Freigaben',tabMaintenance:'Wartung',tabAdvanced:'Erweitert',tabPower:'Energie'},
-  fr:{language:'Langue',languageSettings:'Paramètres de langue',languageField:'Langue de l’interface',save:'Enregistrer',cancel:'Annuler',delete:'Supprimer',continue:'Continuer',close:'Fermer',search:'Rechercher',searchPlaceholder:'Rechercher...',loading:'Chargement...',error:'Erreur',logout:'Se déconnecter',loginPage:'Page de connexion',runvardAccounts:'Comptes runvard',background:'Arrière-plan',backgroundTitle:'Arrière-plan',presets:'Présélections',uploadImage:'Importer une image',dropImage:'Cliquer ou déposer une image ici',imageUrl:'URL de l’image',restoreDefault:'Restaurer la valeur par défaut',addTile:'Ajouter un raccourci',confirmDelete:'Confirmer la suppression',saved:'Enregistré',languageSaved:'Langue enregistrée',expertOn:'Mode expert activé',expertOff:'Mode expert désactivé',loginEnabled:'Connexion activée. Une connexion sera requise à la prochaine visite.',loginDisabled:'Connexion désactivée',signedInAs:'Connecté en tant que',loginDisabledHead:'La connexion est désactivée',daySuffix:'',confirmCheckbox:'Je comprends et je veux continuer.',dangerConfirmTitle:'Confirmation requise',dangerConfirmMessage:'Cette action modifie des paramètres ou des données système. Veuillez confirmer avant que runvard continue.',tileTerminal:'Terminal',tileFiles:'Fichiers',tileStorage:'Stockage',tileDocker:'Docker',tileVms:'Machines virtuelles',tileBackup:'Sauvegarde',tileMonitoring:'Supervision',tileSystem:'Système',tileApps:'Applications',descShell:'Accès shell',descFiles:'Parcourir · Importer · Partager',descStorage:'Disques · Pools · État',descDocker:'Conteneurs · Compose',descVms:'Invités · Stockage',descBackup:'Tâches · Historique',descMonitoring:'Journaux · Alertes · Audit',descSystem:'Vue d’ensemble · Mises à jour · Utilisateurs',tabDisks:'Disques',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Conteneurs',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',tabMachines:'Machines virtuelles',tabStoragePools:'Pools de stockage',tabJobs:'Tâches',tabHistory:'Historique',tabLogs:'Journaux',tabAlerts:'Alertes',tabAudit:'Audit',tabOverview:'Vue d’ensemble',tabUpdates:'Mises à jour',tabUsers:'Utilisateurs',tabNetwork:'Réseau',tabServices:'Services',tabShares:'Partages',tabMaintenance:'Maintenance',tabAdvanced:'Avancé',tabPower:'Alimentation'},
-  it:{language:'Lingua',languageSettings:'Impostazioni lingua',languageField:'Lingua dell’interfaccia',save:'Salva',cancel:'Annulla',delete:'Elimina',continue:'Continua',close:'Chiudi',search:'Cerca',searchPlaceholder:'Cerca...',loading:'Caricamento...',error:'Errore',logout:'Esci',loginPage:'Pagina di accesso',runvardAccounts:'Account runvard',background:'Sfondo',backgroundTitle:'Sfondo',presets:'Preset',uploadImage:'Carica immagine',dropImage:'Fai clic o rilascia un’immagine qui',imageUrl:'URL immagine',restoreDefault:'Ripristina predefinito',addTile:'Aggiungi collegamento',confirmDelete:'Conferma eliminazione',saved:'Salvato',languageSaved:'Lingua salvata',expertOn:'Modalità esperto attivata',expertOff:'Modalità esperto disattivata',loginEnabled:'Accesso attivato. Al prossimo accesso sarà richiesta l’autenticazione.',loginDisabled:'Accesso disattivato',signedInAs:'Accesso come',loginDisabledHead:'Accesso disattivato',daySuffix:'',confirmCheckbox:'Ho capito e voglio continuare.',dangerConfirmTitle:'Conferma richiesta',dangerConfirmMessage:'Questa azione modifica impostazioni o dati di sistema. Conferma prima che runvard continui.',tileTerminal:'Terminale',tileFiles:'File',tileStorage:'Archiviazione',tileDocker:'Docker',tileVms:'Macchine virtuali',tileBackup:'Backup',tileMonitoring:'Monitoraggio',tileSystem:'Sistema',tileApps:'App',descShell:'Accesso shell',descFiles:'Sfoglia · Carica · Condividi',descStorage:'Dischi · Pool · Stato',descDocker:'Container · Compose',descVms:'Guest · Archiviazione',descBackup:'Job · Cronologia',descMonitoring:'Log · Avvisi · Audit',descSystem:'Panoramica · Aggiornamenti · Utenti',tabDisks:'Dischi',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Container',tabCompose:'Compose',tabImages:'Immagini',tabVolumes:'Volumi',tabMachines:'Macchine virtuali',tabStoragePools:'Pool di archiviazione',tabJobs:'Job',tabHistory:'Cronologia',tabLogs:'Log',tabAlerts:'Avvisi',tabAudit:'Audit',tabOverview:'Panoramica',tabUpdates:'Aggiornamenti',tabUsers:'Utenti',tabNetwork:'Rete',tabServices:'Servizi',tabShares:'Condivisioni',tabMaintenance:'Manutenzione',tabAdvanced:'Avanzato',tabPower:'Alimentazione'},
-  es:{language:'Idioma',languageSettings:'Configuración de idioma',languageField:'Idioma de la interfaz',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Cerrar',search:'Buscar',searchPlaceholder:'Buscar...',loading:'Cargando...',error:'Error',logout:'Cerrar sesión',loginPage:'Página de inicio de sesión',runvardAccounts:'Cuentas runvard',background:'Fondo',backgroundTitle:'Fondo',presets:'Preajustes',uploadImage:'Subir imagen',dropImage:'Haz clic o suelta una imagen aquí',imageUrl:'URL de imagen',restoreDefault:'Restaurar valores predeterminados',addTile:'Añadir acceso directo',confirmDelete:'Confirmar eliminación',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo experto activado',expertOff:'Modo experto desactivado',loginEnabled:'Inicio de sesión activado. Se requerirá autenticación en la próxima visita.',loginDisabled:'Inicio de sesión desactivado',signedInAs:'Sesión iniciada como',loginDisabledHead:'El inicio de sesión está desactivado',daySuffix:'',confirmCheckbox:'Entiendo y quiero continuar.',dangerConfirmTitle:'Confirmación requerida',dangerConfirmMessage:'Esta acción cambia ajustes o datos del sistema. Confirma antes de que runvard continúe.',tileTerminal:'Terminal',tileFiles:'Archivos',tileStorage:'Almacenamiento',tileDocker:'Docker',tileVms:'Máquinas virtuales',tileBackup:'Copias de seguridad',tileMonitoring:'Supervisión',tileSystem:'Sistema',tileApps:'Aplicaciones',descShell:'Acceso shell',descFiles:'Explorar · Subir · Compartir',descStorage:'Discos · Pools · Estado',descDocker:'Contenedores · Compose',descVms:'Invitados · Almacenamiento',descBackup:'Tareas · Historial',descMonitoring:'Registros · Alertas · Auditoría',descSystem:'Resumen · Actualizaciones · Usuarios',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contenedores',tabCompose:'Compose',tabImages:'Imágenes',tabVolumes:'Volúmenes',tabMachines:'Máquinas virtuales',tabStoragePools:'Pools de almacenamiento',tabJobs:'Tareas',tabHistory:'Historial',tabLogs:'Registros',tabAlerts:'Alertas',tabAudit:'Auditoría',tabOverview:'Resumen',tabUpdates:'Actualizaciones',tabUsers:'Usuarios',tabNetwork:'Red',tabServices:'Servicios',tabShares:'Recursos compartidos',tabMaintenance:'Mantenimiento',tabAdvanced:'Avanzado',tabPower:'Energía'},
-  pt:{language:'Idioma',languageSettings:'Definições de idioma',languageField:'Idioma da interface',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Fechar',search:'Pesquisar',searchPlaceholder:'Pesquisar...',loading:'A carregar...',error:'Erro',logout:'Terminar sessão',loginPage:'Página de início de sessão',runvardAccounts:'Contas runvard',background:'Fundo',backgroundTitle:'Fundo',presets:'Predefinições',uploadImage:'Carregar imagem',dropImage:'Clique ou largue uma imagem aqui',imageUrl:'URL da imagem',restoreDefault:'Restaurar predefinição',addTile:'Adicionar atalho',confirmDelete:'Confirmar eliminação',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo especialista ativado',expertOff:'Modo especialista desativado',loginEnabled:'Início de sessão ativado. Será necessária autenticação na próxima visita.',loginDisabled:'Início de sessão desativado',signedInAs:'Sessão iniciada como',loginDisabledHead:'Início de sessão desativado',daySuffix:'',confirmCheckbox:'Compreendo e quero continuar.',dangerConfirmTitle:'Confirmação necessária',dangerConfirmMessage:'Esta ação altera definições ou dados do sistema. Confirme antes de o runvard continuar.',tileTerminal:'Terminal',tileFiles:'Ficheiros',tileStorage:'Armazenamento',tileDocker:'Docker',tileVms:'Máquinas virtuais',tileBackup:'Cópias de segurança',tileMonitoring:'Monitorização',tileSystem:'Sistema',tileApps:'Aplicações',descShell:'Acesso shell',descFiles:'Navegar · Carregar · Partilhar',descStorage:'Discos · Pools · Estado',descDocker:'Contentores · Compose',descVms:'Convidados · Armazenamento',descBackup:'Tarefas · Histórico',descMonitoring:'Registos · Alertas · Auditoria',descSystem:'Visão geral · Atualizações · Utilizadores',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contentores',tabCompose:'Compose',tabImages:'Imagens',tabVolumes:'Volumes',tabMachines:'Máquinas virtuais',tabStoragePools:'Pools de armazenamento',tabJobs:'Tarefas',tabHistory:'Histórico',tabLogs:'Registos',tabAlerts:'Alertas',tabAudit:'Auditoria',tabOverview:'Visão geral',tabUpdates:'Atualizações',tabUsers:'Utilizadores',tabNetwork:'Rede',tabServices:'Serviços',tabShares:'Partilhas',tabMaintenance:'Manutenção',tabAdvanced:'Avançado',tabPower:'Energia'},
+  de:{networkMap:'Netzwerkkarte',language:'Sprache',languageSettings:'Spracheinstellungen',languageField:'Oberflächensprache',save:'Speichern',cancel:'Abbrechen',delete:'Löschen',continue:'Fortfahren',close:'Schließen',search:'Suchen',searchPlaceholder:'Suchen...',loading:'Lädt...',error:'Fehler',logout:'Abmelden',loginPage:'Login-Seite',runvardAccounts:'runvard-Konten',background:'Hintergrund',backgroundTitle:'Hintergrund',presets:'Vorlagen',uploadImage:'Bild hochladen',dropImage:'Klicken oder Bild hier ablegen',imageUrl:'Bild-URL',restoreDefault:'Standard wiederherstellen',addTile:'Verknüpfung hinzufügen',confirmDelete:'Löschen bestätigen',saved:'Gespeichert',languageSaved:'Sprache gespeichert',expertOn:'Expertenmodus aktiviert',expertOff:'Expertenmodus deaktiviert',loginEnabled:'Login aktiviert. Beim nächsten Besuch ist eine Anmeldung erforderlich.',loginDisabled:'Login deaktiviert',signedInAs:'Angemeldet als',loginDisabledHead:'Login ist deaktiviert',daySuffix:'Uhr',confirmCheckbox:'Ich habe verstanden und möchte fortfahren.',dangerConfirmTitle:'Bestätigung erforderlich',dangerConfirmMessage:'Diese Aktion ändert systemrelevante Einstellungen oder Daten. Bitte bestätige, bevor runvard fortfährt.',tileTerminal:'Terminal',tileFiles:'Dateien',tileStorage:'Speicher',tileDocker:'Docker',tileVms:'Virtuelle Maschinen',tileBackup:'Backup',tileMonitoring:'Monitoring',tileSystem:'System',tileApps:'Apps',descShell:'Shell-Zugriff',descFiles:'Durchsuchen · Hochladen · Freigeben',descStorage:'Laufwerke · Pools · Status',descDocker:'Container · Compose',descVms:'Gäste · Speicher',descBackup:'Aufgaben · Verlauf',descMonitoring:'Logs · Hinweise · Audit',descSystem:'Übersicht · Updates · Benutzer',tabDisks:'Laufwerke',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Container',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',tabMachines:'Virtuelle Maschinen',tabStoragePools:'Speicher-Pools',tabJobs:'Aufgaben',tabHistory:'Verlauf',tabLogs:'Logs',tabAlerts:'Hinweise',tabAudit:'Audit',tabOverview:'Übersicht',tabUpdates:'Updates',tabUsers:'Benutzer',tabNetwork:'Netzwerk',tabServices:'Dienste',tabShares:'Freigaben',tabMaintenance:'Wartung',tabAdvanced:'Erweitert',tabPower:'Energie'},
+  fr:{networkMap:'Carte du réseau',language:'Langue',languageSettings:'Paramètres de langue',languageField:'Langue de l’interface',save:'Enregistrer',cancel:'Annuler',delete:'Supprimer',continue:'Continuer',close:'Fermer',search:'Rechercher',searchPlaceholder:'Rechercher...',loading:'Chargement...',error:'Erreur',logout:'Se déconnecter',loginPage:'Page de connexion',runvardAccounts:'Comptes runvard',background:'Arrière-plan',backgroundTitle:'Arrière-plan',presets:'Présélections',uploadImage:'Importer une image',dropImage:'Cliquer ou déposer une image ici',imageUrl:'URL de l’image',restoreDefault:'Restaurer la valeur par défaut',addTile:'Ajouter un raccourci',confirmDelete:'Confirmer la suppression',saved:'Enregistré',languageSaved:'Langue enregistrée',expertOn:'Mode expert activé',expertOff:'Mode expert désactivé',loginEnabled:'Connexion activée. Une connexion sera requise à la prochaine visite.',loginDisabled:'Connexion désactivée',signedInAs:'Connecté en tant que',loginDisabledHead:'La connexion est désactivée',daySuffix:'',confirmCheckbox:'Je comprends et je veux continuer.',dangerConfirmTitle:'Confirmation requise',dangerConfirmMessage:'Cette action modifie des paramètres ou des données système. Veuillez confirmer avant que runvard continue.',tileTerminal:'Terminal',tileFiles:'Fichiers',tileStorage:'Stockage',tileDocker:'Docker',tileVms:'Machines virtuelles',tileBackup:'Sauvegarde',tileMonitoring:'Supervision',tileSystem:'Système',tileApps:'Applications',descShell:'Accès shell',descFiles:'Parcourir · Importer · Partager',descStorage:'Disques · Pools · État',descDocker:'Conteneurs · Compose',descVms:'Invités · Stockage',descBackup:'Tâches · Historique',descMonitoring:'Journaux · Alertes · Audit',descSystem:'Vue d’ensemble · Mises à jour · Utilisateurs',tabDisks:'Disques',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Conteneurs',tabCompose:'Compose',tabImages:'Images',tabVolumes:'Volumes',tabMachines:'Machines virtuelles',tabStoragePools:'Pools de stockage',tabJobs:'Tâches',tabHistory:'Historique',tabLogs:'Journaux',tabAlerts:'Alertes',tabAudit:'Audit',tabOverview:'Vue d’ensemble',tabUpdates:'Mises à jour',tabUsers:'Utilisateurs',tabNetwork:'Réseau',tabServices:'Services',tabShares:'Partages',tabMaintenance:'Maintenance',tabAdvanced:'Avancé',tabPower:'Alimentation'},
+  it:{networkMap:'Mappa di rete',language:'Lingua',languageSettings:'Impostazioni lingua',languageField:'Lingua dell’interfaccia',save:'Salva',cancel:'Annulla',delete:'Elimina',continue:'Continua',close:'Chiudi',search:'Cerca',searchPlaceholder:'Cerca...',loading:'Caricamento...',error:'Errore',logout:'Esci',loginPage:'Pagina di accesso',runvardAccounts:'Account runvard',background:'Sfondo',backgroundTitle:'Sfondo',presets:'Preset',uploadImage:'Carica immagine',dropImage:'Fai clic o rilascia un’immagine qui',imageUrl:'URL immagine',restoreDefault:'Ripristina predefinito',addTile:'Aggiungi collegamento',confirmDelete:'Conferma eliminazione',saved:'Salvato',languageSaved:'Lingua salvata',expertOn:'Modalità esperto attivata',expertOff:'Modalità esperto disattivata',loginEnabled:'Accesso attivato. Al prossimo accesso sarà richiesta l’autenticazione.',loginDisabled:'Accesso disattivato',signedInAs:'Accesso come',loginDisabledHead:'Accesso disattivato',daySuffix:'',confirmCheckbox:'Ho capito e voglio continuare.',dangerConfirmTitle:'Conferma richiesta',dangerConfirmMessage:'Questa azione modifica impostazioni o dati di sistema. Conferma prima che runvard continui.',tileTerminal:'Terminale',tileFiles:'File',tileStorage:'Archiviazione',tileDocker:'Docker',tileVms:'Macchine virtuali',tileBackup:'Backup',tileMonitoring:'Monitoraggio',tileSystem:'Sistema',tileApps:'App',descShell:'Accesso shell',descFiles:'Sfoglia · Carica · Condividi',descStorage:'Dischi · Pool · Stato',descDocker:'Container · Compose',descVms:'Guest · Archiviazione',descBackup:'Job · Cronologia',descMonitoring:'Log · Avvisi · Audit',descSystem:'Panoramica · Aggiornamenti · Utenti',tabDisks:'Dischi',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Container',tabCompose:'Compose',tabImages:'Immagini',tabVolumes:'Volumi',tabMachines:'Macchine virtuali',tabStoragePools:'Pool di archiviazione',tabJobs:'Job',tabHistory:'Cronologia',tabLogs:'Log',tabAlerts:'Avvisi',tabAudit:'Audit',tabOverview:'Panoramica',tabUpdates:'Aggiornamenti',tabUsers:'Utenti',tabNetwork:'Rete',tabServices:'Servizi',tabShares:'Condivisioni',tabMaintenance:'Manutenzione',tabAdvanced:'Avanzato',tabPower:'Alimentazione'},
+  es:{networkMap:'Mapa de red',language:'Idioma',languageSettings:'Configuración de idioma',languageField:'Idioma de la interfaz',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Cerrar',search:'Buscar',searchPlaceholder:'Buscar...',loading:'Cargando...',error:'Error',logout:'Cerrar sesión',loginPage:'Página de inicio de sesión',runvardAccounts:'Cuentas runvard',background:'Fondo',backgroundTitle:'Fondo',presets:'Preajustes',uploadImage:'Subir imagen',dropImage:'Haz clic o suelta una imagen aquí',imageUrl:'URL de imagen',restoreDefault:'Restaurar valores predeterminados',addTile:'Añadir acceso directo',confirmDelete:'Confirmar eliminación',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo experto activado',expertOff:'Modo experto desactivado',loginEnabled:'Inicio de sesión activado. Se requerirá autenticación en la próxima visita.',loginDisabled:'Inicio de sesión desactivado',signedInAs:'Sesión iniciada como',loginDisabledHead:'El inicio de sesión está desactivado',daySuffix:'',confirmCheckbox:'Entiendo y quiero continuar.',dangerConfirmTitle:'Confirmación requerida',dangerConfirmMessage:'Esta acción cambia ajustes o datos del sistema. Confirma antes de que runvard continúe.',tileTerminal:'Terminal',tileFiles:'Archivos',tileStorage:'Almacenamiento',tileDocker:'Docker',tileVms:'Máquinas virtuales',tileBackup:'Copias de seguridad',tileMonitoring:'Supervisión',tileSystem:'Sistema',tileApps:'Aplicaciones',descShell:'Acceso shell',descFiles:'Explorar · Subir · Compartir',descStorage:'Discos · Pools · Estado',descDocker:'Contenedores · Compose',descVms:'Invitados · Almacenamiento',descBackup:'Tareas · Historial',descMonitoring:'Registros · Alertas · Auditoría',descSystem:'Resumen · Actualizaciones · Usuarios',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contenedores',tabCompose:'Compose',tabImages:'Imágenes',tabVolumes:'Volúmenes',tabMachines:'Máquinas virtuales',tabStoragePools:'Pools de almacenamiento',tabJobs:'Tareas',tabHistory:'Historial',tabLogs:'Registros',tabAlerts:'Alertas',tabAudit:'Auditoría',tabOverview:'Resumen',tabUpdates:'Actualizaciones',tabUsers:'Usuarios',tabNetwork:'Red',tabServices:'Servicios',tabShares:'Recursos compartidos',tabMaintenance:'Mantenimiento',tabAdvanced:'Avanzado',tabPower:'Energía'},
+  pt:{networkMap:'Mapa da rede',language:'Idioma',languageSettings:'Definições de idioma',languageField:'Idioma da interface',save:'Guardar',cancel:'Cancelar',delete:'Eliminar',continue:'Continuar',close:'Fechar',search:'Pesquisar',searchPlaceholder:'Pesquisar...',loading:'A carregar...',error:'Erro',logout:'Terminar sessão',loginPage:'Página de início de sessão',runvardAccounts:'Contas runvard',background:'Fundo',backgroundTitle:'Fundo',presets:'Predefinições',uploadImage:'Carregar imagem',dropImage:'Clique ou largue uma imagem aqui',imageUrl:'URL da imagem',restoreDefault:'Restaurar predefinição',addTile:'Adicionar atalho',confirmDelete:'Confirmar eliminação',saved:'Guardado',languageSaved:'Idioma guardado',expertOn:'Modo especialista ativado',expertOff:'Modo especialista desativado',loginEnabled:'Início de sessão ativado. Será necessária autenticação na próxima visita.',loginDisabled:'Início de sessão desativado',signedInAs:'Sessão iniciada como',loginDisabledHead:'Início de sessão desativado',daySuffix:'',confirmCheckbox:'Compreendo e quero continuar.',dangerConfirmTitle:'Confirmação necessária',dangerConfirmMessage:'Esta ação altera definições ou dados do sistema. Confirme antes de o runvard continuar.',tileTerminal:'Terminal',tileFiles:'Ficheiros',tileStorage:'Armazenamento',tileDocker:'Docker',tileVms:'Máquinas virtuais',tileBackup:'Cópias de segurança',tileMonitoring:'Monitorização',tileSystem:'Sistema',tileApps:'Aplicações',descShell:'Acesso shell',descFiles:'Navegar · Carregar · Partilhar',descStorage:'Discos · Pools · Estado',descDocker:'Contentores · Compose',descVms:'Convidados · Armazenamento',descBackup:'Tarefas · Histórico',descMonitoring:'Registos · Alertas · Auditoria',descSystem:'Visão geral · Atualizações · Utilizadores',tabDisks:'Discos',tabRaid:'RAID',tabLuks:'LUKS',tabZfs:'ZFS/Btrfs',tabIscsi:'iSCSI',tabSmart:'SMART',tabSwap:'Swap',tabLvm:'LVM',tabContainer:'Contentores',tabCompose:'Compose',tabImages:'Imagens',tabVolumes:'Volumes',tabMachines:'Máquinas virtuais',tabStoragePools:'Pools de armazenamento',tabJobs:'Tarefas',tabHistory:'Histórico',tabLogs:'Registos',tabAlerts:'Alertas',tabAudit:'Auditoria',tabOverview:'Visão geral',tabUpdates:'Atualizações',tabUsers:'Utilizadores',tabNetwork:'Rede',tabServices:'Serviços',tabShares:'Partilhas',tabMaintenance:'Manutenção',tabAdvanced:'Avançado',tabPower:'Energia'},
 };
 const I18N_COMPLETIONS={
   de:{
@@ -1310,6 +1345,266 @@ const I18N_COMPLETIONS={
 for(const lang of Object.keys(I18N_COMPLETIONS)){
   Object.assign(I18N[lang],I18N_COMPLETIONS[lang]);
 }
+const COMPOSE_EDITOR_I18N={
+  "de": {
+    "sync": "Alle Einstellungen lassen sich im Formular und in YAML bearbeiten.",
+    "sources": "Compose-Datei",
+    "runtime": "Aus der Container-Konfiguration rekonstruiert. Ursprüngliche Kommentare, Build-Angaben und Variablenreferenzen sind in Docker nicht gespeichert.",
+    "loadError": "Compose-Konfiguration konnte nicht geladen werden",
+    "invalid": "Bitte die Konfiguration prüfen",
+    "settings": "Einstellungen",
+    "container": "Container",
+    "network": "Netzwerk",
+    "storage": "Speicher",
+    "environment": "Umgebungsvariablen",
+    "image": "Image",
+    "serviceName": "Servicename",
+    "containerName": "Containername",
+    "restart": "Neustartverhalten",
+    "hostPort": "Host-Port",
+    "containerPort": "Container-Port",
+    "protocol": "Protokoll",
+    "hostPath": "Host-Pfad",
+    "containerPath": "Container-Ziel",
+    "readOnly": "Nur lesen",
+    "variable": "Variable",
+    "value": "Wert",
+    "addPort": "Port hinzufügen",
+    "addMount": "Speicher hinzufügen",
+    "addVariable": "Variable hinzufügen",
+    "remove": "Entfernen",
+    "advanced": "Erweiterte Einstellungen",
+    "synced": "Änderungen automatisch übernommen",
+    "pending": "Wird abgeglichen …",
+    "yamlError": "YAML korrigieren. Das Formular zeigt den letzten gültigen Stand.",
+    "formError": "Bitte den markierten Formularwert korrigieren.",
+    "unsaved": "Ungespeicherte Änderungen",
+    "unchanged": "Keine Änderungen",
+    "saving": "Wird gespeichert …",
+    "review": "Änderungen prüfen",
+    "reviewTitle": "Änderungen vor dem Speichern",
+    "back": "Weiter bearbeiten",
+    "discard": "Ungespeicherte Änderungen verwerfen?",
+    "editTitle": "Compose bearbeiten",
+    "envChanged": "Die .env-Datei wurde geändert.",
+    "serviceExists": "Dieser Servicename ist bereits vergeben oder ungültig."
+  },
+  "en": {
+    "sync": "Edit all settings in the form or in YAML.",
+    "sources": "Compose file",
+    "runtime": "Reconstructed from the container configuration. Docker does not store original comments, build definitions or variable references.",
+    "loadError": "Could not load Compose configuration",
+    "invalid": "Please check the configuration",
+    "settings": "Settings",
+    "container": "Container",
+    "network": "Network",
+    "storage": "Storage",
+    "environment": "Environment variables",
+    "image": "Image",
+    "serviceName": "Service name",
+    "containerName": "Container name",
+    "restart": "Restart policy",
+    "hostPort": "Host port",
+    "containerPort": "Container port",
+    "protocol": "Protocol",
+    "hostPath": "Host path",
+    "containerPath": "Container target",
+    "readOnly": "Read only",
+    "variable": "Variable",
+    "value": "Value",
+    "addPort": "Add port",
+    "addMount": "Add storage",
+    "addVariable": "Add variable",
+    "remove": "Remove",
+    "advanced": "Advanced settings",
+    "synced": "Changes synchronized automatically",
+    "pending": "Synchronizing…",
+    "yamlError": "Correct the YAML. The form shows the last valid configuration.",
+    "formError": "Correct the highlighted form value.",
+    "unsaved": "Unsaved changes",
+    "unchanged": "No changes",
+    "saving": "Saving…",
+    "review": "Review changes",
+    "reviewTitle": "Changes before saving",
+    "back": "Continue editing",
+    "discard": "Discard unsaved changes?",
+    "editTitle": "Edit Compose",
+    "envChanged": "The .env file has changed.",
+    "serviceExists": "This service name is already used or invalid."
+  },
+  "fr": {
+    "sync": "Modifiez tous les paramètres dans le formulaire ou en YAML.",
+    "sources": "Fichier Compose",
+    "runtime": "Configuration reconstituée à partir du conteneur. Docker ne conserve pas les commentaires, les définitions de construction ni les références de variables d’origine.",
+    "loadError": "Impossible de charger la configuration Compose",
+    "invalid": "Veuillez vérifier la configuration",
+    "settings": "Paramètres",
+    "container": "Conteneur",
+    "network": "Réseau",
+    "storage": "Stockage",
+    "environment": "Variables d’environnement",
+    "image": "Image",
+    "serviceName": "Nom du service",
+    "containerName": "Nom du conteneur",
+    "restart": "Politique de redémarrage",
+    "hostPort": "Port de l’hôte",
+    "containerPort": "Port du conteneur",
+    "protocol": "Protocole",
+    "hostPath": "Chemin de l’hôte",
+    "containerPath": "Cible du conteneur",
+    "readOnly": "Lecture seule",
+    "variable": "Variable",
+    "value": "Valeur",
+    "addPort": "Ajouter un port",
+    "addMount": "Ajouter un stockage",
+    "addVariable": "Ajouter une variable",
+    "remove": "Retirer",
+    "advanced": "Paramètres avancés",
+    "synced": "Modifications synchronisées automatiquement",
+    "pending": "Synchronisation…",
+    "yamlError": "Corrigez le YAML. Le formulaire affiche la dernière configuration valide.",
+    "formError": "Corrigez la valeur signalée dans le formulaire.",
+    "unsaved": "Modifications non enregistrées",
+    "unchanged": "Aucune modification",
+    "saving": "Enregistrement…",
+    "review": "Vérifier les modifications",
+    "reviewTitle": "Modifications avant enregistrement",
+    "back": "Continuer à modifier",
+    "discard": "Abandonner les modifications non enregistrées ?",
+    "editTitle": "Modifier Compose",
+    "envChanged": "Le fichier .env a été modifié.",
+    "serviceExists": "Ce nom de service est déjà utilisé ou non valide."
+  },
+  "it": {
+    "sync": "Modifica tutte le impostazioni nel modulo o in YAML.",
+    "sources": "File Compose",
+    "runtime": "Configurazione ricostruita dal contenitore. Docker non conserva i commenti, le definizioni di compilazione o i riferimenti alle variabili originali.",
+    "loadError": "Impossibile caricare la configurazione Compose",
+    "invalid": "Controlla la configurazione",
+    "settings": "Impostazioni",
+    "container": "Contenitore",
+    "network": "Rete",
+    "storage": "Archiviazione",
+    "environment": "Variabili d’ambiente",
+    "image": "Immagine",
+    "serviceName": "Nome del servizio",
+    "containerName": "Nome del contenitore",
+    "restart": "Criterio di riavvio",
+    "hostPort": "Porta host",
+    "containerPort": "Porta del contenitore",
+    "protocol": "Protocollo",
+    "hostPath": "Percorso host",
+    "containerPath": "Destinazione nel contenitore",
+    "readOnly": "Sola lettura",
+    "variable": "Variabile",
+    "value": "Valore",
+    "addPort": "Aggiungi porta",
+    "addMount": "Aggiungi spazio di archiviazione",
+    "addVariable": "Aggiungi variabile",
+    "remove": "Rimuovi",
+    "advanced": "Impostazioni avanzate",
+    "synced": "Modifiche sincronizzate automaticamente",
+    "pending": "Sincronizzazione…",
+    "yamlError": "Correggi lo YAML. Il modulo mostra l’ultima configurazione valida.",
+    "formError": "Correggi il valore evidenziato nel modulo.",
+    "unsaved": "Modifiche non salvate",
+    "unchanged": "Nessuna modifica",
+    "saving": "Salvataggio…",
+    "review": "Verifica modifiche",
+    "reviewTitle": "Modifiche prima del salvataggio",
+    "back": "Continua a modificare",
+    "discard": "Scartare le modifiche non salvate?",
+    "editTitle": "Modifica Compose",
+    "envChanged": "Il file .env è stato modificato.",
+    "serviceExists": "Questo nome di servizio è già in uso o non valido."
+  },
+  "es": {
+    "sync": "Edita todos los ajustes en el formulario o en YAML.",
+    "sources": "Archivo Compose",
+    "runtime": "Configuración reconstruida a partir del contenedor. Docker no almacena los comentarios, las definiciones de compilación ni las referencias a variables originales.",
+    "loadError": "No se pudo cargar la configuración de Compose",
+    "invalid": "Revisa la configuración",
+    "settings": "Ajustes",
+    "container": "Contenedor",
+    "network": "Red",
+    "storage": "Almacenamiento",
+    "environment": "Variables de entorno",
+    "image": "Imagen",
+    "serviceName": "Nombre del servicio",
+    "containerName": "Nombre del contenedor",
+    "restart": "Política de reinicio",
+    "hostPort": "Puerto del host",
+    "containerPort": "Puerto del contenedor",
+    "protocol": "Protocolo",
+    "hostPath": "Ruta del host",
+    "containerPath": "Destino del contenedor",
+    "readOnly": "Solo lectura",
+    "variable": "Variable",
+    "value": "Valor",
+    "addPort": "Añadir puerto",
+    "addMount": "Añadir almacenamiento",
+    "addVariable": "Añadir variable",
+    "remove": "Quitar",
+    "advanced": "Ajustes avanzados",
+    "synced": "Cambios sincronizados automáticamente",
+    "pending": "Sincronizando…",
+    "yamlError": "Corrige el YAML. El formulario muestra la última configuración válida.",
+    "formError": "Corrige el valor marcado en el formulario.",
+    "unsaved": "Cambios sin guardar",
+    "unchanged": "Sin cambios",
+    "saving": "Guardando…",
+    "review": "Revisar cambios",
+    "reviewTitle": "Cambios antes de guardar",
+    "back": "Seguir editando",
+    "discard": "¿Descartar los cambios sin guardar?",
+    "editTitle": "Editar Compose",
+    "envChanged": "El archivo .env ha cambiado.",
+    "serviceExists": "Este nombre de servicio ya está en uso o no es válido."
+  },
+  "pt": {
+    "sync": "Edite todas as definições no formulário ou em YAML.",
+    "sources": "Ficheiro Compose",
+    "runtime": "Configuração reconstruída a partir do contentor. O Docker não guarda os comentários, as definições de compilação nem as referências a variáveis originais.",
+    "loadError": "Não foi possível carregar a configuração do Compose",
+    "invalid": "Verifique a configuração",
+    "settings": "Definições",
+    "container": "Contentor",
+    "network": "Rede",
+    "storage": "Armazenamento",
+    "environment": "Variáveis de ambiente",
+    "image": "Imagem",
+    "serviceName": "Nome do serviço",
+    "containerName": "Nome do contentor",
+    "restart": "Política de reinício",
+    "hostPort": "Porta do anfitrião",
+    "containerPort": "Porta do contentor",
+    "protocol": "Protocolo",
+    "hostPath": "Caminho do anfitrião",
+    "containerPath": "Destino no contentor",
+    "readOnly": "Só de leitura",
+    "variable": "Variável",
+    "value": "Valor",
+    "addPort": "Adicionar porta",
+    "addMount": "Adicionar armazenamento",
+    "addVariable": "Adicionar variável",
+    "remove": "Remover",
+    "advanced": "Definições avançadas",
+    "synced": "Alterações sincronizadas automaticamente",
+    "pending": "A sincronizar…",
+    "yamlError": "Corrija o YAML. O formulário apresenta a última configuração válida.",
+    "formError": "Corrija o valor assinalado no formulário.",
+    "unsaved": "Alterações por guardar",
+    "unchanged": "Sem alterações",
+    "saving": "A guardar…",
+    "review": "Rever alterações",
+    "reviewTitle": "Alterações antes de guardar",
+    "back": "Continuar a editar",
+    "discard": "Descartar as alterações por guardar?",
+    "editTitle": "Editar Compose",
+    "envChanged": "O ficheiro .env foi alterado.",
+    "serviceExists": "Este nome de serviço já está em uso ou é inválido."
+  }
+};
 function currentLanguage(){
   try{
     const lang=localStorage.getItem(LANGUAGE_KEY)||SERVER_DEFAULT_LANGUAGE||'en';
@@ -1422,6 +1717,9 @@ const UI_PHRASES={
     "Automatic":"Automatisch",
     "Automatic restart if needed":"Automatischer Neustart bei Bedarf",
     "Automatic security updates":"Automatische Sicherheitsupdates",
+    "unattended-upgrades is not installed":"unattended-upgrades ist nicht installiert",
+    "Install unattended-upgrades to enable automatic security updates.":"Installiere unattended-upgrades, um automatische Sicherheitsupdates zu aktivieren.",
+    "Security updates are installed daily using the system package policy. Restart time uses the server time zone. runvard updates remain manual.":"Sicherheitsupdates werden täglich gemäß den Paketregeln des Systems installiert. Die Neustartzeit gilt in der Zeitzone des Servers. runvard-Updates bleiben manuell.",
     "Already on dashboard":"Bereits auf dem Dashboard",
     "Available":"Verfügbar",
     "Available updates":"Verfügbare Updates",
@@ -2426,6 +2724,9 @@ const UI_PHRASES={
     "Automatic":"Automatique",
     "Automatic restart if needed":"Redémarrage automatique si nécessaire",
     "Automatic security updates":"Mises à jour de sécurité automatiques",
+    "unattended-upgrades is not installed":"unattended-upgrades n’est pas installé",
+    "Install unattended-upgrades to enable automatic security updates.":"Installez unattended-upgrades pour activer les mises à jour de sécurité automatiques.",
+    "Security updates are installed daily using the system package policy. Restart time uses the server time zone. runvard updates remain manual.":"Les mises à jour de sécurité sont installées chaque jour selon la politique des paquets du système. L’heure de redémarrage utilise le fuseau horaire du serveur. Les mises à jour de runvard restent manuelles.",
     "Already on dashboard":"Déjà sur le tableau de bord",
     "Available":"Disponible",
     "Available updates":"Mises à jour disponibles",
@@ -3393,6 +3694,9 @@ const UI_PHRASES={
     "Automatic":"Automatico",
     "Automatic restart if needed":"Riavvio automatico se necessario",
     "Automatic security updates":"Aggiornamenti di sicurezza automatici",
+    "unattended-upgrades is not installed":"unattended-upgrades non è installato",
+    "Install unattended-upgrades to enable automatic security updates.":"Installa unattended-upgrades per attivare gli aggiornamenti di sicurezza automatici.",
+    "Security updates are installed daily using the system package policy. Restart time uses the server time zone. runvard updates remain manual.":"Gli aggiornamenti di sicurezza vengono installati ogni giorno secondo le regole dei pacchetti di sistema. L’ora di riavvio usa il fuso orario del server. Gli aggiornamenti di runvard restano manuali.",
     "Already on dashboard":"Già nella dashboard",
     "Available":"Disponibile",
     "Available updates":"Aggiornamenti disponibili",
@@ -4359,6 +4663,9 @@ const UI_PHRASES={
     "Automatic":"Automático",
     "Automatic restart if needed":"Reinicio automático si es necesario",
     "Automatic security updates":"Actualizaciones de seguridad automáticas",
+    "unattended-upgrades is not installed":"unattended-upgrades no está instalado",
+    "Install unattended-upgrades to enable automatic security updates.":"Instala unattended-upgrades para activar las actualizaciones de seguridad automáticas.",
+    "Security updates are installed daily using the system package policy. Restart time uses the server time zone. runvard updates remain manual.":"Las actualizaciones de seguridad se instalan a diario según las reglas de paquetes del sistema. La hora de reinicio usa la zona horaria del servidor. Las actualizaciones de runvard siguen siendo manuales.",
     "Already on dashboard":"Ya está en el panel",
     "Available":"Disponible",
     "Available updates":"Actualizaciones disponibles",
@@ -5329,6 +5636,9 @@ const UI_PHRASES={
     "Automatic":"Automático",
     "Automatic restart if needed":"Reinício automático se necessário",
     "Automatic security updates":"Atualizações de segurança automáticas",
+    "unattended-upgrades is not installed":"unattended-upgrades não está instalado",
+    "Install unattended-upgrades to enable automatic security updates.":"Instale unattended-upgrades para ativar as atualizações de segurança automáticas.",
+    "Security updates are installed daily using the system package policy. Restart time uses the server time zone. runvard updates remain manual.":"As atualizações de segurança são instaladas diariamente segundo as regras de pacotes do sistema. A hora de reinício usa o fuso horário do servidor. As atualizações do runvard continuam a ser manuais.",
     "Already on dashboard":"Já está no painel",
     "Available":"Disponível",
     "Available updates":"Atualizações disponíveis",
@@ -7636,6 +7946,7 @@ function applyLanguage(){
   document.querySelectorAll('[data-i18n-title]').forEach(el=>{el.title=tr(el.dataset.i18nTitle);});
   document.querySelectorAll('[data-i18n-placeholder]').forEach(el=>{el.placeholder=tr(el.dataset.i18nPlaceholder);});
   translateRenderedText(document.body);
+  document.querySelectorAll('[data-device-i18n]').forEach(el=>{el.textContent=deviceText(el.dataset.deviceI18n);});
   updateClock();
   renderTiles();
   syncConnectedServerLabels();
@@ -7899,7 +8210,7 @@ let formReturnFocus=null;
 function resetFormCardClasses(){
   const formCard=document.querySelector('#form-overlay .form-card');
   if(formCard)formCard.classList.remove(
-    'compose-install-card','tile-edit-card',
+    'compose-install-card','compose-linked-card','tile-edit-card','device-access-card',
     'server-type-picker-card','external-server-form-card','backup-wizard-card',
   );
   $('#form-body')?.classList.remove('backup-wizard-body');
@@ -7987,6 +8298,9 @@ function openForm(title,icon,fields,onSubmit){
   openFormOverlay('input:not([type="checkbox"]),select,textarea');
 }
 function closeForm(){
+  if(window.RunvardComposeEditor&&!RunvardComposeEditor.beforeClose())return;
+  const deviceSecret=document.getElementById("device-token");if(deviceSecret){deviceSecret.value="";$("#form-body").replaceChildren();}
+  dashCancelTileEdit();
   resetFormCardClasses();
   $('#form-overlay').classList.remove('open');
   const returnFocus=formReturnFocus;
@@ -8099,7 +8413,7 @@ function resetSearch(){searchEnabled=false;$('#modal-search').classList.remove('
 
 // ═══ Clock & Sys-Info ═══
 setInterval(updateClock,1000);
-api('/system/info').then(i=>{$('#hostname').textContent=i.hostname;setTopbarUser(i.user||'admin');});
+api('/system/info').then(i=>{$('#hostname').textContent=i.hostname;setRunvardComputerName(i.hostname);setTopbarUser(i.user||'admin');});
 
 // ── Benutzer-Menü: Status und Abmelden ──
 function setTopbarUser(name){
@@ -8122,6 +8436,13 @@ function toggleUserMenu(e){
 }
 document.addEventListener('click',e=>{if(!e.target.closest('.user-menu-wrap'))closeUserMenu();});
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&$('#user-menu')?.classList.contains('open')){closeUserMenu();$('#topbar-user')?.focus();}});
+function closeDockerCardMenusAfterClick(target){
+  const clickedSummary=target instanceof Element?target.closest('.docker-card-menu > summary'):null;
+  document.querySelectorAll('.docker-card-menu[open]').forEach(menu=>{
+    if(menu!==clickedSummary?.parentElement)menu.removeAttribute('open');
+  });
+}
+document.addEventListener('click',e=>closeDockerCardMenusAfterClick(e.target));
 let currentAuthStatus={role:null,expert:false};
 async function loadAuthStatus(){
   try{
@@ -8129,6 +8450,7 @@ async function loadAuthStatus(){
     currentAuthStatus=s;
     setTopbarUser(s.user||tr('loginDisabled'));
     const h=$('#um-head'); if(h) h.innerHTML=s.user?`${esc(tr('signedInAs'))} <strong>${esc(s.user)}</strong>`:tr('loginDisabledHead');
+    const devices=$('#um-devices');if(devices)devices.style.display=s.role==='admin'?'block':'none';
     const acc=$('#um-accounts'); if(acc) acc.style.display=(s.role==='admin')?'block':'none';
     expertModeActive=!!s.expert;
     const ex=$('#um-expert-toggle');
@@ -8174,6 +8496,358 @@ window.acctAddForm=()=>openForm('Create account','👥',[
 window.acctPass=username=>openForm('Change password: '+username,'⚿',[{name:'password',label:'New password',type:'password'}],async d=>{try{const r=await post('/accounts/password',{username,password:d.password});if(r&&r.ok===false){toast(r.error||'Error','error');return;}closeForm();toast('Password changed');}catch(e){toast(e.message,'error');}});
 window.acctRole=async(username,role)=>{try{const r=await post('/accounts/role',{username,role});if(r&&r.ok===false){toast(r.error||'Error','error');return;}toast(uiText('Role')+': '+(role==='admin'?'Admin':uiText('Read only')));renderAccounts();}catch(e){toast(e.message,'error');}};
 window.acctDel=username=>confirmDelete('Delete account',`Delete runvard account "${username}"?`,async()=>{try{await post('/accounts/delete',{username});toast('Account deleted');renderAccounts();}catch(e){toast(e.message,'error');}});
+
+// Read-only device access: dedicated tokens, no user accounts.
+const DEVICE_I18N={
+  "en": {
+    "title": "Device access",
+    "intro": "Share selected measurements with a device without creating a user account.",
+    "add": "Add device",
+    "empty": "No device access configured.",
+    "name": "Device name",
+    "servers": "Allowed servers",
+    "fields": "Allowed data",
+    "hint": "Nothing is shared by default. Missing measurements return null. Container and VM data contain counts; warnings contain a count; backups contain timestamps and status.",
+    "save": "Save",
+    "cancel": "Cancel",
+    "close": "Close",
+    "edit": "Edit",
+    "disable": "Disable",
+    "enable": "Enable",
+    "delete": "Delete",
+    "deletePrompt": "Delete this device access? Its token will stop working immediately.",
+    "active": "Active",
+    "inactive": "Disabled",
+    "tokenTitle": "Save the device token",
+    "tokenHint": "This token is shown only once. Store it on your device and send it as an Authorization: Bearer header over HTTPS.",
+    "token": "Device token",
+    "copy": "Copy token",
+    "copied": "Copied",
+    "endpoint": "Measurements endpoint",
+    "error": "The request failed. Please try again.",
+    "invalid_name": "Enter a device name with 1–80 characters.",
+    "invalid_selection": "Select valid servers and data fields.",
+    "device_limit": "The limit of 100 devices has been reached.",
+    "device_not_found": "This device access no longer exists.",
+    "saved": "Saved",
+    "status": "Server status and uptime",
+    "cpu_percent": "CPU usage",
+    "ram_percent": "RAM usage",
+    "temperatures": "Temperatures",
+    "disk_percent": "Root disk usage",
+    "disk_health": "Drive health",
+    "network": "Network throughput",
+    "containers": "Container counts",
+    "vms": "VM counts",
+    "updates": "Available app updates",
+    "alerts": "Warning count",
+    "backups": "Backup status"
+  },
+  "de": {
+    "title": "Gerätefreigaben",
+    "intro": "Ausgewählte Messwerte mit einem Gerät teilen, ohne ein Benutzerkonto anzulegen.",
+    "add": "Gerät hinzufügen",
+    "empty": "Keine Gerätefreigaben eingerichtet.",
+    "name": "Gerätename",
+    "servers": "Erlaubte Server",
+    "fields": "Erlaubte Daten",
+    "hint": "Standardmäßig wird nichts freigegeben. Fehlende Messwerte liefern null. Container und VMs liefern Anzahlen, Warnungen eine Anzahl und Backups Zeitpunkte und Status.",
+    "save": "Speichern",
+    "cancel": "Abbrechen",
+    "close": "Schließen",
+    "edit": "Bearbeiten",
+    "disable": "Deaktivieren",
+    "enable": "Aktivieren",
+    "delete": "Löschen",
+    "deletePrompt": "Diese Gerätefreigabe löschen? Ihr Token wird sofort ungültig.",
+    "active": "Aktiv",
+    "inactive": "Deaktiviert",
+    "tokenTitle": "Geräte-Token sichern",
+    "tokenHint": "Dieser Token wird nur einmal angezeigt. Hinterlege ihn auf deinem Gerät und sende ihn über HTTPS im Header Authorization: Bearer.",
+    "token": "Geräte-Token",
+    "copy": "Token kopieren",
+    "copied": "Kopiert",
+    "endpoint": "Messwerte-Endpunkt",
+    "error": "Die Anfrage ist fehlgeschlagen. Bitte erneut versuchen.",
+    "invalid_name": "Gib einen Gerätenamen mit 1–80 Zeichen ein.",
+    "invalid_selection": "Wähle gültige Server und Datenfelder aus.",
+    "device_limit": "Die Grenze von 100 Geräten ist erreicht.",
+    "device_not_found": "Diese Gerätefreigabe existiert nicht mehr.",
+    "saved": "Gespeichert",
+    "status": "Serverstatus und Betriebszeit",
+    "cpu_percent": "CPU-Auslastung",
+    "ram_percent": "RAM-Auslastung",
+    "temperatures": "Temperaturen",
+    "disk_percent": "Belegung des Systemlaufwerks",
+    "disk_health": "Laufwerkszustand",
+    "network": "Netzwerkdurchsatz",
+    "containers": "Container-Anzahlen",
+    "vms": "VM-Anzahlen",
+    "updates": "Verfügbare App-Updates",
+    "alerts": "Anzahl der Warnungen",
+    "backups": "Backupstatus"
+  },
+  "fr": {
+    "title": "Accès des appareils",
+    "intro": "Partager des mesures sélectionnées avec un appareil sans créer de compte utilisateur.",
+    "add": "Ajouter un appareil",
+    "empty": "Aucun accès d’appareil configuré.",
+    "name": "Nom de l’appareil",
+    "servers": "Serveurs autorisés",
+    "fields": "Données autorisées",
+    "hint": "Aucune donnée n’est partagée par défaut. Les mesures absentes valent null. Les conteneurs, les VM et les avertissements sont des totaux ; les sauvegardes indiquent les dates et l’état.",
+    "save": "Enregistrer",
+    "cancel": "Annuler",
+    "close": "Fermer",
+    "edit": "Modifier",
+    "disable": "Désactiver",
+    "enable": "Activer",
+    "delete": "Supprimer",
+    "deletePrompt": "Supprimer cet accès ? Son jeton cessera immédiatement de fonctionner.",
+    "active": "Actif",
+    "inactive": "Désactivé",
+    "tokenTitle": "Conserver le jeton de l’appareil",
+    "tokenHint": "Ce jeton n’est affiché qu’une seule fois. Enregistrez-le sur votre appareil et transmettez-le via HTTPS dans l’en-tête Authorization: Bearer.",
+    "token": "Jeton de l’appareil",
+    "copy": "Copier le jeton",
+    "copied": "Copié",
+    "endpoint": "Point d’accès aux mesures",
+    "error": "La requête a échoué. Veuillez réessayer.",
+    "invalid_name": "Saisissez un nom d’appareil de 1 à 80 caractères.",
+    "invalid_selection": "Sélectionnez des serveurs et des champs de données valides.",
+    "device_limit": "La limite de 100 appareils est atteinte.",
+    "device_not_found": "Cet accès d’appareil n’existe plus.",
+    "saved": "Enregistré",
+    "status": "État du serveur et durée de fonctionnement",
+    "cpu_percent": "Utilisation du processeur",
+    "ram_percent": "Utilisation de la mémoire vive",
+    "temperatures": "Températures",
+    "disk_percent": "Occupation du disque système",
+    "disk_health": "État des disques",
+    "network": "Débit réseau",
+    "containers": "Nombre de conteneurs",
+    "vms": "Nombre de VM",
+    "updates": "Mises à jour d’applications disponibles",
+    "alerts": "Nombre d’avertissements",
+    "backups": "État des sauvegardes"
+  },
+  "it": {
+    "title": "Accessi dei dispositivi",
+    "intro": "Condividi le misurazioni selezionate con un dispositivo senza creare un account utente.",
+    "add": "Aggiungi dispositivo",
+    "empty": "Nessun accesso dispositivo configurato.",
+    "name": "Nome del dispositivo",
+    "servers": "Server consentiti",
+    "fields": "Dati consentiti",
+    "hint": "Nessun dato è condiviso per impostazione predefinita. Le misurazioni mancanti restituiscono null. Container, VM e avvisi sono conteggi; i backup riportano date e stato.",
+    "save": "Salva",
+    "cancel": "Annulla",
+    "close": "Chiudi",
+    "edit": "Modifica",
+    "disable": "Disattiva",
+    "enable": "Attiva",
+    "delete": "Elimina",
+    "deletePrompt": "Eliminare questo accesso? Il relativo token smetterà subito di funzionare.",
+    "active": "Attivo",
+    "inactive": "Disattivato",
+    "tokenTitle": "Conserva il token del dispositivo",
+    "tokenHint": "Questo token viene mostrato una sola volta. Salvalo sul dispositivo e invialo tramite HTTPS nell’intestazione Authorization: Bearer.",
+    "token": "Token del dispositivo",
+    "copy": "Copia token",
+    "copied": "Copiato",
+    "endpoint": "Endpoint delle misurazioni",
+    "error": "La richiesta non è riuscita. Riprova.",
+    "invalid_name": "Inserisci un nome del dispositivo da 1 a 80 caratteri.",
+    "invalid_selection": "Seleziona server e campi dati validi.",
+    "device_limit": "È stato raggiunto il limite di 100 dispositivi.",
+    "device_not_found": "Questo accesso dispositivo non esiste più.",
+    "saved": "Salvato",
+    "status": "Stato del server e tempo di attività",
+    "cpu_percent": "Utilizzo della CPU",
+    "ram_percent": "Utilizzo della RAM",
+    "temperatures": "Temperature",
+    "disk_percent": "Utilizzo del disco di sistema",
+    "disk_health": "Stato delle unità",
+    "network": "Velocità di rete",
+    "containers": "Numero di container",
+    "vms": "Numero di VM",
+    "updates": "Aggiornamenti delle app disponibili",
+    "alerts": "Numero di avvisi",
+    "backups": "Stato dei backup"
+  },
+  "es": {
+    "title": "Accesos de dispositivos",
+    "intro": "Comparte las métricas seleccionadas con un dispositivo sin crear una cuenta de usuario.",
+    "add": "Añadir dispositivo",
+    "empty": "No hay accesos de dispositivos configurados.",
+    "name": "Nombre del dispositivo",
+    "servers": "Servidores permitidos",
+    "fields": "Datos permitidos",
+    "hint": "No se comparte ningún dato de forma predeterminada. Las métricas ausentes devuelven null. Los contenedores, las VM y las advertencias son recuentos; las copias de seguridad incluyen fechas y estado.",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "close": "Cerrar",
+    "edit": "Editar",
+    "disable": "Desactivar",
+    "enable": "Activar",
+    "delete": "Eliminar",
+    "deletePrompt": "¿Eliminar este acceso? Su token dejará de funcionar inmediatamente.",
+    "active": "Activo",
+    "inactive": "Desactivado",
+    "tokenTitle": "Guarda el token del dispositivo",
+    "tokenHint": "Este token se muestra una sola vez. Guárdalo en tu dispositivo y envíalo mediante HTTPS en la cabecera Authorization: Bearer.",
+    "token": "Token del dispositivo",
+    "copy": "Copiar token",
+    "copied": "Copiado",
+    "endpoint": "Endpoint de métricas",
+    "error": "La solicitud ha fallado. Inténtalo de nuevo.",
+    "invalid_name": "Introduce un nombre de dispositivo de entre 1 y 80 caracteres.",
+    "invalid_selection": "Selecciona servidores y campos de datos válidos.",
+    "device_limit": "Se ha alcanzado el límite de 100 dispositivos.",
+    "device_not_found": "Este acceso de dispositivo ya no existe.",
+    "saved": "Guardado",
+    "status": "Estado del servidor y tiempo de actividad",
+    "cpu_percent": "Uso de CPU",
+    "ram_percent": "Uso de RAM",
+    "temperatures": "Temperaturas",
+    "disk_percent": "Uso del disco del sistema",
+    "disk_health": "Estado de las unidades",
+    "network": "Tráfico de red",
+    "containers": "Número de contenedores",
+    "vms": "Número de VM",
+    "updates": "Actualizaciones de aplicaciones disponibles",
+    "alerts": "Número de advertencias",
+    "backups": "Estado de las copias de seguridad"
+  },
+  "pt": {
+    "title": "Acessos de dispositivos",
+    "intro": "Partilhe as métricas selecionadas com um dispositivo sem criar uma conta de utilizador.",
+    "add": "Adicionar dispositivo",
+    "empty": "Nenhum acesso de dispositivo configurado.",
+    "name": "Nome do dispositivo",
+    "servers": "Servidores permitidos",
+    "fields": "Dados permitidos",
+    "hint": "Por predefinição, nenhum dado é partilhado. As métricas em falta devolvem null. Os contentores, as VM e os avisos são contagens; as cópias de segurança incluem datas e estado.",
+    "save": "Guardar",
+    "cancel": "Cancelar",
+    "close": "Fechar",
+    "edit": "Editar",
+    "disable": "Desativar",
+    "enable": "Ativar",
+    "delete": "Eliminar",
+    "deletePrompt": "Eliminar este acesso? O respetivo token deixará de funcionar imediatamente.",
+    "active": "Ativo",
+    "inactive": "Desativado",
+    "tokenTitle": "Guarde o token do dispositivo",
+    "tokenHint": "Este token é apresentado apenas uma vez. Guarde-o no dispositivo e envie-o por HTTPS no cabeçalho Authorization: Bearer.",
+    "token": "Token do dispositivo",
+    "copy": "Copiar token",
+    "copied": "Copiado",
+    "endpoint": "Endpoint de métricas",
+    "error": "O pedido falhou. Tente novamente.",
+    "invalid_name": "Introduza um nome de dispositivo com 1 a 80 carateres.",
+    "invalid_selection": "Selecione servidores e campos de dados válidos.",
+    "device_limit": "Foi atingido o limite de 100 dispositivos.",
+    "device_not_found": "Este acesso de dispositivo já não existe.",
+    "saved": "Guardado",
+    "status": "Estado do servidor e tempo de atividade",
+    "cpu_percent": "Utilização da CPU",
+    "ram_percent": "Utilização da RAM",
+    "temperatures": "Temperaturas",
+    "disk_percent": "Utilização do disco do sistema",
+    "disk_health": "Estado das unidades",
+    "network": "Tráfego de rede",
+    "containers": "Número de contentores",
+    "vms": "Número de VM",
+    "updates": "Atualizações de aplicações disponíveis",
+    "alerts": "Número de avisos",
+    "backups": "Estado das cópias de segurança"
+  }
+};
+function deviceText(key){return (DEVICE_I18N[currentLanguage()]||DEVICE_I18N.en)[key]||DEVICE_I18N.en[key]||key;}
+function deviceError(error){const key=error?.body?.detail;return deviceText(typeof key==='string'&&key in DEVICE_I18N.en?key:'error');}
+let deviceCatalog={devices:[],servers:[],fields:[]};
+function deviceShell(title,markup,focus){
+  resetFormCardClasses()?.classList.add('device-access-card');
+  $('#form-head').textContent=title;
+  $('#form-body').innerHTML=markup;
+  formSubmitFn=null;
+  openFormOverlay(focus);
+}
+async function devicesManage(){
+  closeUserMenu();
+  try{deviceCatalog=await api('/devices/admin/list');deviceList();}
+  catch(error){toast(deviceError(error),'error');}
+}
+function deviceList(){
+  const t=key=>esc(deviceText(key));
+  const names=new Map(deviceCatalog.servers.map(server=>[server.id,server.name]));
+  deviceShell(deviceText('title'),`<p>${t('intro')}</p>
+    <div>${deviceCatalog.devices.length?deviceCatalog.devices.map((device,index)=>`
+      <section class="device-row">
+        <div class="device-row-head"><strong>${esc(device.name)}</strong><span>${t(device.enabled?'active':'inactive')}</span></div>
+        <div class="device-summary"><strong>${t('servers')}:</strong> ${device.servers.map(id=>esc(names.get(id)||id)).join(', ')||'—'}<br>
+        <strong>${t('fields')}:</strong> ${device.fields.map(field=>t(field)).join(', ')||'—'}</div>
+        <div class="device-actions"><button class="btn ghost" data-device-edit="${index}">${t('edit')}</button>
+        <button class="btn ghost" data-device-toggle="${index}">${t(device.enabled?'disable':'enable')}</button>
+        <button class="btn ghost danger" data-device-delete="${index}">${t('delete')}</button></div>
+      </section>`).join(''):`<p>${t('empty')}</p>`}</div>
+    <div class="form-actions"><button class="btn ghost" onclick="closeForm()">${t('close')}</button>
+    <button class="btn" id="device-add">${t('add')}</button></div>`,'#device-add');
+  $('#device-add').onclick=()=>deviceEdit();
+  document.querySelectorAll('[data-device-edit]').forEach(button=>button.onclick=()=>deviceEdit(deviceCatalog.devices[+button.dataset.deviceEdit]));
+  document.querySelectorAll('[data-device-toggle]').forEach(button=>button.onclick=async()=>{
+    const device=deviceCatalog.devices[+button.dataset.deviceToggle];button.disabled=true;
+    try{await post('/devices/admin/enabled',{device_id:device.id,enabled:!device.enabled});await devicesManage();}
+    catch(error){toast(deviceError(error),'error');button.disabled=false;}
+  });
+  document.querySelectorAll('[data-device-delete]').forEach(button=>button.onclick=()=>{
+    const device=deviceCatalog.devices[+button.dataset.deviceDelete];
+    confirmDelete(deviceText('delete'),deviceText('deletePrompt'),async()=>{
+      try{await post('/devices/admin/delete',{device_id:device.id});await devicesManage();}
+      catch(error){toast(deviceError(error),'error');}
+    });
+  });
+}
+function deviceEdit(device){
+  const t=key=>esc(deviceText(key));
+  deviceShell(device?deviceText('edit'):deviceText('add'),`
+    <form id="device-form"><div class="form-field"><label for="device-name">${t('name')}</label>
+      <input id="device-name" name="name" required maxlength="80" value="${esc(device?.name||'')}"></div>
+    <fieldset><legend>${t('servers')}</legend>${deviceCatalog.servers.map(server=>`
+      <label class="device-choice"><input type="checkbox" name="device-server" value="${esc(server.id)}" ${device?.servers.includes(server.id)?'checked':''}><span>${esc(server.name)}</span></label>`).join('')}</fieldset>
+    <fieldset><legend>${t('fields')}</legend><div class="device-fields">${deviceCatalog.fields.map(field=>`
+      <label class="device-choice"><input type="checkbox" name="device-field" value="${esc(field)}" ${device?.fields.includes(field)?'checked':''}><span>${t(field)}</span></label>`).join('')}</div></fieldset>
+    <p>${t('hint')}</p><p id="device-error" class="device-error" role="alert"></p>
+    <div class="form-actions"><button class="btn ghost" type="button" onclick="deviceList()">${t('cancel')}</button>
+      <button class="btn" id="device-save" type="submit">${t('save')}</button></div></form>`,'#device-name');
+  $('#device-form').onsubmit=async event=>{
+    event.preventDefault();const button=$('#device-save');button.disabled=true;
+    const data={name:$('#device-name').value,servers:JSON.stringify([...document.querySelectorAll('[name="device-server"]:checked')].map(el=>el.value)),
+      fields:JSON.stringify([...document.querySelectorAll('[name="device-field"]:checked')].map(el=>el.value))};
+    if(device)Object.assign(data,{device_id:device.id,enabled:device.enabled});
+    try{
+      const result=await post(device?'/devices/admin/update':'/devices/admin/create',data);
+      if(device){await devicesManage();toast(deviceText('saved'));}
+      else deviceTokenResult(result.token);
+    }catch(error){$('#device-error').textContent=deviceError(error);button.disabled=false;}
+  };
+}
+function deviceTokenResult(token){
+  const t=key=>esc(deviceText(key));
+  deviceShell(deviceText('tokenTitle'),`<p>${t('tokenHint')}</p>
+    <div class="form-field"><label for="device-token">${t('token')}</label><textarea id="device-token" rows="3" readonly spellcheck="false" autocomplete="off"></textarea></div>
+    <button class="btn ghost" id="device-copy">${t('copy')}</button><p id="device-copy-status" role="status"></p>
+    <p>${t('endpoint')}</p><code>GET ${esc(location.origin)}/api/devices/metrics</code>
+    <div class="form-actions"><button class="btn" id="device-token-done">${t('close')}</button></div>`,'#device-token');
+  $('#device-token').value=token;
+  $('#device-copy').onclick=async()=>{
+    const input=$('#device-token');input.select();
+    try{await navigator.clipboard.writeText(input.value);$('#device-copy-status').textContent=deviceText('copied');}
+    catch(error){input.focus();input.select();}
+  };
+  $('#device-token-done').onclick=()=>{closeForm();devicesManage();};
+}
 
 loadAuthStatus();
 
@@ -8229,12 +8903,12 @@ const FED_I18N={
   pt:{connectedServers:'Servidores ligados',network:'Rede',showMore:'Mostrar mais',showLess:'Mostrar menos',connectServer:'Ligar servidor',openNewTab:'Abrir num novo separador',servers:'Servidores',externalServer:'Servidor externo',serverType:'Tipo de servidor',testConnection:'Testar ligação',setup:'Ligar instâncias runvard',setupCopy:'Crie aqui um grupo de servidores ou adira a um servidor existente.',create:'Criar grupo de servidores',join:'Aderir ao grupo',refresh:'Atualizar',pair:'Código de emparelhamento',settings:'Definições',current:'Este servidor',open:'Abrir',revoke:'Revogar',online:'Online',degraded:'Degradado',offline:'Offline',incompatible:'Incompatível',unknown:'A aguardar',last:'Último contacto',updates:'Atualizações',alerts:'Alertas',version:'Versão',expires:'Válido por 10 minutos · utilização única'},
 };
 const FED_FORM_I18N={
-  en:{displayName:'Display name',internalUrl:'Internal URL',browserUrl:'Browser URL',allowedNetworks:'Allowed private networks',existingInternalUrl:'Existing server internal URL',internalUrlHint:'Literal LAN/VPN IP and port, e.g. http://10.0.0.12:8080',browserUrlHint:'The URL users open; reverse-proxy hostnames are supported.',copy:'Copy',copied:'Copied',disk:'Disk'},
-  de:{displayName:'Anzeigename',internalUrl:'Interne URL',browserUrl:'Browser-URL',allowedNetworks:'Erlaubte private Netze',existingInternalUrl:'Interne URL des vorhandenen Servers',internalUrlHint:'Direkte LAN-/VPN-IP und Port, z. B. http://10.0.0.12:8080',browserUrlHint:'Die URL, die Benutzer öffnen; Reverse-Proxy-Hostnamen werden unterstützt.',copy:'Kopieren',copied:'Kopiert',disk:'Datenträger'},
-  fr:{displayName:'Nom affiché',internalUrl:'URL interne',browserUrl:'URL du navigateur',allowedNetworks:'Réseaux privés autorisés',existingInternalUrl:'URL interne du serveur existant',internalUrlHint:'Adresse IP LAN/VPN directe et port, p. ex. http://10.0.0.12:8080',browserUrlHint:'L’URL ouverte par les utilisateurs ; les noms d’hôte du proxy inverse sont pris en charge.',copy:'Copier',copied:'Copié',disk:'Disque'},
-  it:{displayName:'Nome visualizzato',internalUrl:'URL interno',browserUrl:'URL del browser',allowedNetworks:'Reti private consentite',existingInternalUrl:'URL interno del server esistente',internalUrlHint:'Indirizzo IP LAN/VPN diretto e porta, ad es. http://10.0.0.12:8080',browserUrlHint:'L’URL aperto dagli utenti; sono supportati i nomi host del reverse proxy.',copy:'Copia',copied:'Copiato',disk:'Disco'},
-  es:{displayName:'Nombre visible',internalUrl:'URL interna',browserUrl:'URL del navegador',allowedNetworks:'Redes privadas permitidas',existingInternalUrl:'URL interna del servidor existente',internalUrlHint:'IP LAN/VPN directa y puerto, p. ej., http://10.0.0.12:8080',browserUrlHint:'La URL que abren los usuarios; se admiten nombres de host de proxy inverso.',copy:'Copiar',copied:'Copiado',disk:'Disco'},
-  pt:{displayName:'Nome apresentado',internalUrl:'URL interno',browserUrl:'URL do navegador',allowedNetworks:'Redes privadas permitidas',existingInternalUrl:'URL interno do servidor existente',internalUrlHint:'IP LAN/VPN direto e porta, por ex., http://10.0.0.12:8080',browserUrlHint:'O URL aberto pelos utilizadores; são suportados nomes de anfitrião de proxy inverso.',copy:'Copiar',copied:'Copiado',disk:'Disco'},
+  en:{displayName:'Display name',internalUrl:'Internal URL',browserUrl:'Browser URL',allowedNetworks:'Allowed private networks',existingInternalUrl:'Existing server internal URL',existingFingerprint:'Existing server fingerprint',fingerprint:'Fingerprint',internalUrlHint:'Literal LAN/VPN IP and explicit port, e.g. http://10.0.0.12:8080.',browserUrlHint:'Browser-facing HTTP(S) origin only, without a path; reverse-proxy hostnames are supported.',allowedNetworksHint:'Comma-separated CIDRs. They must include this server and every peer it must reach.',fingerprintHint:'Copy the SHA256 fingerprint shown with the pairing code on the existing server.',copy:'Copy',copied:'Copied',disk:'Disk'},
+  de:{displayName:'Anzeigename',internalUrl:'Interne URL',browserUrl:'Browser-URL',allowedNetworks:'Erlaubte private Netze',existingInternalUrl:'Interne URL des vorhandenen Servers',existingFingerprint:'Fingerprint des vorhandenen Servers',fingerprint:'Fingerprint',internalUrlHint:'Direkte LAN-/VPN-IP mit explizitem Port, z. B. http://10.0.0.12:8080.',browserUrlHint:'Nur der HTTP(S)-Ursprung für den Browser, ohne Pfad; Reverse-Proxy-Hostnamen werden unterstützt.',allowedNetworksHint:'Kommagetrennte CIDRs. Sie müssen diesen Server und alle erreichbaren Peers einschließen.',fingerprintHint:'Den SHA256-Fingerprint übernehmen, der mit dem Pairing-Code auf dem vorhandenen Server angezeigt wird.',copy:'Kopieren',copied:'Kopiert',disk:'Datenträger'},
+  fr:{displayName:'Nom affiché',internalUrl:'URL interne',browserUrl:'URL du navigateur',allowedNetworks:'Réseaux privés autorisés',existingInternalUrl:'URL interne du serveur existant',existingFingerprint:'Empreinte du serveur existant',fingerprint:'Empreinte',internalUrlHint:'Adresse IP LAN/VPN directe avec port explicite, p. ex. http://10.0.0.12:8080.',browserUrlHint:'Origine HTTP(S) du navigateur uniquement, sans chemin ; les noms du proxy inverse sont acceptés.',allowedNetworksHint:'CIDR séparés par des virgules. Ils doivent inclure ce serveur et tous les pairs à joindre.',fingerprintHint:'Copiez l’empreinte SHA256 affichée avec le code de jumelage sur le serveur existant.',copy:'Copier',copied:'Copié',disk:'Disque'},
+  it:{displayName:'Nome visualizzato',internalUrl:'URL interno',browserUrl:'URL del browser',allowedNetworks:'Reti private consentite',existingInternalUrl:'URL interno del server esistente',existingFingerprint:'Impronta del server esistente',fingerprint:'Impronta',internalUrlHint:'IP LAN/VPN diretto con porta esplicita, ad es. http://10.0.0.12:8080.',browserUrlHint:'Solo origine HTTP(S) per il browser, senza percorso; sono supportati i nomi del reverse proxy.',allowedNetworksHint:'CIDR separati da virgole. Devono includere questo server e ogni peer da raggiungere.',fingerprintHint:'Copia l’impronta SHA256 mostrata con il codice di abbinamento sul server esistente.',copy:'Copia',copied:'Copiato',disk:'Disco'},
+  es:{displayName:'Nombre visible',internalUrl:'URL interna',browserUrl:'URL del navegador',allowedNetworks:'Redes privadas permitidas',existingInternalUrl:'URL interna del servidor existente',existingFingerprint:'Huella del servidor existente',fingerprint:'Huella',internalUrlHint:'IP LAN/VPN directa con puerto explícito, p. ej. http://10.0.0.12:8080.',browserUrlHint:'Solo el origen HTTP(S) del navegador, sin ruta; se admiten nombres de proxy inverso.',allowedNetworksHint:'CIDR separados por comas. Deben incluir este servidor y todos los pares que deba alcanzar.',fingerprintHint:'Copia la huella SHA256 mostrada con el código de emparejamiento en el servidor existente.',copy:'Copiar',copied:'Copiado',disk:'Disco'},
+  pt:{displayName:'Nome apresentado',internalUrl:'URL interno',browserUrl:'URL do navegador',allowedNetworks:'Redes privadas permitidas',existingInternalUrl:'URL interno do servidor existente',existingFingerprint:'Impressão do servidor existente',fingerprint:'Impressão',internalUrlHint:'IP LAN/VPN direto com porta explícita, por ex. http://10.0.0.12:8080.',browserUrlHint:'Apenas a origem HTTP(S) do navegador, sem caminho; são aceites nomes de proxy inverso.',allowedNetworksHint:'CIDR separados por vírgulas. Devem incluir este servidor e todos os pares a alcançar.',fingerprintHint:'Copie a impressão SHA256 mostrada com o código de emparelhamento no servidor existente.',copy:'Copiar',copied:'Copiado',disk:'Disco'},
 };
 const EXTERNAL_SERVER_I18N={
   en:{
@@ -8864,8 +9538,14 @@ setInterval(loadConnectedServers,10000);
 let _systemUpdateBadgeNext=0,_systemUpdateBadgeHasUpdates=false;
 let _appsUpdateBadgeHasUpdates=false;
 const RUNVARD_DOCUMENT_TITLE='runvard';
+let runvardComputerName='';
+function setRunvardComputerName(name){
+  runvardComputerName=String(name||'').trim();
+  updateDocumentTitle();
+}
 function updateDocumentTitle(){
-  document.title=_systemUpdateBadgeHasUpdates?`${uiText('Update available')} · ${RUNVARD_DOCUMENT_TITLE}`:RUNVARD_DOCUMENT_TITLE;
+  const title=runvardComputerName?`${runvardComputerName} · ${RUNVARD_DOCUMENT_TITLE}`:RUNVARD_DOCUMENT_TITLE;
+  document.title=_systemUpdateBadgeHasUpdates?`${uiText('Update available')} · ${title}`:title;
 }
 function applySystemUpdateBadge(){
   const el=$('#badge-system');
@@ -9010,12 +9690,19 @@ async function renderTab(id,tab){const body=$('#modal-body');body.style.padding=
 // ═══ Federation / Servers ═══
 let _fedOverview=null;
 function fedDefaultName(){return ($('#hostname')?.textContent||'runvard').trim()||'runvard';}
+function fedInternalUrlDefault(){
+  const host=String(location.hostname||'').replace(/^\[|\]$/g,'');
+  const ipv4=/^(?:\d{1,3}\.){3}\d{1,3}$/.test(host);
+  const ipv6=host.includes(':');
+  if(!ipv4&&!ipv6)return'';
+  return location.origin;
+}
 function fedSetupFields(){
   return [
     {name:'name',label:fedText('displayName'),value:fedDefaultName()},
-    {name:'internal_url',label:fedText('internalUrl'),value:location.origin,hint:fedText('internalUrlHint')},
+    {name:'internal_url',label:fedText('internalUrl'),value:fedInternalUrlDefault(),hint:fedText('internalUrlHint')},
     {name:'browser_url',label:fedText('browserUrl'),value:location.origin,hint:fedText('browserUrlHint')},
-    {name:'allowed_cidrs',label:fedText('allowedNetworks'),value:'10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,fd00::/8'},
+    {name:'allowed_cidrs',label:fedText('allowedNetworks'),value:'10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,100.64.0.0/10,fd00::/8',hint:fedText('allowedNetworksHint')},
   ];
 }
 async function renderServers(body){
@@ -9210,7 +9897,8 @@ function fedNodeHtml(node,admin){
   const metric=(value,label)=>`<div class="fed-metric"><b>${esc(String(value??'—'))}</b><span>${esc(label)}</span></div>`;
   return `<article class="fed-node">
     <div class="fed-node-main"><div class="fed-node-name"><span class="fed-health ${esc(health)}"></span>${esc(node.name||node.hostname||node.node_id)} ${node.current?`<span class="status-pill run">${esc(fedText('current'))}</span>`:''}</div>
-      <div class="fed-node-meta">${esc(status)} · ${esc(fedText('last'))}: ${esc(last)} · ${esc(node.browser_url||'')}</div></div>
+      <div class="fed-node-meta">${esc(status)} · ${esc(fedText('last'))}: ${esc(last)} · ${esc(node.browser_url||'')}</div>
+      ${node.fingerprint?`<div class="fed-node-meta">${esc(fedText('fingerprint'))}: <code>${esc(node.fingerprint)}</code></div>`:''}</div>
     <div class="fed-metrics">
       ${metric((s.cpu_percent??'—')+(s.cpu_percent==null?'':'%'),'CPU')}
       ${metric((s.ram_percent??'—')+(s.ram_percent==null?'':'%'),'RAM')}
@@ -9231,8 +9919,9 @@ window.fedEnableForm=()=>openForm(fedText('create'),'⬡',fedSetupFields(),async
 });
 window.fedJoinForm=()=>{
   const fields=[
-    {name:'peer_url',label:fedText('existingInternalUrl'),placeholder:'http://10.0.0.11:8080'},
-    {name:'code',label:'Pairing code'},
+    {name:'peer_url',label:fedText('existingInternalUrl'),placeholder:'http://10.0.0.11:8080',hint:fedText('internalUrlHint')},
+    {name:'code',label:fedText('pair')},
+    {name:'peer_fingerprint',label:fedText('existingFingerprint'),placeholder:'SHA256:…',hint:fedText('fingerprintHint')},
     ...fedSetupFields(),
   ];
   openForm(fedText('join'),'⇄',fields,async d=>{
@@ -9245,7 +9934,7 @@ window.fedSettingsForm=()=>{
     {name:'name',label:fedText('displayName'),value:s.name||''},
     {name:'internal_url',label:fedText('internalUrl'),value:s.internal_url||''},
     {name:'browser_url',label:fedText('browserUrl'),value:s.browser_url||''},
-    {name:'allowed_cidrs',label:fedText('allowedNetworks'),value:(s.allowed_cidrs||[]).join(',')},
+    {name:'allowed_cidrs',label:fedText('allowedNetworks'),value:(s.allowed_cidrs||[]).join(','),hint:fedText('allowedNetworksHint')},
   ],async d=>{try{await post('/federation/v1/admin/settings',d);closeForm();toast(tr('saved'));renderServers($('#modal-body'));}catch(e){toast(e.message,'error');}});
 };
 window.fedPairCode=async()=>{
@@ -9254,8 +9943,11 @@ window.fedPairCode=async()=>{
     $('#form-head').innerHTML=`<span>⇄</span> ${esc(fedText('pair'))}`;
     $('#form-body').innerHTML=`<div class="form-field"><label>${esc(fedText('expires'))}</label>
       <input id="fed-pair-value" readonly value="${esc(r.code)}" style="font-family:'JetBrains Mono',monospace"></div>
+      <div class="form-field"><label>${esc(fedText('fingerprint'))}</label>
+      <input id="fed-fingerprint-value" readonly value="${esc(r.fingerprint)}" style="font-family:'JetBrains Mono',monospace"></div>
       <div class="form-actions"><button class="btn ghost" onclick="closeForm()">${esc(tr('close'))}</button>
-      <button class="btn" onclick="navigator.clipboard.writeText($('#fed-pair-value').value);toast(fedText('copied'))">${esc(fedText('copy'))}</button></div>`;
+      <button class="btn ghost" onclick="navigator.clipboard.writeText($('#fed-fingerprint-value').value);toast(fedText('copied'))">${esc(fedText('copy'))} · ${esc(fedText('fingerprint'))}</button>
+      <button class="btn" onclick="navigator.clipboard.writeText($('#fed-pair-value').value);toast(fedText('copied'))">${esc(fedText('copy'))} · ${esc(fedText('pair'))}</button></div>`;
     $('#form-overlay').classList.add('open');
   }catch(e){toast(e.message,'error');}
 };
@@ -11024,7 +11716,7 @@ function dockerServiceCard(container){
     running&&webPort?`<button onclick="dockerAct('${container.id}','restart')">${esc(uiText('Restart'))}</button>`:'',
     running?`<button onclick="dockerAct('${container.id}','stop')">${esc(uiText('Stop'))}</button>`:'',
     webPort&&running?`<button onclick="dockerStats('${container.id}','${esc(container.name)}')">${esc(uiText('Stats'))}</button>`:'',
-    composeProject?`<button onclick="dashCompose(${composeId})">${esc(uiText('Edit'))}</button>`:'',
+    composeProject?`<button onclick="dashCompose(${composeId})">${esc(uiText('Edit'))}</button>`:`<button onclick="composeEdit('container:'+${esc(JSON.stringify(container.name))})">${esc(uiText('Edit'))}</button>`,
     `<button onclick="dockerContainerAddToDashboard(${groupKeyArg},${groupNameArg},${groupKindArg},${groupProjectArg},${webPort||0})">${esc(uiText('Show on dashboard'))}</button>`,
     `<button class="danger" onclick="dockerDel('${container.id}','${esc(container.name)}')">${esc(uiText('Delete'))}</button>`,
   ].join('');
@@ -11068,6 +11760,7 @@ async function dockerSaveGroupToDashboard(group,catalogApp,port){
   toast(uiText('Added to dashboard'));
 }
 window.dockerContainerAddToDashboard=async(key,name,kind,project,port)=>{
+  closeDockerCardMenusAfterClick(null);
   try{
     const group={key,name,kind,project};
     const catalog=await api('/apps/catalog').catch(()=>({apps:[]}));
@@ -11231,32 +11924,8 @@ window.composeForm=()=>openForm('Compose project','🐳',[{name:'name',label:'Pr
   await composeAddToDashboard(d.name,composeFirstPort(d.content),false);closeForm();toast('Project saved');renderDocker($('#modal-body'),'Compose');
 });
 window.composeEdit=async name=>{
-  try{
-    const c=await api('/docker/compose/get?name='+encodeURIComponent(name));
-    const diskData=await api('/system/disks').catch(()=>[]);
-    const draft=appComposeProjectDraft(name,c);
-    draft.mounts=appInstallMounts(diskData);
-    draft.volumes.forEach(v=>{if(v.managed)v.mountpoint=appInstallBestMount(draft.mounts,appInstallVolumeRole(v));});
-    appComposeFormOpen(draft,{
-      title:'Compose: '+name,
-      icon:'🐳',
-      description:'Edit docker-compose.yml and optional .env values for this project.',
-      primaryLabel:'Save',
-      onSubmit:async currentDraft=>{
-        const content=appInstallCompose(currentDraft);
-        const r=await post('/docker/compose/save',{
-          name,
-          content,
-          env_enabled:currentDraft.envFileEnabled?'1':'0',
-          env_content:currentDraft.envFileContent||''
-        });
-        requireOk(r,'Could not save Compose project');
-        closeForm();toast(uiText('Saved'));
-        renderDocker($('#modal-body'),'Compose');
-        loadDashboard();
-      },
-    });
-  }catch(e){toast('Error: '+e.message,'error');}
+  try{await RunvardComposeEditor.open(name);}
+  catch(e){toast(COMPOSE_EDITOR_I18N[currentLanguage()].loadError+': '+e.message,'error');}
 };
 window.composeAct=async(name,action)=>{
   composePendingActions.set(name,action);
@@ -12517,29 +13186,36 @@ window.aaSetForm=()=>openForm('Set AppArmor profile','🛡',[
   {name:'mode',label:'Modus',type:'select',options:[{value:'enforce',label:'Enforce (erzwingen)'},{value:'complain',label:'Complain (protokollieren)'},{value:'disable',label:'Disable'}]},
 ],async d=>{try{const r=await post('/sysmgr/apparmor/set',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}closeForm();toast('Profile updated');renderSystem($('#modal-body'),'AppArmor');}catch(e){toast('Error: '+e.message,'error');}});
 
+function automaticUpdatesCard(uu,tab='Wartung'){
+  const text=value=>esc(uiText(value));
+  let controls;
+  if(!uu){
+    controls=`<div class="empty-state">${text('Check failed')}</div>`;
+  }else if(!uu.installed){
+    controls=`<p class="nx-action-sub">${text('Install unattended-upgrades to enable automatic security updates.')}</p>
+      <button class="btn sm" id="uu-install" onclick="uuInstall('${tab}')">${text('Install package')}</button>`;
+  }else{
+    controls=`<label style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><input type="checkbox" id="uu-enable" ${uu.enabled?'checked':''} style="width:auto">${text('Unattended updates active')}</label>
+      <label style="display:flex;align-items:center;gap:8px;margin-bottom:12px"><input type="checkbox" id="uu-reboot" ${uu.auto_reboot?'checked':''} style="width:auto">${text('Automatic restart if needed')}</label>
+      <div class="nx-action-row" style="flex-wrap:wrap"><label for="uu-time">${text('Restart time')}</label><input type="time" id="uu-time" value="${esc(uu.reboot_time||'02:00')}" required style="width:120px;max-width:100%"></div>
+      <div class="nx-action-row" style="justify-content:flex-end"><button class="btn sm" id="uu-save" onclick="uuSave('${tab}')">${text('Save')}</button></div>`;
+  }
+  return `<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${text('Automatic security updates')}</div></div>
+    <p class="nx-action-sub">${text('Security updates are installed daily using the system package policy. Restart time uses the server time zone. runvard updates remain manual.')}</p>${controls}</div>`;
+}
+
 // ── Wartung: unattended-upgrades / tuned / kdump / sosreport ──
 async function renderMaintenance(body){
   body.innerHTML='<div class="loading">Loading…</div>';
   const [uu,tu,kd,sos]=await Promise.all([
-    api('/sysmgr/unattended').catch(()=>({})),
+    api('/sysmgr/unattended').catch(()=>null),
     api('/sysmgr/tuned').catch(()=>({available:false})),
     api('/sysmgr/kdump').catch(()=>({available:false})),
     api('/sysmgr/sosreport').catch(()=>({available:false,reports:[]})),
   ]);
   let html='<div style="display:flex;flex-direction:column;gap:16px">';
 
-  // unattended-upgrades
-  html+=`<div><div class="section-label" style="margin-bottom:10px">Automatic security updates</div><div class="nx-card-inner">`;
-  if(!uu.installed){
-    html+=`<div style="font-size:12px;color:var(--text2);margin-bottom:10px">The package <span class="mono">unattended-upgrades</span> is not installed.</div><button class="btn sm" onclick="uuInstall()">Install package</button>`;
-  }else{
-    html+=`
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;margin-bottom:10px"><input type="checkbox" id="uu-enable" ${uu.enabled?'checked':''} style="width:auto"> Unattended updates active</label>
-      <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:12px;margin-bottom:10px"><input type="checkbox" id="uu-reboot" ${uu.auto_reboot?'checked':''} style="width:auto"> Automatic restart if needed</label>
-      <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px"><span style="font-size:12px;color:var(--text2)">Restart time</span><input id="uu-time" value="${esc(uu.reboot_time||'02:00')}" placeholder="HH:MM" style="width:90px;font-family:'JetBrains Mono',monospace"></div>
-      <div style="text-align:right"><button class="btn sm" onclick="uuSave()">Save</button></div>`;
-  }
-  html+=`</div></div>`;
+  html+=automaticUpdatesCard(uu);
 
   // tuned
   html+=`<div><div class="section-label" style="margin-bottom:10px">Performance profile (tuned)</div><div class="nx-card-inner">`;
@@ -12593,8 +13269,36 @@ async function renderMaintenance(body){
   html+='</div>';
   body.innerHTML=html;
 }
-window.uuInstall=async()=>{toast('Installation started…');try{const r=await post('/sysmgr/packages/install',{name:'unattended-upgrades'});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Installing – wait a moment, then reopen the tab');}catch(e){toast('Error: '+e.message,'error');}};
-window.uuSave=async()=>{const d={enable:$('#uu-enable').checked?'true':'false',auto_reboot:$('#uu-reboot').checked?'true':'false',reboot_time:$('#uu-time').value};try{const r=await post('/sysmgr/unattended/set',d);if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Gespeichert');renderSystem($('#modal-body'),'Wartung');}catch(e){toast('Error: '+e.message,'error');}};
+window.uuInstall=async(tab='Wartung')=>{
+  const btn=$('#uu-install');if(btn)btn.disabled=true;
+  toast(uiText('Installation started…'));
+  try{
+    let r=await post('/sysmgr/packages/install',{name:'unattended-upgrades'});
+    if(r&&r.job_id){
+      while(true){
+        const job=await api('/sysmgr/job?id='+encodeURIComponent(r.job_id));
+        if(job.status==='failed')throw new Error(job.error||uiText('Error'));
+        if(job.status==='succeeded'){r=job.result;break;}
+        await new Promise(resolve=>setTimeout(resolve,1500));
+      }
+    }
+    if(!r||r.ok===false)throw new Error(r?.stderr||uiText('Error'));
+    toast(uiText('Fertig'));
+    await renderSystem($('#modal-body'),tab);
+  }catch(e){toast(uiText('Error: ')+uiText(e.message),'error');}
+  finally{if(btn)btn.disabled=false;}
+};
+window.uuSave=async(tab='Wartung')=>{
+  const btn=$('#uu-save');if(btn)btn.disabled=true;
+  const d={enable:$('#uu-enable').checked?'true':'false',auto_reboot:$('#uu-reboot').checked?'true':'false',reboot_time:$('#uu-time').value};
+  try{
+    const r=await post('/sysmgr/unattended/set',d);
+    if(!r||r.ok===false)throw new Error(r?.stderr||uiText('Error'));
+    toast(uiText('Gespeichert'));
+    await renderSystem($('#modal-body'),tab);
+  }catch(e){toast(uiText('Error: ')+uiText(e.message),'error');}
+  finally{if(btn)btn.disabled=false;}
+};
 window.tunedSet=async()=>{const profile=$('#tuned-sel').value;toast('Applying profile…');try{const r=await post('/sysmgr/tuned/set',{profile});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Profile active: '+profile);renderSystem($('#modal-body'),'Wartung');}catch(e){toast('Error: '+e.message,'error');}};
 window.kdumpAct=async action=>{try{const r=await post('/sysmgr/kdump/action',{action});if(r&&r.ok===false){toast((r.stderr||'Error').slice(0,200),'error');return;}toast('OK');renderSystem($('#modal-body'),'Wartung');}catch(e){toast('Error: '+e.message,'error');}};
 window.sosRun=async()=>{const out=$('#sos-out');if(out){out.style.display='block';out.textContent='Starte sosreport …';}toast('Generating diagnostic report…');try{const r=await post('/sysmgr/sosreport/run',{});if(!r||!r.job_id){toast('Start fehlgeschlagen','error');return;}sosPoll(r.job_id);}catch(e){toast('Error: '+e.message,'error');}};
@@ -13221,6 +13925,7 @@ const APP_DESC_ROWS=[
   ['vaultwarden','Bitwarden-kompatibler Passwort-Manager','Bitwarden-compatible password manager','Gestionnaire de mots de passe compatible Bitwarden','Gestore password compatibile con Bitwarden','Gestor de contraseñas compatible con Bitwarden','Gestor de palavras-passe compatível com Bitwarden'],
   ['paperless-ngx','Digitales Dokumenten-Management','Digital document management','Gestion numérique de documents','Gestione documentale digitale','Gestión documental digital','Gestão documental digital'],
   ['papervard','Lokales Dokumentenarchiv für Familien und kleine Teams','Local document archive for families and small teams','Archive local de documents pour familles et petites équipes','Archivio documentale locale per famiglie e piccoli team','Archivo local de documentos para familias y equipos pequeños','Arquivo local de documentos para famílias e pequenas equipas'],
+  ['printvard','3D-Projektbibliothek und Druckverwaltung','3D project library and print management','Bibliothèque de projets 3D et gestion des impressions','Libreria di progetti 3D e gestione delle stampe','Biblioteca de proyectos 3D y gestión de impresiones','Biblioteca de projetos 3D e gestão de impressões'],
   ['joplin-server','Synchronisierungs-Server für Joplin-Notizen','Sync server for Joplin notes','Serveur de synchronisation pour notes Joplin','Server di sincronizzazione per note Joplin','Servidor de sincronización para notas de Joplin','Servidor de sincronização para notas Joplin'],
   ['trilium','Hierarchische Notiz-App für Wissensbasen','Hierarchical notes app for knowledge bases','App de notes hiérarchiques pour bases de connaissances','App di note gerarchiche per basi di conoscenza','App de notas jerárquicas para bases de conocimiento','App de notas hierárquicas para bases de conhecimento'],
   ['affine','Open-Source-Alternative zu Notion & Miro','Open-source alternative to Notion and Miro','Alternative open source à Notion et Miro','Alternativa open source a Notion e Miro','Alternativa open source a Notion y Miro','Alternativa open source ao Notion e Miro'],
@@ -13563,7 +14268,7 @@ function appCardHtml(a){
     const primary=pending
       ? pendingButton
       : a.running
-      ? `<button class="btn sm success" style="flex:1" onclick="appOpen('${safeId}',${a.port})">↗ ${esc(uiText('Open'))}</button>`
+      ? `<a class="btn sm success" style="flex:1;text-decoration:none" href="http://${location.hostname}:${a.port}" target="_blank" rel="noopener noreferrer">↗ ${esc(uiText('Open'))}</a>`
       : `<button class="btn sm" style="flex:1" onclick="appAct('${safeId}','start')">▶ ${esc(uiText('Start'))}</button>`;
     actions=`<div style="display:flex;gap:6px">
       ${primary}
@@ -13664,7 +14369,9 @@ window.appUninstall=(id,name)=>confirmDelete('Uninstall app',
 
 window.appOpen=(id,port)=>{
   if(!port){toast('No port defined','error');return;}
-  window.open(`http://${location.hostname}:${port}`,'_blank');
+  const url=`http://${location.hostname}:${port}`;
+  const opened=window.open(url,'_blank');
+  if(opened)opened.opener=null;
 };
 
 async function renderPorts(body){
@@ -13823,7 +14530,10 @@ function renderDashboard(){
     const status=dashTileStatus(t);
     const url=dashIsServiceTile(t)?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');
     const iconHtml=t.icon&&t.icon.length<=2?t.icon:`<img src="${esc(t.icon||'')}" onerror="this.parentElement.textContent='${esc((t.name||'?')[0])}'">`;
-    return `<div class="dash-tile" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')">
+    const targetUrl=t.type==='custom'?t.url:dashIsServiceTile(t)&&(t.port||t.url)?dashTileUrl(t):'';
+    const tag=targetUrl?'a':'div';
+    const linkAttrs=targetUrl?` href="${esc(targetUrl)}" target="_blank" rel="noopener noreferrer" draggable="false"`:'';
+    return `<${tag} class="dash-tile${targetUrl?' dash-tile-link':''}"${linkAttrs} data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')">
       <div class="dash-tile-body${t.show_url?' has-url':''}">
         <div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div>
         <div class="dash-status ${status.cls}" title="${esc(status.title)}"></div>
@@ -13831,7 +14541,7 @@ function renderDashboard(){
         <div class="dash-tile-name">${esc(t.name)}</div>
       </div>
       ${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}
-    </div>`;
+    </${tag}>`;
   }).join('');
   // Drag & Drop
   if(typeof Sortable!=='undefined'){
@@ -13846,10 +14556,9 @@ function renderDashboard(){
 
 window.dashClick=(e,id)=>{
   if(e.target.closest('.dash-dots'))return;
-  const t=dashTiles.find(x=>x.id===id);
-  if(!t)return;
-  if(t.type==='custom'&&t.url){window.open(t.url,'_blank');return;}
-  if(dashIsServiceTile(t)&&t.port){window.open(dashTileUrl(t),'_blank');}
+  // Let the browser open native links, including keyboard and modified clicks.
+  if(e.target.closest('.dash-tile-link'))return;
+  dashOpen(id);
 };
 
 function dashComposeProject(t){
@@ -13861,11 +14570,13 @@ function dashTileHost(t){
 }
 
 function dashTileAddress(t){
+  if(/^https?:\/\//i.test(t?.url||''))return t.url.replace(/^https?:\/\//i,'');
   const host=dashTileHost(t);
   return t?.port?`${host}:${t.port}`:host;
 }
 
 function dashTileUrl(t){
+  if(/^https?:\/\//i.test(t?.url||''))return t.url;
   return `http://${dashTileAddress(t)}`;
 }
 
@@ -13924,8 +14635,13 @@ window.dashCtx=(e,id)=>{
 window.dashOpen=id=>{
   const t=dashTiles.find(x=>x.id===id);
   if(!t)return;
-  if(t.type==='custom'&&t.url)window.open(t.url,'_blank');
-  else if(dashIsServiceTile(t)&&t.port)window.open(dashTileUrl(t),'_blank');
+  const url=t.type==='custom'?t.url:dashIsServiceTile(t)&&(t.port||t.url)?dashTileUrl(t):'';
+  if(url){
+    const opened=window.open(url,'_blank');
+    if(opened)opened.opener=null;
+    else window.location.assign(url);
+  }
+  else if(dashIsServiceTile(t))dashLogs(id);
   document.querySelector('.dash-ctx')?.remove();
 };
 window.dashAppAction=async(id,action)=>{
@@ -13988,23 +14704,7 @@ window.dashCompose=async id=>{
     const isCompose=appIsCompose(t)||String(id||'').startsWith('compose:');
     const project=isCompose?dashComposeProject(t||{id}):id;
     if(isCompose)return composeEdit(project);
-    const a=await api('/apps/get?app_id='+encodeURIComponent(id));
-    const draft=await appComposeDraft(id,a.compose||'');
-    appComposeFormOpen(draft,{
-      title:'Compose: '+a.name,
-      icon:'✎',
-      description:localizedAppDesc(a)||a.desc||'Docker Compose',
-      primaryLabel:'Save',
-      env:false,
-      onSubmit:async currentDraft=>{
-        const content=appInstallCompose(currentDraft);
-        const r=await post('/apps/save-compose',{app_id:id,content});
-        requireOk(r,'Could not save Compose file');
-        closeForm();toast(uiText('Saved'));
-        const body=$('#modal-body');if(body&&currentTile?.id==='apps')renderApps(body);
-        loadDashboard();
-      },
-    });
+    return composeEdit(t?.type==='docker'?String(t.id):id);
   }catch(e){toast('Error: '+e.message,'error');}
 };
 window.dashFiles=id=>{
@@ -14022,11 +14722,231 @@ window.dashToggleUrl=async(id,show)=>{
   renderDashboard();
 };
 const DASH_DEFAULT_ACCENT='#7a4aff';
-let dashIconLookupTimer=null,dashIconLookupSeq=0;
-function dashTileIconHtml(icon,name){
+let dashIconLookupSeq=0,dashEditState=null;
+const TILE_EDIT_I18N={
+  "appearance": {
+    "de": "Darstellung",
+    "en": "Appearance",
+    "fr": "Apparence",
+    "it": "Aspetto",
+    "es": "Apariencia",
+    "pt": "Aparência"
+  },
+  "link": {
+    "de": "Link & Adresse",
+    "en": "Link & address",
+    "fr": "Lien et adresse",
+    "it": "Link e indirizzo",
+    "es": "Enlace y dirección",
+    "pt": "Ligação e endereço"
+  },
+  "preview": {
+    "de": "Vorschau",
+    "en": "Preview",
+    "fr": "Aperçu",
+    "it": "Anteprima",
+    "es": "Vista previa",
+    "pt": "Pré-visualização"
+  },
+  "previewHint": {
+    "de": "So erscheint deine Kachel im Dashboard.",
+    "en": "How your tile appears on the dashboard.",
+    "fr": "Voici votre tuile dans le tableau de bord.",
+    "it": "Ecco come appare il riquadro nella dashboard.",
+    "es": "Así se verá tu tarjeta en el panel.",
+    "pt": "Assim aparece o seu bloco no painel."
+  },
+  "findIcon": {
+    "de": "Icon suchen",
+    "en": "Find icon",
+    "fr": "Rechercher une icône",
+    "it": "Cerca icona",
+    "es": "Buscar icono",
+    "pt": "Procurar ícone"
+  },
+  "searchHint": {
+    "de": "App-Name, z. B. Plex",
+    "en": "App name, e.g. Plex",
+    "fr": "Nom de l’application, p. ex. Plex",
+    "it": "Nome dell’app, ad es. Plex",
+    "es": "Nombre de la app, p. ej. Plex",
+    "pt": "Nome da aplicação, p. ex. Plex"
+  },
+  "search": {
+    "de": "Suchen",
+    "en": "Search",
+    "fr": "Rechercher",
+    "it": "Cerca",
+    "es": "Buscar",
+    "pt": "Procurar"
+  },
+  "iconSource": {
+    "de": "Bildadresse oder Symbol",
+    "en": "Image URL or symbol",
+    "fr": "URL de l’image ou symbole",
+    "it": "URL immagine o simbolo",
+    "es": "URL de imagen o símbolo",
+    "pt": "URL da imagem ou símbolo"
+  },
+  "iconHint": {
+    "de": "Bildadresse einfügen, ein Symbol eingeben oder ein Bild hochladen.",
+    "en": "Paste an image URL, enter a symbol or upload an image.",
+    "fr": "Collez l’URL d’une image, saisissez un symbole ou importez une image.",
+    "it": "Incolla l’URL di un’immagine, inserisci un simbolo o carica un’immagine.",
+    "es": "Pega la URL de una imagen, introduce un símbolo o sube una imagen.",
+    "pt": "Cole o URL de uma imagem, introduza um símbolo ou carregue uma imagem."
+  },
+  "faviconHint": {
+    "de": "Bei Diensten wird zuerst das Favicon verwendet. Dieses Icon dient als Ersatz.",
+    "en": "Services use their favicon first. This icon is the fallback.",
+    "fr": "Les services utilisent d’abord leur favicon. Cette icône sert de remplacement.",
+    "it": "I servizi usano prima la favicon. Questa icona è usata in alternativa.",
+    "es": "Los servicios usan primero su favicon. Este icono es la alternativa.",
+    "pt": "Os serviços usam primeiro o favicon. Este ícone é a alternativa."
+  },
+  "upload": {
+    "de": "Bild hochladen",
+    "en": "Upload image",
+    "fr": "Importer une image",
+    "it": "Carica immagine",
+    "es": "Subir imagen",
+    "pt": "Carregar imagem"
+  },
+  "clear": {
+    "de": "Icon zurücksetzen",
+    "en": "Reset icon",
+    "fr": "Réinitialiser l’icône",
+    "it": "Reimposta icona",
+    "es": "Restablecer icono",
+    "pt": "Repor ícone"
+  },
+  "uploaded": {
+    "de": "Hochgeladenes Bild",
+    "en": "Uploaded image",
+    "fr": "Image importée",
+    "it": "Immagine caricata",
+    "es": "Imagen subida",
+    "pt": "Imagem carregada"
+  },
+  "searching": {
+    "de": "Icon wird gesucht …",
+    "en": "Searching for an icon…",
+    "fr": "Recherche d’une icône…",
+    "it": "Ricerca dell’icona…",
+    "es": "Buscando un icono…",
+    "pt": "A procurar um ícone…"
+  },
+  "found": {
+    "de": "Icon übernommen.",
+    "en": "Icon selected.",
+    "fr": "Icône sélectionnée.",
+    "it": "Icona selezionata.",
+    "es": "Icono seleccionado.",
+    "pt": "Ícone selecionado."
+  },
+  "notFound": {
+    "de": "Kein Icon gefunden. Lade ein Bild hoch oder füge eine Bildadresse ein.",
+    "en": "No icon found. Upload an image or paste an image URL.",
+    "fr": "Aucune icône trouvée. Importez une image ou collez son URL.",
+    "it": "Nessuna icona trovata. Carica un’immagine o incolla il suo URL.",
+    "es": "No se encontró ningún icono. Sube una imagen o pega su URL.",
+    "pt": "Nenhum ícone encontrado. Carregue uma imagem ou cole o respetivo URL."
+  },
+  "showAddress": {
+    "de": "Adresse anzeigen",
+    "en": "Show address",
+    "fr": "Afficher l’adresse",
+    "it": "Mostra indirizzo",
+    "es": "Mostrar dirección",
+    "pt": "Mostrar endereço"
+  },
+  "addressHint": {
+    "de": "Die Adresse erscheint unter der Kachel.",
+    "en": "The address appears below the tile.",
+    "fr": "L’adresse s’affiche sous la tuile.",
+    "it": "L’indirizzo appare sotto il riquadro.",
+    "es": "La dirección aparece debajo de la tarjeta.",
+    "pt": "O endereço aparece por baixo do bloco."
+  },
+  "nameRequired": {
+    "de": "Gib einen Anzeigenamen ein.",
+    "en": "Enter a display name.",
+    "fr": "Saisissez un nom d’affichage.",
+    "it": "Inserisci un nome visualizzato.",
+    "es": "Introduce un nombre para mostrar.",
+    "pt": "Introduza um nome a apresentar."
+  },
+  "urlRequired": {
+    "de": "Gib eine vollständige HTTP- oder HTTPS-Adresse ein.",
+    "en": "Enter a complete HTTP or HTTPS URL.",
+    "fr": "Saisissez une URL HTTP ou HTTPS complète.",
+    "it": "Inserisci un URL HTTP o HTTPS completo.",
+    "es": "Introduce una URL HTTP o HTTPS completa.",
+    "pt": "Introduza um URL HTTP ou HTTPS completo."
+  },
+  "imageError": {
+    "de": "Wähle eine Bilddatei mit höchstens 2 MB.",
+    "en": "Choose an image file up to 2 MB.",
+    "fr": "Choisissez une image de 2 Mo maximum.",
+    "it": "Scegli un’immagine di massimo 2 MB.",
+    "es": "Elige una imagen de hasta 2 MB.",
+    "pt": "Escolha uma imagem até 2 MB."
+  },
+  "saving": {
+    "de": "Wird gespeichert …",
+    "en": "Saving…",
+    "fr": "Enregistrement…",
+    "it": "Salvataggio…",
+    "es": "Guardando…",
+    "pt": "A guardar…"
+  },
+  "saveError": {
+    "de": "Speichern fehlgeschlagen. Deine Änderungen bleiben erhalten. Versuche es erneut.",
+    "en": "Could not save. Your changes are preserved. Try again.",
+    "fr": "Échec de l’enregistrement. Vos modifications sont conservées. Réessayez.",
+    "it": "Salvataggio non riuscito. Le modifiche sono conservate. Riprova.",
+    "es": "No se pudo guardar. Tus cambios se conservan. Inténtalo de nuevo.",
+    "pt": "Não foi possível guardar. As alterações foram preservadas. Tente novamente."
+  },
+  "copyError": {
+    "de": "Kopieren fehlgeschlagen. Markiere die Adresse und kopiere sie manuell.",
+    "en": "Could not copy. Select the address and copy it manually.",
+    "fr": "Échec de la copie. Sélectionnez l’adresse et copiez-la manuellement.",
+    "it": "Copia non riuscita. Seleziona l’indirizzo e copialo manualmente.",
+    "es": "No se pudo copiar. Selecciona la dirección y cópiala manualmente.",
+    "pt": "Não foi possível copiar. Selecione o endereço e copie-o manualmente."
+  },
+  "noteLimit": {
+    "de": "Höchstens 80 Zeichen",
+    "en": "Up to 80 characters",
+    "fr": "80 caractères maximum",
+    "it": "Massimo 80 caratteri",
+    "es": "Hasta 80 caracteres",
+    "pt": "Até 80 caracteres"
+  }
+};
+function tileEditText(key){return TILE_EDIT_I18N[key][currentLanguage()]||TILE_EDIT_I18N[key].en;}
+function dashCancelTileEdit(){dashIconLookupSeq++;dashEditState=null;}
+function dashTileFaviconUrl(t){
+  if(!dashIsServiceTile(t)||!t.port)return'';
+  try{
+    const url=new URL(dashTileUrl(t));
+    url.pathname='/favicon.ico';
+    url.search='';
+    url.hash='';
+    return url.href;
+  }catch(e){return'';}
+}
+function dashApplyTileIconFallback(img){
+  const parent=img?.parentElement;if(!parent)return;
+  parent.innerHTML=dashTileIconHtml(img.dataset.fallbackIcon||'',img.dataset.fallbackName||'?');
+}
+function dashTileIconHtml(icon,name,faviconUrl=''){
   const value=String(icon||'').trim();
+  const favicon=String(faviconUrl||'').trim();
+  if(favicon)return `<img src="${esc(favicon)}" loading="lazy" referrerpolicy="no-referrer" data-fallback-icon="${esc(value)}" data-fallback-name="${esc(name||'?')}" onerror="dashApplyTileIconFallback(this)">`;
   if(value&&value.length<=2)return esc(value);
-  if(value)return `<img src="${esc(value)}" onerror="this.parentElement.textContent='${esc((name||'?')[0])}'">`;
+  if(value)return `<img src="${esc(value)}" loading="lazy" referrerpolicy="no-referrer" data-fallback-name="${esc(name||'?')}" onerror="dashApplyTileIconFallback(this)">`;
   return esc((name||'?')[0]);
 }
 function dashSelfhstSlug(value){
@@ -14075,8 +14995,10 @@ function dashIconSearchTerms(...values){
 function dashProbeIcon(url){
   return new Promise(resolve=>{
     const img=new Image();
-    img.onload=()=>resolve(true);
-    img.onerror=()=>resolve(false);
+    const timer=setTimeout(()=>finish(false),3500);
+    function finish(ok){clearTimeout(timer);img.onload=null;img.onerror=null;resolve(ok);}
+    img.onload=()=>finish(true);
+    img.onerror=()=>finish(false);
     img.referrerPolicy='no-referrer';
     img.src=url;
   });
@@ -14090,137 +15012,183 @@ async function dashFindSelfhstIconForTerms(terms,seq){
   }
   return '';
 }
-function dashShowIconUpload(show){
-  const btn=$('#tile-edit-upload-btn');
-  if(!btn)return;
-  btn.classList.toggle('visible',!!show);
-  btn.setAttribute('aria-hidden',show?'false':'true');
-}
 async function dashFindSelfhstIcon(value,seq){
   return dashFindSelfhstIconForTerms(dashIconSearchTerms(value),seq);
 }
+function dashSetIconStatus(text=''){$('#tile-edit-icon-status').textContent=text;}
+function dashSetIconPending(pending){
+  if(!dashEditState)return;
+  dashEditState.iconPending=pending;
+  $('#tile-edit-save').disabled=pending||dashEditState.saving;
+}
 function dashHandleIconInput(){
-  const inp=$('#tile-edit-icon');if(!inp)return;
-  const value=inp.value.trim();
+  dashIconLookupSeq++;
+  if(dashEditState)dashEditState.uploadedIcon='';
+  dashSetIconPending(false);
+  $('#tile-edit-icon-search-go').disabled=false;
+  dashSetIconStatus();
   dashUpdateEditPreview();
-  clearTimeout(dashIconLookupTimer);
-  if(!value||value.length<=2||/^https?:\/\//i.test(value)||value.startsWith('data:image/')){
-    dashShowIconUpload(false);
-    return;
-  }
+}
+window.dashSearchTileIcon=async()=>{
+  const state=dashEditState;if(!state||state.saving)return;
+  const value=$('#tile-edit-icon-search').value.trim();
+  if(!value)return;
   const seq=++dashIconLookupSeq;
-  dashIconLookupTimer=setTimeout(async()=>{
+  $('#tile-edit-icon-search-go').disabled=true;
+  dashSetIconPending(true);
+  dashSetIconStatus(tileEditText('searching'));
+  try{
     const found=await dashFindSelfhstIcon(value,seq);
-    if(seq!==dashIconLookupSeq||found===null)return;
+    if(state!==dashEditState||seq!==dashIconLookupSeq)return;
     if(found){
-      inp.value=found;
-      dashShowIconUpload(false);
-      dashUpdateEditPreview();
-    }else{
-      dashShowIconUpload(true);
+      state.uploadedIcon='';
+      $('#tile-edit-icon').value=found;
       dashUpdateEditPreview();
     }
-  },320);
-}
+    dashSetIconStatus(tileEditText(found?'found':'notFound'));
+  }catch(e){
+    if(state===dashEditState&&seq===dashIconLookupSeq)dashSetIconStatus(tileEditText('notFound'));
+  }finally{
+    if(state===dashEditState&&seq===dashIconLookupSeq){$('#tile-edit-icon-search-go').disabled=false;dashSetIconPending(false);}
+  }
+};
 window.dashResetTileAccent=()=>{
-  const inp=$('#tile-edit-accent');if(!inp)return;
-  inp.value=DASH_DEFAULT_ACCENT;
+  $('#tile-edit-accent').value=DASH_DEFAULT_ACCENT;
   dashUpdateEditPreview();
 };
-window.dashUploadTileIcon=()=>{
-  $('#tile-edit-icon-file')?.click();
+window.dashUploadTileIcon=()=>$('#tile-edit-icon-file')?.click();
+window.dashClearTileIcon=()=>{
+  $('#tile-edit-icon').value='';
+  $('#tile-edit-icon-file').value='';
+  dashHandleIconInput();
 };
 window.dashReadTileIconFile=file=>{
-  if(!file||!file.type.startsWith('image/'))return;
+  const state=dashEditState;if(!file||!state||state.saving)return;
+  const seq=++dashIconLookupSeq;
+  $('#tile-edit-icon-search-go').disabled=false;
+  dashSetIconPending(false);
+  if(!file.type.startsWith('image/')||file.size>2*1024*1024){dashSetIconStatus(tileEditText('imageError'));return;}
+  dashSetIconPending(true);
+  dashSetIconStatus();
   const reader=new FileReader();
   reader.onload=()=>{
-    const inp=$('#tile-edit-icon');if(!inp)return;
-    inp.value=String(reader.result||'');
-    dashShowIconUpload(false);
+    if(state!==dashEditState||seq!==dashIconLookupSeq)return;
+    dashSetIconPending(false);
+    state.uploadedIcon=String(reader.result||'');
+    $('#tile-edit-icon').value='';
+    dashSetIconStatus(tileEditText('uploaded'));
     dashUpdateEditPreview();
   };
+  reader.onerror=()=>{if(state===dashEditState&&seq===dashIconLookupSeq){dashSetIconPending(false);dashSetIconStatus(tileEditText('imageError'));}};
   reader.readAsDataURL(file);
 };
+function dashEditedIcon(){return dashEditState?.uploadedIcon||$('#tile-edit-icon').value.trim();}
+function dashEditedAddress(){
+  const t=dashEditState?.tile;if(!t)return '';
+  return ($('#tile-edit-url')?.value.trim()||(dashIsServiceTile(t)?dashTileUrl(t):'')).replace(/^https?:\/\//i,'');
+}
 function dashUpdateEditPreview(){
-  const card=$('#tile-edit-preview');if(!card)return;
-  const name=$('#tile-edit-name')?.value||'Tile';
-  const icon=$('#tile-edit-icon')?.value||'';
-  const note=$('#tile-edit-note')?.value||'';
-  const accent=$('#tile-edit-accent')?.value||DASH_DEFAULT_ACCENT;
-  const showUrl=!!$('#tile-edit-show-url')?.checked;
-  const address=$('#tile-edit-address')?.dataset.address||'';
-  card.style.setProperty('--tile-accent',accent);
-  $('#tile-edit-preview-icon').innerHTML=dashTileIconHtml(icon,name);
+  const state=dashEditState,card=$('#tile-edit-preview');if(!state||!card)return;
+  const name=$('#tile-edit-name').value.trim()||state.tile.name;
+  const icon=dashEditedIcon(),note=$('#tile-edit-note').value;
+  const showUrl=$('#tile-edit-show-url').checked,address=dashEditedAddress();
+  card.style.setProperty('--tile-accent',$('#tile-edit-accent').value||DASH_DEFAULT_ACCENT);
+  $('#tile-edit-preview-icon').innerHTML=dashTileIconHtml(icon,name,dashTileFaviconUrl(state.tile));
   $('#tile-edit-preview-name').textContent=name;
-  const noteEl=$('#tile-edit-preview-note');
-  noteEl.textContent=note;
-  noteEl.style.display=note?'block':'none';
-  const urlEl=$('#tile-edit-preview-url');
-  urlEl.textContent=address;
-  urlEl.style.display=showUrl&&address?'block':'none';
+  $('#tile-edit-preview-name').title=name;
+  $('#tile-edit-preview-note').textContent=note;
+  $('#tile-edit-preview-note').title=note;
+  $('#tile-edit-preview-note').hidden=!note;
+  $('#tile-edit-preview-body').classList.toggle('has-url',showUrl);
+  $('#tile-edit-preview-url').textContent=address;
+  $('#tile-edit-preview-footer').hidden=!showUrl;
+  $('#tile-edit-address').value=address;
+  $('#tile-edit-copy').disabled=!address;
+  $('#tile-edit-note-count').textContent=note.length+'/80';
 }
 window.dashCopyTileAddress=async()=>{
-  const value=$('#tile-edit-address')?.dataset.address||'';
-  if(!value)return;
+  const value=dashEditedAddress();if(!value)return;
   try{await navigator.clipboard.writeText(value);toast(uiText('Copied'));}
-  catch(e){toast(value);}
+  catch(e){$('#tile-edit-error').textContent=tileEditText('copyError');$('#tile-edit-address').focus();$('#tile-edit-address').select();}
 };
 window.dashEditTile=id=>{
   document.querySelector('.dash-ctx')?.remove();
-  const t=dashTiles.find(x=>x.id===id);
-  if(!t)return;
-  const isService=dashIsServiceTile(t);
-  const address=isService?dashTileAddress(t):String(t.url||'').replace(/^https?:\/\//,'');
-  const accent=t.accent||DASH_DEFAULT_ACCENT;
-  const previewStatus=dashTileStatus(t);
-  const formCard=document.querySelector('#form-overlay .form-card');
-  if(formCard){formCard.classList.remove('compose-install-card');formCard.classList.add('tile-edit-card');}
-  $('#form-head').innerHTML=`<span>✎</span> ${esc(uiText('Edit tile'))}`;
-  $('#form-body').innerHTML=`
-    <div class="tile-edit-preview-wrap">
-      <div class="tile-edit-preview" id="tile-edit-preview" style="--tile-accent:${esc(accent)}">
-        <div class="tile-edit-preview-body">
-          <div class="tile-edit-preview-dot dash-status ${previewStatus.cls}" title="${esc(previewStatus.title)}" style="position:static"></div>
-          <div class="tile-edit-preview-icon" id="tile-edit-preview-icon">${dashTileIconHtml(t.icon,t.name)}</div>
-          <div class="tile-edit-preview-name" id="tile-edit-preview-name">${esc(t.name)}</div>
-          <div class="tile-edit-preview-note" id="tile-edit-preview-note" style="${t.note?'':'display:none'}">${esc(t.note||'')}</div>
+  const t=dashTiles.find(x=>x.id===id);if(!t)return;
+  dashCancelTileEdit();
+  const state=dashEditState={tile:t,saving:false,uploadedIcon:String(t.icon||'').startsWith('data:image/')?t.icon:''};
+  const isService=dashIsServiceTile(t),accent=t.accent||DASH_DEFAULT_ACCENT,status=dashTileStatus(t);
+  const address=isService?dashTileAddress(t):String(t.url||'').replace(/^https?:\/\//i,'');
+  const formCard=resetFormCardClasses();formCard?.classList.add('tile-edit-card');
+  const text=key=>esc(tileEditText(key));
+  $('#form-head').innerHTML=`<span>${esc(uiText('Edit tile'))}</span><button type="button" class="btn ghost" onclick="closeForm()" aria-label="${esc(uiText('Close'))}"><span aria-hidden="true">×</span></button>`;
+  $('#form-body').innerHTML=`<form id="tile-edit-form" novalidate>
+    <div class="tile-edit-layout">
+      <aside class="tile-edit-preview-wrap" aria-label="${text('preview')}">
+        <p class="tile-edit-preview-label">${text('preview')}</p>
+        <div class="dash-tile tile-edit-preview" id="tile-edit-preview" style="--tile-accent:${esc(accent)}">
+          <div class="dash-tile-body${t.show_url?' has-url':''}" id="tile-edit-preview-body">
+            <div class="dash-status ${status.cls}" title="${esc(status.title)}" role="img" aria-label="${esc(status.title)}"></div>
+            <div class="dash-tile-icon" id="tile-edit-preview-icon" aria-hidden="true">${dashTileIconHtml(t.icon,t.name,dashTileFaviconUrl(t))}</div>
+            <div class="dash-tile-name" id="tile-edit-preview-name">${esc(t.name)}</div>
+            <div class="dash-tile-note" id="tile-edit-preview-note" ${t.note?'':'hidden'}>${esc(t.note||'')}</div>
+          </div>
+          <div class="dash-tile-footer" id="tile-edit-preview-footer" ${t.show_url?'':'hidden'}><div class="dash-tile-url" id="tile-edit-preview-url">${esc(address)}</div></div>
         </div>
-        <div class="tile-edit-preview-url" id="tile-edit-preview-url" style="${t.show_url&&address?'':'display:none'}">${esc(address)}</div>
+        <p class="tile-edit-preview-caption">${text('previewHint')}</p>
+      </aside>
+      <div class="tile-edit-fields">
+        <fieldset class="tile-edit-section"><legend>${text('appearance')}</legend><div class="tile-edit-grid">
+          <div class="form-field"><label for="tile-edit-name">${esc(uiText('Display name'))}</label><input id="tile-edit-name" required value="${esc(t.name||'')}" aria-describedby="tile-edit-error"></div>
+          <div class="form-field"><label for="tile-edit-note">${esc(uiText('Note'))}</label><input id="tile-edit-note" maxlength="80" value="${esc(t.note||'')}" placeholder="${esc(uiText('Optional short note'))}" aria-describedby="tile-edit-note-hint"><p class="tile-edit-hint" id="tile-edit-note-hint">${text('noteLimit')} · <span id="tile-edit-note-count">${String(t.note||'').length}/80</span></p></div>
+          <div class="form-field"><label for="tile-edit-accent">${esc(uiText('Accent color'))}</label><div class="tile-edit-control"><input id="tile-edit-accent" type="color" value="${esc(accent)}"><button type="button" class="btn ghost" onclick="dashResetTileAccent()">${esc(uiText('Use default color'))}</button></div></div>
+          <div class="form-field"><label for="tile-edit-icon-search">${text('findIcon')}</label><div class="tile-edit-control"><input id="tile-edit-icon-search" placeholder="${text('searchHint')}" aria-describedby="tile-edit-icon-status"><button type="button" class="btn ghost" id="tile-edit-icon-search-go" onclick="dashSearchTileIcon()">${text('search')}</button></div></div>
+          <div class="form-field"><label for="tile-edit-icon">${text('iconSource')}</label><input id="tile-edit-icon" value="${esc(state.uploadedIcon?'':t.icon||'')}" aria-describedby="tile-edit-icon-hint"><p class="tile-edit-hint" id="tile-edit-icon-hint">${text('iconHint')}${isService?' '+text('faviconHint'):''}</p><div class="tile-edit-upload-actions"><button type="button" class="btn ghost" onclick="dashUploadTileIcon()">${text('upload')}</button><button type="button" class="btn ghost" onclick="dashClearTileIcon()">${text('clear')}</button></div><input id="tile-edit-icon-file" type="file" accept="image/*" hidden onchange="dashReadTileIconFile(this.files&&this.files[0])"></div>
+          <p class="tile-edit-status" id="tile-edit-icon-status" role="status">${state.uploadedIcon?text('uploaded'):''}</p>
+        </div></fieldset>
+        <fieldset class="tile-edit-section"><legend>${text('link')}</legend><div class="tile-edit-grid">
+          <div class="form-field"><label for="tile-edit-url">${esc(uiText('URL'))}</label><input id="tile-edit-url" type="url" required value="${esc(isService?dashTileUrl(t):t.url||'')}" placeholder="https://example.com" aria-describedby="tile-edit-error"></div>
+          <label class="tile-edit-option"><input id="tile-edit-show-url" type="checkbox" ${t.show_url?'checked':''}><span><strong>${text('showAddress')}</strong><span>${text('addressHint')}</span></span></label>
+          <div class="form-field"><label for="tile-edit-address">${esc(uiText('Visible address'))}</label><div class="tile-edit-control"><input id="tile-edit-address" class="mono" value="${esc(address)}" readonly><button type="button" class="btn ghost" id="tile-edit-copy" onclick="dashCopyTileAddress()" ${address?'':'disabled'}>${esc(uiText('Copy address'))}</button></div></div>
+        </div></fieldset>
       </div>
     </div>
-    <div class="tile-edit-grid">
-      <div class="form-field"><label>${esc(uiText('Display name'))}</label><input id="tile-edit-name" value="${esc(t.name||'')}" placeholder="${esc(uiText('Name'))}"></div>
-      <div class="form-field"><label>${esc(uiText('Icon'))}</label><div class="tile-edit-control"><input id="tile-edit-icon" value="${esc(t.icon||'')}" placeholder="home assistant, plex or https://..."><button type="button" class="tile-edit-icon-btn tile-edit-upload-btn" id="tile-edit-upload-btn" onclick="dashUploadTileIcon()" title="${esc(uiText('Upload icon'))}" aria-label="${esc(uiText('Upload icon'))}">⇧</button><input id="tile-edit-icon-file" type="file" accept="image/*" hidden onchange="dashReadTileIconFile(this.files&&this.files[0])"></div></div>
-      <div class="form-field"><label>${esc(uiText('Accent color'))}</label><div class="tile-edit-control"><input id="tile-edit-accent" type="color" value="${esc(accent)}" style="height:38px;padding:4px"><button type="button" class="tile-edit-icon-btn" onclick="dashResetTileAccent()" title="${esc(uiText('Use default color'))}" aria-label="${esc(uiText('Use default color'))}">↺</button></div></div>
-      <div class="form-field"><label>${esc(uiText('Visible address'))}</label><input id="tile-edit-address" data-address="${esc(address)}" value="${esc(address)}" readonly></div>
-      <div class="form-field tile-edit-wide"><label>${esc(uiText('Note'))}</label><input id="tile-edit-note" value="${esc(t.note||'')}" placeholder="${esc(uiText('Optional short note'))}"></div>
-      ${t.type==='custom'?`<div class="form-field tile-edit-wide"><label>URL</label><input id="tile-edit-url" value="${esc(t.url||'')}" placeholder="http://192.168.1.50:8123"></div>`:''}
-    </div>
-    <div class="tile-edit-options">
-      <label class="tile-edit-option"><span><strong>${esc(uiText('Show IP'))}</strong><span>${esc(uiText('Show the address under this dashboard tile.'))}</span></span><input id="tile-edit-show-url" type="checkbox" ${t.show_url?'checked':''}></label>
-    </div>
-    <div class="tile-edit-actions">
-      <button class="btn ghost" onclick="dashCopyTileAddress()">${esc(uiText('Copy address'))}</button>
-      <div class="tile-edit-actions-main"><button class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button class="btn" id="tile-edit-save">${esc(tr('save'))}</button></div>
-    </div>`;
-  ['tile-edit-name','tile-edit-note','tile-edit-accent','tile-edit-show-url'].forEach(sel=>$('#'+sel)?.addEventListener(sel==='tile-edit-show-url'?'change':'input',dashUpdateEditPreview));
-  $('#tile-edit-icon')?.addEventListener('input',dashHandleIconInput);
-  $('#tile-edit-save').onclick=async()=>{
-    const payload={
-      tile_id:id,
-      name:$('#tile-edit-name').value.trim()||t.name,
-      icon:$('#tile-edit-icon').value.trim(),
-      show_url:$('#tile-edit-show-url').checked,
-      accent:$('#tile-edit-accent').value,
-      note:$('#tile-edit-note').value.trim()
-    };
-    if(t.type==='custom')payload.url=$('#tile-edit-url').value.trim();
+    <p class="tile-edit-error" id="tile-edit-error" role="alert"></p>
+    <div class="tile-edit-actions"><button type="button" class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button type="submit" class="btn" id="tile-edit-save">${esc(tr('save'))}</button></div>
+  </form>`;
+  ['tile-edit-name','tile-edit-note','tile-edit-accent','tile-edit-show-url','tile-edit-url'].forEach(sel=>$('#'+sel)?.addEventListener(sel==='tile-edit-show-url'?'change':'input',dashUpdateEditPreview));
+  $('#tile-edit-icon').addEventListener('input',dashHandleIconInput);
+  $('#tile-edit-icon-search').addEventListener('input',()=>{dashIconLookupSeq++;$('#tile-edit-icon-search-go').disabled=false;dashSetIconPending(false);dashSetIconStatus();});
+  $('#tile-edit-icon-search').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();dashSearchTileIcon();}});
+  const save=async event=>{
+    event?.preventDefault();if(state.saving||state.iconPending||state!==dashEditState)return;
+    const error=$('#tile-edit-error'),name=$('#tile-edit-name'),url=$('#tile-edit-url');
+    error.textContent='';name.removeAttribute('aria-invalid');url?.removeAttribute('aria-invalid');
+    const fail=(input,key)=>{error.textContent=tileEditText(key);input.setAttribute('aria-invalid','true');input.focus();};
+    if(!name.value.trim()){fail(name,'nameRequired');return;}
+    {
+      try{const parsed=new URL(url.value.trim());if(!['http:','https:'].includes(parsed.protocol)||!parsed.hostname)throw new Error();}
+      catch(e){fail(url,'urlRequired');return;}
+    }
+    const payload={tile_id:id,name:name.value.trim(),icon:dashEditedIcon(),show_url:$('#tile-edit-show-url').checked,accent:$('#tile-edit-accent').value,note:$('#tile-edit-note').value.trim()};
+    payload.url=url.value.trim();
+    dashIconLookupSeq++;
+    state.saving=true;
+    const button=$('#tile-edit-save');button.disabled=true;button.textContent=tileEditText('saving');
+    const form=$('#tile-edit-form');form.setAttribute('aria-busy','true');
+    const controls=[...form.querySelectorAll('input,button')];controls.forEach(control=>control.disabled=true);
     try{
-      await post('/dashboard/update',payload);
-      closeForm();toast(uiText('Saved'));loadDashboard();
-    }catch(e){toast('Error: '+e.message,'error');}
+      const result=await post('/dashboard/update',payload);
+      if(result?.ok===false)throw new Error();
+      if(state===dashEditState){closeForm();toast(uiText('Saved'));loadDashboard();}
+    }catch(e){if(state===dashEditState)error.textContent=tileEditText('saveError');}
+    finally{
+      state.saving=false;
+      if(state===dashEditState){form.removeAttribute('aria-busy');controls.forEach(control=>control.disabled=false);button.disabled=false;button.textContent=tr('save');$('#tile-edit-copy').disabled=!dashEditedAddress();}
+    }
   };
-  $('#form-overlay').classList.add('open');
+  $('#tile-edit-form').onsubmit=save;
+  $('#tile-edit-save').onclick=save;
+  openFormOverlay('#tile-edit-name');
 };
 window.dashRemove=(id,name)=>{
   document.querySelector('.dash-ctx')?.remove();
@@ -14718,7 +15686,7 @@ function dockerModernAppCard(group,catalog,index){
   const menuItems=[
     state.key!=='stopped'?`<button onclick="dockerModernAppAct(${keyArg},'restart')">${esc(uiText('Restart'))}</button>`:'',
     state.key!=='stopped'?`<button onclick="dockerModernAppAct(${keyArg},'stop')">${esc(uiText('Stop'))}</button>`:'',
-    group.kind==='compose'?`<button onclick="composeEdit(${esc(JSON.stringify(group.project))})">${esc(uiText('Edit'))}</button>`:'',
+    `<button onclick="composeEdit(${esc(JSON.stringify(group.kind==='compose'?group.project:'container:'+group.containers[0].name))})">${esc(uiText('Edit'))}</button>`,
     `<button onclick="dockerModernAddToDashboard(${keyArg})">${esc(uiText('Show on dashboard'))}</button>`,
     group.kind==='container'?`<button class="danger" onclick="dockerDel(${esc(JSON.stringify(first.id))},${esc(JSON.stringify(first.name))})">${esc(uiText('Delete'))}</button>`:'',
   ].join('');
@@ -14746,6 +15714,7 @@ function updateDockerModernAppStats(body,stats){
 }
 window.dockerModernOpenDetails=id=>{const details=document.getElementById(id);if(!details)return;details.open=true;details.querySelector('summary')?.focus();};
 window.dockerModernAddToDashboard=async key=>{
+  closeDockerCardMenusAfterClick(null);
   const group=_modernDockerGroups.get(key);if(!group)return;
   try{
     await dockerSaveGroupToDashboard(group,group.catalogApp,dockerModernGroupPublishedPort(group));
@@ -15436,7 +16405,7 @@ function appCardHtml(a){
     const primary=pending
       ? `<button class="btn sm ghost" style="flex:1" disabled>${esc(appPendingLabel(pending))}</button>`
       : a.running
-      ? `<button class="btn sm success" style="flex:1" onclick="appOpen('${a.id}',${a.port})">${esc(uiText('Open'))}</button>`
+      ? `<a class="btn sm success" style="flex:1;text-decoration:none" href="http://${location.hostname}:${a.port}" target="_blank" rel="noopener noreferrer">${esc(uiText('Open'))}</a>`
       : `<button class="btn sm" style="flex:1" onclick="appAct('${a.id}','start')">${esc(uiText('Start'))}</button>`;
     actions=`<div style="display:flex;gap:6px">${primary}<button class="btn icon" title="${esc(uiText('Actions'))}" onclick="appMenu(event,'${a.id}','${esc(a.name)}',${a.running?1:0},${a.update_available?1:0})" style="width:30px;height:30px;font-size:15px" ${pending?'disabled':''}>⋯</button></div>`;
   }
@@ -15708,13 +16677,14 @@ async function renderSystem(body,tab){
 async function renderServicesSimple(body){
   const s=await api('/services/list');
   body.innerHTML=viewIntro('Services','Start, stop or inspect system services. Changing core services can disconnect runvard.', '')
-    +`<div class="nx-card-grid">${s.slice(0,80).map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="service-title mono">${esc(x.name)}</div>${statusBadge(x.active,x.active==='active'?'good':'warn')}</div><div class="nx-action-row">${isExpertMode()?`<button class="btn ghost sm" onclick="svcAct('${esc(x.name)}','${x.active==='active'?'restart':'start'}')">${x.active==='active'?'Restart':'Start'}</button>`:''}<button class="btn ghost sm" onclick="svcLogs('${esc(x.name)}')">Logs</button></div></div>`).join('')}</div>`;
+    +`<div class="nx-card-grid">${s.map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="service-title mono">${esc(x.name)}</div>${statusBadge(x.active,x.active==='active'?'good':'warn')}</div><div class="nx-action-row">${isExpertMode()?`<button class="btn ghost sm" onclick="svcAct('${esc(x.name)}','${x.active==='active'?'restart':'start'}')">${x.active==='active'?'Restart':'Start'}</button>`:''}<button class="btn ghost sm" onclick="svcLogs('${esc(x.name)}')">Logs</button></div></div>`).join('')}</div>`;
 }
 const renderSystemOriginalFallback=async(body,tab)=>{
   if(tab==='Updates'){
     body.innerHTML='<div class="loading">Checking updates…</div>';
-    const [u,runvard]=await Promise.all([
+    const [u,uu,runvard]=await Promise.all([
       api('/sysmgr/updates'),
+      api('/sysmgr/unattended').catch(()=>null),
       api('/sysmgr/runvard-release').catch(e=>({remote:{ok:false,error:e.message}})),
     ]);
     const remote=runvard.remote||{};
@@ -15732,6 +16702,7 @@ const renderSystemOriginalFallback=async(body,tab)=>{
         ${summaryCard('runvard GitHub',statusBadge(runvardLabel,runvardTone),remoteSub)}
       </div>
       <div class="nx-card-grid">
+        ${automaticUpdatesCard(uu,'Updates')}
         <div class="nx-action-card">
           <div class="nx-action-head"><div class="nx-action-title">runvard repository</div></div>
           <div class="nx-kv">
@@ -15759,8 +16730,11 @@ function renderDashboard(){
   section.style.display='block';
   if(!dashTiles.length){grid.innerHTML=`<div class="nx-view-intro" style="grid-column:1/-1"><div><h3>Ready for apps</h3><p>Install apps or add custom shortcuts.</p></div><button class="btn" onclick="openTileById('apps')">Open apps</button></div>`;return;}
   grid.innerHTML=dashTiles.map(t=>{
-    const isService=dashIsServiceTile(t);const status=dashTileStatus(t);const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=dashTileIconHtml(t.icon,t.name);const accent=t.accent||'#7a4aff';
-    return `<div class="dash-tile" style="--tile-accent:${esc(accent)}" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')"><div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${status.cls}" title="${esc(status.title)}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div>${t.note?`<div class="dash-tile-note">${esc(t.note)}</div>`:''}</div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
+    const isService=dashIsServiceTile(t);const status=dashTileStatus(t);const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=dashTileIconHtml(t.icon,t.name,dashTileFaviconUrl(t));const accent=t.accent||'#7a4aff';
+    const targetUrl=t.type==='custom'?t.url:dashIsServiceTile(t)&&(t.port||t.url)?dashTileUrl(t):'';
+    const tag=targetUrl?'a':'div';
+    const linkAttrs=targetUrl?` href="${esc(targetUrl)}" target="_blank" rel="noopener noreferrer" draggable="false"`:'';
+    return `<${tag} class="dash-tile${targetUrl?' dash-tile-link':''}"${linkAttrs} style="--tile-accent:${esc(accent)}" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')"><div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${status.cls}" title="${esc(status.title)}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div>${t.note?`<div class="dash-tile-note">${esc(t.note)}</div>`:''}</div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</${tag}>`;
   }).join('');
   if(typeof Sortable!=='undefined'){Sortable.create(grid,{animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',onEnd:()=>{const order=[...grid.querySelectorAll('.dash-tile')].map(el=>el.dataset.id);post('/dashboard/order',{order:JSON.stringify(order)});}});}
 }

@@ -75,6 +75,44 @@ def test_enable_requires_admin_and_danger_confirmation(tmp_path, monkeypatch):
     assert response.json()["total"] == 1
 
 
+def test_pairing_code_includes_the_existing_server_fingerprint(
+    tmp_path, monkeypatch,
+):
+    manager = FederationManager(tmp_path, _snapshot)
+    manager.enable(
+        "Node A", "http://127.0.0.1:8101", "https://a.example.test",
+        ["127.0.0.0/8"],
+    )
+    monkeypatch.setattr(server, "FEDERATION", manager)
+
+    response = _client().post("/api/federation/v1/admin/pairing-code")
+
+    assert response.status_code == 200
+    assert response.json()["fingerprint"].startswith("SHA256:")
+
+
+def test_sso_accept_uses_a_cookie_compatible_with_cross_site_handoff(
+    monkeypatch,
+):
+    class AcceptingFederation:
+        @staticmethod
+        def accept_sso(ticket):
+            assert ticket == "signed-ticket"
+            return {
+                "username": "tester", "role": "admin", "expert": True,
+            }
+
+    monkeypatch.setattr(server, "FEDERATION", AcceptingFederation())
+
+    response = _client().post(
+        "/api/federation/v1/sso/accept", data={"ticket": "signed-ticket"},
+        follow_redirects=False,
+    )
+
+    assert response.status_code == 303
+    assert "samesite=lax" in response.headers["set-cookie"].lower()
+
+
 def test_sso_start_returns_no_store_post_bridge_without_url_ticket(
     tmp_path, monkeypatch,
 ):

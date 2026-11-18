@@ -116,6 +116,44 @@ def test_modern_docker_mobile_summary_stays_compact():
     assert 'html[data-ui-theme="modern"] .modern-docker-tool-summary {' in css
 
 
+def test_docker_action_menus_close_after_clicking_elsewhere():
+    html = INDEX_HTML.read_text()
+
+    function_marker = "function closeDockerCardMenusAfterClick(target)"
+    listener_marker = (
+        "document.addEventListener('click',e=>closeDockerCardMenusAfterClick(e.target));"
+    )
+    assert function_marker in html
+    assert listener_marker in html
+    function_source = function_marker + html.split(function_marker, 1)[1].split(
+        listener_marker, 1
+    )[0]
+    script = f"""
+class Element {{
+  constructor(parentElement = null) {{
+    this.parentElement = parentElement;
+    this.closestSummary = null;
+    this.open = true;
+  }}
+  closest() {{ return this.closestSummary; }}
+  removeAttribute(name) {{ if (name === 'open') this.open = false; }}
+}}
+const firstMenu = new Element();
+const secondMenu = new Element();
+const firstSummary = new Element(firstMenu);
+const summaryChild = new Element();
+summaryChild.closestSummary = firstSummary;
+global.Element = Element;
+global.document = {{ querySelectorAll: () => [firstMenu, secondMenu] }};
+{function_source}
+closeDockerCardMenusAfterClick(summaryChild);
+if (!firstMenu.open || secondMenu.open) throw new Error('opening one menu must close the other');
+closeDockerCardMenusAfterClick(new Element());
+if (firstMenu.open) throw new Error('clicking elsewhere must close the open menu');
+"""
+    subprocess.run(["node", "-e", script], check=True)
+
+
 def test_modern_docker_dashboard_tile_uses_catalog_apps_and_generic_containers():
     tiles = run_modern_docker_helper(
         "["

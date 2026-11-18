@@ -6,8 +6,10 @@ import re
 import shutil
 import socket
 import subprocess
+import tempfile
 
 from modules.compose_utils import best_web_port_from_compose, published_ports_from_compose
+from modules import compose_sources
 
 try:
     import docker
@@ -456,19 +458,55 @@ def prune_networks():
 
 # --- Docker Compose ---
 
+def _compose_containers():
+    try:
+        return _get_client().containers.list(all=True)
+    except Exception:
+        return []
+
+
+def _compose_location(name, allow_new=False):
+    standalone = str(name).startswith("container:")
+    safe_name = "container-" + name.split(":", 1)[1] if standalone else name
+    path = _compose_project_path(safe_name)
+    containers, files, directory = compose_sources.discover(_compose_containers(), name)
+    if files:
+        return path, containers, files, directory or os.path.dirname(files[0])
+    # App-store installations and saved manual projects can exist without containers.
+    for root in (COMPOSE_DIR, os.path.join(os.path.dirname(COMPOSE_DIR), "apps")):
+        candidate = os.path.join(root, safe_name)
+        for filename in ("docker-compose.yml", "compose.yaml", "compose.yml", "docker-compose.yaml"):
+            source = os.path.join(candidate, filename)
+            if os.path.isfile(source):
+                return candidate, containers, [source], candidate
+    if containers or allow_new:
+        return path, containers, [], path
+    raise ValueError("Compose project not found")
+
+
 def list_compose_projects():
-    os.makedirs(COMPOSE_DIR, exist_ok=True)
-    projects = []
-    for name in os.listdir(COMPOSE_DIR):
-        path = os.path.join(COMPOSE_DIR, name)
-        compose_file = os.path.join(path, "docker-compose.yml")
-        if os.path.isfile(compose_file):
-            projects.append({
-                "name": name,
-                "running": _compose_running(path),
-                "port": _compose_port(compose_file),
-            })
-    return projects
+    projects = {}
+    if os.path.isdir(COMPOSE_DIR):
+        for name in os.listdir(COMPOSE_DIR):
+            path = os.path.join(COMPOSE_DIR, name)
+            compose_file = os.path.join(path, "docker-compose.yml")
+            if os.path.isfile(compose_file):
+                projects[name] = {"name": name, "running": _compose_running(path),
+                                  "port": _compose_port(compose_file)}
+    for container in _compose_containers():
+        name = _container_labels(container).get("com.docker.compose.project")
+        if not name:
+            continue
+        entry = projects.setdefault(name, {"name": name, "running": False, "port": 0})
+        entry["running"] = entry["running"] or bool(container.attrs.get("State", {}).get("Running"))
+        for target, bindings in (container.attrs.get("HostConfig", {}).get("PortBindings") or {}).items():
+            for binding in bindings or []:
+                if not entry["port"]:
+                    try:
+                        entry["port"] = int(binding.get("HostPort") or 0)
+                    except ValueError:
+                        pass
+    return list(projects.values())
 
 
 def _compose_port(compose_file):
@@ -500,39 +538,57 @@ def _compose_project_path(name):
     return os.path.join(COMPOSE_DIR, safe)
 
 
-def save_compose(name, content, env_enabled=False, env_content=""):
-    path = _compose_project_path(name)
-    os.makedirs(path, exist_ok=True)
-    with open(os.path.join(path, "docker-compose.yml"), "w") as f:
-        f.write(content)
-    env_path = os.path.join(path, ".env")
-    if env_enabled:
-        with open(env_path, "w") as f:
-            f.write(env_content or "")
-    else:
-        try:
-            os.remove(env_path)
-        except FileNotFoundError:
-            pass
+def convert_compose(content=None, document=None, yaml_tags=None):
+    return compose_sources.convert(content, document, yaml_tags)
+
+
+def save_compose(name, content, env_enabled=False, env_content="", source_contents=None):
+    path, containers, files, directory = _compose_location(name, allow_new=True)
+    contents = source_contents if source_contents is not None else [content]
+    if not isinstance(contents, list) or not contents or any(not isinstance(c, str) for c in contents):
+        raise ValueError("Invalid Compose source contents")
+    if files and len(contents) != len(files):
+        raise ValueError("Compose source files changed; reload before saving")
+    # Validate every source before writing any file. Source paths come only from
+    # Docker metadata or the application's fixed storage roots, never the request.
+    for source in contents:
+        convert_compose(content=source)
+    if not files:
+        os.makedirs(path, exist_ok=True)
+        files = [os.path.join(path, "docker-compose.yml")]
+        directory = path
+    changes = dict(zip(files, contents))
+    changes[os.path.join(directory, ".env")] = env_content or "" if env_enabled else None
+    compose_sources.write_sources(changes)
     return {"ok": True}
 
 
 def get_compose(name):
-    path = _compose_project_path(name)
-    compose_path = os.path.join(path, "docker-compose.yml")
-    env_path = os.path.join(path, ".env")
-    data = {"content": "", "env_enabled": False, "env_content": ""}
-    try:
-        with open(compose_path) as f:
-            data["content"] = f.read()
-    except OSError:
-        pass
+    path, containers, files, directory = _compose_location(name)
+    sources = []
+    if files:
+        for filename in files:
+            try:
+                with open(filename) as f:
+                    content = f.read()
+                parsed = convert_compose(content=content)
+                sources.append({"path": filename, "content": content, "document": parsed["document"], "tags": parsed["tags"]})
+            except (OSError, ValueError) as exc:
+                raise ValueError(f"Cannot load Compose source {filename}: {exc}") from exc
+    else:
+        parsed = convert_compose(document=json.dumps(compose_sources.runtime_document(containers)))
+        sources.append({"path": os.path.join(path, "docker-compose.yml"), **parsed})
+    data = {"content": sources[0]["content"], "sources": sources,
+            "reconstructed": not bool(files), "env_enabled": False, "env_content": ""}
+    env_path = os.path.join(directory, ".env")
     try:
         with open(env_path) as f:
             data["env_content"] = f.read()
             data["env_enabled"] = True
-    except OSError:
+    except FileNotFoundError:
         pass
+    except OSError as exc:
+        raise ValueError(f"Cannot load environment file {env_path}: {exc}") from exc
     return data
 
 
@@ -558,10 +614,14 @@ def _compose_owned_ports(name):
         return ports
     try:
         client = _get_client()
-        containers = client.containers.list(
-            all=True,
-            filters={"label": f"com.docker.compose.project={name}"},
-        )
+        if name.startswith("container:"):
+            containers = [c for c in client.containers.list(all=True)
+                          if c.name == name.split(":", 1)[1]]
+        else:
+            containers = client.containers.list(
+                all=True,
+                filters={"label": f"com.docker.compose.project={name}"},
+            )
     except Exception:
         return ports
     for container in containers:
@@ -596,18 +656,46 @@ def check_compose_ports(name, content):
     return {"ok": not conflicts, "ports": entries, "conflicts": conflicts}
 
 
+def check_compose_source_ports(name, contents, env_enabled=False, env_content=""):
+    """Validate the effective project, including overrides and .env interpolation."""
+    path, containers, files, directory = _compose_location(name, allow_new=True)
+    for content in contents:
+        convert_compose(content=content)
+    with tempfile.TemporaryDirectory(prefix="runvard-compose-check-") as temporary:
+        project_directory = directory if os.path.isdir(directory) else temporary
+        env_path = os.path.join(temporary, ".env")
+        with open(env_path, "w") as f:
+            f.write(env_content if env_enabled else "")
+        project = "container-" + name.split(":", 1)[1] if name.startswith("container:") else name
+        cmd = ["docker", "compose", "-p", project, "--project-directory", project_directory,
+               "--env-file", env_path]
+        for index, content in enumerate(contents):
+            filename = os.path.join(temporary, f"source-{index}.yaml")
+            with open(filename, "w") as f:
+                f.write(content)
+            cmd.extend(["-f", filename])
+        cmd.extend(["config", "--format", "json"])
+        try:
+            result = subprocess.run(cmd, cwd=project_directory, capture_output=True, text=True, timeout=30)
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise ValueError("Compose validation could not be completed") from exc
+        if result.returncode:
+            raise ValueError(result.stderr.strip() or "Invalid Compose configuration")
+        return check_compose_ports(name, result.stdout)
+
+
 def compose_action(name, action):
-    path = _compose_project_path(name)
-    cmd_map = {
-        "up": ["docker", "compose", "up", "-d"],
-        "stop": ["docker", "compose", "stop"],
-        "down": ["docker", "compose", "down"],
-        "restart": ["docker", "compose", "restart"],
-    }
-    if action not in cmd_map:
+    path, containers, files, directory = _compose_location(name)
+    if action not in ("up", "stop", "down", "restart"):
         raise ValueError("Unbekannte Aktion")
-    r = subprocess.run(cmd_map[action], cwd=path, capture_output=True,
-                       text=True, timeout=300)
+    if not files:
+        raise ValueError("Save the Compose configuration before starting this project")
+    project = "container-" + name.split(":", 1)[1] if name.startswith("container:") else name
+    cmd = ["docker", "compose", "-p", project]
+    for filename in files:
+        cmd.extend(["-f", filename])
+    cmd.extend([action, "-d"] if action == "up" else [action])
+    r = subprocess.run(cmd, cwd=directory, capture_output=True, text=True, timeout=300)
     return {"ok": r.returncode == 0, "output": r.stdout + r.stderr}
 
 

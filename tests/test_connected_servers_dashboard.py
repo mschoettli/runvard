@@ -140,6 +140,28 @@ def test_connection_test_has_persistent_inline_state():
     assert "aria-live" in INDEX
 
 
+def test_federation_form_does_not_prefill_a_hostname_as_internal_url():
+    assert "function fedInternalUrlDefault()" in INDEX
+    setup = INDEX[
+        INDEX.index("function fedInternalUrlDefault()"):
+        INDEX.index("async function renderServers", INDEX.index("function fedInternalUrlDefault()"))
+    ]
+    assert "location.hostname" in setup
+    assert "return''" in setup
+    assert "value:fedInternalUrlDefault()" in setup
+
+
+def test_federation_join_requires_the_existing_server_fingerprint():
+    assert "peer_fingerprint" in INDEX
+    assert "label:fedText('existingFingerprint')" in INDEX
+    assert "{name:'code',label:fedText('pair')}" in INDEX
+    for key in ("existingFingerprint", "allowedNetworksHint", "browserUrlHint"):
+        for language in ("en", "de", "fr", "it", "es", "pt"):
+            locale_start = INDEX.index(f"  {language}:{{", INDEX.index("const FED_FORM_I18N"))
+            locale_end = INDEX.index("},", locale_start)
+            assert f"{key}:" in INDEX[locale_start:locale_end]
+
+
 def test_external_admin_rows_expose_status_and_label_icon_actions():
     assert "external-server-health-text" in INDEX
     for key in ("refreshStatus", "editServer", "deleteServer"):

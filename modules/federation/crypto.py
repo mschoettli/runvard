@@ -41,6 +41,12 @@ def node_id_from_public_key(public_key: str) -> str:
     return hashlib.sha256(_b64decode(public_key)).hexdigest()[:32]
 
 
+def public_key_fingerprint(public_key: str) -> str:
+    """Return a copy-friendly SHA-256 fingerprint for out-of-band checks."""
+    digest = hashlib.sha256(_b64decode(public_key)).digest()
+    return "SHA256:" + base64.b64encode(digest).decode("ascii").rstrip("=")
+
+
 def _atomic_write(path: Path, value: str, mode: int) -> None:
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.{os.getpid()}.tmp")

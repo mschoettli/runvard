@@ -69,3 +69,18 @@ def test_connection_guide_uses_placeholders_and_protected_source_links():
         assert placeholder in html
     assert "BEGIN OPENSSH PRIVATE KEY" not in html
     assert 'target="_blank" rel="noopener noreferrer"' in html
+
+
+def test_runvard_guide_covers_real_pairing_prerequisites_and_trust_checks():
+    html = guide_html()
+    for required in (
+        "RUNVARD-A-IP",
+        "RUNVARD-B-IP",
+        "timedatectl show -p NTPSynchronized --value",
+        "/api/federation/v1/sso/accept",
+        "peer fingerprint",
+        "Server-Fingerprint",
+    ):
+        assert required in html
+    assert html.count("30 seconds") >= 1
+    assert html.count("30 Sekunden") >= 1

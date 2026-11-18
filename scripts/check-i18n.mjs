@@ -153,6 +153,16 @@ const i18n = evaluate(indexSource, "I18N", context);
 mergeLocales(i18n, evaluate(indexSource, "I18N_COMPLETIONS", context, true));
 requireKeyParity("I18N", i18n, "en");
 
+const deviceI18n = evaluate(indexSource, "DEVICE_I18N", context);
+requireKeyParity("DEVICE_I18N", deviceI18n, "en", locales);
+for (const locale of locales) {
+  const extra = Object.keys(deviceI18n[locale]).filter(key => !(key in deviceI18n.en));
+  if (extra.length) failures.push(`DEVICE_I18N.${locale} extra keys: ${extra.join(", ")}`);
+  for (const [key, value] of Object.entries(deviceI18n[locale])) {
+    if (typeof value !== "string" || !value.trim()) failures.push(`DEVICE_I18N.${locale}.${key} is empty`);
+  }
+}
+
 const uiPhrases = evaluate(indexSource, "UI_PHRASES", context);
 mergeLocales(uiPhrases, evaluate(indexSource, "UI_PHRASE_COMPLETIONS", context, true));
 requireKeyParity("UI_PHRASES", uiPhrases, "de", ["fr", "it", "es", "pt"]);
@@ -179,10 +189,30 @@ for (const key of [
 
 for (const name of [
   "TOAST_PHRASES", "PROGRESS_PHRASES", "FILE_I18N", "APP_UI",
-  "APP_CATEGORY_LABELS", "APP_INSTALL_STEP_PHRASES", "PATH_PICKER_I18N",
+  "APP_CATEGORY_LABELS", "APP_INSTALL_STEP_PHRASES", "PATH_PICKER_I18N", "TILE_EDIT_I18N",
 ]) {
   requireLocalizedLeaves(name, evaluate(indexSource, name, context));
 }
+const composeEditorI18n = evaluate(indexSource, "COMPOSE_EDITOR_I18N", context);
+requireKeyParity("COMPOSE_EDITOR_I18N", composeEditorI18n, "en", locales);
+for (const key of ["sync", "sources", "runtime", "loadError", "invalid", "settings", "container", "network", "storage", "environment", "hostPort", "containerPort", "addPort", "addMount", "addVariable", "synced", "yamlError", "formError", "unsaved", "review", "discard"]) {
+  for (const locale of locales) {
+    if (!composeEditorI18n[locale]?.[key]) failures.push(`COMPOSE_EDITOR_I18N.${locale}.${key} is missing`);
+  }
+}
+requireExpectedTranslations("COMPOSE_EDITOR_I18N.yamlError", Object.fromEntries(locales.map(locale => [locale, composeEditorI18n[locale].yamlError])), {
+  de: "YAML korrigieren. Das Formular zeigt den letzten gültigen Stand.",
+  en: "Correct the YAML. The form shows the last valid configuration.",
+  fr: "Corrigez le YAML. Le formulaire affiche la dernière configuration valide.",
+  it: "Correggi lo YAML. Il modulo mostra l’ultima configurazione valida.",
+  es: "Corrige el YAML. El formulario muestra la última configuración válida.",
+  pt: "Corrija o YAML. O formulário apresenta a última configuração válida.",
+});
+const tileEditorI18n = evaluate(indexSource, "TILE_EDIT_I18N", context);
+requireExpectedTranslations("TILE_EDIT_I18N.showAddress", tileEditorI18n.showAddress, {
+  de: "Adresse anzeigen", en: "Show address", fr: "Afficher l’adresse",
+  it: "Mostra indirizzo", es: "Mostrar dirección", pt: "Mostrar endereço",
+});
 const backupWizardI18n = evaluate(indexSource, "BACKUP_WIZARD_I18N", context);
 mergeLocales(backupWizardI18n, evaluate(indexSource, "BACKUP_WIZARD_I18N_COMPLETIONS", context));
 requireKeyParity("BACKUP_WIZARD_I18N", backupWizardI18n, "en", locales);
@@ -304,6 +334,37 @@ for (const match of indexSource.matchAll(/data-i18n(?:-title|-placeholder)?=["']
 }
 const unknownKeys = [...trKeys].filter((key) => !(key in i18nBase));
 if (unknownKeys.length) failures.push(`unknown i18n keys: ${unknownKeys.join(" | ")}`);
+
+// Standalone network map: the catalog is optional only for isolated legacy checker fixtures.
+const networkMapCatalog = new URL("static/network-map-i18n.json", root);
+if (fs.existsSync(networkMapCatalog)) {
+  const maps = JSON.parse(fs.readFileSync(networkMapCatalog, "utf8"));
+  requireKeyParity("network-map", maps, "en", locales);
+  for (const locale of locales) {
+    const extras = Object.keys(maps[locale] || {}).filter(key => !(key in maps.en));
+    if (extras.length) failures.push(`network-map.${locale} extra keys: ${extras.join(", ")}`);
+    for (const [key, value] of Object.entries(maps[locale] || {})) {
+      if (typeof value !== "string" || !value.trim()) failures.push(`network-map.${locale}.${key} empty`);
+    }
+  }
+}
+
+const mobilePreviewCatalog = new URL("static/mobile-modal-preview/catalog.js", root);
+if (fs.existsSync(mobilePreviewCatalog)) {
+  const entries = evaluate(fs.readFileSync(mobilePreviewCatalog, "utf8"), "MOBILE_MODAL_I18N");
+  for (const [key, values] of Object.entries(entries)) {
+    if (!Array.isArray(values) || values.length !== locales.length) {
+      failures.push(`mobile-modal-preview.${key} must contain all six locales`);
+      continue;
+    }
+    values.forEach((value, index) => {
+      if (typeof value !== "string" || !value.trim()) {
+        failures.push(`mobile-modal-preview.${key}.${locales[index]} empty`);
+      }
+      requirePlaceholderParity(`mobile-modal-preview.${key}.${locales[index]}`, values[1], value);
+    });
+  }
+}
 
 if (failures.length) {
   console.error(`i18n check failed (${failures.length}):`);

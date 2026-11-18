@@ -126,14 +126,26 @@ invalid signatures, reused nonces, unsupported versions, or more than
    entropy.
 2. Only a hash of the code is stored.
 3. The code expires after ten minutes, is single-use, and is rate limited.
-4. The administrator enters the existing node's internal URL and code on the
-   new node.
-5. Both nodes exchange public keys and signed node metadata.
-6. The new node receives the current membership snapshot and revocation set.
-7. The admitting node creates a signed `node_joined` event.
-8. The event is distributed to reachable peers and later reconciled with
+4. The existing node displays its SHA-256 public-key fingerprint beside the
+   pairing code.
+5. The administrator enters the existing node's internal URL, code, and
+   fingerprint on the new node.
+6. The new node rejects a response whose public key does not match the expected
+   fingerprint.
+7. Both nodes exchange public keys and signed node metadata.
+8. The new node receives the current membership snapshot and revocation set.
+9. The admitting node creates a signed `node_joined` event.
+10. The event is distributed to reachable peers and later reconciled with
    offline peers.
-9. The UI displays both node fingerprints after successful pairing.
+11. The UI displays both node fingerprints after successful pairing so the
+    administrator can compare them on both servers.
+
+Before pairing, each node must be reachable from the other through its literal
+LAN/VPN IP and explicit port. Each node's allowed CIDRs must contain its own
+internal address and the addresses of every peer it must contact. Browser URLs
+are HTTP(S) origins without paths; a browser-facing reverse proxy must forward
+`/api/federation/v1/sso/accept`. System clocks must be synchronized within the
+30-second signed-request tolerance.
 
 ### Membership event log
 

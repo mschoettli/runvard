@@ -4,6 +4,7 @@ Haupt-Anwendung: FastAPI mit allen Routen, Auth und WebSocket-Terminal.
 """
 import os
 import secrets
+import sys
 import asyncio
 import json
 import hmac
@@ -14,6 +15,7 @@ import html
 import requests
 import subprocess
 import ipaddress
+import socket
 
 from fastapi import FastAPI, Request, Depends, HTTPException, WebSocket, \
     WebSocketDisconnect, UploadFile, File, Form
@@ -27,9 +29,12 @@ from modules import (system, terminal, files, storage, docker_mgr, services,
                      system_mgr, apps, dashboard, metrics, accounts, audit,
                      ports, time_machine, path_picker)
 from modules import security_tokens, auth_config
+from modules.device_access import DeviceAccessStore, LocalTelemetry, FIELDS as DEVICE_FIELDS, snapshot_metrics, number
+from modules.network_map import NetworkMap
 from modules.external_servers import ExternalServerManager
 from modules.external_servers.service import error_category
 from modules.federation import FederationManager
+from modules.federation.crypto import public_key_fingerprint
 from modules.federation.service import REDEEM_PATH, STATUS_PATH, SYNC_PATH
 
 app = FastAPI(title="runvard", docs_url=None, redoc_url=None)
@@ -89,6 +94,11 @@ COOKIE_NAME = "runvard_session"
 SESSION_TTL = 8 * 3600              # 8 Stunden
 SESSION_TTL_REMEMBER = 30 * 86400   # 30 Tage
 
+DEVICE_ACCESS = DeviceAccessStore(os.path.join(DATA_DIR, "device-access.json"))
+DEVICE_TELEMETRY = LocalTelemetry()
+
+NETWORK_MAP = NetworkMap(DATA_DIR)
+
 FEDERATION = FederationManager(os.path.join(DATA_DIR, "federation"))
 EXTERNAL_SERVERS = ExternalServerManager(
     os.path.join(DATA_DIR, "external-servers"),
@@ -99,6 +109,8 @@ EXTERNAL_SERVERS = ExternalServerManager(
 def _start_federation_worker():
     auth_config.enforce_authentication(AUTH_CFG_FILE)
     accounts.ensure_bootstrap_account()
+    if os.environ.get("RUNVARD_NETWORK_MAP_NO_WORKER") != "1" and sys.platform.startswith("linux"):
+        NETWORK_MAP.start()
     if FEDERATION.state.get("enabled") and \
             os.environ.get("RUNVARD_FEDERATION_NO_WORKER") != "1":
         FEDERATION.start()
@@ -108,6 +120,7 @@ def _start_federation_worker():
 
 @app.on_event("shutdown")
 def _stop_federation_worker():
+    NETWORK_MAP.stop()
     terminal.kill_all_sessions()
     FEDERATION.stop()
     EXTERNAL_SERVERS.stop()
@@ -154,8 +167,6 @@ EXPERT_ONLY_PATHS = {
     "/api/sysmgr/sosreport/run",
     "/api/sysmgr/tuned",
     "/api/sysmgr/tuned/set",
-    "/api/sysmgr/unattended",
-    "/api/sysmgr/unattended/set",
     "/api/vms/pool/action",
     "/api/vms/pool/create",
     "/api/vms/pool/vol-create",
@@ -347,7 +358,6 @@ def _danger_confirm_meta(path, form):
         "/api/sysmgr/power/logind/set": ("sysmgr:logind-power", "logind"),
         "/api/sysmgr/hostname": ("sysmgr:hostname", "name"),
         "/api/sysmgr/packages/remove": ("sysmgr:package-remove", "name"),
-        "/api/sysmgr/unattended/set": ("sysmgr:unattended", "unattended-upgrades"),
         "/api/sysmgr/tuned/set": ("sysmgr:tuned", "profile"),
         "/api/dashboard/remove": ("dashboard:remove", "tile_id"),
         "/api/federation/v1/admin/enable": ("federation:enable", "internal_url"),
@@ -365,6 +375,8 @@ def _danger_confirm_meta(path, form):
         "/api/time-machine/replications/import":
             ("time-machine:promote-received", "source_replication_id"),
     }
+    if path == "/api/sysmgr/unattended/set":
+        return ("sysmgr:unattended", "unattended-upgrades")
     if path == "/api/docker/action":
         action = _form_value(form, "action")
         if action == "remove":
@@ -452,6 +464,49 @@ def index(request: Request):
     if not _current_user(request):
         return RedirectResponse("/login", status_code=302)
     return HTMLResponse(_frontend_html("index.html"), headers={"Cache-Control": "no-store"})
+
+
+@app.get("/network-map", response_class=HTMLResponse)
+def network_map_page(request: Request):
+    if not _current_user(request):
+        return RedirectResponse("/login", status_code=302)
+    return HTMLResponse(_frontend_html("network-map.html"), headers={"Cache-Control": "no-store"})
+
+
+@app.get("/api/network-map")
+def network_map_data(request: Request, user: str = Depends(auth)):
+    result = NETWORK_MAP.snapshot()
+    result["can_edit"] = _parse_token(request.cookies.get(COOKIE_NAME))[1] == "admin"
+    return JSONResponse(result, headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/network-map/{action}")
+async def network_map_action(action: str, request: Request, user: str = Depends(require_admin)):
+    if request.headers.get("content-type", "").split(";", 1)[0] != "application/json":
+        raise HTTPException(status_code=415, detail="json_required")
+    origin = request.headers.get("origin")
+    if origin and origin != str(request.base_url).rstrip("/"):
+        raise HTTPException(status_code=403, detail="origin_rejected")
+    try:
+        data = await request.json()
+        if not isinstance(data, dict):
+            raise ValueError("invalid_request")
+        if action == "scan":
+            NETWORK_MAP.request_scan()
+        elif action == "settings":
+            NETWORK_MAP.configure(data)
+        elif action == "device":
+            NETWORK_MAP.edit_device(str(data.get("id", "")), data)
+        elif action == "mesh":
+            if not NETWORK_MAP.connected:
+                raise ValueError("zigbee_failed")
+            # Explicit user request: the only command sent to Zigbee2MQTT.
+            NETWORK_MAP.mesh_request.set()
+        else:
+            raise HTTPException(status_code=404, detail="unknown_action")
+    except (ValueError, TypeError) as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
+    return {"ok": True}
 
 
 @app.get("/login", response_class=HTMLResponse)
@@ -715,6 +770,122 @@ term.onData(d=>{if(ws.readyState===1)ws.send(JSON.stringify({type:'input',data:d
 window.addEventListener('resize',()=>{fit.fit();if(ws.readyState===1)ws.send(JSON.stringify({type:'resize',rows:term.rows,cols:term.cols}));});
 </script>
 </body></html>"""
+
+
+# ============ Read-only device access ============
+
+def _device_sources():
+    rows = [{"id": "local", "name": socket.gethostname(), "local": True}]
+    # Read existing cached peer data without triggering collection or network I/O.
+    with FEDERATION.lock:
+        for node in FEDERATION.state.get("nodes", {}).values():
+            if node.get("revoked") or node["node_id"] == FEDERATION.identity.node_id:
+                continue
+            if not FEDERATION.state.get("enabled"):
+                continue
+            status = FEDERATION.state.get("peer_status", {}).get(node["node_id"], {})
+            rows.append({"id": "peer:" + node["node_id"], "name": node.get("name") or node["node_id"],
+                         "health": status.get("health"), "last_contact": status.get("last_success"),
+                         "snapshot": status.get("snapshot") or {}})
+    for node in EXTERNAL_SERVERS.overview().get("nodes", []):
+        rows.append({"id": node["node_id"], "name": node["name"],
+                     "health": node.get("health"), "last_contact": node.get("last_contact"),
+                     "snapshot": node.get("snapshot") or {}})
+    return rows
+
+
+def _device_local_metrics(fields):
+    return DEVICE_TELEMETRY.collect(fields)
+
+
+def _device_selection(name, servers, fields):
+    try:
+        selected_servers, selected_fields = json.loads(servers), json.loads(fields)
+    except (TypeError, ValueError):
+        raise HTTPException(400, "invalid_selection")
+    if not name.strip() or len(name.strip()) > 80:
+        raise HTTPException(400, "invalid_name")
+    for selected, allowed in ((selected_servers, {s["id"] for s in _device_sources()}),
+                              (selected_fields, set(DEVICE_FIELDS))):
+        if not isinstance(selected, list) or len(selected) > 100 or any(
+            not isinstance(item, str) or item not in allowed for item in selected
+        ):
+            raise HTTPException(400, "invalid_selection")
+    return name.strip(), list(dict.fromkeys(selected_servers)), list(dict.fromkeys(selected_fields))
+
+
+@app.get("/api/devices/admin/list")
+def device_access_list(user: str = Depends(require_admin)):
+    return JSONResponse({"devices": DEVICE_ACCESS.list(), "fields": DEVICE_FIELDS,
+                         "servers": [{"id": s["id"], "name": s["name"]} for s in _device_sources()]},
+                        headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/devices/admin/create")
+def device_access_create(name: str = Form(...), servers: str = Form("[]"), fields: str = Form("[]"),
+                         user: str = Depends(require_admin)):
+    selection = _device_selection(name, servers, fields)
+    try:
+        result = DEVICE_ACCESS.create(*selection)
+    except ValueError:
+        raise HTTPException(400, "device_limit")
+    return JSONResponse(result, headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/devices/admin/update")
+def device_access_update(device_id: str = Form(...), name: str = Form(...),
+                         servers: str = Form("[]"), fields: str = Form("[]"),
+                         enabled: bool = Form(True), user: str = Depends(require_admin)):
+    selection = _device_selection(name, servers, fields)
+    try:
+        result = DEVICE_ACCESS.update(device_id, *selection, enabled)
+    except KeyError:
+        raise HTTPException(404, "device_not_found")
+    return JSONResponse({"device": result}, headers={"Cache-Control": "no-store"})
+
+
+@app.post("/api/devices/admin/enabled")
+def device_access_enabled(device_id: str = Form(...), enabled: bool = Form(...),
+                          user: str = Depends(require_admin)):
+    try:
+        DEVICE_ACCESS.set_enabled(device_id, enabled)
+    except KeyError:
+        raise HTTPException(404, "device_not_found")
+    return {"ok": True}
+
+
+@app.post("/api/devices/admin/delete")
+def device_access_delete(device_id: str = Form(...), user: str = Depends(require_admin)):
+    try:
+        DEVICE_ACCESS.delete(device_id)
+    except KeyError:
+        raise HTTPException(404, "device_not_found")
+    return {"ok": True}
+
+
+@app.get("/api/devices/metrics")
+def device_access_metrics(request: Request):
+    authorization = request.headers.get("authorization", "")
+    scheme, _, token = authorization.partition(" ")
+    grant = DEVICE_ACCESS.authenticate(token) if scheme.lower() == "bearer" else None
+    if not grant:
+        raise HTTPException(401, "invalid_device_token", headers={"WWW-Authenticate": "Bearer", "Cache-Control": "no-store"})
+    rows = []
+    for source in _device_sources():
+        if source["id"] not in grant["servers"]:
+            continue
+        values = _device_local_metrics(grant["fields"]) if source.get("local") else snapshot_metrics(source, grant["fields"])
+        rows.append({"id": source["id"], "name": source["name"],
+                     "captured_at": int(time.time()) if source.get("local") else number(source.get("snapshot", {}).get("captured_at")),
+                     **{key: values.get(key) for key in grant["fields"]}})
+    # A grant can be restricted or revoked while an expensive reader is running.
+    current = DEVICE_ACCESS.authenticate(token)
+    if not current:
+        raise HTTPException(401, "invalid_device_token", headers={"Cache-Control": "no-store"})
+    result = [{key: value for key, value in row.items()
+               if key in ("id", "name", "captured_at") or key in current["fields"]}
+              for row in rows if row["id"] in current["servers"]]
+    return JSONResponse({"api_version": 1, "servers": result}, headers={"Cache-Control": "no-store"})
 
 
 # ============ System ============
@@ -1295,7 +1466,19 @@ def docker_compose_list(user: str = Depends(auth)):
 
 @app.get("/api/docker/compose/get")
 def docker_compose_get(name: str, user: str = Depends(auth)):
-    return docker_mgr.get_compose(name)
+    try:
+        return docker_mgr.get_compose(name)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
+
+
+@app.post("/api/docker/compose/convert")
+def docker_compose_convert(content: str = Form(""), document: str | None = Form(None),
+                           yaml_tags: str | None = Form(None), user: str = Depends(auth)):
+    try:
+        return docker_mgr.convert_compose(content=content, document=document, yaml_tags=yaml_tags)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
 
 @app.post("/api/docker/compose/check-ports")
@@ -1308,14 +1491,32 @@ def docker_compose_check_ports(name: str = Form(...), content: str = Form(...),
 def docker_compose_save(name: str = Form(...), content: str = Form(...),
                         env_enabled: bool = Form(False),
                         env_content: str = Form(""),
+                        source_contents: str | None = Form(None),
                         user: str = Depends(require_admin)):
-    port_check = docker_mgr.check_compose_ports(name, content)
+    try:
+        sources = json.loads(source_contents) if source_contents is not None else None
+        if sources is not None and (not isinstance(sources, list) or not sources
+                                    or any(not isinstance(item, str) for item in sources)):
+            raise ValueError("Invalid Compose sources")
+    except (TypeError, ValueError) as exc:
+        raise HTTPException(400, str(exc))
+    try:
+        port_check = (docker_mgr.check_compose_source_ports(name, sources, env_enabled, env_content)
+                      if sources is not None else docker_mgr.check_compose_ports(name, content))
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
     if not port_check["ok"]:
         return {
             **port_check,
             "stderr": "One or more Compose ports are already in use.",
         }
-    return docker_mgr.save_compose(name, content, env_enabled, env_content)
+    try:
+        if sources is None:
+            return docker_mgr.save_compose(name, content, env_enabled, env_content)
+        return docker_mgr.save_compose(name, content, env_enabled, env_content,
+                                       source_contents=sources)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
 
 @app.post("/api/docker/compose/action")
@@ -2367,8 +2568,13 @@ def apps_action_job(id: str, user: str = Depends(auth)):
 
 
 @app.get("/api/apps/check-updates")
-def apps_check_updates(force: bool = False, user: str = Depends(auth)):
-    return apps.check_updates(force=force)
+def apps_check_updates(force: bool = False, app_id: str = "", user: str = Depends(auth)):
+    if not app_id:
+        return apps.check_updates(force=force)
+    try:
+        return apps.check_updates(force=force, app_id=app_id)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
 
 
 # ============ Dashboard ============
@@ -2404,13 +2610,13 @@ def dashboard_toggle_url(tile_id: str = Form(...), show: bool = Form(...),
 
 @app.post("/api/dashboard/update")
 def dashboard_update(tile_id: str = Form(...), name: str = Form(""),
-                     url: str = Form(""), icon: str = Form(""),
+                     url: str = Form(""), icon: str = Form(None),
                      host: str = Form(None),
                      show_url: bool = Form(None),
                      accent: str = Form(None), note: str = Form(None),
                      user: str = Depends(auth)):
     return dashboard.update_tile(tile_id, name or None, url or None,
-                                 icon or None, host, show_url,
+                                 icon, host, show_url,
                                  accent, note)
 
 
@@ -2461,7 +2667,12 @@ def federation_settings(
 @app.post("/api/federation/v1/admin/pairing-code")
 def federation_pairing_code(user: str = Depends(require_admin)):
     try:
-        return {"code": FEDERATION.issue_pairing_code(), "expires_in": 600}
+        code = FEDERATION.issue_pairing_code()
+        return {
+            "code": code,
+            "expires_in": 600,
+            "fingerprint": public_key_fingerprint(FEDERATION.identity.public_key),
+        }
     except ValueError as exc:
         raise HTTPException(400, str(exc))
 
@@ -2469,6 +2680,7 @@ def federation_pairing_code(user: str = Depends(require_admin)):
 @app.post("/api/federation/v1/admin/join")
 def federation_join(
     peer_url: str = Form(...), code: str = Form(...),
+    peer_fingerprint: str = Form(...),
     name: str = Form(...), internal_url: str = Form(...),
     browser_url: str = Form(...), allowed_cidrs: str = Form(""),
     user: str = Depends(confirmed_admin),
@@ -2477,6 +2689,7 @@ def federation_join(
         result = FEDERATION.join(
             peer_url, code, name, internal_url, browser_url,
             _federation_cidrs(allowed_cidrs) or None,
+            peer_fingerprint=peer_fingerprint,
         )
         if os.environ.get("RUNVARD_FEDERATION_NO_WORKER") != "1":
             FEDERATION.start()
@@ -2603,7 +2816,7 @@ def federation_sso_accept(request: Request, ticket: str = Form(...)):
         make_token(
             claim["username"], SESSION_TTL, claim["role"], claim["expert"],
         ),
-        max_age=SESSION_TTL, httponly=True, samesite="strict",
+        max_age=SESSION_TTL, httponly=True, samesite="lax",
         secure=_is_https(request), path="/",
     )
     response.headers["Cache-Control"] = "no-store"
