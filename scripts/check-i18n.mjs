@@ -208,6 +208,14 @@ requireExpectedTranslations("COMPOSE_EDITOR_I18N.yamlError", Object.fromEntries(
   es: "Corrige el YAML. El formulario muestra la última configuración válida.",
   pt: "Corrija o YAML. O formulário apresenta a última configuração válida.",
 });
+requireExpectedTranslations("COMPOSE_EDITOR_I18N.portConflict", Object.fromEntries(locales.map(locale => [locale, composeEditorI18n[locale].portConflict])), {
+  "de": "Mindestens ein Compose-Port wird bereits verwendet.",
+  "en": "One or more Compose ports are already in use.",
+  "fr": "Un ou plusieurs ports Compose sont déjà utilisés.",
+  "it": "Una o più porte Compose sono già in uso.",
+  "es": "Uno o varios puertos de Compose ya están en uso.",
+  "pt": "Uma ou mais portas do Compose já estão a ser utilizadas."
+});
 const tileEditorI18n = evaluate(indexSource, "TILE_EDIT_I18N", context);
 requireExpectedTranslations("TILE_EDIT_I18N.showAddress", tileEditorI18n.showAddress, {
   de: "Adresse anzeigen", en: "Show address", fr: "Afficher l’adresse",

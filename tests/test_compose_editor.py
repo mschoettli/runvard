@@ -252,3 +252,20 @@ def test_node_harness_uses_pytest_interpreter_without_local_virtualenv(tmp_path)
                                  'PYTHONPATH': str(ROOT)})
     assert result.returncode == 0, result.stdout + result.stderr
     assert json.loads(result.stdout) == {'services': {'web': {'image': 'nginx'}}}
+
+
+def test_save_conflict_groups_heading_and_detail_in_footer_feedback():
+    run_editor_js(r'''
+await RunvardComposeEditor.open('demo');
+await elements.get('compose-complete-save').onclick();
+global.post=async()=>({ok:false,stderr:'One or more Compose ports are already in use.'});
+global.requireOk=result=>{if(!result.ok)throw new Error(result.stderr);};
+await elements.get('compose-complete-save').onclick();
+const error=elements.get('compose-complete-error');
+assert.strictEqual(error.hidden,false);
+assert(error.textContent.includes(COMPOSE_EDITOR_I18N[currentLanguage()].invalid));
+assert(error.textContent.includes(COMPOSE_EDITOR_I18N[currentLanguage()].portConflict));
+assert.strictEqual(elements.get('compose-complete-status').textContent,'');
+assert.strictEqual(elements.get('compose-complete-dirty').hidden,true);
+assert.strictEqual(elements.get('compose-complete-back').hidden,false);
+''')

@@ -177,8 +177,10 @@
     $('#compose-complete-lines').scrollTop=yaml.scrollTop;
   }
   function status(message,error=''){
-    $('#compose-complete-status').textContent=message;
-    const el=$('#compose-complete-error');el.textContent=error;el.hidden=!error;
+    $('#compose-complete-status').textContent=error?'':message;
+    if(error==='One or more Compose ports are already in use.')error=text('portConflict');
+    const el=$('#compose-complete-error');el.textContent=error?(message===error?message:message+'\n'+error):'';el.hidden=!error;
+    $('#compose-complete-dirty').hidden=!!error;
     $('#compose-complete-yaml').setAttribute('aria-invalid',String(!!error&&active().side==='raw'));
     $('#compose-complete-form').inert=active().side==='raw';
     $('#compose-complete-dirty').textContent=text(state.dirty?'unsaved':'unchanged');
@@ -241,7 +243,7 @@
     const current=state;
     current.busy=true;$('#compose-complete-save').disabled=true;$('#compose-complete-shell').inert=true;
     try{await action();}
-    catch(error){if(state===current){status(text('invalid'),active().error?$('#compose-complete-error').textContent:error.message);}}
+    catch(error){if(state===current&&!active().error)status(text('invalid'),error.message);}
     finally{if(state===current){current.busy=false;$('#compose-complete-save').disabled=false;$('#compose-complete-shell').inert=false;}}
   }
   function diff(before,after){
@@ -279,10 +281,10 @@
         <section class="compose-linked-form-panel" aria-labelledby="compose-complete-settings"><h3 id="compose-complete-settings">${esc(text('settings'))}</h3><div class="compose-form-stack" id="compose-complete-form"></div>
           <details class="compose-linked-details compose-linked-env-file"><summary>${esc(uiText('Environment file'))}</summary><label class="compose-env-toggle"><input type="checkbox" id="compose-complete-env-enabled" ${data.env_enabled?'checked':''}>${esc(uiText('Store a .env file next to docker-compose.yml'))}</label><textarea class="compose-env-textarea" id="compose-complete-env" aria-label=".env" spellcheck="false" ${data.env_enabled?'':'hidden'}>${esc(data.env_content||'')}</textarea></details>
         </section>
-        <section class="compose-linked-yaml-panel" id="compose-complete-yaml-panel" aria-labelledby="compose-complete-filename"><h3 id="compose-complete-filename">docker-compose.yml</h3><div class="compose-linked-code mono"><pre class="compose-code-lines" id="compose-complete-lines" aria-hidden="true"></pre><div class="compose-code-input"><pre class="compose-code-highlight" id="compose-complete-highlight" aria-hidden="true"></pre><textarea id="compose-complete-yaml" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="YAML" aria-describedby="compose-complete-status compose-complete-error" wrap="off"></textarea></div></div><p id="compose-complete-status" class="compose-linked-status" role="status" aria-live="polite"></p><p id="compose-complete-error" class="compose-linked-error" role="alert" hidden></p></section>
+        <section class="compose-linked-yaml-panel" id="compose-complete-yaml-panel" aria-labelledby="compose-complete-filename"><h3 id="compose-complete-filename">docker-compose.yml</h3><div class="compose-linked-code mono"><pre class="compose-code-lines" id="compose-complete-lines" aria-hidden="true"></pre><div class="compose-code-input"><pre class="compose-code-highlight" id="compose-complete-highlight" aria-hidden="true"></pre><textarea id="compose-complete-yaml" spellcheck="false" autocapitalize="off" autocomplete="off" aria-label="YAML" aria-describedby="compose-complete-status compose-complete-error" wrap="off"></textarea></div></div><p id="compose-complete-status" class="compose-linked-status" role="status" aria-live="polite"></p></section>
       </div>
       <section class="compose-linked-review" id="compose-complete-review" aria-live="polite" hidden></section>
-      <div class="compose-install-actions"><span id="compose-complete-dirty" class="compose-install-summary"></span><div class="compose-install-action-buttons"><button type="button" class="btn ghost" id="compose-complete-back" hidden>${esc(text('back'))}</button><button type="button" class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button type="button" class="btn" id="compose-complete-save">${esc(text('review'))}</button></div></div>
+      <div class="compose-install-actions"><div class="compose-linked-feedback"><span id="compose-complete-dirty" class="compose-install-summary"></span><p id="compose-complete-error" class="compose-linked-error" role="alert" hidden></p></div><div class="compose-install-action-buttons"><button type="button" class="btn ghost" id="compose-complete-back" hidden>${esc(text('back'))}</button><button type="button" class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button type="button" class="btn" id="compose-complete-save">${esc(text('review'))}</button></div></div>
     </div>`;
     const yaml=$('#compose-complete-yaml');
     yaml.addEventListener('input',()=>changed(active(),'raw'));

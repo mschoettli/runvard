@@ -21,7 +21,7 @@ try{const theme=localStorage.getItem('runvard_ui_theme');document.documentElemen
 <script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
 <script src="/static/docker-modern.js?v=20261005-dashboard"></script>
-<script src="/static/compose-editor.js?v=20261117c"></script>
+<script src="/static/compose-editor.js?v=20261118-footer"></script>
 <style>
 :root{--bg:#0a0b14;--bg2:rgba(13,14,26,.85);--bg3:rgba(17,18,33,.65);--glass:rgba(255,255,255,.04);--glass-hover:rgba(122,74,255,.08);--border:rgba(255,255,255,.08);--border-accent:rgba(122,74,255,.3);--text:#f0f0ff;--text2:rgba(240,240,255,.55);--text3:rgba(240,240,255,.28);--accent:#7a4aff;--accent-light:#9d7aff;--green:#22c55e;--yellow:#eab308;--red:#ef4444;--radius:12px;--blur:blur(16px)}
 *{margin:0;padding:0;box-sizing:border-box}
@@ -990,7 +990,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 @media(max-width:480px){.device-access-card .form-body,.device-access-card .form-head{padding:1rem}}
 
 </style>
-<link rel="stylesheet" href="/static/modern-theme.css?v=96d164153923">
+<link rel="stylesheet" href="/static/modern-theme.css?v=b3cdacaa982e">
 </head>
 <body>
 
@@ -1393,7 +1393,8 @@ const COMPOSE_EDITOR_I18N={
     "discard": "Ungespeicherte Änderungen verwerfen?",
     "editTitle": "Compose bearbeiten",
     "envChanged": "Die .env-Datei wurde geändert.",
-    "serviceExists": "Dieser Servicename ist bereits vergeben oder ungültig."
+    "serviceExists": "Dieser Servicename ist bereits vergeben oder ungültig.",
+    "portConflict": "Mindestens ein Compose-Port wird bereits verwendet."
   },
   "en": {
     "sync": "Edit all settings in the form or in YAML.",
@@ -1436,7 +1437,8 @@ const COMPOSE_EDITOR_I18N={
     "discard": "Discard unsaved changes?",
     "editTitle": "Edit Compose",
     "envChanged": "The .env file has changed.",
-    "serviceExists": "This service name is already used or invalid."
+    "serviceExists": "This service name is already used or invalid.",
+    "portConflict": "One or more Compose ports are already in use."
   },
   "fr": {
     "sync": "Modifiez tous les paramètres dans le formulaire ou en YAML.",
@@ -1479,7 +1481,8 @@ const COMPOSE_EDITOR_I18N={
     "discard": "Abandonner les modifications non enregistrées ?",
     "editTitle": "Modifier Compose",
     "envChanged": "Le fichier .env a été modifié.",
-    "serviceExists": "Ce nom de service est déjà utilisé ou non valide."
+    "serviceExists": "Ce nom de service est déjà utilisé ou non valide.",
+    "portConflict": "Un ou plusieurs ports Compose sont déjà utilisés."
   },
   "it": {
     "sync": "Modifica tutte le impostazioni nel modulo o in YAML.",
@@ -1522,7 +1525,8 @@ const COMPOSE_EDITOR_I18N={
     "discard": "Scartare le modifiche non salvate?",
     "editTitle": "Modifica Compose",
     "envChanged": "Il file .env è stato modificato.",
-    "serviceExists": "Questo nome di servizio è già in uso o non valido."
+    "serviceExists": "Questo nome di servizio è già in uso o non valido.",
+    "portConflict": "Una o più porte Compose sono già in uso."
   },
   "es": {
     "sync": "Edita todos los ajustes en el formulario o en YAML.",
@@ -1565,7 +1569,8 @@ const COMPOSE_EDITOR_I18N={
     "discard": "¿Descartar los cambios sin guardar?",
     "editTitle": "Editar Compose",
     "envChanged": "El archivo .env ha cambiado.",
-    "serviceExists": "Este nombre de servicio ya está en uso o no es válido."
+    "serviceExists": "Este nombre de servicio ya está en uso o no es válido.",
+    "portConflict": "Uno o varios puertos de Compose ya están en uso."
   },
   "pt": {
     "sync": "Edite todas as definições no formulário ou em YAML.",
@@ -1608,7 +1613,8 @@ const COMPOSE_EDITOR_I18N={
     "discard": "Descartar as alterações por guardar?",
     "editTitle": "Editar Compose",
     "envChanged": "O ficheiro .env foi alterado.",
-    "serviceExists": "Este nome de serviço já está em uso ou é inválido."
+    "serviceExists": "Este nome de serviço já está em uso ou é inválido.",
+    "portConflict": "Uma ou mais portas do Compose já estão a ser utilizadas."
   }
 };
 function currentLanguage(){

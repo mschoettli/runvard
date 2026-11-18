@@ -3459,7 +3459,7 @@ html[data-ui-theme="modern"] .modern-network-empty p {
 .compose-code-input>textarea:focus-visible{outline:2px solid var(--accent)}
 .compose-code-comment{color:#789a76}.compose-code-string{color:#dcaa78}.compose-code-key{color:#83b2ff}
 .compose-linked-status{font-size:.8125rem;line-height:1.5;color:var(--text2);margin:.75rem 0 0}
-.compose-linked-error{font-size:.8125rem;line-height:1.5;color:var(--red);margin:.5rem 0 0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:9rem;overflow:auto}
+.compose-linked-error{font-size:.8125rem;line-height:1.5;color:var(--red);margin:0;white-space:pre-wrap;overflow-wrap:anywhere;max-height:9rem;overflow:auto}
 .compose-linked-shell .compose-install-actions{flex-wrap:wrap;flex:none}
 .compose-linked-shell .compose-install-summary{display:block;white-space:normal;font-size:.75rem}
 .compose-linked-shell .compose-install-action-buttons{flex-wrap:wrap;width:auto;max-width:100%}
@@ -3503,3 +3503,7 @@ html[data-ui-theme="modern"] .compose-linked-shell ::-webkit-scrollbar-thumb{bac
 @media(min-width:640px){.compose-linked-fields{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .compose-linked-shell .compose-install-action-buttons{width:100%}
 @media(min-width:640px){.compose-linked-shell .compose-install-action-buttons{width:auto}}
+
+/* Keep validation feedback beside the actions, including after a failed save. */
+.compose-linked-feedback{flex:1 1 16rem;min-width:0;max-width:100%;text-align:left}
+.compose-linked-feedback .compose-linked-error{max-height:7.5rem;color:var(--red)}
