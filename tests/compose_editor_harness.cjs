@@ -55,7 +55,7 @@ global.requireOk=result=>{if(!result.ok)throw new Error('save failed');};
 global.toasts=[];
 global.toast=(...args)=>toasts.push(args);
 function convert(data){
-  return JSON.parse(cp.execFileSync('.venv/bin/python',['-c',
+  return JSON.parse(cp.execFileSync(process.env.RUNVARD_TEST_PYTHON||'python3',['-c',
     'import json,sys; from modules.docker_mgr import convert_compose; print(json.dumps(convert_compose(**json.load(sys.stdin))))'],
     {input:JSON.stringify(data),encoding:'utf8',stdio:['pipe','pipe','pipe']}));
 }

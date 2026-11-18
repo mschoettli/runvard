@@ -1,8 +1,17 @@
 import json
 from pathlib import Path
 import subprocess
+import sys
+
+import pytest
 
 ROOT = Path(__file__).resolve().parents[1]
+
+
+@pytest.fixture(autouse=True)
+def use_current_python_interpreter(monkeypatch):
+    # Node subprocesses must use the same environment as pytest, including CI.
+    monkeypatch.setenv('RUNVARD_TEST_PYTHON', sys.executable)
 
 
 def run_js(script):
@@ -228,3 +237,18 @@ image.value='nginx:stable';image.listeners.input();await RunvardComposeEditor.fl
 image.value='nginx:alpine';image.listeners.input();await RunvardComposeEditor.flush();
 assert.strictEqual(convert({content:elements.get('compose-complete-yaml').value}).document.services.web.image,'nginx:alpine');
 ''')
+
+
+def test_node_harness_uses_pytest_interpreter_without_local_virtualenv(tmp_path):
+    import os
+    import shutil
+    import sys
+
+    (tmp_path / 'static').mkdir()
+    shutil.copyfile(ROOT / 'static' / 'index.html', tmp_path / 'static' / 'index.html')
+    script = f"const {{convert}}=require({json.dumps(str(ROOT / 'tests' / 'compose_editor_harness.cjs'))});process.stdout.write(JSON.stringify(convert({{content:'services: {{web: {{image: nginx}}}}'}}).document));"
+    result = subprocess.run(['node', '-e', script], cwd=tmp_path, capture_output=True, text=True,
+                            env={**os.environ, 'RUNVARD_TEST_PYTHON': sys.executable,
+                                 'PYTHONPATH': str(ROOT)})
+    assert result.returncode == 0, result.stdout + result.stderr
+    assert json.loads(result.stdout) == {'services': {'web': {'image': 'nginx'}}}
