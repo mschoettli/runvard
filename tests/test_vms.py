@@ -238,6 +238,24 @@ def test_vm_action_shutdown_falls_back_to_virsh(monkeypatch):
     assert calls == [["shutdown", "debian-vm", "--mode", "acpi"]]
 
 
+def test_vm_action_exposes_shutdown_failure(monkeypatch):
+    def unavailable():
+        raise RuntimeError("libvirt unavailable")
+
+    monkeypatch.setattr(vms, "_connect", unavailable)
+    monkeypatch.setattr(
+        vms,
+        "_virsh",
+        lambda args, timeout=120: {"ok": False, "stdout": "", "stderr": "guest rejected ACPI"},
+    )
+
+    assert vms.vm_action("debian-vm", "shutdown") == {
+        "ok": False,
+        "stdout": "",
+        "stderr": "guest rejected ACPI",
+    }
+
+
 def test_update_resources_persists_and_attempts_live_for_running_vm(monkeypatch):
     calls = []
     defined_xml = {}

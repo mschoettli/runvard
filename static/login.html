@@ -9,8 +9,8 @@
 <script>
 try{
   const theme=localStorage.getItem('runvard_ui_theme');
-  document.documentElement.dataset.uiTheme=theme==='modern'?'modern':'original';
-}catch(_){document.documentElement.dataset.uiTheme='original';}
+  document.documentElement.dataset.uiTheme=theme==='original'||theme==='tech'?'tech':'modern';
+}catch(_){document.documentElement.dataset.uiTheme='modern';}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
@@ -97,8 +97,8 @@ html[data-ui-theme="modern"] .lock-note,html[data-ui-theme="modern"] .foot{color
     <div class="theme-picker" role="group" aria-labelledby="theme-picker-label">
       <span class="theme-picker-label" id="theme-picker-label" data-i18n="appearance">Design</span>
       <div class="theme-options">
-        <button class="theme-option" type="button" data-theme="original" aria-pressed="true" data-i18n="original">Original</button>
-        <button class="theme-option" type="button" data-theme="modern" aria-pressed="false" data-i18n="modern">Modern</button>
+        <button class="theme-option" type="button" data-theme="modern" aria-pressed="true" data-i18n="modern">Modern</button>
+        <button class="theme-option" type="button" data-theme="tech" aria-pressed="false" data-i18n="tech">Tech</button>
       </div>
     </div>
     <div class="card">
@@ -130,7 +130,7 @@ const DEFAULT_LANG='__RUNVARD_DEFAULT_LANG__';
 const UI_THEME_KEY='runvard_ui_theme';
 const TEXT={
   en:{
-    appearance:'Design',original:'Original',modern:'Modern',
+    appearance:'Design',tech:'Tech',modern:'Modern',
     title:'Sign in',
     username:'Username',
     password:'Password',
@@ -144,7 +144,7 @@ const TEXT={
     connection:'Connection to the server failed.'
   },
   de:{
-    appearance:'Design',original:'Original',modern:'Modern',
+    appearance:'Design',tech:'Tech',modern:'Modern',
     title:'Anmeldung',
     username:'Benutzername',
     password:'Passwort',
@@ -158,7 +158,7 @@ const TEXT={
     connection:'Verbindung zum Server fehlgeschlagen.'
   },
   fr:{
-    appearance:'Apparence',original:'Original',modern:'Moderne',
+    appearance:'Apparence',tech:'Tech',modern:'Moderne',
     title:'Connexion',
     username:'Nom d’utilisateur',
     password:'Mot de passe',
@@ -172,7 +172,7 @@ const TEXT={
     connection:'La connexion au serveur a échoué.'
   },
   it:{
-    appearance:'Aspetto',original:'Originale',modern:'Moderno',
+    appearance:'Aspetto',tech:'Tech',modern:'Moderno',
     title:'Accedi',
     username:'Nome utente',
     password:'Password',
@@ -186,7 +186,7 @@ const TEXT={
     connection:'Connessione al server non riuscita.'
   },
   es:{
-    appearance:'Diseño',original:'Original',modern:'Moderno',
+    appearance:'Diseño',tech:'Tech',modern:'Moderno',
     title:'Iniciar sesión',
     username:'Nombre de usuario',
     password:'Contraseña',
@@ -200,7 +200,7 @@ const TEXT={
     connection:'No se pudo conectar con el servidor.'
   },
   pt:{
-    appearance:'Aspeto',original:'Original',modern:'Moderno',
+    appearance:'Aspeto',tech:'Tech',modern:'Moderno',
     title:'Iniciar sessão',
     username:'Nome de utilizador',
     password:'Palavra-passe',
@@ -235,7 +235,7 @@ function applyLanguage(){
 applyLanguage();
 
 function applyUiTheme(theme,persist=false){
-  theme=theme==='modern'?'modern':'original';
+  theme=theme==='original'||theme==='tech'?'tech':'modern';
   document.documentElement.dataset.uiTheme=theme;
   document.querySelectorAll('.theme-option').forEach(option=>{
     option.setAttribute('aria-pressed',String(option.dataset.theme===theme));

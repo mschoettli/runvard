@@ -6,14 +6,17 @@ import shutil
 import tempfile
 import subprocess
 import time
+import uuid
 import urllib.error
 import urllib.request
 
 
-RUNVARD_REPO_API = "https://api.github.com/repos/mschoettli/runvard/commits/main"
+RUNVARD_RELEASES_API = "https://api.github.com/repos/mschoettli/runvard/releases/latest"
+RUNVARD_COMMITS_API = "https://api.github.com/repos/mschoettli/runvard/commits"
 RUNVARD_REPO_URL = "https://github.com/mschoettli/runvard"
 RUNVARD_REPO_GIT_URL = "https://github.com/mschoettli/runvard.git"
 RUNVARD_UPDATE_LOG = "/opt/runvard/data/runvard-update.log"
+RUNVARD_UPDATE_STATUS = "/opt/runvard/data/runvard-update.status.json"
 VERSION_FILE = os.environ.get(
     "RUNVARD_VERSION_FILE",
     "/opt/runvard/data/runvard.version",
@@ -68,10 +71,11 @@ def _start_detached_update_script(script_path):
 
 
 def _start_systemd_update_script(script_path):
+    unit_name = f"runvard-self-update-{uuid.uuid4().hex[:12]}"
     result = subprocess.run(
         [
             "systemd-run",
-            "--unit=runvard-self-update",
+            f"--unit={unit_name}",
             "--collect",
             "/bin/bash",
             script_path,
@@ -83,7 +87,26 @@ def _start_systemd_update_script(script_path):
     if result.returncode != 0:
         detail = result.stderr.strip() or result.stdout.strip() or "systemd-run failed"
         raise RuntimeError(detail)
-    return {"stdout": result.stdout, "method": "systemd"}
+    return {"stdout": result.stdout, "method": "systemd", "unit": unit_name}
+
+
+def _write_runvard_update_status(status, exit_code=None):
+    """Atomically replace the durable updater state before returning to the UI."""
+    status_dir = os.path.dirname(RUNVARD_UPDATE_STATUS)
+    os.makedirs(status_dir, exist_ok=True)
+    payload = {
+        "status": status,
+        "updated_at": time.strftime("%Y-%m-%dT%H:%M:%S%z"),
+        "exit_code": exit_code,
+    }
+    with tempfile.NamedTemporaryFile(
+        "w", delete=False, encoding="utf-8", dir=status_dir,
+        prefix="runvard-update-status-", suffix=".tmp",
+    ) as tmp:
+        json.dump(payload, tmp, separators=(",", ":"))
+        tmp.write("\n")
+        status_tmp = tmp.name
+    os.replace(status_tmp, RUNVARD_UPDATE_STATUS)
 
 
 def start_runvard_update():
@@ -107,11 +130,26 @@ def start_runvard_update():
     script = f"""#!/usr/bin/env bash
 set -euo pipefail
 LOG="{RUNVARD_UPDATE_LOG}"
+STATUS="{RUNVARD_UPDATE_STATUS}"
+LOCK="${{LOG}}.lock"
+export HOME="${{HOME:-/root}}"
+export GH_CONFIG_DIR="${{GH_CONFIG_DIR:-${{HOME}}/.config/gh}}"
 exec > "$LOG" 2>&1
+exec 9>"$LOCK"
+write_status() {{
+  printf '{{"status":"%s","updated_at":"%s","exit_code":%s}}\n' "$1" "$(date -Is)" "$2" > "${{STATUS}}.tmp"
+  mv "${{STATUS}}.tmp" "$STATUS"
+}}
+finish() {{
+  code=$?
+  if [ "$code" -eq 0 ]; then write_status succeeded 0; else write_status failed "$code"; fi
+  rm -f "$0"
+  exit "$code"
+}}
+flock -n 9 || {{ echo "Another runvard update is already running" >&2; rm -f "$0"; exit 75; }}
+trap finish EXIT
+write_status running 0
 echo "runvard update started: $(date -Is)"
-WORK_DIR="$(mktemp -d)"
-cleanup() {{ rm -rf "$WORK_DIR"; }}
-trap cleanup EXIT
 echo "Running the installed verified-release bootstrap..."
 [ -f /opt/runvard/install.sh ] || {{ echo "Verified installer is missing" >&2; exit 1; }}
 bash "/opt/runvard/install.sh" --verified-release --yes
@@ -123,6 +161,10 @@ echo "runvard update finished: $(date -Is)"
         tmp.write(script)
         script_path = tmp.name
     os.chmod(script_path, 0o700)
+    # systemd-run returns after queuing the unit, before the script necessarily
+    # gets CPU time. Replace any stale terminal state before the API responds so
+    # the first UI poll cannot mistake a previous failure for this attempt.
+    _write_runvard_update_status("running")
     systemd_error = ""
     try:
         start_result = _start_systemd_update_script(script_path)
@@ -131,6 +173,7 @@ echo "runvard update finished: $(date -Is)"
         try:
             start_result = _start_detached_update_script(script_path)
         except Exception as fallback_error:
+            _write_runvard_update_status("failed")
             raise RuntimeError(
                 f"systemd-run failed: {systemd_error}; {fallback_error}"
             ) from fallback_error
@@ -140,6 +183,7 @@ echo "runvard update finished: $(date -Is)"
         "log": RUNVARD_UPDATE_LOG,
         "stdout": start_result["stdout"],
         "method": start_result["method"],
+        "unit": start_result.get("unit", ""),
         "warning": systemd_error,
     }
 
@@ -161,6 +205,24 @@ def runvard_update_log():
     return {"ok": True, "log": data}
 
 
+def runvard_update_status():
+    """Return the durable state written atomically by the detached updater."""
+    try:
+        with open(RUNVARD_UPDATE_STATUS, encoding="utf-8") as status_file:
+            data = json.load(status_file)
+    except (OSError, json.JSONDecodeError):
+        return {"ok": False, "status": "idle", "updated_at": "", "exit_code": None}
+    status = data.get("status")
+    if status not in {"running", "succeeded", "failed"}:
+        status = "failed"
+    return {
+        "ok": True,
+        "status": status,
+        "updated_at": str(data.get("updated_at") or ""),
+        "exit_code": data.get("exit_code"),
+    }
+
+
 def _git_commit():
     r = _run(["git", "-C", REPO_ROOT, "rev-parse", "HEAD"], timeout=10)
     commit = r["stdout"].strip()
@@ -180,17 +242,31 @@ def _stored_commit():
     return ""
 
 
-def _remote_commit():
+def _remote_release_commit():
     def git_fallback(error="", rate_limited=False):
-        r = _run(["git", "ls-remote", RUNVARD_REPO_GIT_URL, "refs/heads/main"], timeout=20)
-        line = r["stdout"].strip().splitlines()[0] if r["ok"] and r["stdout"].strip() else ""
-        commit = line.split(None, 1)[0] if line else ""
-        if re.fullmatch(r"[0-9a-f]{40}", commit):
+        r = _run(["git", "ls-remote", "--tags", RUNVARD_REPO_GIT_URL], timeout=20)
+        tags = {}
+        if r["ok"]:
+            for line in r["stdout"].splitlines():
+                parts = line.split(None, 1)
+                if len(parts) != 2:
+                    continue
+                commit, ref = parts
+                match = re.fullmatch(r"refs/tags/(v(\d+)\.(\d+)\.(\d+))(\^\{\})?", ref)
+                if match and re.fullmatch(r"[0-9a-f]{40}", commit):
+                    version = tuple(int(match.group(i)) for i in range(2, 5))
+                    peeled = ref.endswith("^{}")
+                    previous = tags.get(version)
+                    if previous is None or peeled:
+                        tags[version] = (match.group(1), commit, peeled)
+        if tags:
+            tag, commit, _ = tags[max(tags)]
             return {
                 "ok": True,
                 "commit": commit,
                 "short": commit[:7],
-                "url": f"{RUNVARD_REPO_URL}/commit/{commit}",
+                "url": f"{RUNVARD_REPO_URL}/releases/tag/{tag}",
+                "tag": tag,
                 "message": "",
                 "date": "",
                 "source": "git",
@@ -203,15 +279,27 @@ def _remote_commit():
             "rate_limited": rate_limited,
         }
 
-    req = urllib.request.Request(
-        RUNVARD_REPO_API,
+    release_req = urllib.request.Request(
+        RUNVARD_RELEASES_API,
         headers={
             "Accept": "application/vnd.github+json",
             "User-Agent": "runvard-Update-Check",
         },
     )
     try:
-        with urllib.request.urlopen(req, timeout=15) as res:
+        with urllib.request.urlopen(release_req, timeout=15) as res:
+            release = json.loads(res.read().decode("utf-8"))
+        tag = release.get("tag_name", "")
+        if not re.fullmatch(r"v\d+\.\d+\.\d+", tag):
+            return git_fallback("Latest GitHub release has an invalid tag.")
+        commit_req = urllib.request.Request(
+            f"{RUNVARD_COMMITS_API}/{tag}",
+            headers={
+                "Accept": "application/vnd.github+json",
+                "User-Agent": "runvard-Update-Check",
+            },
+        )
+        with urllib.request.urlopen(commit_req, timeout=15) as res:
             data = json.loads(res.read().decode("utf-8"))
     except urllib.error.HTTPError as e:
         if e.code == 403:
@@ -227,7 +315,8 @@ def _remote_commit():
         "ok": bool(re.fullmatch(r"[0-9a-f]{40}", commit)),
         "commit": commit,
         "short": commit[:7] if commit else "",
-        "url": data.get("html_url") or f"{RUNVARD_REPO_URL}/commit/{commit}",
+        "url": release.get("html_url") or f"{RUNVARD_REPO_URL}/releases/tag/{tag}",
+        "tag": tag,
         "message": (info.get("message") or "").splitlines()[0],
         "date": ((info.get("committer") or {}).get("date") or ""),
     }
@@ -236,7 +325,7 @@ def _remote_commit():
 def runvard_release_status():
     """Return local and GitHub release status for runvard."""
     local = _stored_commit() or _git_commit()
-    remote = _remote_commit()
+    remote = _remote_release_commit()
     remote_commit = remote.get("commit", "") if remote.get("ok") else ""
     return {
         "repo": RUNVARD_REPO_URL,

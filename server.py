@@ -28,7 +28,7 @@ from modules import (system, terminal, files, storage, docker_mgr, services,
                      vms, backup, shares, network, security, monitoring,
                      system_mgr, apps, dashboard, metrics, accounts, audit,
                      ports, time_machine, path_picker)
-from modules import security_tokens, auth_config
+from modules import security_tokens, auth_config, workspace_app
 from modules.device_access import DeviceAccessStore, LocalTelemetry, FIELDS as DEVICE_FIELDS, snapshot_metrics, number
 from modules.network_map import NetworkMap
 from modules.external_servers import ExternalServerManager
@@ -670,11 +670,7 @@ def api_expert_mode(request: Request, enabled: str = Form(...),
 
 
 @app.post("/api/terminal/authorize")
-def api_terminal_authorize(password: str = Form(...),
-                           user: str = Depends(require_admin)):
-    if accounts.verify(user, password) != "admin":
-        audit.record_event(user=user, action="terminal:authorize", ok=False)
-        raise HTTPException(status_code=401, detail="Authentication failed")
+def api_terminal_authorize(user: str = Depends(require_admin)):
     audit.record_event(user=user, action="terminal:authorize", ok=True)
     return security_tokens.issue_terminal_token(user)
 
@@ -2316,6 +2312,11 @@ def sysmgr_runvard_update_log(user: str = Depends(auth)):
     return system_mgr.runvard_update_log()
 
 
+@app.get("/api/sysmgr/runvard-update/status")
+def sysmgr_runvard_update_status(user: str = Depends(auth)):
+    return system_mgr.runvard_update_status()
+
+
 @app.post("/api/sysmgr/updates/apply")
 def sysmgr_updates_apply(user: str = Depends(require_admin)):
     from modules import jobs
@@ -2565,6 +2566,16 @@ def apps_action_job(id: str, user: str = Depends(auth)):
         return jobs.get_job(id)
     except KeyError:
         raise HTTPException(404, "Job nicht gefunden")
+
+
+@app.get("/api/apps/workspace/update-status")
+def apps_workspace_update_status(user: str = Depends(require_admin)):
+    return workspace_app.status()
+
+
+@app.get("/api/apps/workspace/health")
+def apps_workspace_health(user: str = Depends(require_admin)):
+    return workspace_app.health()
 
 
 @app.get("/api/apps/check-updates")

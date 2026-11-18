@@ -120,7 +120,7 @@ let prevented = 0;
 window.dashOpen = id => opened.push(id);
 window.dashClick = {click}\n}};
 const event = {{
-  target: {{closest: selector => selector === '.dash-tile-link' ? {{}} : null}},
+  target: {{closest: selector => selector.split(',').includes('.dash-tile-link') ? {{}} : null}},
   preventDefault: () => prevented++,
 }};
 dashClick(event, 'web');
@@ -136,13 +136,13 @@ assert.equal(prevented, 0);
     subprocess.run(["node", "-e", script], check=True, capture_output=True, text=True)
 
 
-@pytest.mark.parametrize("renderer_index", [0, 1])
-def test_dashboard_renderers_emit_native_app_links(renderer_index):
+def test_dashboard_renderer_emits_native_app_links():
     import json
     from html.parser import HTMLParser
 
     index = (Path(__file__).resolve().parents[1] / "static/index.html").read_text()
-    renderer = index.split("function renderDashboard(){")[renderer_index + 1].split("\n}", 1)[0]
+    renderer = index.split("function renderDashboard(){", 1)[1].split("\n}", 1)[0]
+    link_helper = index.split("function dashTileLinkHtml(t){", 1)[1].split("\n}", 1)[0]
     script = f"""
 const grid = {{innerHTML:''}}, section = {{style:{{}}}};
 const $ = selector => selector === '#dash-grid' ? grid : section;
@@ -160,6 +160,8 @@ function dashTileUrl(t) {{return 'http://'+dashTileAddress(t);}}
 function dashTileStatus() {{return {{cls:'run',title:'Running'}};}}
 function dashTileIconHtml() {{return '';}}
 function dashTileFaviconUrl() {{return '';}}
+function dashApplyGrid(grid,html) {{grid.innerHTML=html;}}
+function dashTileLinkHtml(t) {{{link_helper}\n}}
 function renderDashboard() {{{renderer}\n}}
 renderDashboard();
 process.stdout.write(JSON.stringify(grid.innerHTML));
@@ -171,12 +173,12 @@ process.stdout.write(JSON.stringify(grid.innerHTML));
 
         def handle_starttag(self, tag, attributes):
             attrs = dict(attributes)
-            if 'dash-tile' in attrs.get('class', '').split():
+            if 'dash-tile-link' in attrs.get('class', '').split():
                 self.tiles.append((tag, attrs))
 
     parser = TileParser()
     parser.feed(json.loads(result.stdout))
-    assert len(parser.tiles) == 5
+    assert len(parser.tiles) == 4
     for (tag, attrs), url in zip(parser.tiles[:4], [
         'http://server.test:8096', 'http://server.test:8088',
         'http://remote.test:8123', 'https://example.test/?a=1&b=2',
@@ -186,7 +188,7 @@ process.stdout.write(JSON.stringify(grid.innerHTML));
         assert attrs['target'] == '_blank'
         assert {'noopener', 'noreferrer'} <= set(attrs['rel'].split())
         assert 'dash-tile-link' in attrs['class'].split()
-    assert parser.tiles[-1][0] == 'div'
+    assert 'data-id="no-port"' in json.loads(result.stdout)
 
 
 def test_explicit_main_url_overrides_inferred_port():
@@ -202,3 +204,47 @@ assert.equal(dashTileAddress(tile),'server.test:8001/admin');
 assert.equal(dashTileUrl({type:'docker',port:8001}),'http://server.test:8001');
 """
     subprocess.run(['node', '-e', script], check=True, capture_output=True, text=True)
+
+
+def test_dashboard_renders_native_links_without_javascript_popup_dependency():
+    import json
+    from html.parser import HTMLParser
+
+    class Links(HTMLParser):
+        def __init__(self):
+            super().__init__()
+            self.links = []
+
+        def handle_starttag(self, tag, attrs):
+            if tag == 'a':
+                self.links.append(dict(attrs))
+
+    index = (Path(__file__).resolve().parents[1] / 'static/index.html').read_text()
+    render = index[index.rindex('function renderDashboard(){'):].split('// ═══ Lösch-X')[0]
+    shared = index.split('let dashTiles=[];', 1)[1].split('async function loadDashboard()', 1)[0]
+    helper = index.split('function dashTileLinkHtml(t){', 1)
+    helper_body = helper[1].split('\n}', 1)[0] if len(helper) == 2 else 'return "";'
+    script = f"""
+const grid={{innerHTML:'',addEventListener:()=>{{}}}},section={{style:{{}}}};
+const document={{addEventListener:()=>{{}}}};
+const $=s=>s==='#dash-grid'?grid:section;
+const esc=s=>String(s??'').replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;');
+const dashTiles=[{{id:'web',name:'Web',type:'docker',port:8088}},{{id:'custom',name:'Custom',type:'custom',url:'https://example.test/?a=1&b=2'}},{{id:'no-port',name:'No port',type:'docker',port:0}}];
+const dashIsServiceTile=t=>['app','compose','docker'].includes(t.type);
+const dashTileUrl=t=>'http://server.test:'+t.port;
+const dashTileStatus=t=>({{cls:'run',title:'Running'}}),dashTileAddress=t=>'server.test:'+t.port;
+const dashTileIconHtml=()=>'',dashTileFaviconUrl=()=>'';
+function dashTileLinkHtml(t) {{{helper_body}\n}}
+{shared}
+{render}
+renderDashboard();console.log(JSON.stringify(grid.innerHTML));
+"""
+    result = subprocess.run(['node', '-e', script], check=True, capture_output=True, text=True)
+    parser = Links()
+    parser.feed(json.loads(result.stdout))
+    assert [link['href'] for link in parser.links] == [
+        'http://server.test:8088', 'https://example.test/?a=1&b=2',
+    ]
+    assert all(link.get('target') == '_blank' for link in parser.links)
+    assert all('noopener' in link.get('rel', '') for link in parser.links)
+    assert all('onclick' not in link for link in parser.links)

@@ -392,6 +392,34 @@ sync_program_files() {
     "$SRC"/ "$INSTALL_DIR"/
 }
 
+install_workspace_catalog_app() {
+  local bundle="${INSTALL_DIR}/docker-apps/workspace"
+  local app_dir="${INSTALL_DIR}/data/apps/workspace"
+  local secret_dir="${app_dir}/secrets"
+  local trust_keys_dir="${app_dir}/trust-root/keys"
+
+  [ -f "${bundle}/compose.yaml" ] || return 0
+  [ -f "${bundle}/postgres-init.sh" ] || die "Workspace postgres-init.sh is missing."
+  [ -f "${bundle}/restore-probe.sh" ] || die "Workspace restore-probe.sh is missing."
+  [ ! -L "$bundle" ] && [ ! -L "${bundle}/compose.yaml" ] \
+    && [ ! -L "${bundle}/postgres-init.sh" ] \
+    && [ ! -L "${bundle}/restore-probe.sh" ] \
+    || die "Workspace bundle must not contain symbolic links."
+
+  umask 077
+  install -d -m 0700 "$app_dir" "$secret_dir" "$trust_keys_dir"
+  install -m 0600 "${bundle}/compose.yaml" "${app_dir}/docker-compose.yml"
+  install -o 999 -g 999 -m 0500 "${bundle}/postgres-init.sh" "${app_dir}/postgres-init.sh"
+  install -o 999 -g 999 -m 0500 "${bundle}/restore-probe.sh" "${app_dir}/restore-probe.sh"
+  for name in migration-password app-password; do
+    if [ ! -e "${secret_dir}/${name}" ]; then
+      openssl rand -base64 48 > "${secret_dir}/${name}"
+    fi
+    chown 0:0 "${secret_dir}/${name}"
+    chmod 0444 "${secret_dir}/${name}"
+  done
+}
+
 # ---------------------------- preflight --------------------------------
 [ "$(id -u)" -eq 0 ] || die "$(t root_required)"
 command -v apt-get >/dev/null 2>&1 || die "$(t apt_required)"
@@ -423,11 +451,25 @@ echo -e "${NC}  ${DIM}runvard installer${NC}\n"
 
 # -------------------------- configuration ------------------------------
 step "$(t config)"
-ADMIN_USER="$(ask "$(t admin_user)" "${RUNVARD_USER:-admin}")"
+EXISTING_ADMIN=""
+if [ -f /opt/runvard/data/users.json ]; then
+  EXISTING_ADMIN="$(python3 -c '
+import json
+try:
+    users = json.load(open("/opt/runvard/data/users.json", encoding="utf-8"))
+except (OSError, ValueError):
+    users = {}
+print(next((name for name, meta in users.items() if meta.get("role") == "admin"), ""))
+' 2>/dev/null || true)"
+fi
+ADMIN_USER="$(ask "$(t admin_user)" "${RUNVARD_USER:-${EXISTING_ADMIN:-admin}}")"
 
 ADMIN_PASS="${RUNVARD_PASS:-}"
 GEN_PASS=0
-if [ "$ASSUME_YES" != "1" ] && [ -z "$ADMIN_PASS" ]; then
+PRESERVE_ADMIN_PASS=0
+if [ -n "$EXISTING_ADMIN" ] && [ -z "$ADMIN_PASS" ]; then
+  PRESERVE_ADMIN_PASS=1
+elif [ "$ASSUME_YES" != "1" ] && [ -z "$ADMIN_PASS" ]; then
   while :; do
     p1="$(read_password "$(t admin_pass)")"
     if [ -z "$p1" ]; then
@@ -442,7 +484,7 @@ if [ "$ASSUME_YES" != "1" ] && [ -z "$ADMIN_PASS" ]; then
     warn "$(t password_mismatch)"
   done
 fi
-if [ -z "$ADMIN_PASS" ]; then
+if [ "$PRESERVE_ADMIN_PASS" != "1" ] && [ -z "$ADMIN_PASS" ]; then
   GEN_PASS=1
   ADMIN_PASS="$(random_password)"
   [ -n "$ADMIN_PASS" ] || ADMIN_PASS="$(head -c 18 /dev/urandom | base64 | tr -d '/+=' | cut -c1-18)"
@@ -478,7 +520,7 @@ export DEBIAN_FRONTEND=noninteractive
 
 PKGS=(
   python3 python3-pip python3-venv python3-dev gcc pkg-config
-  rsync curl ca-certificates git openssl sudo cron tmux
+  rsync curl ca-certificates git gh openssl sudo cron tmux
   btop htop smartmontools mdadm parted lvm2 cryptsetup dosfstools
   e2fsprogs xfsprogs btrfs-progs zfsutils-linux
   samba samba-vfs-modules avahi-daemon libnss-mdns nfs-kernel-server nfs-common cifs-utils
@@ -503,6 +545,7 @@ if [ "$SRC" != "$INSTALL_DIR" ]; then
 else
   info "Source already matches target; skipping file sync."
 fi
+install_workspace_catalog_app
 
 SOURCE_COMMIT="${RUNVARD_SOURCE_COMMIT:-}"
 if [ -z "$SOURCE_COMMIT" ] && [ -d "$SRC/.git" ] && command -v git >/dev/null 2>&1; then
@@ -543,16 +586,20 @@ ok "$(t venv_ok)"
 # ----------------------------- 4 config --------------------------------
 phase "$(t config_phase)"
 umask 077
-printf '%s\0%s\0' "$ADMIN_USER" "$ADMIN_PASS" | \
-  "$INSTALL_DIR/venv/bin/python" -c '
+printf '%s\0%s\0%s\0' "$ADMIN_USER" "$ADMIN_PASS" "$PRESERVE_ADMIN_PASS" | \
+  PYTHONPATH="$INSTALL_DIR" "$INSTALL_DIR/venv/bin/python" -c '
 import sys
 from modules import accounts
 raw = sys.stdin.buffer.read().split(b"\0")
 username = raw[0].decode()
 password = raw[1].decode()
+preserve = raw[2].decode() == "1"
 accounts.STORE = "/opt/runvard/data/users.json"
 existing = {item["username"] for item in accounts.list_users()}
-result = accounts.set_password(username, password) if username in existing else accounts.add_user(username, password, "admin")
+if preserve and username in existing:
+    result = {"ok": True}
+else:
+    result = accounts.set_password(username, password) if username in existing else accounts.add_user(username, password, "admin")
 if not result.get("ok"):
     raise SystemExit(result.get("error", "account setup failed"))
 ' || die "Could not create the administrator account."
@@ -653,7 +700,7 @@ if [ "$GEN_PASS" = "1" ]; then
 else
   echo -e "  $(t password) : ${BOLD}$(t hidden)${NC}"
 fi
-unset ADMIN_PASS RUNVARD_PASS p1 p2
+unset ADMIN_PASS RUNVARD_PASS PRESERVE_ADMIN_PASS EXISTING_ADMIN p1 p2
 echo
 echo -e "  $(t status)  : ${BOLD}systemctl status runvard${NC}"
 echo -e "  $(t logs)    : ${BOLD}journalctl -u runvard -f${NC}"

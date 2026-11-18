@@ -136,18 +136,18 @@ def test_proxy_https_header_is_used_only_for_explicitly_trusted_proxy(monkeypatc
     assert server._is_https(Request()) is True
 
 
-def test_terminal_step_up_rejects_readonly_and_wrong_password(monkeypatch, tmp_path):
+def test_terminal_authorization_requires_admin_session(monkeypatch, tmp_path):
     _, client = _server_client(monkeypatch, tmp_path)
     assert _login(client, "viewer", "view password").status_code == 200
-    assert client.post("/api/terminal/authorize", data={"password": "view password"}).status_code == 403
+    assert client.post("/api/terminal/authorize").status_code == 403
     assert _login(client, "admin-a", "root password").status_code == 200
-    assert client.post("/api/terminal/authorize", data={"password": "wrong"}).status_code == 401
+    assert client.post("/api/terminal/authorize").status_code == 200
 
 
-def test_terminal_step_up_grant_is_bound_and_single_use(monkeypatch, tmp_path):
+def test_terminal_grant_is_bound_and_single_use(monkeypatch, tmp_path):
     server, client = _server_client(monkeypatch, tmp_path)
     assert _login(client, "admin-a", "root password").status_code == 200
-    response = client.post("/api/terminal/authorize", data={"password": "root password"})
+    response = client.post("/api/terminal/authorize")
     assert response.status_code == 200
     token = response.json()["token"]
     assert security_tokens.consume_terminal_token(token, "admin-a") == "admin-a"
@@ -175,4 +175,8 @@ def test_installer_hashes_admin_and_never_writes_password_to_env():
     assert "RUNVARD_PASS" not in env_block
     assert "RUNVARD_USER" not in env_block
     assert "accounts.add_user" in text
+    assert 'PYTHONPATH="$INSTALL_DIR" "$INSTALL_DIR/venv/bin/python"' in text
+    assert 'PRESERVE_ADMIN_PASS=1' in text
+    assert 'if preserve and username in existing:' in text
+    assert "git gh openssl" in text
     assert 'chmod 600 "$ENV_FILE"' in text

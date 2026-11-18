@@ -12,7 +12,7 @@ runvard is built for people who operate their own servers, homelabs, and small
 infrastructure setups and want direct control without constantly switching between
 terminal commands, log files, Docker tools, and separate admin interfaces.
 
-<img width="3726" height="2120" alt="image" src="https://github.com/user-attachments/assets/74697af4-ce6f-4ce7-b215-d23b6dcf414f" />
+<img width="1855" height="1044" alt="Bildschirmfoto 2026-08-04 um 20 39 22" src="https://github.com/user-attachments/assets/0983f613-f7e7-4581-9f8b-d82539e1f92f" />
 
 
 ## What is runvard?
@@ -54,7 +54,7 @@ The dashboard is the main starting point in runvard. It shows important services
 installed apps, Compose projects, and custom links as tiles. Ordering and visibility
 can be adjusted so frequently used services stay easy to reach.
 
-runvard offers an Original and a Modern interface theme. The selected theme also
+runvard offers a Tech and a Modern interface theme, with Modern as the default. The selected theme also
 applies to the sign-in page, is remembered in the browser, and can be changed
 before or after signing in. Both variants are responsive and keyboard accessible.
 
@@ -231,9 +231,9 @@ Recommended practices:
 - Do not expose it directly to the public internet without protection
 - Keep the system updated and maintain regular backups
 
-The built-in terminal is an isolated, time-limited root shell and requires a fresh
-administrator password confirmation before each connection. Do not expose runvard's
-upstream HTTP port directly to an untrusted network.
+The built-in terminal is an isolated, time-limited root shell available only to an
+authenticated administrator and protected by a short-lived, single-use connection
+token. Do not expose runvard's upstream HTTP port directly to an untrusted network.
 
 ## Installation
 
@@ -250,3 +250,59 @@ permission. See [LICENSE](LICENSE) for details.
 runvard turns a Debian or Ubuntu server into a private control center for system
 operations, Docker, apps, storage, networking, security, backups, monitoring, and
 maintenance.
+
+## Problems and solutions
+
+### Verified update fails with exit code 4
+
+runvard verifies release archives with `gh attestation verify`. The update fails
+with exit code `4` when the GitHub CLI is too old to provide the `attestation`
+command or when the root account is not authenticated with GitHub. Debian and
+Ubuntu packages in the `2.45.x`/`2.46.x` series are known to be unsuitable for
+this update path.
+
+Check both requirements as `root`:
+
+```bash
+gh --version
+gh attestation --help
+GH_CONFIG_DIR=/root/.config/gh gh auth status
+```
+
+If `gh attestation` is missing, install the current GitHub CLI from GitHub's
+official Debian repository:
+
+```bash
+apt update
+apt install -y wget
+mkdir -p -m 755 /etc/apt/keyrings
+wget -nv -O /etc/apt/keyrings/githubcli-archive-keyring.gpg \
+  https://cli.github.com/packages/githubcli-archive-keyring.gpg
+chmod go+r /etc/apt/keyrings/githubcli-archive-keyring.gpg
+echo "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/githubcli-archive-keyring.gpg] https://cli.github.com/packages stable main" \
+  > /etc/apt/sources.list.d/github-cli.list
+apt update
+apt install -y gh
+```
+
+Then authenticate the root account. On a headless server, complete the displayed
+device code on a trusted device at <https://github.com/login/device>. Never share
+the device code or access token.
+
+```bash
+BROWSER=true gh auth login --hostname github.com --git-protocol https --web
+chmod 700 /root/.config/gh
+chmod 600 /root/.config/gh/hosts.yml
+GH_CONFIG_DIR=/root/.config/gh gh auth status
+```
+
+Retry the verified update:
+
+```bash
+GH_CONFIG_DIR=/root/.config/gh bash /opt/runvard/install.sh --verified-release --yes
+```
+
+Detailed diagnostics and recovery notes are available in
+[TROUBLESHOOTING.md](TROUBLESHOOTING.md). The upstream package installation
+commands are maintained in GitHub's
+[official Linux installation guide](https://github.com/cli/cli/blob/trunk/docs/install_linux.md).
