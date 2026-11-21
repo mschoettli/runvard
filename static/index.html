@@ -348,6 +348,14 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 
 /* Files */
 .files-layout{display:grid;grid-template-columns:170px minmax(0,1fr);gap:0;height:100%;min-height:0;overflow:hidden}
+.files-mobile,.file-select-check{display:none}
+.files-sidebar button,.files-pathbar button.bc-seg{border:none;background:transparent;font:inherit;text-align:left}
+.files-sidebar button.files-quicklink{font-size:12px}
+.files-sb-label.remote{margin-top:8px;padding-top:12px;border-top:1px solid var(--border)}
+.files-pathbar button.bc-seg{font-size:11px}
+.files-pathbar .bc-seg.current{cursor:default}
+.files-empty{grid-column:1/-1;text-align:center;color:var(--text2);padding:2rem .75rem;font-size:.875rem}
+.file-result-path{font-size:.75rem;color:var(--text2);overflow-wrap:anywhere}
 .files-sidebar{display:flex;flex-direction:column;gap:2px;padding:0 10px 0 0;border-right:.5px solid var(--border);overflow-y:auto}
 .files-sb-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:0 8px;margin:0 0 4px}
 .files-quicklink{padding:7px 10px;border-radius:8px;cursor:pointer;font-size:12px;display:flex;align-items:center;gap:8px;color:var(--text2);transition:all .15s}
@@ -419,6 +427,16 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 .fn-color-archive{color:rgba(168,85,247,.7)}
 .fn-color-pdf{color:rgba(239,68,68,.7)}
 .fn-color-default{color:var(--text2)}
+.file-editor{display:flex;flex-direction:column;height:100%;gap:10px;min-width:0}
+.file-editor .toolbar{margin:0}
+.file-editor-name{overflow-wrap:anywhere;font-size:14px;color:var(--text)}
+.file-editor>#md-edit,.file-editor>.md-split{flex:1;min-height:0}
+.file-editor textarea{width:100%;min-width:0;font-family:'JetBrains Mono',monospace}
+@media(max-width:760px){
+  .file-editor .btn{min-height:44px}
+  .file-editor #md-edit{font-size:16px}
+  .file-editor .md-split{grid-template-columns:minmax(0,1fr);grid-template-rows:1fr 1fr}
+}
 .md-split{display:grid;grid-template-columns:1fr 1fr;gap:14px;height:calc(100% - 60px)}
 .md-split textarea{height:100%;resize:none;font-family:'JetBrains Mono',monospace}
 .md-preview{background:var(--glass);border-radius:11px;padding:16px;overflow:auto}
@@ -915,10 +933,82 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   .nx-card-grid,.nx-summary-grid{grid-template-columns:1fr}
   .nx-kv{grid-template-columns:1fr}
   .tm-actions .btn{flex:1 1 100%}
-  .files-layout{grid-template-columns:1fr;overflow:auto}
-  .files-sidebar{border-right:0;border-bottom:.5px solid var(--border);padding:0 0 10px;margin-bottom:10px;display:grid;grid-template-columns:repeat(2,1fr)}
-  .files-main{padding-left:0;overflow:visible}
-  .files-scroll{overflow-x:hidden}
+  #overlay .files-modal{background-color:var(--bg)}
+  .files-modal .modal-tabs:empty{display:none}
+  .files-modal .modal-close{width:2.75rem;height:2.75rem}
+  .files-layout{display:flex;height:100%;min-height:0;overflow:hidden}
+  .files-layout .files-sidebar,.files-layout .files-desktop{display:none!important}
+  .files-layout .files-mobile{display:inline-flex}
+  .files-layout .files-main{flex:1;min-width:0;min-height:0;padding:0;gap:.5rem;overflow:hidden}
+  .files-pathbar,.files-layout .files-trash .files-pathbar{display:flex;align-items:center;gap:.375rem;min-width:0}
+  .files-pathbar .breadcrumb{flex:1;overflow-x:auto;scrollbar-width:none;margin:0;white-space:nowrap;min-width:0}
+  .files-pathbar .breadcrumb::-webkit-scrollbar{display:none}
+  .files-pathbar .breadcrumb .bc-seg{padding:0 .25rem;display:inline-flex;align-items:center;flex:none;min-height:2.75rem;font-size:.875rem;line-height:1.3;color:var(--text2)}
+  .files-pathbar .breadcrumb .bc-seg.current{max-width:100%;min-width:0;display:block;line-height:2.75rem;text-overflow:ellipsis;overflow:hidden;font-weight:700;color:var(--text)}
+  .files-tool{display:inline-flex;align-items:center;justify-content:center;gap:.375rem;min-width:2.75rem;min-height:2.75rem;padding:0 .625rem;border:1px solid var(--border);border-radius:.625rem;background:var(--glass);line-height:1.25;font-family:inherit;font-weight:600;font-size:.8125rem;color:var(--text);cursor:pointer}
+  .files-places-btn{color:var(--accent-light);background:var(--glass-hover);border-color:var(--border-accent)}
+  .files-places-btn svg{display:none}
+  .files-places-btn .files-caret{font-size:1rem;line-height:1}
+  .files-up,.files-more-btn{flex:none;padding:0;line-height:1}
+  .files-up{font-size:1.125rem}
+  .files-tool:disabled{opacity:.4}
+  .files-select[aria-pressed="true"]{color:var(--accent-light);border-color:var(--accent-light);background:var(--glass-hover)}
+  .files-toolbar{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.5rem;margin:0;padding-bottom:.75rem;border-bottom:1px solid var(--border)}
+  .files-toolbar .nx-search-wrap{width:100%;min-width:0!important}
+  .files-toolbar #files-search{min-height:2.75rem;width:100%;min-width:0!important;border-radius:.625rem;padding:.5rem 2.875rem .5rem .75rem!important;font-size:1rem!important}
+  .files-toolbar .nx-clear-btn{right:0}
+  .files-scroll{overflow:auto;overscroll-behavior:contain;padding:0;min-width:0}
+  .file-grid{grid-template-columns:repeat(auto-fill,minmax(min(100%,6rem),1fr));align-items:stretch;gap:.5rem;padding:2px}
+  .files-layout .file-card{position:relative;min-width:0;min-height:6.25rem;height:100%;padding:.75rem .375rem .625rem;border:1px solid var(--border);border-radius:.75rem;background:var(--glass);gap:.45rem}
+  .files-layout .file-card:focus-visible,.files-layout tr[data-path]:focus-visible{outline:2px solid var(--accent-light);outline-offset:-2px}
+  .files-layout .file-card .fi{width:2.375rem;height:2.375rem;font-size:1.25rem}
+  .files-layout .file-card .fn{width:100%;max-height:none;overflow-wrap:anywhere;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:2;font-size:.8125rem;line-height:1.35;color:var(--text)}
+  .files-layout .file-card.selected{border-color:var(--accent-light);background:var(--glass-hover)}
+  .files-layout.is-selecting .file-select-check{display:block;width:1.125rem;height:1.125rem;margin:0;accent-color:var(--accent);cursor:pointer}
+  .files-layout .file-card .file-select-check{position:absolute;inset:.375rem .375rem auto auto}
+  .files-layout.is-selecting tr[data-path] td:first-child .fi{display:none!important}
+  .files-layout #file-area:is(table),.files-layout #file-area tbody{display:block}
+  .files-layout #file-area thead{display:none}
+  .files-layout #file-area tr[data-path]{display:grid;grid-template-columns:2rem minmax(0,1fr) auto;gap:.125rem .5rem;align-items:center;padding:.5rem .25rem;min-height:3.5rem;border-bottom:1px solid var(--border)}
+  .files-layout #file-area tr[data-path] td{padding:0;border:0;background:none;border-radius:0}
+  .files-layout #file-area td:first-child{grid-area:1/1/span 2}
+  .files-layout #file-area td:nth-child(2){grid-area:1/2;color:var(--text);font-size:.875rem;font-weight:600;overflow-wrap:anywhere}
+  .files-layout #file-area td:nth-child(3){grid-area:1/3/span 2}
+  .files-layout #file-area td:nth-child(4){grid-area:2/2}
+  .files-layout #file-area td:nth-child(n+3){font-size:.75rem!important;color:var(--text2)!important}
+  .files-layout #file-area .sel-row{background:var(--glass-hover);box-shadow:inset 3px 0 var(--accent)}
+  .files-layout .files-statusbar{min-width:0;min-height:2.125rem;margin:0;padding:.375rem 0 0;gap:.4rem;flex-wrap:wrap;color:var(--text2);font-size:.75rem}
+  .files-layout .files-statusbar .sb-total{gap:.25rem}
+  .files-layout .files-statusbar:has(.sb-actions.active)>:not(.sb-actions){display:none}
+  .files-layout .files-statusbar .sb-actions.active{flex:1;gap:.375rem;margin:0}
+  .files-layout .files-statusbar .sb-selected{flex:1;white-space:normal;overflow-wrap:anywhere;margin:0;font-size:.8125rem}
+  .files-layout .files-statusbar .sb-actions .btn{width:2.75rem;height:2.75rem;min-width:2.75rem;border-radius:.625rem;font-size:1.125rem}
+  .files-sheet{position:fixed;inset:auto 0 max(.75rem,env(safe-area-inset-bottom));width:min(28rem,calc(100% - 1.5rem));max-height:min(80dvh,40rem);margin:0 auto;padding:0;color:var(--text);background:var(--bg);border:1px solid var(--border-accent);border-radius:1rem;box-shadow:0 1rem 4rem #0005;overflow:hidden}
+  .files-sheet::backdrop{background:rgb(5 9 20 / 55%)}
+  .files-sheet-inner{display:flex;flex-direction:column;max-height:inherit}
+  .files-sheet header{display:flex;flex-shrink:0;align-items:center;justify-content:space-between;gap:1rem;padding:.625rem .875rem;border-bottom:1px solid var(--border)}
+  .files-sheet h3{margin:0;color:var(--text);font-size:1rem}
+  .files-sheet header .files-tool{font-size:1.25rem}
+  .files-sheet-body{overflow-y:auto;overscroll-behavior:contain;padding:.375rem .75rem .75rem}
+  .files-sheet .files-sb-label{margin:.5rem 0 .25rem;font-size:.6875rem;color:var(--text2)}
+  .files-sheet-item,.files-sheet .files-quicklink,.files-sheet-sort{display:flex;align-items:center;gap:.875rem;width:100%;min-height:2.875rem;padding:.5rem .625rem;border:0;border-radius:.5rem;background:transparent;color:var(--text);font:inherit;font-size:.9375rem;text-align:left;overflow-wrap:anywhere}
+  .files-sheet-item,.files-sheet .files-quicklink{cursor:pointer}
+  .files-sheet-item:hover,.files-sheet .files-quicklink:hover,.files-sheet .files-quicklink.active{background:var(--glass-hover);color:var(--accent-light)}
+  .files-sheet-item.danger{color:var(--red)}
+  .files-sheet-item>span,.files-sheet .files-quicklink>span{display:inline-grid;place-items:center;flex:0 0 1.5rem;font-size:1.0625rem;font-weight:600}
+  .files-sheet-divider{height:1px;background:var(--border);margin:.375rem 0}
+  .files-sheet-sort{align-items:center;justify-content:space-between;gap:.625rem}
+  .files-sheet-sort select{width:auto;max-width:55%;min-height:2.75rem}
+  .files-trash .toolbar{margin:0}
+  .files-layout .files-trash .toolbar .btn,.files-layout .files-trash td .btn{min-width:2.75rem;min-height:2.75rem}
+  .files-trash table,.files-trash tbody{display:block}
+  .files-trash thead{display:none}
+  .files-trash tr{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:.375rem .625rem;align-items:center;padding:.625rem 0;border-bottom:1px solid var(--border)}
+  .files-trash td{border:0;padding:0;min-width:0;overflow-wrap:anywhere}
+  .files-trash td:nth-child(1),.files-trash td:nth-child(2){grid-column:1/-1}
+  .files-trash td:nth-child(1)>span{max-width:100%}
+  .files-trash td:nth-child(1) .fi{flex:none}
+  .files-trash td:nth-child(3){font-size:.75rem}
   .topbar{grid-template-columns:minmax(0,1fr) auto;column-gap:.75rem;height:3.75rem;min-height:3.75rem;padding:.5rem .75rem;position:sticky}
   .logo{min-width:0;overflow:hidden}
   .logo{flex-direction:column;align-items:flex-start;justify-content:center;gap:.125rem;line-height:1.05}
@@ -987,6 +1077,11 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .device-access-card textarea{width:100%;box-sizing:border-box;resize:vertical;font-family:monospace;overflow-wrap:anywhere}
 .device-access-card code{display:block;overflow-wrap:anywhere;font-size:.75rem}
 .device-error{color:var(--danger,#ef4444);font-size:.8125rem;line-height:1.5}
+@media(max-width:360px){
+  .files-places-btn{padding:0}
+  .files-places-btn svg{display:block;width:1.25rem;height:1.25rem;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
+  .files-places-btn span{display:none}
+}
 @media(max-width:480px){.device-access-card .form-body,.device-access-card .form-head{padding:1rem}}
 
 </style>
@@ -1247,7 +1342,9 @@ function dangerConfirmMeta(p,d){
   if(p==='/docker/action'&&d.action!=='remove')return null;
   if(p==='/docker/action')return {action:'docker:remove-container',target:valueOf(d,'container_id')};
   if(p==='/docker/networks/prune')return {action:'docker:network-prune',target:'Docker'};
-  if(p==='/files/job')return d.action==='delete'?{action:'files:delete',target:valueOf(d,'paths')}:null;
+  if(p==='/files/job'&&d.action==='delete'){
+    return d.paths_json?{action:'files:delete-selection',target:d.paths_json}:{action:'files:delete',target:valueOf(d,'paths')};
+  }
   if(p==='/docker/compose/action')return null;
   if(p==='/vms/action')return d.action==='delete'?{action:'vms:delete',target:valueOf(d,'name')}:null;
   if(p==='/vms/pool/action')return d.action==='delete'?{action:'vms:pool-delete',target:valueOf(d,'name')}:null;
@@ -7932,14 +8029,14 @@ function progressText(text){
 function i18nOriginalAttrKey(attr){
   return 'i18nOriginal'+attr.replace(/(^|-)([a-z])/g,(_,p,c)=>c.toUpperCase());
 }
+const renderedAttrSkip='script,style,.xterm,.logbox,[translate="no"]';
+const renderedTextSkip=renderedAttrSkip+',input,textarea,.mono';
 function translateRenderedText(root){
   if(!root)return;
   const attrs=['title','placeholder','aria-label'];
-  const attrSkip='script,style,.xterm,.logbox';
-  const textSkip='input,textarea,script,style,.xterm,.logbox,.mono';
   const elements=root.nodeType===1?[root,...root.querySelectorAll('*')]:root.querySelectorAll?[...root.querySelectorAll('*')]:[];
   elements.forEach(el=>{
-    if(el.closest(attrSkip))return;
+    if(el.closest(renderedAttrSkip))return;
     attrs.forEach(a=>{
       const v=el.getAttribute(a);
       const key=i18nOriginalAttrKey(a);
@@ -7951,7 +8048,7 @@ function translateRenderedText(root){
   });
   const walker=document.createTreeWalker(root,NodeFilter.SHOW_TEXT,{acceptNode:n=>{
     if(!n.nodeValue.trim())return NodeFilter.FILTER_REJECT;
-    if(n.parentElement&&n.parentElement.closest(textSkip))return NodeFilter.FILTER_REJECT;
+    if(n.parentElement&&n.parentElement.closest(renderedTextSkip))return NodeFilter.FILTER_REJECT;
     return NodeFilter.FILTER_ACCEPT;
   }});
   const nodes=[];
@@ -9660,7 +9757,10 @@ loadTileBadges();
 function openModal(tile){
   const tabs=visibleTabs(tile);
   currentTile=tile;currentTab=tabs.length?tabs[0].tab:null;resetSearch();
-  document.querySelector('#overlay .modal')?.classList.toggle('servers-modal',tile.id==='servers');
+  const modal=$('#overlay .modal');
+  modal.classList.toggle('servers-modal',tile.id==='servers');
+  modal.classList.toggle('files-modal',tile.id==='files');
+  modal.querySelector('.modal-close').setAttribute('aria-label',tr('close'));
   $('#modal-title').innerHTML=`<span>${tileTitleIcon(tile)}</span> ${esc(tileName(tile))}`;
   const tabsEl=$('#modal-tabs');tabsEl.innerHTML='';
   const hasSearch=['services','docker','vms','system'].includes(tile.id);
@@ -9692,6 +9792,12 @@ function syncModalLanguage(){
 }
 function openTileById(id){const t=TILES.find(x=>x.id===id);if(t)openModal(t);}
 function closeModal(){
+  if(currentTile?.id==='files'){
+    ++fileRenderVersion;
+    clearTimeout(fileSearchTimer);
+    fileSearchQuery='';
+    toggleFileSelectionMode(false);
+  }
   $('#overlay').classList.remove('open');
   if(termWs){termWs.close();termWs=null;}
   if(typeof window._termDispose==='function'){try{window._termDispose();}catch(e){}}
@@ -10277,17 +10383,39 @@ function renderAuthorizedTerminal(body,terminalToken){
 
 // ═══ Dateien – vollständig ═══
 const QUICKLINKS=[
-  {label:'🏠 Home',path:'/root'},
-  {label:'📂 /home',path:'/home'},
-  {label:'📂 /mnt',path:'/mnt'},
-  {label:'📂 /media',path:'/media'},
-  {label:'📀 VM-Images',path:'/var/lib/libvirt/images'},
-  {label:'🧩 Apps',path:'/opt/runvard/data/apps'},
-  {label:'🧱 Compose',path:'/opt/runvard/data/compose'},
-  {label:'🗑 Trash',path:'__trash__'},
+  {icon:'🏠',key:'homeFolder',path:'/root'},
+  {icon:'📂',path:'/home'},
+  {icon:'📂',path:'/mnt'},
+  {icon:'📂',path:'/media'},
+  {icon:'📀',key:'vmImages',path:'/var/lib/libvirt/images'},
+  {icon:'🧩',key:'appFolder',path:'/opt/runvard/data/apps'},
+  {icon:'🧱',label:'Compose',path:'/opt/runvard/data/compose'},
+  {icon:'🗑',key:'trash',path:'__trash__'},
 ];
-let currentPath='/root', clipboard=null, viewMode='grid', sortBy='name', sortDir='asc', selectedFiles=new Set(), fileSelectionOrder=[], fileEntryMeta=new Map(), lastSelectedPath=null, fileJobsTimer=null, filesHotkeysReady=false, filesGlobalDropReady=false, fileDragPayload=null, fileExternalDragDepth=0;
+const compactFileScreen=window.matchMedia('(max-width: 760px)');
+let currentPath='/root', clipboard=null, viewMode=compactFileScreen.matches?'list':'grid', sortBy='name', sortDir='asc', selectedFiles=new Set(), fileSelectionOrder=[], fileEntryMeta=new Map(), lastSelectedPath=null, watchedFileJob=null, filesHotkeysReady=false, filesGlobalDropReady=false, fileDragPayload=null, fileExternalDragDepth=0;
 const FILE_I18N={
+  places:{de:'Orte',en:'Places',fr:'Emplacements',it:'Posizioni',es:'Ubicaciones',pt:'Localizações'},
+  networkLocations:{de:'Netzwerk',en:'Network',fr:'Réseau',it:'Rete',es:'Red',pt:'Rede'},
+  homeFolder:{de:'Persönlicher Ordner',en:'Home',fr:'Dossier personnel',it:'Cartella personale',es:'Carpeta personal',pt:'Pasta pessoal'},
+  vmImages:{de:'VM-Images',en:'VM images',fr:'Images de VM',it:'Immagini VM',es:'Imágenes de VM',pt:'Imagens de VM'},
+  appFolder:{de:'Apps',en:'Apps',fr:'Applications',it:'App',es:'Aplicaciones',pt:'Aplicações'},
+  trash:{de:'Papierkorb',en:'Trash',fr:'Corbeille',it:'Cestino',es:'Papelera',pt:'Lixo'},
+  moreActions:{de:'Weitere Aktionen',en:'More actions',fr:'Autres actions',it:'Altre azioni',es:'Más acciones',pt:'Mais ações'},
+  sortBy:{de:'Sortieren nach',en:'Sort by',fr:'Trier par',it:'Ordina per',es:'Ordenar por',pt:'Ordenar por'},
+  gridView:{de:'Rasteransicht',en:'Grid view',fr:'Vue en grille',it:'Vista a griglia',es:'Vista de cuadrícula',pt:'Vista em grelha'},
+  listView:{de:'Listenansicht',en:'List view',fr:'Vue en liste',it:'Vista a elenco',es:'Vista de lista',pt:'Vista em lista'},
+  selectMode:{de:'Auswählen',en:'Select',fr:'Sélectionner',it:'Seleziona',es:'Seleccionar',pt:'Selecionar'},
+  selectionCount:{de:'Ausgewählt: $1',en:'Selected: $1',fr:'Sélection : $1',it:'Selezione: $1',es:'Selección: $1',pt:'Seleção: $1'},
+  emptyFolder:{de:'Dieser Ordner ist leer.',en:'This folder is empty.',fr:'Ce dossier est vide.',it:'Questa cartella è vuota.',es:'Esta carpeta está vacía.',pt:'Esta pasta está vazia.'},
+  noSearchResults:{de:'Keine Treffer für diese Suche.',en:'No search results.',fr:'Aucun résultat pour cette recherche.',it:'Nessun risultato per questa ricerca.',es:'No hay resultados para esta búsqueda.',pt:'Nenhum resultado para esta pesquisa.'},
+  copiedItem:{de:'Kopiert: $1',en:'Copied: $1',fr:'Copié : $1',it:'Copiato: $1',es:'Copiado: $1',pt:'Copiado: $1'},
+  cutItem:{de:'Ausgeschnitten: $1',en:'Cut: $1',fr:'Coupé : $1',it:'Tagliato: $1',es:'Cortado: $1',pt:'Cortado: $1'},
+  originalPath:{de:'Ursprünglicher Pfad',en:'Original path',fr:'Chemin d’origine',it:'Percorso originale',es:'Ruta original',pt:'Caminho original'},
+  deletedOn:{de:'Gelöscht am',en:'Date deleted',fr:'Date de suppression',it:'Data di eliminazione',es:'Fecha de eliminación',pt:'Data de eliminação'},
+  folderSingular:{de:'Ordner',en:'folder',fr:'dossier',it:'cartella',es:'carpeta',pt:'pasta'},
+  fileSingular:{de:'Datei',en:'file',fr:'fichier',it:'file',es:'archivo',pt:'ficheiro'},
+  restored:{de:'„$1“ wurde wiederhergestellt',en:'Restored “$1”',fr:'Restauration de « $1 » terminée',it:'Ripristino di «$1» completato',es:'Se ha restaurado «$1»',pt:'Restauro de «$1» concluído'},
   up:{de:'Nach oben',en:'Up',fr:'Remonter',it:'Su',es:'Subir',pt:'Subir'},
   parentFolder:{de:'Übergeordneter Ordner',en:'Parent folder',fr:'Dossier parent',it:'Cartella superiore',es:'Carpeta superior',pt:'Pasta superior'},
   copyPath:{de:'Pfad kopieren',en:'Copy path',fr:'Copier le chemin',it:'Copia percorso',es:'Copiar ruta',pt:'Copiar caminho'},
@@ -10354,9 +10482,8 @@ const FILE_I18N={
 };
 function fileText(key,...args){
   const dict=FILE_I18N[key]||{};
-  let text=dict[currentLanguage()]||dict.en||key;
-  args.forEach((v,i)=>{text=text.replace(new RegExp('\\$'+(i+1),'g'),v);});
-  return text;
+  const text=dict[currentLanguage()]||dict.en||key;
+  return text.replace(/\$(\d+)/g,(placeholder,n)=>args[n-1]??placeholder);
 }
 
 function fileIcon(e){
@@ -10401,108 +10528,220 @@ function setFileSort(key){
 
 function sortMark(key){return sortBy===key?(sortDir==='asc'?' ↑':' ↓'):'';}
 
-async function renderFiles(body){
-  if(currentPath==='__trash__') return renderTrash(body);
-  const [data,mountData]=await Promise.all([
-    api('/files/list?path='+encodeURIComponent(currentPath)),
-    api('/files/mounts').catch(()=>({mounts:[]}))
+let fileSelectionMode=false;
+let fileLongPressPath=null;
+let fileDirectoryEntries=[];
+let fileSearchQuery='';
+let fileSearchTimer;
+let fileRenderVersion=0;
+
+function prepareFileEntries(items){
+  const entries=sortEntries(items.filter(e=>!e.blocked));
+  fileEntryMeta=new Map(entries.map(e=>[e.path,e]));
+  fileSelectionOrder=entries.map(e=>e.path);
+  selectedFiles=new Set([...selectedFiles].filter(path=>fileEntryMeta.has(path)));
+  return entries;
+}
+
+function renderFileEntries(entries,grid,searching){
+  if(!entries.length){
+    const message=`<div class="files-empty" role="status">${esc(fileText(searching?'noSearchResults':'emptyFolder'))}</div>`;
+    return grid?message:`<tr><td colspan="4">${message}</td></tr>`;
+  }
+  return entries.map(e=>{
+    const fi=fileIcon(e), selected=selectedFiles.has(e.path);
+    const attrs=`data-path="${esc(e.path)}" data-name="${esc(e.name)}" data-dir="${e.is_dir?'1':'0'}"
+      data-readonly="${e.readonly?'1':'0'}" draggable="${!compactFileScreen.matches&&!e.readonly}" tabindex="0"
+      onclick="fileClick(event,this.dataset.path,this.dataset.dir==='1')"
+      onkeydown="fileEntryKey(event,this)"
+      ondblclick="if(!compactFileScreen.matches)openFileEntry(this.dataset.path,this.dataset.dir==='1')"
+      ondragstart="fileDragStart(event,this.dataset.path,this.dataset.dir==='1')"
+      ondragend="fileDragEnd(event)"
+      ondragenter="fileDropTargetEnter(event,this.dataset.path,this.dataset.dir==='1')"
+      ondragover="fileDropTargetOver(event,this.dataset.path,this.dataset.dir==='1')"
+      ondragleave="fileDropTargetLeave(event)"
+      ondrop="fileDropTargetDrop(event,this.dataset.path,this.dataset.dir==='1')"
+      oncontextmenu="showCtx(event,this.dataset.path,this.dataset.dir==='1',this.dataset.readonly==='1')"`;
+    const check=`<input class="file-select-check" type="checkbox" aria-label="${esc(e.name)}" translate="no"
+      ${selected?'checked':''} onclick="event.stopPropagation()" onchange="toggleFilePath(this.closest('[data-path]').dataset.path)">`;
+    if(grid){
+      return `<div class="file-card${selected?' selected':''}" ${attrs} title="${esc(e.path)}" translate="no">
+        ${check}<div class="fi ${fi.cls}" aria-hidden="true">${fi.icon}</div>
+        <div class="fn">${esc(e.name)}</div></div>`;
+    }
+    return `<tr class="${selected?'sel-row':''}" ${attrs} translate="no">
+      <td>${check}<div class="fi ${fi.cls}" aria-hidden="true" style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px">${fi.icon}</div></td>
+      <td class="${fi.ncls}">${esc(e.name)}${searching?`<div class="mono file-result-path">${esc(e.path)}</div>`:''}</td>
+      <td style="color:var(--text3);text-align:right;font-size:11px">${e.is_dir||e.size==null?'—':fmtBytes(e.size)}</td>
+      <td style="color:var(--text3);font-size:11px">${e.modified==null?'—':new Date(e.modified*1000).toLocaleDateString(localeCode())}</td>
+    </tr>`;
+  }).join('');
+}
+
+function toggleFileView(){
+  viewMode=viewMode==='grid'?'list':'grid';
+  renderFiles($('#modal-body'));
+}
+
+function fileCountText(count,isDir){
+  const singular=new Intl.PluralRules(localeCode()).select(count)==='one';
+  const key=isDir?(singular?'folderSingular':'folders'):(singular?'fileSingular':'files');
+  return count+' '+fileText(key);
+}
+
+function filePlaceLinks(mounts){
+  const link=(path,label,icon,title='')=>`<button type="button" class="files-quicklink${currentPath===path?' active':''}" data-path="${esc(path)}" onclick="navTo(this.dataset.path)" translate="no" title="${esc(title||label)}"${currentPath===path?' aria-current="location"':''}><span aria-hidden="true">${icon}</span> ${esc(label)}</button>`;
+  return `<div class="files-sb-label">${esc(uiText('Quick access'))}</div>
+    ${QUICKLINKS.map(q=>link(q.path,q.key?fileText(q.key):q.label||q.path,q.icon)).join('')}
+    ${mounts?`<div class="files-sb-label remote">${esc(fileText('networkLocations'))}</div>
+      ${mounts.map(m=>link(m.mountpoint,m.label,m.type==='SMB'?'🌐':'📡',m.source)).join('')}
+      <button class="files-quicklink" onclick="mountSmbForm()">🔗 ${esc(uiText('Connect SMB'))}</button>
+      <button class="files-quicklink" onclick="mountNfsForm()">🔗 ${esc(uiText('Connect NFS'))}</button>`:''}`;
+}
+
+// Native dialogs keep the active sheet scrollable, contain focus and restore it on dismissal.
+function showFileSheet(kind){
+  const dialog=$('#files-sheet');
+  const places=kind==='places', selected=kind==='selection';
+  const title=fileText(places?'places':'moreActions');
+  let content;
+  if(places){
+    content=dialog.parentElement.querySelector('.files-sidebar').innerHTML;
+  }else{
+    const item=(label,icon,action,danger=false)=>`<button type="button" class="files-sheet-item${danger?' danger':''}" onclick="${action}"><span aria-hidden="true">${icon}</span>${esc(label)}</button>`;
+    if(selected){
+      const [path]=selectedFiles;
+      const single=selectedFiles.size===1;
+      const writable=[...selectedFiles].every(p=>!fileEntryMeta.get(p)?.readonly);
+      content=[
+        single && item(fileText('share'),'🔗','createShareLink([...selectedFiles][0])'),
+        writable && item(fileText('cut'),'✂','bulkCut()'),
+        single && writable && item(uiText('Rename'),'✎','renameForm([...selectedFiles][0])'),
+        single && !fileEntryMeta.get(path)?.is_dir && path.toLowerCase().endsWith('.zip') && item(fileText('unpack'),'▤','unzipFile([...selectedFiles][0])'),
+        single && !fileEntryMeta.get(path)?.is_dir && item(fileText('createZip'),'▣','bulkZip()'),
+        single && fileEntryMeta.get(path)?.is_dir && writable && item(fileText('asSambaShare'),'▱',"sambaShareForm([...selectedFiles][0],[...selectedFiles][0].split('/').pop())"),
+        single && item(fileText('properties'),'ⓘ','showProps([...selectedFiles][0])'),
+        writable && item(fileText('delete'),'×','bulkDelete()',true)
+      ].filter(Boolean).join('');
+    }else{
+      const sortOptions=['name','size','date','type'].map(key=>`<option value="${key}" ${sortBy===key?'selected':''}>${esc(fileText(key))}</option>`).join('');
+      content=item(fileText('newFolder'),'+','mkdirForm()')+
+        item(fileText('upload'),'↑',"document.getElementById('files-upload').click()")+
+        (clipboard?item(fileText('pasteHere'),'▣','pasteClipboard()'):'')+
+        item(fileText('copyPath'),'⧉','copyText(currentPath)')+
+        '<div class="files-sheet-divider"></div>'+
+        item(fileText(viewMode==='grid'?'listView':'gridView'),viewMode==='grid'?'☰':'⊞','toggleFileView()')+
+        `<label class="files-sheet-sort">${esc(fileText('sortBy'))}<select onchange="setFileSort(this.value)">${sortOptions}</select></label>`;
+    }
+  }
+  dialog.querySelector('h3').textContent=title;
+  dialog.querySelector('.files-sheet-body').innerHTML=content;
+  dialog.querySelector('.files-sheet-body').addEventListener('click',closeFileSheetOnAction,true);
+  dialog.showModal();
+}
+
+function closeFileSheetOnAction(event){
+  if(event.target.closest('button'))this.closest('dialog').close();
+}
+
+function fileSheet(){
+  return `<dialog class="files-sheet" id="files-sheet" aria-labelledby="files-sheet-title" onclick="if(event.target===this)this.close()" onkeydown="event.stopPropagation()">
+      <div class="files-sheet-inner">
+        <header><h3 id="files-sheet-title"></h3><button class="files-tool" aria-label="${esc(uiText('Close'))}" onclick="this.closest('dialog').close()">×</button></header>
+        <div class="files-sheet-body"></div>
+      </div>
+    </dialog>`;
+}
+
+function filePlacesButton(){
+  return `<button class="files-tool files-places-btn files-mobile" aria-haspopup="dialog" title="${esc(fileText('places'))}" aria-label="${esc(fileText('places'))}" onclick="showFileSheet('places')"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="4.5" width="18" height="15" rx="2.5"/><path d="M9 5v14M5.5 8h1M5.5 11h1M5.5 14h1"/></svg><span>${esc(fileText('places'))}</span><span class="files-caret" aria-hidden="true">⌄</span></button>`;
+}
+
+async function renderFiles(body,requestedPath=currentPath){
+  if(requestedPath==='__trash__') return renderTrash(body);
+  const version=++fileRenderVersion;
+  const navigating=currentPath!==requestedPath;
+  const query=navigating?'':fileSearchQuery;
+  const [data,mountData,searchData]=await Promise.all([
+    api('/files/list?path='+encodeURIComponent(requestedPath)),
+    api('/files/mounts').catch(()=>({mounts:[]})),
+    query?api('/files/search?base='+encodeURIComponent(requestedPath)+'&q='+encodeURIComponent(query)):null
   ]);
-  const entries=sortEntries(data.entries);
-  fileEntryMeta=new Map(entries.map(e=>[e.path,{is_dir:!!e.is_dir,readonly:!!e.readonly}]));
-  fileSelectionOrder=entries.filter(e=>!e.blocked).map(e=>e.path);
-  selectedFiles=new Set([...selectedFiles].filter(p=>fileSelectionOrder.includes(p)));
+  if(version!==fileRenderVersion||currentTile?.id!=='files')return;
+  if(navigating){
+    fileSearchQuery='';
+    clearTimeout(fileSearchTimer);
+    toggleFileSelectionMode(false);
+  }
+  currentPath=data.path;
+  fileDirectoryEntries=data.entries;
+  const entries=prepareFileEntries(searchData?searchData.results:fileDirectoryEntries);
   const remoteMounts=(mountData.mounts||[]);
   const pathParts=data.path.split('/').filter(Boolean);
   const bcHtml=pathParts.map((p,i)=>{
     const full='/'+pathParts.slice(0,i+1).join('/');
     const isCurrent=i===pathParts.length-1;
-    return `${i>0?'<span class="bc-sep">›</span>':''}<span class="bc-seg${isCurrent?' current':''}" onclick="navTo('${esc(full)}')">${esc(p)}</span>`;
+    return `${i>0?'<span class="bc-sep" aria-hidden="true">/</span>':''}${isCurrent?`<span class="bc-seg current" aria-current="location" title="${esc(full)}">${esc(p)}</span>`:`<button class="bc-seg" data-path="${esc(full)}" onclick="navTo(this.dataset.path)">${esc(p)}</button>`}`;
   }).join('');
   body.innerHTML=`
   <div class="files-layout">
-    <div class="files-sidebar">
-      <div class="files-sb-label">${esc(uiText('Quick access'))}</div>
-      ${QUICKLINKS.map(q=>`<div class="files-quicklink${currentPath===q.path?' active':''}" onclick="navTo('${esc(q.path)}')">${q.label}</div>`).join('')}
-      <div style="height:.5px;background:var(--border);margin:6px 8px"></div>
-      <div class="files-sb-label">${esc(uiText('Remote'))}</div>
-      ${remoteMounts.map(m=>`<div class="files-quicklink${currentPath===m.mountpoint?' active':''}" title="${esc(m.source)}" onclick="navTo('${esc(m.mountpoint)}')">${m.type==='SMB'?'🖧':'📡'} ${esc(m.label)}</div>`).join('')}
-      <div class="files-quicklink" onclick="mountSmbForm()">🔗 ${esc(uiText('Connect SMB'))}</div>
-      <div class="files-quicklink" onclick="mountNfsForm()">🔗 ${esc(uiText('Connect NFS'))}</div>
-    </div>
+    <aside class="files-sidebar">${filePlaceLinks(remoteMounts)}</aside>
     <div class="files-main">
-      <div class="breadcrumb">${bcHtml||'<span class="bc-seg current">/</span>'}</div>
+      <div class="files-pathbar">
+        ${filePlacesButton()}
+        <button class="files-tool files-up files-mobile" data-path="${esc(data.parent)}" onclick="navTo(this.dataset.path)" title="${esc(fileText('parentFolder'))}" aria-label="${esc(fileText('parentFolder'))}" ${data.path===data.parent?'disabled':''}>↑</button>
+        <div class="breadcrumb" translate="no">${bcHtml||'<span class="bc-seg current">/</span>'}</div>
+        <button class="files-tool files-more-btn files-mobile" aria-haspopup="dialog" title="${esc(fileText('moreActions'))}" aria-label="${esc(fileText('moreActions'))}" onclick="showFileSheet('actions')">•••</button>
+      </div>
       <div id="file-job-strip" class="file-job-strip">
         <span id="file-job-label">${esc(fileText('working'))}</span>
         <div class="job-track"><div id="file-job-fill" class="job-fill"></div></div>
         <span id="file-job-pct" class="mono">0%</span>
       </div>
-      <div class="toolbar">
-        <button class="btn ghost sm" onclick="navTo('${esc(data.parent)}')" title="${esc(fileText('parentFolder'))}">↑ ${esc(fileText('up'))}</button>
-        <button class="btn ghost sm" onclick="copyText(currentPath)" title="${esc(fileText('copyPath'))}">⧉ ${esc(fileText('path'))}</button>
-        <button class="btn ghost sm" onclick="mkdirForm()">+ ${esc(fileText('newFolder'))}</button>
-        <label class="btn ghost sm" style="cursor:pointer">↑ ${esc(fileText('upload'))}<input type="file" multiple hidden onchange="uploadFiles(this)"></label>
-        <button class="btn ghost sm" onclick="selectedFiles.size===1?createShareLink([...selectedFiles][0]):toast(fileText('selectOne'),'error')">${esc(fileText('share'))}</button>
-        <input id="files-search" class="nx-search" placeholder="${esc(fileText('search'))}" style="flex:1;min-width:120px;padding:6px 10px;font-size:11px" oninput="fileSearch(this.value)">
-        <div style="margin-left:auto;display:flex;gap:5px;align-items:center">
-          <select id="sort-sel" style="width:auto;padding:4px 20px 4px 8px;font-size:11px" onchange="sortBy=this.value;renderFiles($('#modal-body'))">
+      <div class="toolbar files-toolbar">
+        <button class="btn ghost sm files-desktop" data-path="${esc(data.parent)}" onclick="navTo(this.dataset.path)" title="${esc(fileText('parentFolder'))}">↑ ${esc(fileText('up'))}</button>
+        <button class="btn ghost sm files-desktop" onclick="copyText(currentPath)" title="${esc(fileText('copyPath'))}">⧉ ${esc(fileText('path'))}</button>
+        <button class="btn ghost sm files-desktop" onclick="mkdirForm()">+ ${esc(fileText('newFolder'))}</button>
+        <label class="btn ghost sm files-desktop" style="cursor:pointer">↑ ${esc(fileText('upload'))}<input id="files-upload" type="file" multiple hidden onchange="uploadFiles(this)"></label>
+        <button class="btn ghost sm files-desktop" onclick="selectedFiles.size===1?createShareLink([...selectedFiles][0]):toast(fileText('selectOne'),'error')">${esc(fileText('share'))}</button>
+        <input id="files-search" class="nx-search" aria-label="${esc(fileText('search'))}" placeholder="${esc(fileText('search'))}" style="flex:1;min-width:120px;padding:6px 10px;font-size:11px" oninput="fileSearch(this.value)">
+        <button class="files-tool files-mobile files-select" id="files-select-toggle" aria-pressed="false" onclick="toggleFileSelectionMode()">${esc(fileText('selectMode'))}</button>
+        <div class="files-desktop" style="margin-left:auto;display:flex;gap:5px;align-items:center">
+          <select id="sort-sel" aria-label="${esc(fileText('sortBy'))}" style="width:auto;padding:4px 20px 4px 8px;font-size:11px" onchange="sortBy=this.value;renderFiles($('#modal-body'))">
             <option value="name" ${sortBy==='name'?'selected':''}>${esc(fileText('name'))}</option><option value="size" ${sortBy==='size'?'selected':''}>${esc(fileText('size'))}</option><option value="date" ${sortBy==='date'?'selected':''}>${esc(fileText('date'))}</option><option value="type" ${sortBy==='type'?'selected':''}>${esc(fileText('type'))}</option>
           </select>
-          <button class="btn icon" onclick="viewMode=viewMode==='grid'?'list':'grid';renderFiles($('#modal-body'))" title="${esc(fileText('view'))}" style="font-size:13px">${viewMode==='grid'?'☰':'⊞'}</button>
+          <button class="btn icon" aria-label="${esc(fileText(viewMode==='grid'?'listView':'gridView'))}" onclick="toggleFileView()" title="${esc(fileText(viewMode==='grid'?'listView':'gridView'))}" style="font-size:13px">${viewMode==='grid'?'☰':'⊞'}</button>
         </div>
       </div>
       <div class="files-scroll" id="files-scroll" oncontextmenu="showFolderCtx(event)">
       <div class="files-drop-hint">${esc(fileText('dropUpload'))}</div>
       ${viewMode==='grid'?`
       <div class="file-grid" id="file-area">
-        ${entries.map(e=>{if(e.blocked)return'';const fi=fileIcon(e);return`
-        <div class="file-card${selectedFiles.has(e.path)?' selected':''}"
-          data-path="${esc(e.path)}" data-name="${esc(e.name)}" data-dir="${e.is_dir?'1':'0'}" draggable="${e.readonly?'false':'true'}"
-          onclick="fileClick(event,'${esc(e.path)}',${e.is_dir})"
-          ondblclick="fileDblClick('${esc(e.path)}',${e.is_dir})"
-          ondragstart="fileDragStart(event,'${esc(e.path)}',${e.is_dir})"
-          ondragend="fileDragEnd(event)"
-          ondragenter="fileDropTargetEnter(event,'${esc(e.path)}',${e.is_dir})"
-          ondragover="fileDropTargetOver(event,'${esc(e.path)}',${e.is_dir})"
-          ondragleave="fileDropTargetLeave(event)"
-          ondrop="fileDropTargetDrop(event,'${esc(e.path)}',${e.is_dir})"
-          oncontextmenu="showCtx(event,'${esc(e.path)}',${e.is_dir},${e.readonly})">
-          <div class="fi ${fi.cls}">${fi.icon}</div>
-          <div class="fn">${esc(e.name)}</div>
-        </div>`;}).join('')}
+        ${renderFileEntries(entries,true,!!query)}
       </div>`:`
       <table id="file-area" style="font-size:12px">
         <thead><tr><th style="width:32px"></th><th class="sortable-th" onclick="setFileSort('name')">${esc(fileText('name'))}${sortMark('name')}</th><th class="sortable-th" onclick="setFileSort('size')" style="width:70px;text-align:right">${esc(fileText('size'))}${sortMark('size')}</th><th class="sortable-th" onclick="setFileSort('date')" style="width:90px">${esc(fileText('date'))}${sortMark('date')}</th></tr></thead>
-        <tbody>${entries.map(e=>{if(e.blocked)return'';const fi=fileIcon(e);return`
-          <tr data-path="${esc(e.path)}" data-dir="${e.is_dir?'1':'0'}" draggable="${e.readonly?'false':'true'}" class="${selectedFiles.has(e.path)?'sel-row':''}"
-          onclick="fileClick(event,'${esc(e.path)}',${e.is_dir})"
-          ondblclick="fileDblClick('${esc(e.path)}',${e.is_dir})"
-          ondragstart="fileDragStart(event,'${esc(e.path)}',${e.is_dir})"
-          ondragend="fileDragEnd(event)"
-          ondragenter="fileDropTargetEnter(event,'${esc(e.path)}',${e.is_dir})"
-          ondragover="fileDropTargetOver(event,'${esc(e.path)}',${e.is_dir})"
-          ondragleave="fileDropTargetLeave(event)"
-          ondrop="fileDropTargetDrop(event,'${esc(e.path)}',${e.is_dir})"
-          oncontextmenu="showCtx(event,'${esc(e.path)}',${e.is_dir},${e.readonly})">
-          <td><div class="fi ${fi.cls}" style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px">${fi.icon}</div></td>
-          <td class="${fi.ncls}">${esc(e.name)}</td>
-          <td style="color:var(--text3);text-align:right;font-family:'JetBrains Mono',monospace;font-size:11px">${e.is_dir?'—':fmtBytes(e.size)}</td>
-          <td style="color:var(--text3);font-size:11px">${new Date(e.modified*1000).toLocaleDateString(localeCode())}</td>
-        </tr>`;}).join('')}</tbody>
+        <tbody>${renderFileEntries(entries,false,!!query)}</tbody>
       </table>`}
       </div>
       <div class="files-statusbar">
-        <div class="sb-item">📁 ${entries.filter(e=>e.is_dir).length} ${esc(fileText('folders'))}</div>
+        <div class="sb-item" data-file-count="folders">${esc(fileCountText(entries.filter(e=>e.is_dir).length,true))}</div>
         <div class="sb-sep"></div>
-        <div class="sb-item">📄 ${entries.filter(e=>!e.is_dir).length} ${esc(fileText('files'))}</div>
-        <div class="sb-total"><span>${esc(fileText('total'))}</span><strong>${fmtBytes(entries.reduce((s,e)=>s+(e.is_dir?0:(e.size||0)),0))}</strong></div>
+        <div class="sb-item" data-file-count="files">${esc(fileCountText(entries.filter(e=>!e.is_dir).length,false))}</div>
+        <div class="sb-total"><span>${esc(fileText('total'))}</span><strong data-file-count="size">${fmtBytes(entries.reduce((s,e)=>s+(e.is_dir?0:(e.size||0)),0))}</strong></div>
         <div id="files-selection-actions" class="sb-actions" aria-live="polite"></div>
       </div>
     </div>
+    ${fileSheet()}
   </div>
   <div id="ctx-menu"></div>`;
+  const crumb=body.querySelector('.files-pathbar .breadcrumb');
+  crumb.scrollLeft=crumb.scrollWidth;
+  $('#files-search').value=fileSearchQuery;
   setupFileInteractions();
   resumeFileJobs();
-  updateBulkBar();
+  updateFileSelectionUI();
+  if(query!==fileSearchQuery)fileSearch(fileSearchQuery);
 }
 
 function setupFileInteractions(){
@@ -10537,12 +10776,10 @@ function setupFileDropUpload(){
   });
 }
 
-function filesDropActive(){
-  if(!currentTile||currentTile.id!=='files'||currentPath==='__trash__')return false;
-  const form=$('#form-overlay'), confirm=$('#confirm-overlay');
-  if(form&&form.classList.contains('open'))return false;
-  if(confirm&&confirm.classList.contains('open'))return false;
-  return !!$('#files-scroll');
+function filesBrowserActive(){
+  return !!$('#overlay.open #files-scroll')&&!document.querySelector(
+    'dialog[open],#form-overlay.open,#confirm-overlay.open'
+  );
 }
 
 function fileDropFiles(e){
@@ -10644,26 +10881,26 @@ function setupFilesGlobalDrop(){
   if(filesGlobalDropReady)return;
   filesGlobalDropReady=true;
   document.addEventListener('dragover',e=>{
-    if(!filesDropActive()||!fileDragHasExternalFiles(e))return;
+    if(!filesBrowserActive()||!fileDragHasExternalFiles(e))return;
     e.preventDefault();
     e.stopPropagation();
     e.dataTransfer.dropEffect='copy';
     markFileExternalDrop(true);
   },true);
   document.addEventListener('dragenter',e=>{
-    if(!filesDropActive()||!fileDragHasExternalFiles(e))return;
+    if(!filesBrowserActive()||!fileDragHasExternalFiles(e))return;
     e.preventDefault();
     e.stopPropagation();
     fileExternalDragDepth++;
     markFileExternalDrop(true);
   },true);
   document.addEventListener('dragleave',e=>{
-    if(!filesDropActive()||!fileDragHasExternalFiles(e))return;
+    if(!filesBrowserActive()||!fileDragHasExternalFiles(e))return;
     fileExternalDragDepth=Math.max(0,fileExternalDragDepth-1);
     if(fileExternalDragDepth===0)markFileExternalDrop(false);
   },true);
   document.addEventListener('drop',e=>{
-    if(!filesDropActive()||!fileDragHasExternalFiles(e))return;
+    if(!filesBrowserActive()||!fileDragHasExternalFiles(e))return;
     e.preventDefault();
     e.stopPropagation();
     fileExternalDragDepth=0;
@@ -10689,7 +10926,8 @@ function setupFileMarquee(){
   });
   const intersects=(a,b)=>!(a.right<b.left||a.left>b.right||a.bottom<b.top||a.top>b.bottom);
   sc.addEventListener('pointerdown',e=>{
-    if(e.button!==0||e.target.closest('[data-path],button,input,select,textarea,label'))return;
+    fileLongPressPath=null;
+    if(e.pointerType==='touch'||e.button!==0||e.target.closest('[data-path],button,input,select,textarea,label'))return;
     start={x:e.clientX,y:e.clientY,add:e.ctrlKey||e.metaKey};
     moved=false;
     box=document.createElement('div');
@@ -10725,10 +10963,11 @@ function setupFilesHotkeys(){
   if(filesHotkeysReady)return;
   filesHotkeysReady=true;
   document.addEventListener('keydown',e=>{
-    if(!currentTile||currentTile.id!=='files')return;
+    if(!filesBrowserActive())return;
     if(e.target.closest('input,textarea,select'))return;
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){
       e.preventDefault();
+      if(compactFileScreen.matches)fileSelectionMode=true;
       fileSelectionOrder.forEach(p=>selectedFiles.add(p));
       updateFileSelectionUI();
     }else if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='c'){
@@ -10742,11 +10981,11 @@ function setupFilesHotkeys(){
     }else if(e.key==='Delete'||e.key==='Backspace'){
       if(selectedFiles.size){e.preventDefault();bulkDelete();}
     }else if(e.key==='Escape'){
-      selectedFiles.clear();updateFileSelectionUI();closeCtx();
+      toggleFileSelectionMode(false);
     }
   });
   document.addEventListener('paste',e=>{
-    if(!currentTile||currentTile.id!=='files')return;
+    if(!filesBrowserActive())return;
     if(e.target.closest('input,textarea'))return;
     const files=[...(e.clipboardData?.files||[])];
     if(files.length){e.preventDefault();uploadFileList(files,currentPath);}
@@ -10818,7 +11057,7 @@ async function startFileJob(action,paths,opts={}){
   if(!paths||!paths.length){toast(fileText('selectFiles'),'error');return null;}
   const job=await post('/files/job',{
     action,
-    paths:paths.join('|'),
+    paths_json:JSON.stringify(paths),
     dst_dir:opts.dst_dir||'',
     output:opts.output||''
   });
@@ -10841,35 +11080,56 @@ function paintFileJob(job){
   if(label)label.textContent=fileJobLabel(job)+(job.current?' · '+job.current.split('/').pop():'');
 }
 
-async function watchFileJob(jobId){
-  if(fileJobsTimer)clearInterval(fileJobsTimer);
+function watchFileJob(jobId){
+  if(watchedFileJob?.id===jobId)return;
+  clearTimeout(watchedFileJob?.timer);
+  const watch={id:jobId,timer:null};
+  watchedFileJob=watch;
   const poll=async()=>{
     try{
       const job=await api('/files/job?job_id='+encodeURIComponent(jobId));
+      if(watchedFileJob!==watch)return;
       paintFileJob(job);
-      if(['done','error','unknown'].includes(job.status)){
-        clearInterval(fileJobsTimer);fileJobsTimer=null;
-        if(job.status==='done'){toast(fileJobLabel(job));renderFiles($('#modal-body'));}
-        else toast(job.error||'File job stopped','error');
-        setTimeout(()=>{$('#file-job-strip')?.classList.remove('active');},2500);
+      if(!['done','error','unknown'].includes(job.status)){
+        watch.timer=setTimeout(poll,1200);
+        return;
       }
-    }catch(e){clearInterval(fileJobsTimer);fileJobsTimer=null;}
+      watchedFileJob=null;
+      if(job.status==='done'){
+        toast(fileJobLabel(job));
+        const refresh=()=>{if($('#overlay.open #file-area'))renderFiles($('#modal-body'));};
+        const sheet=$('#files-sheet[open]');
+        if(sheet)sheet.addEventListener('close',refresh,{once:true});
+        else refresh();
+      }else{
+        toast(job.error||fileText('error'),'error');
+        const strip=$('#file-job-strip');
+        setTimeout(()=>{if(!watchedFileJob)strip?.classList.remove('active');},2500);
+      }
+    }catch(error){if(watchedFileJob===watch)watchedFileJob=null;}
   };
-  await poll();
-  fileJobsTimer=setInterval(poll,1200);
+  poll();
 }
 
 async function resumeFileJobs(){
   try{
     const r=await api('/files/jobs?active=true');
     const job=(r.jobs||[])[0];
-    if(job)watchFileJob(job.id);
+    if(job&&!watchedFileJob)watchFileJob(job.id);
   }catch(e){}
 }
 
 // Rechtsklick-Kontextmenü
 window.showCtx=(e,path,isDir,readonly)=>{
   e.preventDefault(); e.stopPropagation();
+  if(compactFileScreen.matches){
+    fileLongPressPath=path;
+    fileSelectionMode=true;
+    selectedFiles.add(path);
+    lastSelectedPath=path;
+    updateFileSelectionUI();
+    return;
+  }
   const old=$('#ctx-menu'); if(old) old.innerHTML='';
   const name=path.split('/').pop();
   if(!selectedFiles.has(path)){
@@ -10882,28 +11142,35 @@ window.showCtx=(e,path,isDir,readonly)=>{
   const multi=paths.length>1;
   const itemLabel=multi?`${paths.length} ${fileText('items')}`:name;
   const items=[
-    {icon:'⬇',label:multi?fileText('downloadSelected'):fileText('download'),fn:multi?'bulkDownload()':`downloadFile('${esc(path)}')`},
-    (!multi&&!readonly)?{icon:'✎',label:uiText('Rename'),fn:`renameForm('${esc(path)}')`}:null,
-    readonly?null:{icon:'📋',label:multi?fileText('copySelected'):fileText('copy'),fn:'bulkCopy()'},
-    readonly?null:{icon:'✂',label:multi?fileText('cutSelected'):fileText('cut'),fn:'bulkCut()'},
-    clipboard?{icon:'📌',label:fileText('pasteHere'),fn:`pasteClipboard()`}:null,
+    {icon:'⬇',label:multi?fileText('downloadSelected'):fileText('download'),fn:multi?()=>bulkDownload():()=>downloadFile(path)},
+    (!multi&&!readonly)?{icon:'✎',label:uiText('Rename'),fn:()=>renameForm(path)}:null,
+    readonly?null:{icon:'📋',label:multi?fileText('copySelected'):fileText('copy'),fn:()=>bulkCopy()},
+    readonly?null:{icon:'✂',label:multi?fileText('cutSelected'):fileText('cut'),fn:()=>bulkCut()},
+    clipboard?{icon:'📌',label:fileText('pasteHere'),fn:()=>pasteClipboard()}:null,
     {icon:'',label:'─',fn:''},
-    (!multi&&isDir&&!readonly)?{icon:'🔗',label:fileText('asSambaShare'),fn:`sambaShareForm('${esc(path)}','${esc(name)}')`}:null,
-    !multi?{icon:'🔗',label:fileText('createLink'),fn:`createShareLink('${esc(path)}')`}:null,
-    multi?{icon:'📦',label:fileText('createZip'),fn:'bulkZip()'}:(isDir&&path.endsWith('.zip')?null:{icon:'📦',label:path.endsWith('.zip')?fileText('unpack'):fileText('createZip'),fn:path.endsWith('.zip')?`unzipFile('${esc(path)}')` :`zipFile('${esc(path)}')`}),
+    (!multi&&isDir&&!readonly)?{icon:'🔗',label:fileText('asSambaShare'),fn:()=>sambaShareForm(path,name)}:null,
+    !multi?{icon:'🔗',label:fileText('createLink'),fn:()=>createShareLink(path)}:null,
+    multi?{icon:'📦',label:fileText('createZip'),fn:()=>bulkZip()}:(isDir&&path.endsWith('.zip')?null:{icon:'📦',label:path.endsWith('.zip')?fileText('unpack'):fileText('createZip'),fn:path.endsWith('.zip')?()=>unzipFile(path) :()=>zipFile(path)}),
     {icon:'',label:'─',fn:''},
-    readonly?null:{icon:'🗑',label:multi?fileText('deleteSelected'):fileText('delete'),fn:multi?'bulkDelete()':`deleteFile('${esc(path)}')`},
-    !multi?{icon:'ℹ',label:fileText('properties'),fn:`showProps('${esc(path)}')`}:null,
-  ].filter(Boolean).filter(i=>i.label!=='─'||true);
+    readonly?null:{icon:'🗑',label:multi?fileText('deleteSelected'):fileText('delete'),fn:multi?()=>bulkDelete():()=>deleteFile(path)},
+    !multi?{icon:'ℹ',label:fileText('properties'),fn:()=>showProps(path)}:null,
+  ].filter(Boolean);
 
   const menu=$('#ctx-menu');
   menu.style.cssText=`position:fixed;top:${Math.min(e.clientY,window.innerHeight-280)}px;left:${Math.min(e.clientX,window.innerWidth-180)}px;background:rgba(15,12,26,.97);border:.5px solid var(--border-accent);border-radius:12px;padding:6px;z-index:999;min-width:170px;box-shadow:0 12px 40px rgba(0,0,0,.6)`;
-  menu.innerHTML=`<div style="padding:6px 12px 8px;color:var(--text3);font-size:11px;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(itemLabel)}</div>`+items.map(i=>i.label==='─'?'<div style="height:.5px;background:var(--border);margin:4px 6px"></div>':`<div onclick="${i.fn};closeCtx()" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center" onmouseover="this.style.background='var(--glass-hover)'" onmouseout="this.style.background=''">${i.icon?`<span>${i.icon}</span>`:'<span style="width:16px"></span>'} ${esc(i.label)}</div>`).join('');
+  menu.innerHTML=`<div translate="no" style="padding:6px 12px 8px;color:var(--text3);font-size:11px;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(itemLabel)}</div>`+items.map((i,index)=>i.label==='─'?'<div style="height:.5px;background:var(--border);margin:4px 6px"></div>':`<div data-ctx-index="${index}" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center" onmouseover="this.style.background='var(--glass-hover)'" onmouseout="this.style.background=''">${i.icon?`<span>${i.icon}</span>`:'<span style="width:16px"></span>'} ${esc(i.label)}</div>`).join('');
+  menu.querySelectorAll('[data-ctx-index]').forEach(button=>{
+    button.onclick=()=>{
+      closeCtx();
+      items[Number(button.dataset.ctxIndex)].fn();
+    };
+  });
   setTimeout(()=>document.addEventListener('click',closeCtx,{once:true}),10);
 };
 window.showFolderCtx=e=>{
   if(e.target.closest('[data-path]')) return;
   e.preventDefault(); e.stopPropagation();
+  if(compactFileScreen.matches)return;
   selectedFiles.clear();
   lastSelectedPath=null;
   updateFileSelectionUI();
@@ -10922,17 +11189,64 @@ window.showFolderCtx=e=>{
 window.closeCtx=()=>{const m=$('#ctx-menu');if(m){m.innerHTML='';m.removeAttribute('style');}};
 
 function updateFileSelectionUI(){
+  const selectButton=$('#files-select-toggle');
+  if(selectButton){
+    selectButton.setAttribute('aria-pressed',String(fileSelectionMode));
+    selectButton.textContent=fileSelectionMode?uiText('Cancel'):fileText('selectMode');
+  }
+  $('#files-scroll')?.closest('.files-layout')?.classList.toggle('is-selecting',fileSelectionMode);
   document.querySelectorAll('#file-area [data-path]').forEach(el=>{
     const on=selectedFiles.has(el.dataset.path);
+    const check=el.querySelector('.file-select-check');
+    if(check)check.checked=on;
     el.classList.toggle('selected',on);
     el.classList.toggle('sel-row',on);
   });
   updateBulkBar();
 }
 
-// Klick-Logik: Klick = Auswahl, Ctrl/Cmd = hinzufügen, Shift = Bereich
+function toggleFileSelectionMode(on=!fileSelectionMode){
+  fileSelectionMode=on;
+  if(!on){
+    selectedFiles.clear();
+    lastSelectedPath=null;
+  }
+  closeCtx();
+  updateFileSelectionUI();
+}
+
+function toggleFilePath(path){
+  if(selectedFiles.has(path))selectedFiles.delete(path);
+  else selectedFiles.add(path);
+  lastSelectedPath=path;
+  updateFileSelectionUI();
+}
+
+function fileEntryKey(e,entry){
+  if(e.target!==entry||!['Enter',' '].includes(e.key))return;
+  e.preventDefault();
+  if(compactFileScreen.matches&&e.key===' ')fileSelectionMode=true;
+  if(fileSelectionMode||e.key===' ')toggleFilePath(entry.dataset.path);
+  else openFileEntry(entry.dataset.path,entry.dataset.dir==='1');
+}
+
+compactFileScreen.addEventListener('change',()=>{
+  if(!compactFileScreen.matches)$('#files-sheet[open]')?.close();
+  if(!$('#file-area'))return;
+  toggleFileSelectionMode(false);
+  document.querySelectorAll('#file-area [data-path]').forEach(entry=>{
+    entry.draggable=!compactFileScreen.matches&&entry.dataset.readonly!=='1';
+  });
+});
+
 window.fileClick=(e,path,isDir)=>{
   e.preventDefault();
+  if(compactFileScreen.matches){
+    if(fileLongPressPath===path){fileLongPressPath=null;return;}
+    if(fileSelectionMode)toggleFilePath(path);
+    else if(e.detail<=1)openFileEntry(path,isDir);
+    return;
+  }
   if(e.shiftKey&&lastSelectedPath&&fileSelectionOrder.includes(lastSelectedPath)){
     if(!(e.ctrlKey||e.metaKey)) selectedFiles.clear();
     const a=fileSelectionOrder.indexOf(lastSelectedPath), b=fileSelectionOrder.indexOf(path);
@@ -10947,10 +11261,10 @@ window.fileClick=(e,path,isDir)=>{
   }
   updateFileSelectionUI();
 };
-window.fileDblClick=(path,isDir)=>{
+function openFileEntry(path,isDir){
   selectedFiles.clear(); updateBulkBar();
   if(isDir) navTo(path); else openFile(path);
-};
+}
 
 function updateBulkBar(){
   const actions=$('#files-selection-actions');
@@ -10958,22 +11272,28 @@ function updateBulkBar(){
   const count=selectedFiles.size;
   actions.classList.toggle('active',count>0);
   if(!count){actions.innerHTML='';return;}
+  const singleFile=count===1&&!fileEntryMeta.get([...selectedFiles][0])?.is_dir;
   actions.innerHTML=`
-    <span class="sb-selected">${count} ${esc(fileText('selected'))}</span>
-    ${count===1?`<button class="btn ghost sm" onclick="createShareLink([...selectedFiles][0])" title="${esc(fileText('share'))}" aria-label="${esc(fileText('share'))}">↗</button>`:''}
+    <span class="sb-selected">${esc(fileText('selectionCount',count))}</span>
+    ${count===1?`<button class="files-desktop btn ghost sm" onclick="createShareLink([...selectedFiles][0])" title="${esc(fileText('share'))}" aria-label="${esc(fileText('share'))}">🔗</button>`:''}
     <button class="btn ghost sm" onclick="bulkCopy()" title="${esc(fileText('copy'))}" aria-label="${esc(fileText('copy'))}">⧉</button>
-    <button class="btn ghost sm" onclick="bulkCut()" title="${esc(fileText('cut'))}" aria-label="${esc(fileText('cut'))}">✂</button>
-    ${clipboard?`<button class="btn ghost sm" onclick="pasteClipboard()" title="${esc(fileText('paste'))}" aria-label="${esc(fileText('paste'))}">▣</button>`:''}
-    <button class="btn ghost sm" onclick="bulkDownload()" title="${esc(fileText('download'))}" aria-label="${esc(fileText('download'))}">↓</button>
-    <button class="btn ghost sm wide" onclick="bulkZip()" title="${esc(fileText('zip'))}" aria-label="${esc(fileText('zip'))}">ZIP</button>
-    <button class="btn danger sm" onclick="bulkDelete()" title="${esc(fileText('delete'))}" aria-label="${esc(fileText('delete'))}">🗑</button>
-    <button class="btn ghost sm" onclick="selectedFiles.clear();lastSelectedPath=null;updateFileSelectionUI()" title="${esc(uiText('Cancel'))}" aria-label="${esc(uiText('Cancel'))}">✕</button>`;
+    <button class="files-desktop btn ghost sm" onclick="bulkCut()" title="${esc(fileText('cut'))}" aria-label="${esc(fileText('cut'))}">✂</button>
+    ${clipboard?`<button class="files-desktop btn ghost sm" onclick="pasteClipboard()" title="${esc(fileText('paste'))}" aria-label="${esc(fileText('paste'))}">▣</button>`:''}
+    ${singleFile?`<button class="btn ghost sm" onclick="bulkDownload()" title="${esc(fileText('download'))}" aria-label="${esc(fileText('download'))}">↓</button>`:`<button class="btn ghost sm wide" onclick="bulkZip()" title="${esc(fileText('createZip'))}" aria-label="${esc(fileText('createZip'))}">ZIP</button>`}
+    ${singleFile?`<button class="files-desktop btn ghost sm wide" onclick="bulkZip()" title="${esc(fileText('createZip'))}" aria-label="${esc(fileText('createZip'))}">ZIP</button>`:''}
+    <button class="files-desktop btn danger sm" onclick="bulkDelete()" title="${esc(fileText('delete'))}" aria-label="${esc(fileText('delete'))}">🗑</button>
+    <button class="files-desktop btn ghost sm" onclick="toggleFileSelectionMode(false)" title="${esc(uiText('Cancel'))}" aria-label="${esc(uiText('Cancel'))}">✕</button>
+    <button class="files-tool files-mobile files-more-btn" aria-haspopup="dialog" aria-label="${esc(fileText('moreActions'))}" title="${esc(fileText('moreActions'))}" onclick="showFileSheet('selection')">•••</button>`;
 }
 
-window.navTo=p=>{currentPath=p;selectedFiles.clear();lastSelectedPath=null;closeCtx();renderFiles($('#modal-body'));};
+window.navTo=async path=>{
+  try{await renderFiles($('#modal-body'),path);}
+  catch(error){if(currentTile?.id==='files')toast(error.message,'error');}
+};
 
 // Datei öffnen / Vorschau
 window.openFile=async path=>{
+  const version=++fileRenderVersion;
   const ext=path.split('.').pop().toLowerCase();
   const body=$('#modal-body');
   if(['jpg','jpeg','png','gif','webp','svg','bmp'].includes(ext)){
@@ -10991,38 +11311,58 @@ window.openFile=async path=>{
   // Text / Markdown
   try{
     const d=await api('/files/read?path='+encodeURIComponent(path));
+    if(version!==fileRenderVersion||currentTile?.id!=='files')return;
     const isMd=/\.(md|markdown)$/i.test(path);
+    const filename=esc(path.split('/').pop());
+    const editor=`<textarea id="md-edit" aria-label="${filename}" translate="no" ${d.readonly?'readonly':''}>${esc(d.content)}</textarea>`;
+    body.innerHTML=`<div class="file-editor">
+      <div class="toolbar">
+        <button class="btn ghost sm" onclick="renderFiles($('#modal-body'))">← ${esc(uiText('Back'))}</button>
+        ${d.readonly?'':`<button class="btn sm" id="file-save">${esc(uiText('Save'))}</button>`}
+      </div>
+      <strong class="file-editor-name" translate="no">${filename}</strong>
+      ${isMd?`<div class="md-split">${editor}<div class="md-preview" id="md-prev" translate="no"></div></div>`:editor}
+    </div>`;
+    const save=body.querySelector('#file-save');
+    if(save)save.onclick=()=>saveFile(path);
     if(isMd){
-      body.innerHTML=`<div class="toolbar"><button class="btn sm" onclick="saveFile('${esc(path)}')">💾 ${esc(uiText('Save'))}</button><button class="btn ghost sm" onclick="renderFiles($('#modal-body'))">← ${esc(uiText('Back'))}</button></div><div class="md-split"><textarea id="md-edit" oninput="updatePreview()">${esc(d.content)}</textarea><div class="md-preview" id="md-prev"></div></div>`;
+      body.querySelector('#md-edit').oninput=updatePreview;
       updatePreview();
-    } else {
-      body.innerHTML=`<div class="toolbar"><button class="btn sm" onclick="saveFile('${esc(path)}')">💾 ${esc(uiText('Save'))}</button><button class="btn ghost sm" onclick="renderFiles($('#modal-body'))">← ${esc(uiText('Back'))}</button></div><textarea id="md-edit" style="width:100%;height:calc(100% - 60px);font-family:'JetBrains Mono',monospace">${esc(d.content)}</textarea>`;
     }
   }catch(e){ toast(uiText('File not readable: ')+e.message,'error'); }
 };
 window.updatePreview=()=>{const p=$('#md-prev');if(p)p.innerHTML=marked.parse($('#md-edit').value);};
-window.saveFile=async path=>{await post('/files/write',{path,content:$('#md-edit').value});toast(uiText('Saved'));};
+window.saveFile=async path=>{
+  try{
+    await post('/files/write',{path,content:$('#md-edit').value});
+    toast(uiText('Saved'));
+  }catch(e){toast(e.message,'error');}
+};
 
 // Suche
-let searchTimeout;
-window.fileSearch=q=>{
-  clearTimeout(searchTimeout);
-  if(!q){renderFiles($('#modal-body'));return;}
-  searchTimeout=setTimeout(async()=>{
-    const r=await api('/files/search?base='+encodeURIComponent(currentPath)+'&q='+encodeURIComponent(q));
-    const area=$('#file-area'); if(!area) return;
-    if(viewMode==='grid'){
-      area.innerHTML=r.results.map(e=>{const fi=fileIcon(e);return`<div class="file-card" ondblclick="fileDblClick('${esc(e.path)}',${e.is_dir})"><div class="fi ${fi.cls}">${fi.icon}</div><div class="fn">${esc(e.name)}</div></div>`;}).join('');
-    }else{
-      const body=area.querySelector('tbody');
-      if(body)body.innerHTML=r.results.map(e=>{const fi=fileIcon(e);return`
-        <tr data-path="${esc(e.path)}" ondblclick="fileDblClick('${esc(e.path)}',${e.is_dir})" onclick="fileClick(event,'${esc(e.path)}',${e.is_dir})">
-          <td><div class="fi ${fi.cls}" style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px">${fi.icon}</div></td>
-          <td class="${fi.ncls}">${esc(e.name)}<div class="mono" style="font-size:10px;color:var(--text3);margin-top:2px">${esc(e.path)}</div></td>
-          <td style="color:var(--text3);text-align:right">—</td>
-          <td style="color:var(--text3)">—</td>
-        </tr>`;}).join('');
-    }
+window.fileSearch=query=>{
+  clearTimeout(fileSearchTimer);
+  fileSearchQuery=query;
+  const base=currentPath, input=$('#files-search');
+  const current=()=>query===fileSearchQuery&&base===currentPath&&input===$('#files-search');
+  const display=items=>{
+    const area=$('#file-area');
+    if(!current()||!area)return;
+    const entries=prepareFileEntries(items), grid=area.tagName!=='TABLE';
+    (grid?area:area.tBodies[0]).innerHTML=renderFileEntries(entries,grid,!!query);
+    const folders=entries.filter(e=>e.is_dir).length;
+    const folderCount=$('[data-file-count="folders"]'), fileCount=$('[data-file-count="files"]'), total=$('[data-file-count="size"]');
+    if(folderCount)folderCount.textContent=fileCountText(folders,true);
+    if(fileCount)fileCount.textContent=fileCountText(entries.length-folders,false);
+    if(total)total.textContent=fmtBytes(entries.reduce((sum,e)=>sum+(e.is_dir?0:e.size||0),0));
+    updateFileSelectionUI();
+  };
+  if(!query){display(fileDirectoryEntries);return;}
+  fileSearchTimer=setTimeout(async()=>{
+    try{
+      const data=await api('/files/search?base='+encodeURIComponent(base)+'&q='+encodeURIComponent(query));
+      display(data.results);
+    }catch(error){if(current())toast(error.message,'error');}
   },300);
 };
 
@@ -11054,7 +11394,14 @@ window.uploadFiles=async inp=>{
   try{await uploadFileList(files,currentPath);}
   finally{inp.value='';}
 };
-window.downloadFile=path=>window.open('/api/files/download?path='+encodeURIComponent(path),'_blank');
+window.downloadFile=path=>{
+  const link=document.createElement('a');
+  link.href='/api/files/download?path='+encodeURIComponent(path);
+  link.download=path.split('/').pop();
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+};
 
 // Umbenennen
 window.renameForm=path=>openForm(uiText('Rename'),'✎',[{name:'new_name',label:uiText('New name'),value:path.split('/').pop()}],async d=>{try{await post('/files/rename',{path,new_name:d.new_name});closeForm();toast('Renamed');renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
@@ -11064,8 +11411,17 @@ function selectedOrPath(path){
   if(path&&!selectedFiles.has(path)) return [path];
   return selectedFiles.size?[...selectedFiles]:(path?[path]:[]);
 }
-window.copyToClipboard=path=>{const paths=selectedOrPath(path);if(!paths.length)return;clipboard={paths,action:'copy'};toast(paths.length>1?fileText('copiedMany',paths.length):'Kopiert: '+paths[0].split('/').pop());renderFiles($('#modal-body'));};
-window.cutToClipboard=path=>{const paths=selectedOrPath(path);if(!paths.length)return;clipboard={paths,action:'cut'};toast(paths.length>1?fileText('cutMany',paths.length):'Ausgeschnitten: '+paths[0].split('/').pop());renderFiles($('#modal-body'));};
+function setFileClipboard(path,action){
+  const paths=selectedOrPath(path);
+  if(!paths.length)return;
+  clipboard={paths,action};
+  const copying=action==='copy';
+  toast(paths.length>1?fileText(copying?'copiedMany':'cutMany',paths.length):fileText(copying?'copiedItem':'cutItem',paths[0].split('/').pop()));
+  if(compactFileScreen.matches)toggleFileSelectionMode(false);
+  else updateBulkBar();
+}
+window.copyToClipboard=path=>setFileClipboard(path,'copy');
+window.cutToClipboard=path=>setFileClipboard(path,'cut');
 window.bulkCopy=()=>copyToClipboard();
 window.bulkCut=()=>cutToClipboard();
 window.pasteClipboard=async()=>{
@@ -11164,7 +11520,7 @@ window.mountSmbForm=()=>openForm(uiText('Connect SMB'),'🔗',[
   {name:'mountpoint',label:uiText('Mountpoint'),placeholder:'/mnt/nas',picker:{purpose:'mountpoint',mode:'folder'}},
   {name:'username',label:uiText('Username'),value:'guest'},
   {name:'password',label:uiText('Password'),type:'password'},
-],async d=>{try{const r=await post('/files/mount-smb',d);if(r&&r.ok===false){toast((r.stderr||r.stdout||'SMB mount failed').slice(0,300),'error');return;}closeForm();toast('SMB share connected');currentPath=(r&&r.mountpoint)||d.mountpoint;renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
+],async d=>{try{const r=await post('/files/mount-smb',d);if(r&&r.ok===false){toast((r.stderr||r.stdout||'SMB mount failed').slice(0,300),'error');return;}closeForm();toast('SMB share connected');await navTo((r&&r.mountpoint)||d.mountpoint);}catch(e){toast(e.message,'error');}});
 
 // Externes NFS mounten
 window.mountNfsForm=()=>openForm(uiText('Connect NFS'),'🔗',[
@@ -11172,7 +11528,7 @@ window.mountNfsForm=()=>openForm(uiText('Connect NFS'),'🔗',[
   {name:'export',label:uiText('Export path'),placeholder:'/srv/nfs/media',picker:{purpose:'nfs-export',mode:'remote',serverField:'server'}},
   {name:'mountpoint',label:uiText('Mountpoint'),placeholder:'/mnt/nfs',picker:{purpose:'mountpoint',mode:'folder'}},
   {name:'options',label:uiText('Options (optional)'),placeholder:'ro,soft',hint:uiText('Comma-separated mount options')},
-],async d=>{try{const r=await post('/files/mount-nfs',d);if(r&&r.ok===false){toast((r.stderr||r.stdout||'NFS mount failed').slice(0,300),'error');return;}closeForm();toast('NFS share connected');currentPath=(r&&r.mountpoint)||d.mountpoint;renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
+],async d=>{try{const r=await post('/files/mount-nfs',d);if(r&&r.ok===false){toast((r.stderr||r.stdout||'NFS mount failed').slice(0,300),'error');return;}closeForm();toast('NFS share connected');await navTo((r&&r.mountpoint)||d.mountpoint);}catch(e){toast(e.message,'error');}});
 
 // Eigenschaften
 window.showProps=async path=>{
@@ -11187,35 +11543,41 @@ window.showProps=async path=>{
 
 // Papierkorb
 async function renderTrash(body){
+  const version=++fileRenderVersion;
   const {items}=await api('/files/trash');
+  if(version!==fileRenderVersion||currentTile?.id!=='files')return;
+  currentPath='__trash__';
+  clearTimeout(fileSearchTimer);
+  fileSearchQuery='';
+  toggleFileSelectionMode(false);
   body.innerHTML=`
   <div class="files-layout">
-    <div class="files-sidebar">
-      ${QUICKLINKS.map(q=>`<div class="files-quicklink${currentPath===q.path?' active':''}" onclick="navTo('${esc(q.path)}')">${q.label}</div>`).join('')}
-    </div>
-    <div class="files-main">
+    <aside class="files-sidebar">${filePlaceLinks()}</aside>
+    <div class="files-main files-trash">
+      <div class="files-pathbar files-mobile">${filePlacesButton()}<strong>${esc(fileText('trash'))}</strong></div>
       ${items.length?`<div class="toolbar">
         <button class="btn danger sm" onclick="emptyTrash()">🗑 ${esc(uiText('Empty trash'))}</button>
       </div>`:''}
-      <table><thead><tr><th>Name</th><th>Original-Pfad</th><th>Deleted</th><th></th></tr></thead><tbody>
+      <div class="files-scroll"><table><thead><tr><th>${esc(fileText('name'))}</th><th>${esc(fileText('originalPath'))}</th><th>${esc(fileText('deletedOn'))}</th><th></th></tr></thead><tbody>
       ${items.length?items.map(i=>`<tr>
-        <td><span style="display:inline-flex;align-items:center;gap:8px"><span class="fi ${i.is_dir?'fi-folder':'fi-doc'}" style="width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px">${i.is_dir?'📁':'📄'}</span> ${esc(i.name)}</span></td>
-        <td class="mono" style="font-size:11px;color:var(--text3)">${esc(i.original)}</td>
+        <td><span style="display:inline-flex;align-items:center;gap:8px"><span class="fi ${i.is_dir?'fi-folder':'fi-doc'}" style="width:24px;height:24px;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;font-size:12px">${i.is_dir?'📁':'📄'}</span> <span translate="no">${esc(i.name)}</span></span></td>
+        <td class="mono" style="font-size:11px;color:var(--text3)" translate="no">${esc(i.original)}</td>
         <td style="color:var(--text3)">${new Date(i.deleted*1000).toLocaleDateString(localeCode())}</td>
-        <td><button class="btn sm ghost" onclick="restoreTrash('${i.id}','${esc(i.name)}')">↩ ${esc(uiText('Restore'))}</button></td>
+        <td><button class="btn sm ghost" data-id="${esc(i.id)}" data-name="${esc(i.name)}" onclick="restoreTrash(this.dataset.id,this.dataset.name)">↩ ${esc(uiText('Restore'))}</button></td>
       </tr>`).join(''):`<tr><td colspan="4" class="loading">${esc(uiText('Trash is empty'))}</td></tr>`}
-      </tbody></table>
+      </tbody></table></div>
     </div>
+    ${fileSheet()}
   </div>`;
 }
 window.emptyTrash=()=>confirmDelete(uiText('Empty trash'),fileText('emptyTrashConfirm'),async()=>{
   try{
     await post('/files/trash/empty',{trash:'trash'});
-    toast('Trash emptied');
-    renderTrash($('#modal-body'));
+    toast(uiText('Trash emptied'));
+    if(currentTile?.id==='files'&&currentPath==='__trash__')renderTrash($('#modal-body'));
   }catch(e){toast(e.message,'error');}
 });
-window.restoreTrash=async(id,name)=>{try{await post('/files/trash/restore',{item_id:id});toast(name+' wiederhergestellt');renderTrash($('#modal-body'));}catch(e){toast(e.message,'error');}};
+window.restoreTrash=async(id,name)=>{try{await post('/files/trash/restore',{item_id:id});toast(fileText('restored',name));if(currentTile?.id==='files'&&currentPath==='__trash__')renderTrash($('#modal-body'));}catch(e){toast(e.message,'error');}};
 
 
 
@@ -16838,7 +17200,6 @@ function nxDecorateSearch(root){
 (()=>{
   nxDecorateSearch(document);
   if(!window.MutationObserver)return;
-  const TEXT_SKIP='input,textarea,script,style,.xterm,.logbox,.mono';
   const queue=new Set();
   let scheduled=false;
   const flush=()=>{
@@ -16850,7 +17211,7 @@ function nxDecorateSearch(root){
         nxDecorateSearch(n);
         translateRenderedText(n);
       }else if(n.nodeType===3){
-        if(n.parentElement&&n.parentElement.closest(TEXT_SKIP))return;
+        if(n.parentElement&&n.parentElement.closest(renderedTextSkip))return;
         const raw=n.nodeValue,trimmed=raw.trim();
         if(!trimmed)return;
         const t=phrase(trimmed);

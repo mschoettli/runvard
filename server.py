@@ -386,6 +386,8 @@ def _danger_confirm_meta(path, form):
         return ("docker:network-prune", "Docker")
     if path == "/api/files/job":
         if _form_value(form, "action") == "delete":
+            if form.get("paths_json"):
+                return ("files:delete-selection", _form_value(form, "paths_json"))
             return ("files:delete", _form_value(form, "paths"))
         return None
     if path == "/api/docker/compose/action":
@@ -1051,9 +1053,23 @@ def files_search(base: str, q: str, user: str = Depends(auth)):
     try: return {"results": files.search(base, q)}
     except Exception as e: raise HTTPException(400, str(e))
 
+def _file_selection(paths: str = Form(""), paths_json: str = Form("")):
+    """Read structured selections or the original pipe-separated form field."""
+    if paths and not paths_json:
+        return paths.split("|")
+    if paths_json and not paths:
+        try:
+            selected = json.loads(paths_json)
+        except ValueError:
+            raise HTTPException(422) from None
+        if isinstance(selected, list) and selected and all(isinstance(p, str) and p for p in selected):
+            return selected
+    raise HTTPException(422)
+
+
 @app.post("/api/files/zip")
-def files_zip(paths: str = Form(...), output: str = Form(...), user: str = Depends(auth)):
-    try: return files.make_zip(paths.split("|"), output)
+def files_zip(output: str = Form(...), user: str = Depends(auth), paths: list[str] = Depends(_file_selection)):
+    try: return files.make_zip(paths, output)
     except Exception as e: raise HTTPException(400, str(e))
 
 @app.post("/api/files/unzip")
@@ -1062,11 +1078,11 @@ def files_unzip(path: str = Form(...), dst_dir: str = Form(...), user: str = Dep
     except Exception as e: raise HTTPException(400, str(e))
 
 @app.post("/api/files/job")
-def files_job(action: str = Form(...), paths: str = Form(...),
+def files_job(action: str = Form(...), paths: list[str] = Depends(_file_selection),
     dst_dir: str = Form(""), output: str = Form(""),
     user: str = Depends(confirmed_auth)):
     try:
-        return files.start_job(action, paths.split("|"), dst_dir, output)
+        return files.start_job(action, paths, dst_dir, output)
     except Exception as e:
         raise HTTPException(400, str(e))
 

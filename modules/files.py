@@ -33,6 +33,16 @@ def _unique_dst(dst):
             return cand
     raise FileExistsError(dst)
 
+def _entry(full, st):
+    mime, _ = mimetypes.guess_type(full)
+    return {
+        "name": os.path.basename(full), "path": full,
+        "is_dir": stat.S_ISDIR(st.st_mode),
+        "size": st.st_size, "modified": st.st_mtime,
+        "mode": stat.filemode(st.st_mode), "mime": mime or "",
+        "readonly": _ro(full), "blocked": _bl(full),
+    }
+
 def list_dir(path):
     path = _r(path or "/")
     if _bl(path): raise PermissionError("Gesperrt")
@@ -43,17 +53,9 @@ def list_dir(path):
     with os.scandir(path) as it:
         for e in it:
             try:
-                st = e.stat(follow_symlinks=False)
-                full = os.path.join(path, e.name)
-                mime, _ = mimetypes.guess_type(full)
-                entries.append({
-                    "name": e.name, "path": full,
-                    "is_dir": e.is_dir(follow_symlinks=False),
-                    "size": st.st_size, "modified": st.st_mtime,
-                    "mode": stat.filemode(st.st_mode), "mime": mime or "",
-                    "readonly": _ro(full), "blocked": _bl(full),
-                })
-            except: continue
+                entries.append(_entry(e.path, e.stat(follow_symlinks=False)))
+            except OSError:
+                continue
     entries.sort(key=lambda e: (not e["is_dir"], e["name"].lower()))
     return {"path": path, "parent": os.path.dirname(path), "entries": entries}
 
@@ -113,29 +115,43 @@ def search(base, query, max_results=200):
         for name in dirs + files:
             if q in name.lower():
                 full = os.path.join(root, name)
-                results.append({"name": name, "path": full, "is_dir": os.path.isdir(full)})
+                try:
+                    entry = _entry(full, os.lstat(full))
+                except OSError:
+                    continue
+                if entry["blocked"]:
+                    continue
+                results.append(entry)
                 if len(results) >= max_results: return results
     return results
 
 # ── ZIP ──
 def make_zip(paths, output_path):
     output_path = _r(output_path); _ok(os.path.dirname(output_path))
-    paths = [_r(p) for p in paths]
+    paths = list(dict.fromkeys(_r(p) for p in paths))
     for p in paths:
         if _bl(p): raise PermissionError("Gesperrt")
+    selected = set(paths)
+    if output_path in selected:
+        raise ValueError(output_path)
+    sources = [p for p in paths if not any(str(parent) in selected for parent in Path(p).parents)]
+    archive_root = os.path.commonpath([os.path.dirname(p) for p in sources])
     with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        for p in paths:
+        for p in sources:
             if os.path.isdir(p):
                 for root, dirs, files in os.walk(p):
                     if _bl(root):
                         dirs.clear()
                         continue
                     dirs[:] = [d for d in dirs if not _bl(os.path.join(root, d))]
+                    files = [f for f in files if _r(os.path.join(root, f)) != output_path]
+                    if not dirs and not files:
+                        zf.write(root, os.path.relpath(root, archive_root))
                     for f in files:
                         full = os.path.join(root, f)
-                        zf.write(full, os.path.relpath(full, os.path.dirname(p)))
+                        zf.write(full, os.path.relpath(full, archive_root))
             else:
-                zf.write(p, os.path.basename(p))
+                zf.write(p, os.path.relpath(p, archive_root))
     return {"ok": True, "path": output_path}
 
 def extract_zip(path, dst_dir):

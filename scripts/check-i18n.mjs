@@ -285,6 +285,12 @@ requireExpectedTranslations("FILE_I18N.de", localizedMap(context.FILE_I18N, "de"
   working: "Wird verarbeitet…",
   jobStarted: "Vorgang gestartet",
 });
+requireExpectedTranslations("FILE_I18N.trash", context.FILE_I18N.trash, {
+  de: "Papierkorb", en: "Trash", fr: "Corbeille", it: "Cestino", es: "Papelera", pt: "Lixo",
+});
+for (const [, key] of indexSource.matchAll(/\bfileText\(['"]([^'"]+)['"]/g)) {
+  if (!context.FILE_I18N[key]) failures.push(`fileText references missing key: ${key}`);
+}
 requireExpectedTranslations("APP_UI.de", localizedMap(context.APP_UI, "de"), {
   installedFirst: "Installierte Apps zuerst",
   starting: "Wird gestartet…",
