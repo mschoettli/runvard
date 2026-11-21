@@ -355,6 +355,16 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 .files-pathbar button.bc-seg{font-size:11px}
 .files-pathbar .bc-seg.current{cursor:default}
 .files-empty{grid-column:1/-1;text-align:center;color:var(--text2);padding:2rem .75rem;font-size:.875rem}
+.file-drive-links:empty,.files-layout.only-drive-links #file-area,.files-layout.only-drive-links .files-statusbar{display:none}
+.only-drive-links .file-drive-links{margin-top:0}
+.file-drive-links{margin-top:.75rem}
+.file-drive-links h3{font-size:.8125rem;color:var(--text2);margin:0 0 .375rem}
+.file-drive-list{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,13rem),1fr));gap:.375rem}
+.file-drive-link{display:flex;align-items:center;gap:.625rem;min-width:0;min-height:44px;padding:.5rem .625rem;border:1px solid var(--border);border-radius:.625rem;background:var(--glass);color:var(--text);text-align:left;cursor:pointer}
+.file-drive-link:hover,.file-drive-link:focus-visible{background:var(--glass-hover)}
+.file-drive-text{display:grid;min-width:0;gap:.125rem;overflow-wrap:anywhere}
+.file-drive-text small,.file-mount-info{font-size:.75rem;font-weight:400;color:var(--text2);overflow-wrap:anywhere}
+.file-mount-info{display:block}
 .file-result-path{font-size:.75rem;color:var(--text2);overflow-wrap:anywhere}
 .files-sidebar{display:flex;flex-direction:column;gap:2px;padding:0 10px 0 0;border-right:.5px solid var(--border);overflow-y:auto}
 .files-sb-label{font-size:9px;color:var(--text3);text-transform:uppercase;letter-spacing:.08em;padding:0 8px;margin:0 0 4px}
@@ -995,7 +1005,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   .files-sheet-item,.files-sheet .files-quicklink{cursor:pointer}
   .files-sheet-item:hover,.files-sheet .files-quicklink:hover,.files-sheet .files-quicklink.active{background:var(--glass-hover);color:var(--accent-light)}
   .files-sheet-item.danger{color:var(--red)}
-  .files-sheet-item>span,.files-sheet .files-quicklink>span{display:inline-grid;place-items:center;flex:0 0 1.5rem;font-size:1.0625rem;font-weight:600}
+  .files-sheet-item>span,.files-sheet .files-quicklink>span[aria-hidden]{display:inline-grid;place-items:center;flex:0 0 1.5rem;font-size:1.0625rem;font-weight:600}
   .files-sheet-divider{height:1px;background:var(--border);margin:.375rem 0}
   .files-sheet-sort{align-items:center;justify-content:space-between;gap:.625rem}
   .files-sheet-sort select{width:auto;max-width:55%;min-height:2.75rem}
@@ -10396,6 +10406,8 @@ const compactFileScreen=window.matchMedia('(max-width: 760px)');
 let currentPath='/root', clipboard=null, viewMode=compactFileScreen.matches?'list':'grid', sortBy='name', sortDir='asc', selectedFiles=new Set(), fileSelectionOrder=[], fileEntryMeta=new Map(), lastSelectedPath=null, watchedFileJob=null, filesHotkeysReady=false, filesGlobalDropReady=false, fileDragPayload=null, fileExternalDragDepth=0;
 const FILE_I18N={
   places:{de:'Orte',en:'Places',fr:'Emplacements',it:'Posizioni',es:'Ubicaciones',pt:'Localizações'},
+  mountedDrives:{de:'Eingebundene Laufwerke',en:'Mounted drives',fr:'Volumes montés',it:'Unità montate',es:'Unidades montadas',pt:'Unidades montadas'},
+  otherDriveLocations:{de:'Weitere Laufwerksorte',en:'Other drive locations',fr:'Autres emplacements de volumes',it:'Altri percorsi delle unità',es:'Otras ubicaciones de unidades',pt:'Outras localizações de unidades'},
   networkLocations:{de:'Netzwerk',en:'Network',fr:'Réseau',it:'Rete',es:'Red',pt:'Rede'},
   homeFolder:{de:'Persönlicher Ordner',en:'Home',fr:'Dossier personnel',it:'Cartella personale',es:'Carpeta personal',pt:'Pasta pessoal'},
   vmImages:{de:'VM-Images',en:'VM images',fr:'Images de VM',it:'Immagini VM',es:'Imágenes de VM',pt:'Imagens de VM'},
@@ -10531,6 +10543,28 @@ function sortMark(key){return sortBy===key?(sortDir==='asc'?' ↑':' ↓'):'';}
 let fileSelectionMode=false;
 let fileLongPressPath=null;
 let fileDirectoryEntries=[];
+let fileMounts=[];
+let checkingFileMounts=false;
+
+function driveLocationLinks(mounts,sidebar=false){
+  const drives=mounts.filter(m=>m.type==='local');
+  // A bind of a subdirectory is another route into the same volume.
+  const roots=new Set(drives.filter(m=>m.root==='/').map(m=>m.device));
+  const seen=new Set();
+  const links=[];
+  for(const m of drives){
+    if(m.root!=='/'&&roots.has(m.device))continue;
+    const identity=JSON.stringify([m.device||m.source,m.root]);
+    if(seen.has(identity))continue;
+    seen.add(identity);
+    if(!sidebar&&fileParentPath(m.mountpoint)===currentPath)continue;
+    links.push(`<button type="button" class="${sidebar?'files-quicklink':'file-drive-link'}" data-path="${esc(m.mountpoint)}" onclick="navTo(this.dataset.path)" translate="no"><span aria-hidden="true">💽</span><span class="file-drive-text"><strong>${esc(m.label)}</strong><small>${esc(m.mountpoint)}</small></span></button>`);
+  }
+  if(!links.length)return '';
+  return sidebar?`<div class="files-sb-label remote">${esc(fileText('mountedDrives'))}</div>${links.join('')}`:
+    `<h3>${esc(fileText(fileDirectoryEntries.some(e=>!e.blocked)?'otherDriveLocations':'mountedDrives'))}</h3><div class="file-drive-list">${links.join('')}</div>`;
+}
+
 let fileSearchQuery='';
 let fileSearchTimer;
 let fileRenderVersion=0;
@@ -10549,7 +10583,10 @@ function renderFileEntries(entries,grid,searching){
     return grid?message:`<tr><td colspan="4">${message}</td></tr>`;
   }
   return entries.map(e=>{
+    const mount=fileMounts.find(m=>m.mountpoint===e.path);
     const fi=fileIcon(e), selected=selectedFiles.has(e.path);
+    if(mount)fi.icon=mount.type==='local'?'💽':'🌐';
+    const mountInfo=mount?`<small class="file-mount-info">${esc([mount.label===e.name?'':mount.label,mount.source].filter(Boolean).join(' · '))}</small>`:'';
     const attrs=`data-path="${esc(e.path)}" data-name="${esc(e.name)}" data-dir="${e.is_dir?'1':'0'}"
       data-readonly="${e.readonly?'1':'0'}" draggable="${!compactFileScreen.matches&&!e.readonly}" tabindex="0"
       onclick="fileClick(event,this.dataset.path,this.dataset.dir==='1')"
@@ -10567,11 +10604,11 @@ function renderFileEntries(entries,grid,searching){
     if(grid){
       return `<div class="file-card${selected?' selected':''}" ${attrs} title="${esc(e.path)}" translate="no">
         ${check}<div class="fi ${fi.cls}" aria-hidden="true">${fi.icon}</div>
-        <div class="fn">${esc(e.name)}</div></div>`;
+        <div class="fn">${esc(e.name)}</div>${mountInfo}</div>`;
     }
     return `<tr class="${selected?'sel-row':''}" ${attrs} translate="no">
       <td>${check}<div class="fi ${fi.cls}" aria-hidden="true" style="width:24px;height:24px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-size:12px">${fi.icon}</div></td>
-      <td class="${fi.ncls}">${esc(e.name)}${searching?`<div class="mono file-result-path">${esc(e.path)}</div>`:''}</td>
+      <td class="${fi.ncls}">${esc(e.name)}${mountInfo}${searching?`<div class="mono file-result-path">${esc(e.path)}</div>`:''}</td>
       <td style="color:var(--text3);text-align:right;font-size:11px">${e.is_dir||e.size==null?'—':fmtBytes(e.size)}</td>
       <td style="color:var(--text3);font-size:11px">${e.modified==null?'—':new Date(e.modified*1000).toLocaleDateString(localeCode())}</td>
     </tr>`;
@@ -10589,12 +10626,13 @@ function fileCountText(count,isDir){
   return count+' '+fileText(key);
 }
 
-function filePlaceLinks(mounts){
+function filePlaceLinks(mounts=fileMounts){
   const link=(path,label,icon,title='')=>`<button type="button" class="files-quicklink${currentPath===path?' active':''}" data-path="${esc(path)}" onclick="navTo(this.dataset.path)" translate="no" title="${esc(title||label)}"${currentPath===path?' aria-current="location"':''}><span aria-hidden="true">${icon}</span> ${esc(label)}</button>`;
   return `<div class="files-sb-label">${esc(uiText('Quick access'))}</div>
     ${QUICKLINKS.map(q=>link(q.path,q.key?fileText(q.key):q.label||q.path,q.icon)).join('')}
+    ${driveLocationLinks(mounts,true)}
     ${mounts?`<div class="files-sb-label remote">${esc(fileText('networkLocations'))}</div>
-      ${mounts.map(m=>link(m.mountpoint,m.label,m.type==='SMB'?'🌐':'📡',m.source)).join('')}
+      ${mounts.filter(m=>m.type!=='local').map(m=>link(m.mountpoint,m.label,m.type==='SMB'?'🌐':'📡',m.source)).join('')}
       <button class="files-quicklink" onclick="mountSmbForm()">🔗 ${esc(uiText('Connect SMB'))}</button>
       <button class="files-quicklink" onclick="mountNfsForm()">🔗 ${esc(uiText('Connect NFS'))}</button>`:''}`;
 }
@@ -10605,6 +10643,7 @@ function showFileSheet(kind){
   const places=kind==='places', selected=kind==='selection';
   const title=fileText(places?'places':'moreActions');
   let content;
+  dialog.dataset.kind=kind;
   if(places){
     content=dialog.parentElement.querySelector('.files-sidebar').innerHTML;
   }else{
@@ -10664,7 +10703,7 @@ async function renderFiles(body,requestedPath=currentPath){
   const query=navigating?'':fileSearchQuery;
   const [data,mountData,searchData]=await Promise.all([
     api('/files/list?path='+encodeURIComponent(requestedPath)),
-    api('/files/mounts').catch(()=>({mounts:[]})),
+    api('/files/mounts').catch(()=>({mounts:fileMounts})),
     query?api('/files/search?base='+encodeURIComponent(requestedPath)+'&q='+encodeURIComponent(query)):null
   ]);
   if(version!==fileRenderVersion||currentTile?.id!=='files')return;
@@ -10676,7 +10715,7 @@ async function renderFiles(body,requestedPath=currentPath){
   currentPath=data.path;
   fileDirectoryEntries=data.entries;
   const entries=prepareFileEntries(searchData?searchData.results:fileDirectoryEntries);
-  const remoteMounts=(mountData.mounts||[]);
+  fileMounts=mountData.mounts||[];
   const pathParts=data.path.split('/').filter(Boolean);
   const bcHtml=pathParts.map((p,i)=>{
     const full='/'+pathParts.slice(0,i+1).join('/');
@@ -10685,7 +10724,7 @@ async function renderFiles(body,requestedPath=currentPath){
   }).join('');
   body.innerHTML=`
   <div class="files-layout">
-    <aside class="files-sidebar">${filePlaceLinks(remoteMounts)}</aside>
+    <aside class="files-sidebar">${filePlaceLinks()}</aside>
     <div class="files-main">
       <div class="files-pathbar">
         ${filePlacesButton()}
@@ -10723,6 +10762,7 @@ async function renderFiles(body,requestedPath=currentPath){
         <thead><tr><th style="width:32px"></th><th class="sortable-th" onclick="setFileSort('name')">${esc(fileText('name'))}${sortMark('name')}</th><th class="sortable-th" onclick="setFileSort('size')" style="width:70px;text-align:right">${esc(fileText('size'))}${sortMark('size')}</th><th class="sortable-th" onclick="setFileSort('date')" style="width:90px">${esc(fileText('date'))}${sortMark('date')}</th></tr></thead>
         <tbody>${renderFileEntries(entries,false,!!query)}</tbody>
       </table>`}
+      ${['/media','/mnt'].includes(currentPath)?'<section class="file-drive-links"></section>':''}
       </div>
       <div class="files-statusbar">
         <div class="sb-item" data-file-count="folders">${esc(fileCountText(entries.filter(e=>e.is_dir).length,true))}</div>
@@ -10738,11 +10778,52 @@ async function renderFiles(body,requestedPath=currentPath){
   const crumb=body.querySelector('.files-pathbar .breadcrumb');
   crumb.scrollLeft=crumb.scrollWidth;
   $('#files-search').value=fileSearchQuery;
+  updateDriveLocations();
   setupFileInteractions();
   resumeFileJobs();
   updateFileSelectionUI();
   if(query!==fileSearchQuery)fileSearch(fileSearchQuery);
 }
+
+function updateDriveLocations(){
+  const panel=$('.file-drive-links');
+  if(!panel)return;
+  panel.innerHTML=fileSearchQuery?'':driveLocationLinks(fileMounts);
+  const empty=$('#file-area .files-empty');
+  panel.closest('.files-layout').classList.toggle('only-drive-links',!!empty&&!!panel.firstChild);
+}
+
+async function refreshFileMounts(){
+  const sidebar=$('#overlay.open .files-sidebar');
+  if(document.hidden||!sidebar||checkingFileMounts)return;
+  const version=fileRenderVersion;
+  const current=()=>sidebar.isConnected&&currentTile?.id==='files'&&version===fileRenderVersion;
+  checkingFileMounts=true;
+  try{
+    const {mounts}=await api('/files/mounts');
+    if(!current()||JSON.stringify(mounts)===JSON.stringify(fileMounts))return;
+    const lost=fileMounts.find(old=>old.type==='local'&&
+      (currentPath===old.mountpoint||currentPath.startsWith(old.mountpoint+'/'))&&
+      !mounts.some(m=>m.mountpoint===old.mountpoint&&m.mount_id===old.mount_id));
+    if(lost){
+      await navTo('/media');
+      return;
+    }
+    const data=currentPath==='__trash__'?null:await api('/files/list?path='+encodeURIComponent(currentPath));
+    if(!current())return;
+    fileMounts=mounts;
+    sidebar.innerHTML=filePlaceLinks();
+    const sheet=$('#files-sheet[open][data-kind="places"] .files-sheet-body');
+    if(sheet)sheet.innerHTML=sidebar.innerHTML;
+    if(data){
+      fileDirectoryEntries=data.entries;
+      fileSearch(fileSearchQuery);
+    }
+  }catch{/* Keep the current listing until a successful refresh. */}
+  finally{checkingFileMounts=false;}
+}
+setInterval(refreshFileMounts,5000);
+document.addEventListener('visibilitychange',refreshFileMounts);
 
 function setupFileInteractions(){
   setupFileDropUpload();
@@ -11350,6 +11431,7 @@ window.fileSearch=query=>{
     if(!current()||!area)return;
     const entries=prepareFileEntries(items), grid=area.tagName!=='TABLE';
     (grid?area:area.tBodies[0]).innerHTML=renderFileEntries(entries,grid,!!query);
+    updateDriveLocations();
     const folders=entries.filter(e=>e.is_dir).length;
     const folderCount=$('[data-file-count="folders"]'), fileCount=$('[data-file-count="files"]'), total=$('[data-file-count="size"]');
     if(folderCount)folderCount.textContent=fileCountText(folders,true);

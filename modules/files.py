@@ -1,5 +1,5 @@
 """Dateimanager – komplett neu, sauber, ohne Altlasten."""
-import os, shutil, stat, mimetypes, json, time, uuid, zipfile, subprocess, threading
+import os, re, shutil, stat, mimetypes, json, time, uuid, zipfile, subprocess, threading
 from pathlib import Path
 
 BLOCKED  = {"/proc", "/sys", "/dev", "/run"}
@@ -390,32 +390,81 @@ def delete_share(token):
     s = _load_shares(); s.pop(token, None); _save_shares(s)
     return {"ok": True}
 
-def list_mounts():
-    mounts = []
-    try:
-        with open("/proc/mounts") as f:
-            lines = f.readlines()
-    except Exception:
-        return mounts
+def _mount_field(value):
+    return re.sub(r"\\([0-7]{3})", lambda m: chr(int(m[1], 8)), value)
 
+
+def _disk_labels():
+    labels = {}
+    for link in Path("/dev/disk/by-label").glob("*"):
+        name = re.sub(rb"\\x([0-9a-fA-F]{2})", lambda m: bytes.fromhex(m[1].decode()),
+                      os.fsencode(link.name)).decode("utf-8", "replace")
+        labels[_r(link)] = name
+    return labels
+
+
+def _device_source(number, fallback):
+    # Mount sources may retain a temporary alias from the mounting process.
+    try:
+        fields = Path("/sys/dev/block", number, "uevent").read_text().splitlines()
+    except OSError:
+        return fallback
+    return next(("/dev/" + f[8:] for f in fields if f.startswith("DEVNAME=")), fallback)
+
+
+def _disk_model(source):
+    device = Path("/sys/class/block", os.path.basename(_r(source))).resolve()
+    if (device / "partition").is_file():
+        device = device.parent
+    try:
+        return (device / "device/model").read_text().strip()
+    except OSError:
+        return ""
+
+
+def _parse_mounts(lines, labels):
+    mounts = {}
+    remote_types = {"cifs": "SMB", "smb3": "SMB", "nfs": "NFS", "nfs4": "NFS"}
     for line in lines:
-        parts = line.split()
-        if len(parts) < 3:
+        left, sep, right = line.partition(" - ")
+        fields, fs = left.split(), right.split()
+        if not sep or len(fields) < 6 or len(fs) < 2:
             continue
-        source, mountpoint, fstype = parts[:3]
-        if fstype not in {"cifs", "smb3", "nfs", "nfs4"}:
+        root, target = map(_mount_field, fields[3:5])
+        fstype, source = fs[0], _mount_field(fs[1])
+        # Multiple mounts can cover the same directory. Only the top one is visible.
+        mounts.pop(target, None)
+        kind = remote_types.get(fstype)
+        if not kind:
+            if not source.startswith("/dev/") or fstype in {"squashfs", "devtmpfs"}:
+                continue
+            if target == "/" or target.split("/")[1] in {
+                "boot", "proc", "sys", "dev", "run", "etc", "usr", "lib", "lib64", "snap"
+            }:
+                continue
+            if target.startswith(("/var/lib/docker/", "/var/lib/containers/", "/var/lib/kubelet/")):
+                continue
+            kind = "local"
+        elif target.split("/")[1] in {"proc", "sys", "dev", "run"}:
             continue
-        source = source.replace("\\040", " ")
-        mountpoint = mountpoint.replace("\\040", " ")
-        kind = "SMB" if fstype in {"cifs", "smb3"} else "NFS"
-        label = source.replace("//", "", 1) if kind == "SMB" else source
-        mounts.append({
-            "source": source,
-            "mountpoint": mountpoint,
-            "type": kind,
-            "label": label or mountpoint,
-        })
-    return mounts
+        if kind == "local":
+            source = _device_source(fields[2], source)
+            label = labels.get(_r(source)) or _disk_model(source) or os.path.basename(target)
+        else:
+            label = source.removeprefix("//")
+        mounts[target] = {"mountpoint": target, "source": source, "type": kind,
+                          "label": label, "root": root, "device": fields[2], "fstype": fstype,
+                          "mount_id": fields[0]}
+    return sorted(mounts.values(), key=lambda m: m["mountpoint"])
+
+
+def list_mounts():
+    try:
+        with open("/proc/self/mountinfo", encoding="utf-8", errors="replace") as stream:
+            return _parse_mounts(stream, _disk_labels())
+    except FileNotFoundError:
+        return []
+
 
 # ── Externes SMB mounten ──
 def mount_smb(server, share_name, mountpoint, username="guest", password=""):
