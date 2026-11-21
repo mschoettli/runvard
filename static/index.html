@@ -583,8 +583,12 @@ pre.logbox{background:#0a0810;padding:16px;border-radius:11px;font-family:'JetBr
 input[type=checkbox]{width:16px;height:16px;padding:0;border:0;background:transparent;accent-color:var(--accent);cursor:pointer;flex-shrink:0}
 .empty-state{text-align:center;padding:40px 20px;color:var(--text3);font-size:13px}
 tr.sel-row td{background:rgba(139,92,246,.1);}
-#ctx-menu:empty{display:none!important}
-#ctx-menu div:empty{display:none}
+#ctx-menu{position:fixed;inset:auto;margin:0;width:max-content;min-width:min(170px,calc(100vw - 16px));max-width:calc(100vw - 16px);max-height:calc(100vh - 16px);overflow:auto;overscroll-behavior:contain;padding:6px;border:1px solid var(--border-accent);border-radius:12px;background:var(--bg);color:var(--text);box-shadow:0 12px 40px rgba(0,0,0,.25)}
+#ctx-menu .ctx-title{padding:6px 12px 8px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--text2);font-size:11px}
+#ctx-menu button{display:flex;align-items:center;gap:10px;width:100%;padding:8px 12px;border:0;border-radius:8px;background:transparent;color:inherit;font:inherit;font-size:13px;text-align:start;cursor:pointer}
+#ctx-menu button:hover,#ctx-menu button:focus-visible{background:var(--glass-hover)}
+#ctx-menu button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+#ctx-menu hr{margin:4px 6px;border:0;border-top:1px solid var(--border)}
 #bulk-bar{display:none}
 
 /* ── App-Store ── */
@@ -10774,7 +10778,7 @@ async function renderFiles(body,requestedPath=currentPath){
     </div>
     ${fileSheet()}
   </div>
-  <div id="ctx-menu"></div>`;
+  <div id="ctx-menu" popover="manual" role="group" aria-labelledby="file-ctx-title"></div>`;
   const crumb=body.querySelector('.files-pathbar .breadcrumb');
   crumb.scrollLeft=crumb.scrollWidth;
   $('#files-search').value=fileSearchQuery;
@@ -11043,8 +11047,18 @@ function setupFileMarquee(){
 function setupFilesHotkeys(){
   if(filesHotkeysReady)return;
   filesHotkeysReady=true;
+  window.addEventListener('resize',closeCtx);
+  // WebKit can release the opening right click outside the menu. Dismiss on the next press.
+  document.addEventListener('pointerdown',e=>{
+    const menu=$('#ctx-menu:popover-open');
+    if(menu&&!menu.contains(e.target))closeCtx();
+  },true);
   document.addEventListener('keydown',e=>{
     if(!filesBrowserActive())return;
+    if($('#ctx-menu:popover-open')){
+      if(e.key==='Escape'){e.preventDefault();closeCtx();}
+      return;
+    }
     if(e.target.closest('input,textarea,select'))return;
     if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='a'){
       e.preventDefault();
@@ -11201,6 +11215,28 @@ async function resumeFileJobs(){
 }
 
 // Rechtsklick-Kontextmenü
+function openFileContextMenu(event,title,items){
+  const menu=$('#ctx-menu');
+  menu.innerHTML=`<div class="ctx-title" id="file-ctx-title" translate="no">${esc(title)}</div>`+
+    items.map((item,index)=>item.separator?'<hr>':
+      `<button type="button" data-ctx-index="${index}"><span aria-hidden="true">${item.icon}</span>${esc(item.label)}</button>`).join('');
+  menu.querySelectorAll('button').forEach(button=>{
+    button.onclick=()=>{
+      closeCtx();
+      items[Number(button.dataset.ctxIndex)].fn();
+    };
+  });
+  menu.showPopover();
+  menu.scrollTop=0;
+  const {width,height}=menu.getBoundingClientRect();
+  const viewport=document.documentElement;
+  menu.style.left=Math.max(8,Math.min(event.clientX,viewport.clientWidth-width-8))+'px';
+  menu.style.top=Math.max(8,Math.min(event.clientY,viewport.clientHeight-height-8))+'px';
+  menu.querySelector('button').focus({preventScroll:true});
+}
+
+window.closeCtx=()=>$('#ctx-menu')?.hidePopover();
+
 window.showCtx=(e,path,isDir,readonly)=>{
   e.preventDefault(); e.stopPropagation();
   if(compactFileScreen.matches){
@@ -11211,7 +11247,6 @@ window.showCtx=(e,path,isDir,readonly)=>{
     updateFileSelectionUI();
     return;
   }
-  const old=$('#ctx-menu'); if(old) old.innerHTML='';
   const name=path.split('/').pop();
   if(!selectedFiles.has(path)){
     selectedFiles.clear();
@@ -11228,25 +11263,16 @@ window.showCtx=(e,path,isDir,readonly)=>{
     readonly?null:{icon:'📋',label:multi?fileText('copySelected'):fileText('copy'),fn:()=>bulkCopy()},
     readonly?null:{icon:'✂',label:multi?fileText('cutSelected'):fileText('cut'),fn:()=>bulkCut()},
     clipboard?{icon:'📌',label:fileText('pasteHere'),fn:()=>pasteClipboard()}:null,
-    {icon:'',label:'─',fn:''},
+    {separator:true},
     (!multi&&isDir&&!readonly)?{icon:'🔗',label:fileText('asSambaShare'),fn:()=>sambaShareForm(path,name)}:null,
     !multi?{icon:'🔗',label:fileText('createLink'),fn:()=>createShareLink(path)}:null,
     multi?{icon:'📦',label:fileText('createZip'),fn:()=>bulkZip()}:(isDir&&path.endsWith('.zip')?null:{icon:'📦',label:path.endsWith('.zip')?fileText('unpack'):fileText('createZip'),fn:path.endsWith('.zip')?()=>unzipFile(path) :()=>zipFile(path)}),
-    {icon:'',label:'─',fn:''},
+    {separator:true},
     readonly?null:{icon:'🗑',label:multi?fileText('deleteSelected'):fileText('delete'),fn:multi?()=>bulkDelete():()=>deleteFile(path)},
     !multi?{icon:'ℹ',label:fileText('properties'),fn:()=>showProps(path)}:null,
   ].filter(Boolean);
 
-  const menu=$('#ctx-menu');
-  menu.style.cssText=`position:fixed;top:${Math.min(e.clientY,window.innerHeight-280)}px;left:${Math.min(e.clientX,window.innerWidth-180)}px;background:rgba(15,12,26,.97);border:.5px solid var(--border-accent);border-radius:12px;padding:6px;z-index:999;min-width:170px;box-shadow:0 12px 40px rgba(0,0,0,.6)`;
-  menu.innerHTML=`<div translate="no" style="padding:6px 12px 8px;color:var(--text3);font-size:11px;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(itemLabel)}</div>`+items.map((i,index)=>i.label==='─'?'<div style="height:.5px;background:var(--border);margin:4px 6px"></div>':`<div data-ctx-index="${index}" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center" onmouseover="this.style.background='var(--glass-hover)'" onmouseout="this.style.background=''">${i.icon?`<span>${i.icon}</span>`:'<span style="width:16px"></span>'} ${esc(i.label)}</div>`).join('');
-  menu.querySelectorAll('[data-ctx-index]').forEach(button=>{
-    button.onclick=()=>{
-      closeCtx();
-      items[Number(button.dataset.ctxIndex)].fn();
-    };
-  });
-  setTimeout(()=>document.addEventListener('click',closeCtx,{once:true}),10);
+  openFileContextMenu(e,itemLabel,items);
 };
 window.showFolderCtx=e=>{
   if(e.target.closest('[data-path]')) return;
@@ -11257,17 +11283,13 @@ window.showFolderCtx=e=>{
   updateFileSelectionUI();
   const clipCount=clipboard?(clipboard.paths||[clipboard.path].filter(Boolean)).length:0;
   const items=[
-    clipboard?{icon:'📌',label:clipCount>1?fileText('pasteManyHere',clipCount):fileText('pasteHere'),fn:'pasteClipboard()'}:null,
-    clipboard?{icon:'',label:'─',fn:''}:null,
-    {icon:'📁',label:fileText('newFolder'),fn:'mkdirForm()'},
+    clipboard?{icon:'📌',label:clipCount>1?fileText('pasteManyHere',clipCount):fileText('pasteHere'),fn:()=>pasteClipboard()}:null,
+    clipboard?{separator:true}:null,
+    {icon:'📁',label:fileText('newFolder'),fn:()=>mkdirForm()},
   ].filter(Boolean);
 
-  const menu=$('#ctx-menu');
-  menu.style.cssText=`position:fixed;top:${Math.min(e.clientY,window.innerHeight-180)}px;left:${Math.min(e.clientX,window.innerWidth-210)}px;background:rgba(15,12,26,.97);border:.5px solid var(--border-accent);border-radius:12px;padding:6px;z-index:999;min-width:200px;box-shadow:0 12px 40px rgba(0,0,0,.6)`;
-  menu.innerHTML=`<div style="padding:6px 12px 8px;color:var(--text3);font-size:11px;max-width:250px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(currentPath)}</div>`+items.map(i=>i.label==='─'?'<div style="height:.5px;background:var(--border);margin:4px 6px"></div>':`<div onclick="${i.fn};closeCtx()" style="padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center" onmouseover="this.style.background='var(--glass-hover)'" onmouseout="this.style.background=''">${i.icon?`<span>${i.icon}</span>`:'<span style="width:16px"></span>'} ${esc(i.label)}</div>`).join('');
-  setTimeout(()=>document.addEventListener('click',closeCtx,{once:true}),10);
+  openFileContextMenu(e,currentPath,items);
 };
-window.closeCtx=()=>{const m=$('#ctx-menu');if(m){m.innerHTML='';m.removeAttribute('style');}};
 
 function updateFileSelectionUI(){
   const selectButton=$('#files-select-toggle');
