@@ -9,7 +9,7 @@ import socket
 import subprocess
 import tempfile
 
-from modules.compose_utils import best_web_port_from_compose, published_ports_from_compose
+from modules.compose_utils import best_web_endpoint_from_compose, best_web_endpoint_from_services, published_ports_from_compose
 from modules import compose_sources
 
 try:
@@ -512,31 +512,49 @@ def list_compose_projects():
             path = os.path.join(COMPOSE_DIR, name)
             compose_file = os.path.join(path, "docker-compose.yml")
             if os.path.isfile(compose_file):
+                port, scheme = _compose_endpoint(compose_file)
                 projects[name] = {"name": name, "running": _compose_running(path),
-                                  "port": _compose_port(compose_file)}
+                                  "port": port, "web_scheme": scheme}
+
+    services_by_project = {}
     for container in _compose_containers():
-        name = _container_labels(container).get("com.docker.compose.project")
+        labels = _container_labels(container)
+        name = labels.get("com.docker.compose.project")
         if not name:
             continue
-        entry = projects.setdefault(name, {"name": name, "running": False, "port": 0})
+        entry = projects.setdefault(name, {"name": name, "running": False, "port": 0, "web_scheme": ""})
         entry["running"] = entry["running"] or bool(container.attrs.get("State", {}).get("Running"))
-        for target, bindings in (container.attrs.get("HostConfig", {}).get("PortBindings") or {}).items():
-            for binding in bindings or []:
-                if not entry["port"]:
-                    try:
-                        entry["port"] = int(binding.get("HostPort") or 0)
-                    except ValueError:
-                        pass
+        config = container.attrs.get("Config") or {}
+        host = container.attrs.get("HostConfig") or {}
+        bindings = (container.attrs.get("NetworkSettings") or {}).get("Ports") or host.get("PortBindings") or {}
+        ports = []
+        for container_port, values in bindings.items():
+            target, _, protocol = container_port.partition("/")
+            for binding in values or []:
+                ports.append({"published": binding.get("HostPort"), "target": target,
+                              "protocol": protocol or "tcp", "host_ip": binding.get("HostIp")})
+                if not entry["port"] and str(binding.get("HostPort") or "").isdigit():
+                    entry["port"] = int(binding["HostPort"])
+        services = services_by_project.setdefault(name, {})
+        service = services.setdefault(labels.get("com.docker.compose.service") or container.name, {
+            "image": config.get("Image"), "environment": config.get("Env"),
+            "network_mode": host.get("NetworkMode"), "ports": [],
+        })
+        service["ports"].extend(ports)
+    for name, services in services_by_project.items():
+        if not projects[name]["web_scheme"]:
+            port, scheme = best_web_endpoint_from_services(services)
+            if scheme:
+                projects[name].update(port=port, web_scheme=scheme)
     return list(projects.values())
 
 
-def _compose_port(compose_file):
+def _compose_endpoint(compose_file):
     try:
         with open(compose_file) as f:
-            return best_web_port_from_compose(f.read())
-    except Exception:
-        pass
-    return 0
+            return best_web_endpoint_from_compose(f.read())
+    except OSError:
+        return 0, ""
 
 
 def _compose_running(path):

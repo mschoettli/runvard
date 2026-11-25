@@ -247,3 +247,39 @@ def test_tagged_scalar_types_survive_form_roundtrip(value):
     serialized = docker_mgr.convert_compose(document=json.dumps(parsed['document']), yaml_tags=json.dumps(parsed['tags']))
     reloaded = docker_mgr.convert_compose(content=serialized['content'])
     assert reloaded['document'] == parsed['document']
+
+
+def test_catalog_uses_live_compose_web_bindings_without_reading_external_files(monkeypatch, tmp_path):
+    from modules import apps
+    database = container('db', 'db-only')
+    database.attrs['HostConfig']['PortBindings'] = {'5432/tcp': [{'HostPort': '18080'}]}
+    api = container('web', 'demo')
+    api.attrs['HostConfig']['PortBindings'] = {'443/tcp': [{'HostPort': ''}]}
+    api.attrs['NetworkSettings'] = {'Ports': {'443/tcp': [{'HostIp': '0.0.0.0', 'HostPort': '49000'}]}}
+    install_containers(monkeypatch, tmp_path, [database, api])
+    monkeypatch.setattr(apps, 'APPS_DIR', str(tmp_path / 'apps'))
+
+    catalog = {entry['id']: entry for entry in apps.get_catalog()['apps']}
+    db = catalog['compose:db-only']
+    assert db['running'] and db['port'] == 18080 and db['web_scheme'] == ''
+    web = catalog['compose:demo']
+    assert web['running'] and web['port'] == 49000 and web['web_scheme'] == 'https'
+    details = apps.get_app('compose:demo')
+    assert (details['port'], details['web_scheme']) == (web['port'], web['web_scheme'])
+
+
+@pytest.mark.parametrize("address,expected_scheme", [("127.0.0.1", ""), ("0.0.0.0", "https")])
+def test_compose_details_use_same_runtime_endpoint_as_catalog_with_static_source(monkeypatch, tmp_path, address, expected_scheme):
+    from modules import apps
+    source = tmp_path / 'compose.yaml'
+    source.write_text('services: {web: {image: nginx, ports: ["8080:80"]}}')
+    web = container('web', 'demo', str(source), str(tmp_path))
+    web.attrs['NetworkSettings'] = {'Ports': {'443/tcp': [{'HostIp': address, 'HostPort': '49000'}]}}
+    install_containers(monkeypatch, tmp_path, [web])
+    monkeypatch.setattr(apps, 'APPS_DIR', str(tmp_path / 'apps'))
+
+    listing = next(entry for entry in apps.get_catalog()['apps'] if entry['id'] == 'compose:demo')
+    details = apps.get_app('compose:demo')
+    assert details['compose'] == source.read_text()
+    for item in (listing, details):
+        assert (item['port'], item['web_scheme']) == (49000, expected_scheme)

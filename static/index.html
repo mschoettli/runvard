@@ -288,7 +288,7 @@ tr{outline:none;user-select:none}
 .btn.danger{background:rgba(239,68,68,.08);border:1px solid rgba(239,68,68,.18);color:#f87171}
 .btn.danger:hover{background:var(--red);color:#fff}
 .btn.success{background:rgba(34,197,94,.15);border:.5px solid rgba(34,197,94,.3);color:var(--green)}
-.btn:disabled,.app-install-btn:disabled{opacity:.45;cursor:not-allowed;filter:saturate(.45)}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:saturate(.45)}
 .btn:disabled:hover{background:#7a4aff;color:#fff;border-color:transparent}
 .btn.ghost:disabled:hover{background:transparent;border-color:rgba(255,255,255,.1);color:rgba(240,240,255,.6)}
 .btn.success:disabled:hover{background:rgba(34,197,94,.15);border-color:rgba(34,197,94,.3);color:var(--green)}
@@ -592,36 +592,7 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 #ctx-menu hr{margin:4px 6px;border:0;border-top:1px solid var(--border)}
 #bulk-bar{display:none}
 
-/* ── App-Store ── */
-.apps-cats{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:18px}
-.apps-cat{padding:5px 14px;border-radius:20px;font-size:12px;background:var(--glass);color:var(--text2);border:.5px solid var(--border);cursor:pointer;transition:all .15s;white-space:nowrap}
-.apps-cat:hover{background:var(--glass-hover);color:var(--text)}
-.apps-cat.active{background:rgba(122,74,255,.2);color:var(--accent-light);border-color:var(--border-accent)}
-.apps-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px}
-.apps-group{grid-column:1/-1;display:grid;grid-template-columns:subgrid;gap:12px;padding:4px 0 12px}
-.apps-group+.apps-group{margin-top:8px;padding-top:20px;border-top:1px solid var(--border)}
-.apps-group-head{grid-column:1/-1;display:flex;align-items:baseline;gap:10px;padding:0 2px}
-.apps-group-title{font-size:13px;font-weight:700;color:var(--text);letter-spacing:.01em}
-.apps-group-count{font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
-.app-card{position:relative;background:var(--bg3);border:1px solid var(--border);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:10px;transition:border-color .15s,transform .15s}
-.app-card:hover{border-color:var(--border-accent);transform:translateY(-2px)}
-.app-card-head{display:flex;align-items:flex-start;gap:12px}
-.app-icon-wrap{width:46px;height:46px;border-radius:11px;background:rgba(255,255,255,.04);border:.5px solid var(--border);display:flex;align-items:center;justify-content:center;flex-shrink:0;overflow:hidden}
-.app-icon-wrap img{width:30px;height:30px;object-fit:contain}
-.app-icon-fallback{width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:700;color:var(--accent-light)}
-.app-card-info{min-width:0;flex:1}
-.app-card-name{font-size:14px;font-weight:600;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.app-card-meta{display:flex;align-items:center;gap:5px;margin-top:3px;font-size:11px;color:var(--text3);font-family:'JetBrains Mono',monospace}
-.app-card-desc{font-size:12px;color:var(--text2);line-height:1.45;flex:1;min-height:34px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
-.app-card-actions{margin-top:2px}
-.app-status-pill{position:absolute;top:12px;right:12px;display:flex;align-items:center;gap:5px;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:500;white-space:nowrap}
-.app-status-pill.run{background:rgba(34,197,94,.12);border:.5px solid rgba(34,197,94,.25);color:#4ade80}
-.app-status-pill.paused{background:rgba(234,179,8,.12);border:.5px solid rgba(234,179,8,.25);color:#eab308}
-.app-status-pill.upd{background:rgba(251,191,36,.12);border:.5px solid rgba(251,191,36,.25);color:#fbbf24}
-.app-status-pill.pending{background:rgba(96,165,250,.12);border:.5px solid rgba(96,165,250,.28);color:#93c5fd}
-.app-status-pill .sd{width:5px;height:5px;border-radius:50%;background:currentColor;display:inline-block}
-.app-install-btn{width:100%;background:transparent;border:.5px solid var(--border-accent);color:var(--accent-light);padding:7px;border-radius:8px;font-size:12px;font-weight:500;font-family:inherit;cursor:pointer;transition:background .15s,color .15s}
-.app-install-btn:hover{background:rgba(122,74,255,.12);color:#fff}
+/* ── App installation ── */
 .form-card.compose-install-card{width:min(920px,calc(100vw - 24px));max-width:none;overflow:hidden}
 .compose-install-card .form-head{min-height:72px;padding:12px 16px}
 .compose-install-card .form-body{padding:0;overflow:hidden}
@@ -715,10 +686,6 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
   .compose-volume-fields{grid-template-columns:minmax(160px,.8fr) minmax(340px,1.8fr) minmax(180px,.9fr) minmax(90px,.45fr);align-items:end}
 }
 .app-menu{position:fixed;background:rgba(15,12,26,.97);border:.5px solid var(--border-accent);border-radius:12px;padding:6px;z-index:999;min-width:170px;box-shadow:0 12px 40px rgba(0,0,0,.6)}
-.app-menu div{padding:8px 12px;border-radius:8px;cursor:pointer;font-size:13px;display:flex;gap:10px;align-items:center}
-.app-menu div:hover{background:var(--glass-hover)}
-.app-menu div.danger{color:#f87171}
-.app-menu .sep{height:.5px;background:var(--border);margin:4px 6px;padding:0}
 
 /* ── Install-Indikator (Header-Inline) ── */
 .install-indicator{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2);white-space:nowrap;animation:instIn .3s ease}
@@ -1105,7 +1072,8 @@ body:not(.dashboard-admin) .dash-add-btn{display:none}
 @media(max-width:480px){.device-access-card .form-body,.device-access-card .form-head{padding:1rem}}
 
 </style>
-<link rel="stylesheet" href="/static/modern-theme.css?v=b3cdacaa982e">
+<link rel="stylesheet" href="/static/modern-theme.css?v=a6074bbbd0e8">
+<link rel="stylesheet" href="/static/apps-library.css?v=0b5a42b62aae">
 
 <link rel="stylesheet" href="/static/brand/brand.css">
 </head>
@@ -8594,7 +8562,9 @@ let currentAuthStatus={role:null,expert:false};
 async function loadAuthStatus(){
   try{
     const s=await api('/auth/status');
+    const roleChanged=currentAuthStatus.role!==s.role;
     currentAuthStatus=s;
+    if(roleChanged&&$('#apps-detail'))renderAppDetail();
     document.body.classList.toggle('dashboard-admin',s.role==='admin');
     setTopbarUser(s.user||tr('loginDisabled'));
     const h=$('#um-head'); if(h) h.innerHTML=s.user?`${esc(tr('signedInAs'))} <strong>${esc(s.user)}</strong>`:tr('loginDisabledHead');
@@ -9857,9 +9827,11 @@ loadTileBadges();
 function openModal(tile){
   ++appsRenderVersion;
   if(!$('#overlay').classList.contains('open'))modalOpener=document.activeElement;
+  if(tile.id==='apps'&&(currentTile?.id!=='apps'||!$('#overlay').classList.contains('open')))appsView='list';
   const tabs=visibleTabs(tile);
   currentTile=tile;currentTab=tabs.length?tabs[0].tab:null;resetSearch();
   const modal=$('#overlay .modal');
+  modal.classList.toggle('apps-modal',tile.id==='apps');
   modal.classList.toggle('servers-modal',tile.id==='servers');
   modal.classList.toggle('files-modal',tile.id==='files');
   modal.querySelector('.modal-close').setAttribute('aria-label',tr('close'));
@@ -14494,7 +14466,8 @@ async function renderNetDetail(body){
   loadHistoryChart('hist-net',[{field:'net_down',label:'▼ Download',color:'#22c55e'},{field:'net_up',label:'▲ Upload',color:'#eab308'}],{scale:v=>+(v/1048576).toFixed(2),ytick:v=>v+' MB/s'});
 }
 // ═══ Apps (App-Store) ═══
-let appsCatalog=[], appsActiveCat='all', appsSearch='', appsSort='default', _activeInstalls=0;
+let appsCatalog=[], appsActiveCat='all', appsSearch='', appsSort='installed', _activeInstalls=0;
+let appsSelectedId=null, appsView='list';
 let appsCatalogCategories=[];
 const appPendingActions=new Map();
 
@@ -14509,12 +14482,26 @@ const APP_UI={
   apps:{de:'Apps',en:'apps',fr:'apps',it:'app',es:'apps',pt:'apps'},
   installed:{de:'installiert',en:'installed',fr:'installées',it:'installate',es:'instaladas',pt:'instaladas'},
   sortApps:{de:'Apps sortieren',en:'Sort apps',fr:'Trier les apps',it:'Ordina le app',es:'Ordenar apps',pt:'Ordenar apps'},
-  myAppsFirst:{de:'Meine Apps zuerst',en:'My apps first',fr:'Mes apps d’abord',it:'Le mie app prima',es:'Mis apps primero',pt:'As minhas apps primeiro'},
+  runvardAppsFirst:{de:'Runvard-Apps zuerst',en:'Runvard apps first',fr:'Apps Runvard en premier',it:'Prima le app Runvard',es:'Apps de Runvard primero',pt:'Apps Runvard primeiro'},
   installedFirst:{de:'Installierte Apps zuerst',en:'Installed first',fr:'Installées d’abord',it:'Installate prima',es:'Instaladas primero',pt:'Instaladas primeiro'},
-  myApps:{de:'Meine Apps',en:'My apps',fr:'Mes apps',it:'Le mie app',es:'Mis apps',pt:'As minhas apps'},
+  runvardApps:{de:'Runvard-Apps',en:'Runvard apps',fr:'Apps Runvard',it:'App Runvard',es:'Apps de Runvard',pt:'Apps Runvard'},
   appCatalog:{de:'App-Katalog',en:'App catalog',fr:'Catalogue d’apps',it:'Catalogo app',es:'Catálogo de apps',pt:'Catálogo de apps'},
   installedApps:{de:'Installierte Apps',en:'Installed apps',fr:'Apps installées',it:'App installate',es:'Apps instaladas',pt:'Apps instaladas'},
   availableApps:{de:'Verfügbare Apps',en:'Available apps',fr:'Apps disponibles',it:'App disponibili',es:'Apps disponibles',pt:'Apps disponíveis'},
+  backToApps:{de:'Zurück zur App-Liste',en:'Back to app list',fr:'Retour à la liste des apps',it:'Torna all’elenco delle app',es:'Volver a la lista de apps',pt:'Voltar à lista de apps'},
+  allCategories:{de:'Alle Kategorien',en:'All categories',fr:'Toutes les catégories',it:'Tutte le categorie',es:'Todas las categorías',pt:'Todas as categorias'},
+  filters:{de:'Filter',en:'Filters',fr:'Filtres',it:'Filtri',es:'Filtros',pt:'Filtros'},
+  category:{de:'Kategorie',en:'Category',fr:'Catégorie',it:'Categoria',es:'Categoría',pt:'Categoria'},
+  details:{de:'Details',en:'Details',fr:'Détails',it:'Dettagli',es:'Detalles',pt:'Detalhes'},
+  webPort:{de:'Web-Port',en:'Web port',fr:'Port web',it:'Porta web',es:'Puerto web',pt:'Porta web'},
+  port:{de:'Port',en:'Port',fr:'Port',it:'Porta',es:'Puerto',pt:'Porta'},
+  available:{de:'Verfügbar',en:'Available',fr:'Disponible',it:'Disponibile',es:'Disponible',pt:'Disponível'},
+  retry:{de:'Erneut laden',en:'Reload',fr:'Recharger',it:'Ricarica',es:'Volver a cargar',pt:'Recarregar'},
+  restartAction:{de:'Neu starten',en:'Restart',fr:'Redémarrer',it:'Riavvia',es:'Reiniciar',pt:'Reiniciar'},
+  installStatusLost:{de:'Der Installationsstatus ist nicht mehr verfügbar.',en:'The installation status is no longer available.',fr:'L’état de l’installation n’est plus disponible.',it:'Lo stato dell’installazione non è più disponibile.',es:'El estado de la instalación ya no está disponible.',pt:'O estado da instalação já não está disponível.'},
+  updateAction:{de:'Aktualisieren',en:'Update',fr:'Mettre à jour',it:'Aggiorna',es:'Actualizar',pt:'Atualizar'},
+  catalogLoadError:{de:'Der App-Katalog konnte nicht geladen werden.',en:'The app catalog could not be loaded.',fr:'Impossible de charger le catalogue d’apps.',it:'Impossibile caricare il catalogo delle app.',es:'No se pudo cargar el catálogo de apps.',pt:'Não foi possível carregar o catálogo de apps.'},
+  customComposeProject:{de:'Eigenes Docker-Compose-Projekt',en:'Custom Docker Compose project',fr:'Projet Docker Compose personnalisé',it:'Progetto Docker Compose personalizzato',es:'Proyecto de Docker Compose personalizado',pt:'Projeto Docker Compose personalizado'},
   update:{de:'Update',en:'update',fr:'mise à jour',it:'aggiornamento',es:'actualización',pt:'atualização'},
   updates:{de:'Updates',en:'updates',fr:'mises à jour',it:'aggiornamenti',es:'actualizaciones',pt:'atualizações'},
   checkUpdates:{de:'Updates prüfen',en:'Check updates',fr:'Vérifier les mises à jour',it:'Controlla aggiornamenti',es:'Buscar actualizaciones',pt:'Verificar atualizações'},
@@ -14703,7 +14690,7 @@ function appCategoryKeys(categories){
   return keys;
 }
 function localizedAppDesc(app){
-  if(app.type==='compose')return app.desc||'Custom Docker Compose project';
+  if(appIsCompose(app))return app.desc&&app.desc!=='Custom Docker Compose project'?app.desc:appUi('customComposeProject');
   const item=APP_DESC_TRANSLATIONS[app.id];
   return item?(item[appLang()]||item.en||app.desc||''):(app.desc||'');
 }
@@ -14728,16 +14715,8 @@ function groupAppsCatalog(items){
   const sorted=sortAppsCatalog(items);
   const definitions=appsSort==='installed'
     ? [['installedApps',app=>Boolean(app.installed)],['availableApps',app=>!app.installed]]
-    : [['myApps',app=>Boolean(app.first_party)],['appCatalog',app=>!app.first_party]];
+    : [['runvardApps',app=>Boolean(app.first_party)],['appCatalog',app=>!app.first_party]];
   return definitions.map(([labelKey,matches])=>({labelKey,items:sorted.filter(matches)})).filter(group=>group.items.length);
-}
-function appCatalogGridHtml(items){
-  const groups=groupAppsCatalog(items);
-  if(!groups.length)return `<div class="empty-state" style="grid-column:1/-1">${esc(appUi('noAppsFound'))}</div>`;
-  return groups.map(group=>`<section class="apps-group" aria-labelledby="apps-group-${esc(group.labelKey)}">
-    <div class="apps-group-head"><h3 class="apps-group-title" id="apps-group-${esc(group.labelKey)}">${esc(appUi(group.labelKey))}</h3><span class="apps-group-count">${group.items.length}</span></div>
-    ${group.items.map(appCardHtml).join('')}
-  </section>`).join('');
 }
 function appPendingLabel(action){
   return appUi(({up:'starting',start:'starting',stop:'stopping',down:'stopping',restart:'restarting',update:'updating'})[action]||'starting');
@@ -14874,7 +14853,7 @@ function finishAppUpdateIndicator(tracker,ok,detail=''){
 async function renderApps(body){
   if(currentTile?.id!=='apps')return;
   const version=++appsRenderVersion;
-  body.innerHTML='<div class="loading">Loading app catalog…</div>';
+  if(!body.querySelector('.apps-library'))body.innerHTML=`<div class="loading" role="status">${esc(tr('loading'))}</div>`;
   try{
     const data=await api('/apps/catalog');
     if(version!==appsRenderVersion)return;
@@ -14882,112 +14861,203 @@ async function renderApps(body){
     appsCatalogCategories=data.categories||[];
     _appsUpdateBadgeHasUpdates=appsCatalog.some(app=>app.update_available);
     updateAppsBadge();
-    renderAppsView(body,appsCatalogCategories);
+    renderAppsView(body);
   }catch(e){
-    if(version===appsRenderVersion)body.innerHTML=`<div class="empty-state" role="alert">${esc(uiText('Load error:'))} ${esc(e.message)}</div>`;
+    if(version!==appsRenderVersion)return;
+    body.innerHTML=`<div class="apps-feedback"><p role="alert">${esc(appUi('catalogLoadError'))}</p>
+      <button type="button" class="btn" onclick="renderApps(this.closest('.modal-body'))">${esc(appUi('retry'))}</button></div>`;
   }
 }
 
-function renderAppsView(body,categories){
-  const q=appsSearch.toLowerCase();
-  const filtered=sortAppsCatalog(appsCatalog.filter(a=>{
-    const catOk=appsActiveCat==='all'||appCategoryKey(a.category)===appsActiveCat;
-    return catOk&&appMatchesSearch(a,q);
-  }));
-  const installedCount=appsCatalog.filter(a=>a.installed).length;
-  const updateCount=appsCatalog.filter(a=>a.update_available).length;
-  const categoryKeys=appCategoryKeys(categories||appsCatalogCategories);
-
-  const modernIntro=isModernUi()?viewIntro('Apps','Install apps or add custom shortcuts.',''):'';
-  body.innerHTML=modernIntro+`
-    <div style="display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap">
-      <input id="apps-search" class="nx-search" placeholder="${esc(appUi('searchApps'))}" value="${esc(appsSearch)}" style="flex:1;min-width:160px;max-width:280px" oninput="appsDoSearch(this.value)">
-      <span style="font-size:11px;color:var(--text3)">${appsCatalog.length} ${esc(appUi('apps'))} · ${installedCount} ${esc(appUi('installed'))}${updateCount?` · <span style="color:#fbbf24">${updateCount} ${esc(appUi(updateCount>1?'updates':'update'))}</span>`:''}</span>
-      <select id="apps-sort" value="${esc(appsSort)}" onchange="appsSetSort(this.value)" aria-label="${esc(appUi('sortApps'))}" title="${esc(appUi('sortApps'))}" style="width:auto;min-width:170px;margin-left:auto">
-        <option value="default"${appsSort==='default'?' selected':''}>${esc(appUi('myAppsFirst'))}</option>
-        <option value="installed"${appsSort==='installed'?' selected':''}>${esc(appUi('installedFirst'))}</option>
-      </select>
-      <button class="btn ghost sm" onclick="appsCheckUpdates()" title="${esc(appUi('checkUpdates'))}">↻ ${esc(appUi('checkUpdates'))}</button>
-    </div>
-    <div class="apps-cats" id="apps-cats">
-      ${categoryKeys.map(c=>`<div class="apps-cat${c===appsActiveCat?' active':''}" onclick="appsSetCat('${esc(c)}')">${esc(appCategoryLabel(c))}</div>`).join('')}
-    </div>
-    <div class="apps-grid" id="apps-grid">
-      ${appCatalogGridHtml(filtered)}
+function renderAppsView(body){
+  if(currentTile?.id!=='apps')return;
+  const categoryKeys=appCategoryKeys(appsCatalogCategories);
+  if(!categoryKeys.includes(appsActiveCat))appsActiveCat='all';
+  if(!body.querySelector('.apps-library')){
+    body.innerHTML=`<div class="apps-library" data-view="${appsView}">
+      <aside class="apps-sidebar" aria-label="${esc(tr('tileApps'))}">
+        <div class="apps-tools">
+          <input id="apps-search" class="nx-search" aria-label="${esc(appUi('searchApps'))}" placeholder="${esc(appUi('searchApps'))}" value="${esc(appsSearch)}" oninput="appsDoSearch(this.value)">
+          <div class="apps-tool-row">
+            <details class="apps-filter-menu"${appsActiveCat!=='all'||appsSort!=='installed'?' open':''}>
+              <summary>${esc(appUi('filters'))}</summary>
+              <div class="apps-filters">
+                <select id="apps-category" aria-label="${esc(appUi('category'))}" onchange="appsSetCat(this.value)"></select>
+                <select id="apps-sort" aria-label="${esc(appUi('sortApps'))}" onchange="appsSetSort(this.value)">
+                  <option value="installed"${appsSort==='installed'?' selected':''}>${esc(appUi('installedFirst'))}</option>
+                  <option value="default"${appsSort==='default'?' selected':''}>${esc(appUi('runvardAppsFirst'))}</option>
+                </select>
+              </div>
+            </details>
+            <button type="button" class="btn ghost sm" id="apps-check" onclick="appsCheckUpdates()">
+              <span aria-hidden="true">↻</span> ${esc(appUi('checkUpdates'))}<span class="apps-update-count" hidden></span>
+            </button>
+          </div>
+        </div>
+        <div id="apps-list" class="apps-list"></div>
+      </aside>
+      <section id="apps-detail" class="apps-detail" aria-labelledby="apps-detail-title"></section>
     </div>`;
-  nxDecorateSearch(body);
-  translateRenderedText(body);
-}
-
-function appTint(cat){
-  if(isModernUi())return '#3973e6';
-  return ({media:'#a78bfa',network:'#22d3ee',productivity:'#7a4aff',ai:'#f472b6',
-    monitoring:'#9ca3af',download:'#2dd4bf',home:'#fbbf24',developer:'#60a5fa',database:'#fb923c',compose:'#9ca3af'})[appCategoryKey(cat)]||'#9d7aff';
-}
-function appHexA(hex,al){const n=parseInt(hex.slice(1),16);return `rgba(${(n>>16)&255},${(n>>8)&255},${n&255},${al})`;}
-
-function appCardHtml(a){
-  const tint=appTint(a.category);
-  const isCompose=appIsCompose(a);
-  const safeId=esc(a.id);
-  const pending=appPendingActions.get(a.id);
-  let actions,pill='';
-  if(!a.installed){
-    actions=`<button class="app-install-btn" onclick="appInstallForm('${safeId}')">${esc(uiText('Install'))}</button>`;
-  } else {
-    pill=pending
-      ? `<span class="app-status-pill pending" title="${esc(appPendingLabel(pending))}"><span class="sd"></span>${esc(appPendingLabel(pending))}</span>`
-      : a.update_available
-      ? `<span class="app-status-pill upd" title="${esc(uiText('Update available'))}">↑ ${esc(uiText('Update'))}</span>`
-      : a.running
-        ? `<span class="app-status-pill run" title="${esc(uiText('Running'))}"><span class="sd"></span>${esc(uiText('Running'))}</span>`
-        : `<span class="app-status-pill paused" title="${esc(uiText('Stopped'))}"><span class="sd"></span>${esc(uiText('Stopped'))}</span>`;
-    const pendingButton=`<button class="btn sm ghost" style="flex:1" disabled>${esc(appPendingLabel(pending))}</button>`;
-    const primary=pending
-      ? pendingButton
-      : a.running
-      ? `<a class="btn sm success" style="flex:1;text-decoration:none" href="http://${location.hostname}:${a.port}" target="_blank" rel="noopener noreferrer">${esc(uiText('Open'))}</a>`
-      : `<button class="btn sm" style="flex:1" onclick="appAct('${safeId}','start')">▶ ${esc(uiText('Start'))}</button>`;
-    actions=`<div style="display:flex;gap:6px">
-      ${primary}
-      <button class="btn icon" title="${esc(uiText('Actions'))}" onclick="appMenu(event,'${safeId}','${esc(a.name)}',${a.running?1:0},${a.update_available?1:0})" style="width:30px;height:30px;font-size:15px" ${pending?'disabled':''}>⋯</button>
-    </div>`;
+    nxDecorateSearch(body);
   }
-  const iconHtml=isCompose
-    ? `<div class="app-icon-fallback" style="display:flex;background:${appHexA(tint,.18)};color:${tint}">${esc(a.icon||'⚙')}</div>`
-    : `<img src="${esc(a.icon)}" alt="${esc(a.name)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-          <div class="app-icon-fallback" style="display:none;background:${appHexA(tint,.18)};color:${tint}">${esc(a.name[0])}</div>`;
-  return `
-    <div class="app-card">
-      ${pill}
-      <div class="app-card-head">
-        <div class="app-icon-wrap" style="background:${appHexA(tint,.12)};border-color:${appHexA(tint,.25)}">
-          ${iconHtml}
-        </div>
-        <div class="app-card-info"${a.installed?' style="padding-right:62px"':''}>
-          <div class="app-card-name">${esc(a.name)}</div>
-          <div class="app-card-meta">:${a.port||'—'}</div>
-        </div>
-      </div>
-      <div class="app-card-desc">${esc(localizedAppDesc(a))}</div>
-      <div class="app-card-actions">${actions}</div>
-    </div>`;
+  const category=body.querySelector('#apps-category');
+  category.innerHTML=categoryKeys.map(key=>`<option value="${esc(key)}">${esc(key==='all'?appUi('allCategories'):appCategoryLabel(key))}</option>`).join('');
+  category.value=appsActiveCat;
+  const count=appsCatalog.filter(app=>app.update_available).length;
+  const badge=body.querySelector('.apps-update-count');
+  badge.hidden=!count;
+  badge.textContent=count;
+  if(count)badge.setAttribute('aria-label',`${count} ${appUi(count===1?'update':'updates')}`);
+  renderAppsList();
 }
 
-window.appsSetCat=cat=>{appsActiveCat=appCategoryKey(cat);renderAppsView($('#modal-body'));};
-window.appsSetSort=value=>{
-  appsSort=value==='installed'?'installed':'default';
-  renderAppsView($('#modal-body'),appsCatalogCategories);
-};
-window.appsDoSearch=v=>{appsSearch=v;const grid=$('#apps-grid');if(!grid)return;
-  const q=v.toLowerCase();
-  const filtered=sortAppsCatalog(appsCatalog.filter(a=>{
-    const catOk=appsActiveCat==='all'||appCategoryKey(a.category)===appsActiveCat;
-    return catOk&&appMatchesSearch(a,q);
-  }));
-  grid.innerHTML=appCatalogGridHtml(filtered);
-  translateRenderedText(grid);
-};
+function appLibraryIcon(app,eager=false){
+  const compose=appIsCompose(app);
+  const image=compose?'':app.icon;
+  const fallback=compose?(app.icon||'⚙'):app.name.slice(0,1);
+  return `<span class="app-library-icon" aria-hidden="true"><span${image?' hidden':''}>${esc(fallback)}</span>${image
+    ?`<img src="${esc(image)}" alt="" loading="${eager?'eager':'lazy'}" onerror="this.hidden=true;this.previousElementSibling.hidden=false">`:''}</span>`;
+}
+
+function renderAppsList(){
+  const list=$('#apps-list');
+  if(!list)return;
+  const q=appsSearch.trim().toLowerCase();
+  const groups=groupAppsCatalog(appsCatalog.filter(app=>
+    (appsActiveCat==='all'||appCategoryKey(app.category)===appsActiveCat)&&appMatchesSearch(app,q)
+  ));
+  if(!groups.some(group=>group.items.some(app=>app.id===appsSelectedId))){
+    appsSelectedId=groups[0]?.items[0].id??null;
+  }
+  if(!appsSelectedId)appsView='list';
+  const returnToList=list.contains(document.activeElement);
+  list.innerHTML=groups.map(group=>`<section class="apps-list-group" aria-labelledby="apps-group-${group.labelKey}">
+      <h3 class="apps-list-heading" id="apps-group-${group.labelKey}">${esc(appUi(group.labelKey))} <span class="apps-list-count">${group.items.length}</span></h3>
+      ${group.items.map(app=>`<button type="button" class="app-list-item" data-app-id="${esc(app.id)}" aria-current="${app.id===appsSelectedId}" aria-controls="apps-detail" onclick="appsSelect(this.dataset.appId)">
+        ${appLibraryIcon(app)}<span class="app-list-name" translate="no">${esc(app.name)}</span>
+      </button>`).join('')}</section>`).join('')||`<p class="apps-feedback" role="status">${esc(appUi('noAppsFound'))}</p>`;
+  renderAppDetail();
+  if(returnToList)(list.querySelector('[aria-current="true"]')||$('#apps-search')).focus({preventScroll:true});
+}
+
+function appsSelect(id){
+  appsSelectedId=id;
+  appsView='detail';
+  document.querySelectorAll('#apps-list .app-list-item[aria-current="true"]').forEach(row=>row.setAttribute('aria-current','false'));
+  const selected=$(`#apps-list [data-app-id="${CSS.escape(id)}"]`);
+  selected.setAttribute('aria-current','true');
+  renderAppDetail();
+  if(matchMedia('(max-width:760px)').matches)$('#apps-detail-title').focus({preventScroll:true});
+}
+
+function appsBackToList(){
+  appsView='list';
+  $('.apps-library').dataset.view=appsView;
+  $('#apps-list [aria-current="true"]')?.focus();
+}
+
+function appWebUrl(app){
+  const port=Number(app.port);
+  if(!['http','https'].includes(app.web_scheme)||!Number.isInteger(port)||port<1||port>65535)return '';
+  return `${app.web_scheme}://${location.hostname}:${port}`;
+}
+
+function appDetailActions(app,pending,webUrl){
+  const actions=[];
+  const button=(label,command,secondary=false)=>`<button type="button" class="btn${secondary?' ghost':''}" data-command="${command}">${esc(uiText(label))}</button>`;
+  if(pending)return '';
+  if(app.running&&webUrl){
+    actions.push(`<a class="btn" data-command="open" href="${esc(webUrl)}" target="_blank" rel="noopener noreferrer">${esc(uiText('Open'))}</a>`);
+  }
+  if(currentAuthStatus.role==='admin'){
+    if(!app.installed)return button('Install','install');
+    if(!app.running)actions.push(button('Start','start'));
+    if(app.update_available&&!appIsCompose(app))actions.push(button(appUi('updateAction'),'update',!!actions.length));
+    if(app.running)actions.push(button(appUi('restartAction'),'restart',!!actions.length));
+    const menu=[
+      ...(app.running?[button('Stop','stop')]:[]),
+      button('Edit compose','edit'),button('Show files','files'),button('Show on dashboard','dashboard'),
+      ...(!appIsCompose(app)?[button('Uninstall','uninstall')]:[])
+    ];
+    actions.push(`<button type="button" class="btn ghost" data-command="menu" id="app-menu-trigger" popovertarget="app-menu" aria-haspopup="menu">${esc(uiText('Actions'))}</button>
+      <div id="app-menu" class="app-menu" popover="auto" role="menu" aria-labelledby="app-menu-trigger">${menu.join('')}</div>`);
+  }
+  return actions.join('');
+}
+
+function renderAppDetail(){
+  const detail=$('#apps-detail');
+  if(!detail)return;
+  const app=appById(appsSelectedId);
+  const focused=detail.contains(document.activeElement);
+  const command=focused?document.activeElement.dataset.command:null;
+  detail.closest('.apps-library').dataset.view=appsView;
+  detail.hidden=!app;
+  if(!app){detail.replaceChildren();return;}
+  const pending=appPendingActions.get(app.id);
+  let state='available',label=appUi('available');
+  if(pending){state='pending';label=pending==='install'?uiText('Installing…'):appPendingLabel(pending);}
+  else if(app.update_available){state='update';label=uiText('Update available');}
+  else if(app.installed){state=app.running?'running':'stopped';label=uiText(app.running?'Running':'Stopped');}
+  const webUrl=appWebUrl(app);
+  const actions=appDetailActions(app,pending,webUrl);
+  detail.innerHTML=`<button type="button" class="app-list-back btn ghost sm" onclick="appsBackToList()"><span aria-hidden="true">‹</span> ${esc(appUi('backToApps'))}</button>
+    <div class="app-detail-hero" aria-hidden="true">${appLibraryIcon(app,true)}</div>
+    <div class="app-detail-body">
+      <h3 id="apps-detail-title" class="app-detail-title" tabindex="-1" translate="no">${esc(app.name)}</h3>
+      <span class="app-detail-status" data-state="${state}" role="status">${esc(label)}</span>
+      <p class="app-detail-description">${esc(localizedAppDesc(app))}</p>
+      ${actions?`<div class="app-detail-actions">${actions}</div>`:''}
+      <section class="app-detail-facts">
+        <h4>${esc(appUi('details'))}</h4>
+        <dl><div><dt>${esc(appUi('category'))}</dt><dd>${esc(appCategoryLabel(app.category))}</dd></div>
+          ${app.port>0?`<div><dt>${esc(appUi(webUrl?'webPort':'port'))}</dt><dd class="mono">${esc(app.port)}</dd></div>`:''}
+        </dl>
+      </section>
+    </div>`;
+  const handlers={install:()=>appInstallForm(app.id),start:()=>appAct(app.id,'start'),restart:()=>appAct(app.id,'restart'),
+    update:()=>appAct(app.id,'update'),stop:()=>appAct(app.id,'stop'),edit:()=>dashCompose(app.id),files:()=>dashFiles(app.id),
+    dashboard:()=>appAddToDashboard(app.id),uninstall:()=>appUninstall(app.id,app.name)};
+  const menu=detail.querySelector('#app-menu');
+  const trigger=detail.querySelector('#app-menu-trigger');
+  detail.querySelectorAll('[data-command]').forEach(button=>{
+    const action=handlers[button.dataset.command];
+    if(action)button.onclick=()=>{
+      if(menu?.matches(':popover-open')){menu.hidePopover();trigger.focus();}
+      action();
+    };
+  });
+  if(menu)setupAppMenu(menu,trigger);
+  if(focused){
+    const next=command&&detail.querySelector(`[data-command="${CSS.escape(command)}"]:not(.app-menu *)`);
+    (next||detail.querySelector('h3')).focus({preventScroll:true});
+  }
+}
+
+function setupAppMenu(menu,trigger){
+  const buttons=[...menu.querySelectorAll('button')];
+  buttons.forEach(button=>button.setAttribute('role','menuitem'));
+  menu.ontoggle=event=>{
+    if(event.newState!=='open')return;
+    const rect=trigger.getBoundingClientRect();
+    const top=rect.bottom+4+menu.offsetHeight<=innerHeight?rect.bottom+4:rect.top-menu.offsetHeight-4;
+    menu.style.top=Math.max(8,top)+'px';
+    menu.style.left=Math.max(8,Math.min(innerWidth-menu.offsetWidth-8,rect.right-menu.offsetWidth))+'px';
+    buttons[0].focus({preventScroll:true});
+  };
+  menu.onkeydown=event=>{
+    const index=buttons.indexOf(document.activeElement),last=buttons.length-1;
+    const next={ArrowDown:(index+1)%buttons.length,ArrowUp:(index+last)%buttons.length,Home:0,End:last}[event.key];
+    if(next!==undefined){event.preventDefault();buttons[next].focus();}
+  };
+  menu.onfocusout=event=>{
+    if(event.relatedTarget&&!menu.contains(event.relatedTarget)&&menu.matches(':popover-open'))menu.hidePopover();
+  };
+}
+
+window.appsSetCat=category=>{appsActiveCat=appCategoryKey(category);renderAppsList();};
+window.appsSetSort=value=>{appsSort=value==='default'?'default':'installed';renderAppsList();};
+window.appsDoSearch=value=>{appsSearch=value;renderAppsList();};
 
 async function waitForAppActionJob(jobId){
   while(true){
@@ -15007,9 +15077,8 @@ window.appAct=async(id,action)=>{
   const labels={start:'Starting…',stop:'Stopping…',restart:'Restarting…',update:'Refreshing…'};
   toast(uiText(labels[action]||'…'));
   appPendingActions.set(id,action);
-  const body=$('#modal-body');
   let updateIndicator=null;
-  if(body)renderAppsView(body,appsCatalogCategories);
+  if(currentTile?.id==='apps')renderAppDetail();
   try{
     let r=await post('/apps/action',{app_id:id,action});
     if(action==='update'&&r.job_id){
@@ -15029,7 +15098,7 @@ window.appAct=async(id,action)=>{
   }catch(e){
     if(updateIndicator)finishAppUpdateIndicator(updateIndicator,false,e.message||'');
     appPendingActions.delete(id);
-    if(body)renderAppsView(body,appsCatalogCategories);
+    if(currentTile?.id==='apps')renderAppDetail();
     toast('Error: '+e.message,'error');
   }
 };
@@ -15098,6 +15167,8 @@ async function renderPorts(body){
   }
 }
 window.openPortsView=()=>{
+  ++appsRenderVersion;
+  $('#overlay .modal').classList.remove('apps-modal');
   const title=uiText('Ports');
   currentTile={id:'ports',icon:'▦',name:title};
   currentTab=null;
@@ -15124,45 +15195,6 @@ window.appAddToDashboard=async id=>{
     loadDashboard();
     toast(uiText('Added to dashboard'));
   }catch(e){toast('Error: '+e.message,'error');}
-};
-
-window.closeAppMenu=()=>{const m=$('#app-menu');if(m)m.remove();};
-window.appMenu=(ev,id,name,running,upd)=>{
-  ev.stopPropagation();
-  closeAppMenu();
-  const app=appById(id)||{};
-  const isCompose=appIsCompose(app)||String(id||'').startsWith('compose:');
-  const items=[];
-  if(running){
-    items.push(['⏸','Stop',()=>appAct(id,'stop')]);
-    items.push(['↻','Restart',()=>appAct(id,'restart')]);
-  } else {
-    items.push(['▶','Start',()=>appAct(id,'start')]);
-  }
-  if(upd&&!isCompose)items.push(['↑','Update',()=>appAct(id,'update')]);
-  items.push('sep');
-  items.push(['✎','Edit compose',()=>dashCompose(id)]);
-  items.push(['📂','Show files',()=>dashFiles(id)]);
-  items.push(['▣','Show on dashboard',()=>appAddToDashboard(id)]);
-  items.push('sep');
-  if(!isCompose)items.push(['🗑','Uninstall',()=>appUninstall(id,name),true]);
-  const m=document.createElement('div');
-  m.id='app-menu';m.className='app-menu';
-  const r=ev.currentTarget.getBoundingClientRect();
-  m.style.top=Math.min(r.bottom+4,window.innerHeight-300)+'px';
-  m.style.left=Math.min(r.right-172,window.innerWidth-184)+'px';
-  items.forEach(it=>{
-    if(it==='sep'){const s=document.createElement('div');s.className='sep';m.appendChild(s);return;}
-    const [icon,label,fn,danger]=it;
-    const labelText=uiText(label);
-    const d=document.createElement('div');
-    if(danger)d.className='danger';
-    d.innerHTML=`<span style="width:16px;text-align:center">${icon}</span> ${esc(labelText)}`;
-    d.onclick=()=>{closeAppMenu();fn();};
-    m.appendChild(d);
-  });
-  document.body.appendChild(m);
-  setTimeout(()=>document.addEventListener('click',closeAppMenu,{once:true}),10);
 };
 
 window.appsCheckUpdates=async()=>{
@@ -16875,36 +16907,69 @@ window.appInstallPickVolume=index=>{
 async function appInstallStart(draft){
   const content=appInstallCompose(draft);
   closeForm();
+  const id=draft.app.id;
+  if(appPendingActions.has(id))return;
+  appPendingActions.set(id,'install');
+  if(currentTile?.id==='apps')renderAppDetail();
   toast('Installing '+draft.app.name+'…');
   const host=ensureInstallIndicatorHost();
   const indicator=document.createElement('div');
   indicator.className='install-indicator';
   indicator.innerHTML=`<span class="install-dot"></span><span class="install-label">${esc(draft.app.name)}</span><span class="install-bar-wrap"><span class="install-bar-fill" id="inst-bar-${esc(draft.app.id)}"></span></span><span class="install-pct" id="inst-step-${esc(draft.app.id)}">…</span>`;
   if(host)host.insertBefore(indicator,host.firstChild);
+  let jobStarted=false;
   try{
-    const r=await post('/apps/install',{app_id:draft.app.id,content});
-    if(!r.job_id){indicator.remove();toast(appUi('installDidNotStart'),'error');return;}
-    _activeInstalls++;updateAppsBadge();
+    const r=await post('/apps/install',{app_id:id,content});
+    if(!r.job_id)throw new Error(appUi('installDidNotStart'));
+    jobStarted=true;
+    _activeInstalls++;
+    updateAppsBadge();
+    const stepEl=indicator.querySelector('.install-pct'),barEl=indicator.querySelector('.install-bar-fill');
     let progress=8;
-    const poller=setInterval(async()=>{
+    while(true){
+      await new Promise(resolve=>setTimeout(resolve,2000));
+      let status;
       try{
-        const s=await api('/apps/install-status?job_id='+encodeURIComponent(r.job_id));
-        const stepEl=$('#inst-step-'+draft.app.id),barEl=$('#inst-bar-'+draft.app.id),labelEl=indicator.querySelector('.install-label');
-        if(stepEl)stepEl.textContent=appInstallStepText(s.step||'…',s.step_key);
-        if(s.status==='pulling')progress=Math.min(progress+2,70);
-        else if(s.status==='starting')progress=Math.min(progress+6,95);
-        if(barEl)barEl.style.width=Math.round(progress)+'%';
-        if(s.status==='done'||s.status==='error'){
-          clearInterval(poller);_activeInstalls=Math.max(0,_activeInstalls-1);updateAppsBadge();
-          if(barEl)barEl.style.width='100%';
-          if(s.ok){indicator.classList.add('done');if(stepEl)stepEl.textContent=appInstallStepText(s.step||'Done ✓',s.step_key||'done');toast(draft.app.name+' installed');let installed=draft.app;try{installed=await api('/apps/get?app_id='+encodeURIComponent(draft.app.id));}catch(e){}dashAutoAdd(draft.app.id,draft.app.name,draft.app.icon,installed.port||draft.app.port);}
-          else{indicator.classList.add('error');indicator.title=s.output||appInstallStepText(s.step,s.step_key)||'';if(labelEl)labelEl.textContent=appUi('installFailed');toast(appInstallStepText(s.step,s.step_key)||appUi('installFailed'),'error');}
-          setTimeout(()=>indicator.remove(),3000);
-          renderApps($('#modal-body'));
+        status=await api('/apps/install-status?job_id='+encodeURIComponent(r.job_id));
+      }catch(e){
+        if(e.status===404||e.status===410)throw new Error(appUi('installStatusLost'));
+        if(e.status===401||e.status===403)throw e;
+        continue;
+      }
+      if(status.status==='unknown')throw new Error(appUi('installStatusLost'));
+      const message=appInstallStepText(status.step||'…',status.step_key);
+      stepEl.textContent=message;
+      if(status.status==='done'||status.status==='error'){
+        barEl.style.width='100%';
+        if(!status.ok){
+          indicator.title=status.output||message;
+          indicator.querySelector('.install-label').textContent=appUi('installFailed');
+          throw new Error(status.step||status.step_key?message:appUi('installFailed'));
         }
-      }catch(e){}
-    },2000);
-  }catch(e){indicator.classList.add('error');toast('Error: '+e.message,'error');setTimeout(()=>indicator.remove(),3000);}
+        indicator.classList.add('done');
+        stepEl.textContent=appInstallStepText(status.step||'Done ✓',status.step_key||'done');
+        toast(draft.app.name+' installed');
+        let installed=draft.app;
+        try{installed=await api('/apps/get?app_id='+encodeURIComponent(id));}catch(e){}
+        dashAutoAdd(id,draft.app.name,draft.app.icon,installed.port||draft.app.port);
+        break;
+      }
+      if(status.status==='pulling')progress=Math.min(progress+2,70);
+      else if(status.status==='starting')progress=Math.min(progress+6,95);
+      barEl.style.width=Math.round(progress)+'%';
+    }
+  }catch(e){
+    indicator.classList.add('error');
+    toast(e.message,'error');
+  }finally{
+    appPendingActions.delete(id);
+    if(jobStarted){
+      _activeInstalls--;
+      updateAppsBadge();
+    }
+    setTimeout(()=>indicator.remove(),3000);
+    renderApps($('#modal-body'));
+  }
 }
 function appComposeIconHtml(a){
   const icon=String(a?.icon||'').trim();
@@ -17029,44 +17094,6 @@ window.appUninstall=(id,name)=>typedConfirm('Uninstall app',`"${name}" will be s
   toast(uiText('Uninstalling…'));
   try{await post('/apps/action',{app_id:id,action:'down'});toast(name+' uninstalled');renderApps($('#modal-body'));}catch(e){toast('Error: '+e.message,'error');}
 });
-function appCardHtml(a){
-  const tint=appTint(a.category);
-  const pending=appPendingActions.get(a.id);
-  let actions,pill='';
-  if(!a.installed){
-    actions=`<button class="app-install-btn" onclick="appInstallForm('${a.id}')">${esc(uiText('Install'))}</button>`;
-  } else {
-    pill=pending
-      ? `<span class="app-status-pill pending" title="${esc(appPendingLabel(pending))}"><span class="sd"></span>${esc(appPendingLabel(pending))}</span>`
-      : a.update_available
-      ? `<span class="app-status-pill upd" title="${esc(uiText('Update available'))}">${esc(uiText('Update'))}</span>`
-      : a.running
-        ? `<span class="app-status-pill run" title="${esc(uiText('Running'))}"><span class="sd"></span>${esc(uiText('Running'))}</span>`
-        : `<span class="app-status-pill paused" title="${esc(uiText('Stopped'))}"><span class="sd"></span>${esc(uiText('Stopped'))}</span>`;
-    const primary=pending
-      ? `<button class="btn sm ghost" style="flex:1" disabled>${esc(appPendingLabel(pending))}</button>`
-      : a.running
-      ? `<a class="btn sm success" style="flex:1;text-decoration:none" href="http://${location.hostname}:${a.port}" target="_blank" rel="noopener noreferrer">${esc(uiText('Open'))}</a>`
-      : `<button class="btn sm" style="flex:1" onclick="appAct('${a.id}','start')">${esc(uiText('Start'))}</button>`;
-    actions=`<div style="display:flex;gap:6px">${primary}<button class="btn icon" title="${esc(uiText('Actions'))}" onclick="appMenu(event,'${a.id}','${esc(a.name)}',${a.running?1:0},${a.update_available?1:0})" style="width:30px;height:30px;font-size:15px" ${pending?'disabled':''}>⋯</button></div>`;
-  }
-  return `<div class="app-card">
-    ${pill}
-    <div class="app-card-head">
-      <div class="app-icon-wrap" style="background:${appHexA(tint,.12)};border-color:${appHexA(tint,.25)}">
-        <img src="${esc(a.icon)}" alt="${esc(a.name)}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
-        <div class="app-icon-fallback" style="display:none;background:${appHexA(tint,.18)};color:${tint}">${esc(a.name[0])}</div>
-      </div>
-      <div class="app-card-info"${a.installed?' style="padding-right:62px"':''}>
-        <div class="app-card-name">${esc(a.name)}</div>
-        <div class="app-card-meta">:${a.port||'—'}</div>
-      </div>
-    </div>
-    <div class="app-card-desc">${esc(localizedAppDesc(a))}</div>
-    <div class="app-card-actions">${actions}</div>
-  </div>`;
-}
-
 async function renderBackup(body,tab){
   if(tab==='Time Machine'){await renderTimeMachine(body);return;}
   if(tab==='History'||tab==='History'){

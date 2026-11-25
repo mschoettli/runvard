@@ -933,7 +933,6 @@ html[data-ui-theme="modern"] .nx-card-inner,
 html[data-ui-theme="modern"] .nx-summary-card,
 html[data-ui-theme="modern"] .nx-action-card,
 html[data-ui-theme="modern"] .vm-panel,
-html[data-ui-theme="modern"] .app-card,
 html[data-ui-theme="modern"] .nx-choice,
 html[data-ui-theme="modern"] .nx-check-row {
   border-color: rgb(255 255 255 / 74%);
@@ -942,7 +941,6 @@ html[data-ui-theme="modern"] .nx-check-row {
 }
 
 html[data-ui-theme="modern"] .nx-action-card:hover,
-html[data-ui-theme="modern"] .app-card:hover,
 html[data-ui-theme="modern"] .nx-choice:hover,
 html[data-ui-theme="modern"] .nx-check-row:hover {
   border-color: var(--border-accent);
@@ -2357,20 +2355,11 @@ html[data-ui-theme="modern"] .status-pill.is-warn {
   color: #936020;
 }
 
-html[data-ui-theme="modern"] .app-card {
-  box-shadow: 0 8px 22px rgb(48 75 110 / 6%);
-}
-
-html[data-ui-theme="modern"] .app-card:hover {
-  transform: translateY(-1px);
-}
-
 html[data-ui-theme="modern"] .nx-kv div,
 html[data-ui-theme="modern"] .vm-resource-grid div,
 html[data-ui-theme="modern"] .vm-device-row,
 html[data-ui-theme="modern"] .nx-advanced,
-html[data-ui-theme="modern"] .nx-chip,
-html[data-ui-theme="modern"] .app-icon-wrap {
+html[data-ui-theme="modern"] .nx-chip {
   border-color: var(--border);
   background: rgb(255 255 255 / 42%);
 }
@@ -2380,37 +2369,16 @@ html[data-ui-theme="modern"] .vm-card {
   background: linear-gradient(90deg, rgb(57 115 230 / 7%), rgb(255 255 255 / 46%) 38%);
 }
 
-html[data-ui-theme="modern"] .nx-chip.good,
-html[data-ui-theme="modern"] .app-status-pill.run {
+html[data-ui-theme="modern"] .nx-chip.good {
   color: var(--green);
 }
 
-html[data-ui-theme="modern"] .nx-chip.warn,
-html[data-ui-theme="modern"] .app-status-pill.paused,
-html[data-ui-theme="modern"] .app-status-pill.upd {
+html[data-ui-theme="modern"] .nx-chip.warn {
   color: var(--yellow);
 }
 
 html[data-ui-theme="modern"] .nx-chip.bad {
   color: var(--red);
-}
-
-html[data-ui-theme="modern"] .apps-cat.active {
-  border-color: var(--border-accent);
-  background: rgb(57 115 230 / 12%);
-  color: var(--accent);
-}
-
-html[data-ui-theme="modern"] .app-install-btn {
-  min-height: 40px;
-  border: 1px solid var(--border-accent);
-  border-radius: 10px;
-  color: var(--accent);
-}
-
-html[data-ui-theme="modern"] .app-install-btn:hover {
-  background: var(--accent);
-  color: #fff;
 }
 
 html[data-ui-theme="modern"] .dash-ctx-item {

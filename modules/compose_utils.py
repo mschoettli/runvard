@@ -67,7 +67,7 @@ def _compose_services(content):
     return {}
 
 
-def _published_and_target(port_mapping):
+def published_and_target(port_mapping):
     if isinstance(port_mapping, dict):
         return _as_int(port_mapping.get("published")), _as_int(port_mapping.get("target"))
 
@@ -123,30 +123,35 @@ def _compose_port_entries(content):
     return entries
 
 
-def best_web_port_from_compose(content, fallback=0, preferred_target=None):
-    services = _compose_services(content)
-    candidates = []
-    for service_name, entry in _compose_port_entries(content):
-        protocol = (entry.get("protocol", "tcp") if isinstance(entry, dict)
-                    else str(entry).partition("/")[2] or "tcp")
-        if str(protocol).lower() != "tcp":
-            continue
-        published, target = _published_and_target(entry)
-        if not published:
-            continue
-        management = management_target_port(service_name, services.get(service_name) or {})
-        if target and target == management:
-            candidates.append((1000, published))
-            continue
-        if target and target == preferred_target:
-            candidates.append((900, published))
-            continue
-        if published in NON_WEB_PORTS or target in NON_WEB_PORTS:
-            continue
+def _binding_candidate(name, service, entry, preferred_target):
+    if isinstance(entry, dict):
+        protocol = entry.get("protocol", "tcp")
+        app_protocol = entry.get("app_protocol")
+        address = str(entry.get("host_ip") or "")
+    else:
+        mapping, _, protocol = str(entry).partition("/")
+        app_protocol = None
+        address = mapping.rsplit(":", 2)[0] if mapping.count(":") >= 2 else ""
+    published, target = published_and_target(entry)
+    if str(protocol or "tcp").lower() != "tcp" or not published or not target:
+        return None
+    if not (0 < published <= 65535 and 0 < target <= 65535):
+        return None
+
+    management = management_target_port(name, service)
+    if target == management:
+        score = 1000
+    elif target == preferred_target:
+        score = 900
+    elif app_protocol in ("http", "https"):
+        score = 800
+    elif target in NON_WEB_PORTS or published in NON_WEB_PORTS:
+        return None
+    else:
         score = 0
-        if WEB_SERVICE_RE.search(service_name or ""):
+        if WEB_SERVICE_RE.search(name):
             score += 60
-        if NON_WEB_SERVICE_RE.search(service_name or ""):
+        if NON_WEB_SERVICE_RE.search(name):
             score -= 80
         if target in WEB_TARGET_PORTS:
             score += 50
@@ -154,23 +159,64 @@ def best_web_port_from_compose(content, fallback=0, preferred_target=None):
             score += 25
         if target in (80, 443):
             score += 20
-        candidates.append((score, published))
-    if not candidates:
-        for name, service in services.items():
-            if isinstance(service, dict) and service.get("network_mode") == "host":
-                management = management_target_port(name, service)
-                if management:
-                    return management
-        return fallback
-    candidates.sort(reverse=True)
-    return candidates[0][1] if candidates[0][0] >= 0 else fallback
+
+    # Protocol follows the container port even when the host port is remapped.
+    scheme = "https" if target in (443, 8443, 9443) else "http"
+    image = str(service.get("image") or "").split("@")[0].rsplit("/", 1)[-1].split(":")[0]
+    if image == "code-server" and target == 8443:
+        scheme = "http"
+    if image == "kasm" and target == 6901:
+        scheme = "https"
+    if app_protocol:
+        scheme = app_protocol if app_protocol in ("http", "https") else ""
+    if score <= 0 or (target in NON_WEB_PORTS and target != management and not app_protocol):
+        scheme = ""
+    if address.startswith("127.") or address.strip("[]") == "::1":
+        scheme = ""
+    return score, published, scheme
+
+
+def best_web_endpoint_from_services(services, preferred_target=None, *, prefer_browser=True):
+    """Return (published port, browser scheme) for resolved Compose services."""
+    candidates = []
+    for name, service in services.items():
+        if not isinstance(service, dict) or not isinstance(service.get("ports"), list):
+            continue
+        for entry in service["ports"]:
+            candidate = _binding_candidate(str(name), service, entry, preferred_target)
+            if candidate and candidate[0] >= 0:
+                candidates.append(candidate)
+    if candidates:
+        _, port, scheme = max(candidates, key=lambda item: (prefer_browser and bool(item[2]), item[0], item[1]))
+        return port, scheme
+    for name, service in services.items():
+        if isinstance(service, dict) and service.get("network_mode") == "host":
+            management = management_target_port(name, service)
+            if management:
+                return management, "http"
+            if preferred_target:
+                return preferred_target, "http"
+    return 0, ""
+
+
+def best_web_endpoint_from_compose(content, preferred_target=None, *, prefer_browser=True):
+    services = _compose_services(content)
+    if not services and yaml is None:
+        for name, entry in _compose_port_entries(content):
+            services.setdefault(name, {"ports": []})["ports"].append(entry)
+    return best_web_endpoint_from_services(services, preferred_target, prefer_browser=prefer_browser)
+
+
+def best_web_port_from_compose(content, fallback=0, preferred_target=None):
+    port, _ = best_web_endpoint_from_compose(content, preferred_target, prefer_browser=False)
+    return port or fallback
 
 
 def published_ports_from_compose(content):
     """Return published host ports from a Docker Compose file."""
     ports = []
     for service_name, entry in _compose_port_entries(content):
-        published, target = _published_and_target(entry)
+        published, target = published_and_target(entry)
         if isinstance(entry, dict):
             host_ip = str(entry.get("host_ip") or "0.0.0.0")
             protocol = str(entry.get("protocol") or "tcp").lower()

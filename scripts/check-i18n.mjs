@@ -308,9 +308,16 @@ for (const [, key] of indexSource.matchAll(/\bfileText\(['"]([^'"]+)['"]/g)) {
 }
 requireExpectedTranslations("APP_UI.de", localizedMap(context.APP_UI, "de"), {
   installedFirst: "Installierte Apps zuerst",
+  runvardApps: "Runvard-Apps",
   starting: "Wird gestartet…",
   stopping: "Wird gestoppt…",
   restarting: "Wird neu gestartet…",
+});
+requireExpectedTranslations("APP_UI.port", context.APP_UI.port, {
+  de: "Port", en: "Port", fr: "Port", it: "Porta", es: "Puerto", pt: "Porta",
+});
+requireExpectedTranslations("APP_UI.restartAction", context.APP_UI.restartAction, {
+  de: "Neu starten", en: "Restart", fr: "Redémarrer", it: "Riavvia", es: "Reiniciar", pt: "Reiniciar",
 });
 requireExpectedTranslations(
   "TOAST_PHRASES.de",

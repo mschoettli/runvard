@@ -16,7 +16,7 @@ import subprocess
 import threading
 
 from modules import docker_mgr, source_apps
-from modules.compose_utils import best_web_port_from_compose
+from modules.compose_utils import NON_WEB_PORTS, best_web_endpoint_from_compose, published_and_target
 
 try:
     import yaml
@@ -167,7 +167,7 @@ volumes:
      "tpl": _c("caddy:latest", ["80:80", "443:443"],
                ["./Caddyfile:/etc/caddy/Caddyfile", "./data:/data"])},
     {"id": "unbound", "name": "Unbound", "icon": "unbound", "category": "Netzwerk",
-     "desc": "Validierender DNS-Resolver", "port": 5335,
+     "desc": "Validierender DNS-Resolver", "port": 5335, "web_scheme": "",
      "tpl": _c("mvance/unbound:latest", ["5335:53/tcp", "5335:53/udp"],
                ["./config:/opt/unbound/etc/unbound"])},
     {"id": "ddns-updater", "name": "DDNS-Updater", "icon": "ddns-updater", "category": "Netzwerk",
@@ -270,7 +270,7 @@ volumes:
 
     # ─── AI ─────────────────────────────────────────────────────────────
     {"id": "ollama", "name": "Ollama", "icon": "ollama", "category": "AI",
-     "desc": "Lokale LLMs wie Llama & DeepSeek hosten", "port": 11434,
+     "desc": "Lokale LLMs wie Llama & DeepSeek hosten", "port": 11434, "web_scheme": "",
      "tpl": _c("ollama/ollama:latest", ["11434:11434"], ["./data:/root/.ollama"])},
     {"id": "open-webui", "name": "Open WebUI", "icon": "open-webui", "category": "AI",
      "desc": "Chat-Oberfläche für lokale LLMs", "port": 8080,
@@ -307,7 +307,7 @@ volumes:
      "desc": "Überwachung der Verfügbarkeit von Diensten", "port": 3001,
      "tpl": _c("louislam/uptime-kuma:1", ["3001:3001"], ["./data:/app/data"])},
     {"id": "portainer", "name": "Portainer", "icon": "portainer", "category": "Monitoring",
-     "desc": "Web-Oberfläche zur Docker-Verwaltung", "port": 9443,
+     "desc": "Web-Oberfläche zur Docker-Verwaltung", "port": 9443, "web_scheme": "https",
      "tpl": _c("portainer/portainer-ce:latest", ["9443:9443", "8000:8000"],
                ["/var/run/docker.sock:/var/run/docker.sock", "./data:/data"])},
     {"id": "dozzle", "name": "Dozzle", "icon": "dozzle", "category": "Monitoring",
@@ -506,7 +506,7 @@ volumes:
      "desc": "Datei-Sync & -Sharing mit hoher Performance", "port": 80,
      "tpl": _c("seafileltd/seafile-mc:latest", ["8080:80"], ["./data:/shared"])},
     {"id": "kasm", "name": "Kasm Workspaces", "icon": "kasm-workspaces", "category": "Developer",
-     "desc": "Streamed Container-Desktops im Browser", "port": 6901,
+     "desc": "Streamed Container-Desktops im Browser", "port": 6901, "web_scheme": "https",
      "tpl": _c("lscr.io/linuxserver/kasm:latest", ["6901:6901", "443:443"],
                ["./data:/opt"], extra="    privileged: true")},
     {"id": "guacamole", "name": "Apache Guacamole", "icon": "apache-guacamole", "category": "Netzwerk",
@@ -625,14 +625,22 @@ def _host_ports_from_compose(content):
     return ports
 
 
-def _first_host_port_from_compose(content, fallback=0, preferred_target=None):
-    port = best_web_port_from_compose(content, preferred_target=preferred_target)
+def _app_endpoint(app, content=None):
+    default_port = app["port"]
+    scheme = app.get("web_scheme", "http") if default_port and default_port not in NON_WEB_PORTS else ""
+    if content is None:
+        return default_port, scheme
+    target = default_port
+    for mapping in app.get("tpl", {}).get("ports", []):
+        published, internal = published_and_target(mapping)
+        if published == default_port:
+            target = internal
+            break
+    port, published_scheme = best_web_endpoint_from_compose(content, preferred_target=target,
+                                                           prefer_browser=bool(scheme))
     if port:
-        return port
-    env_port = _environment_port_from_compose(content)
-    if env_port:
-        return env_port
-    return fallback
+        return port, published_scheme if scheme else ""
+    return _environment_port_from_compose(content) or default_port, ""
 
 
 def _environment_port_from_compose(content):
@@ -1334,7 +1342,7 @@ def _compose_project_from_app_id(app_id):
     return project
 
 
-def _compose_app_entry(project, running=False, port=0, compose=""):
+def _compose_app_entry(project, running=False, port=0, web_scheme="", compose=""):
     return {
         "id": f"compose:{project}",
         "type": "compose",
@@ -1344,6 +1352,7 @@ def _compose_app_entry(project, running=False, port=0, compose=""):
         "category": "Compose",
         "desc": "Custom Docker Compose project",
         "port": port,
+        "web_scheme": web_scheme,
         "first_party": False,
         "installed": True,
         "running": running,
@@ -1366,10 +1375,7 @@ def get_catalog():
     for app in CATALOG:
         installed = is_installed(app["id"])
         running = _running(app["id"]) if installed else False
-        port = app["port"]
-        if installed:
-            port = _first_host_port_from_compose(_read_compose(app["id"]), port,
-                                                 preferred_target=app["port"])
+        port, scheme = _app_endpoint(app, _read_compose(app["id"]) if installed else None)
         out.append({
             "id": app["id"],
             "type": "app",
@@ -1378,6 +1384,7 @@ def get_catalog():
             "category": app["category"],
             "desc": app["desc"],
             "port": port,
+            "web_scheme": scheme,
             "first_party": bool(app.get("first_party")),
             **({"repository_url": app["repository_url"]}
                if app.get("repository_url") else {}),
@@ -1396,6 +1403,7 @@ def get_catalog():
             name,
             running=project.get("running", False),
             port=project.get("port", 0),
+            web_scheme=project.get("web_scheme", ""),
             compose=compose,
         ))
     return {"categories": CATEGORIES, "apps": out}
@@ -1428,9 +1436,8 @@ def get_app(app_id):
             raise ValueError("Compose-Projekt nicht gefunden")
         data = docker_mgr.get_compose(project)
         compose = data.get("content", "")
-        port = _first_host_port_from_compose(compose, 0)
-        return _compose_app_entry(project, running=status.get("running", False), port=port,
-                                  compose=compose)
+        return _compose_app_entry(project, running=status.get("running", False), port=status.get("port", 0),
+                                  web_scheme=status.get("web_scheme", ""), compose=compose)
 
     app = next((a for a in CATALOG if a["id"] == app_id), None)
     if not app:
@@ -1441,6 +1448,7 @@ def get_app(app_id):
         install_info = None
     else:
         compose, install_info = _app_install_draft(app)
+    port, scheme = _app_endpoint(app, compose)
     result = {
         "id": app["id"],
         "type": "app",
@@ -1448,8 +1456,8 @@ def get_app(app_id):
         "icon": _icon_url(app),
         "category": app["category"],
         "desc": app["desc"],
-        "port": _first_host_port_from_compose(compose, app["port"],
-                                              preferred_target=app["port"]),
+        "port": port,
+        "web_scheme": scheme,
         "first_party": bool(app.get("first_party")),
         **({"repository_url": app["repository_url"]}
            if app.get("repository_url") else {}),

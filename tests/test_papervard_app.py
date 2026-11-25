@@ -309,15 +309,32 @@ if (JSON.stringify(result) !== JSON.stringify(expected)) {{
     )
 
 
-def test_app_store_sort_renders_visual_groups():
+@pytest.mark.parametrize(
+    ("order", "expected"),
+    [
+        ("installed", {"installedApps": ["compose:local"], "availableApps": ["papervard", "jellyfin"]}),
+        ("default", {"runvardApps": ["papervard"], "appCatalog": ["compose:local", "jellyfin"]}),
+    ],
+)
+def test_app_library_groups_installed_and_first_party_apps_independently(order, expected):
     html = Path("static/index.html").read_text()
-
-    assert "function groupAppsCatalog(items)" in html
-    assert "function appCatalogGridHtml(items)" in html
-    assert 'class="apps-group"' in html
-    assert ".apps-group+.apps-group" in html
-    for key in ("myApps", "appCatalog", "installedApps", "availableApps"):
-        assert re.search(rf"{key}:\{{de:.*?en:.*?fr:.*?it:.*?es:.*?pt:", html)
+    helpers = [
+        re.search(rf"function {name}\(items\)\{{.*?^\}}", html, re.M | re.S).group()
+        for name in ("sortAppsCatalog", "groupAppsCatalog")
+    ]
+    script = "\n".join(helpers) + f"""
+const appsSort = {json.dumps(order)};
+const groups = groupAppsCatalog([
+  {{id:'compose:local', installed:true, first_party:false}},
+  {{id:'jellyfin', installed:false, first_party:false}},
+  {{id:'papervard', installed:false, first_party:true}},
+]);
+console.log(JSON.stringify(Object.fromEntries(
+  groups.map(group => [group.labelKey, group.items.map(app => app.id)])
+)));
+"""
+    result = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True)
+    assert json.loads(result.stdout) == expected
 
 
 def test_readonly_users_cannot_read_app_compose_secrets(monkeypatch):
