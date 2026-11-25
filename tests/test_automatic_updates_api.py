@@ -6,11 +6,11 @@ import server
 
 def client(role="admin"):
     result = TestClient(server.app)
-    result.cookies.set(server.COOKIE_NAME, server.make_token("tester", 3600, role))
+    result.cookies.set(server.COOKIE_NAME, server.make_token("tester", 3600, role, account_salt=None))
     return result
 
 
-@pytest.mark.parametrize("role", ["admin", "operator", "readonly"])
+@pytest.mark.parametrize("role", ["admin", "readonly"])
 def test_status_is_available_without_expert_mode(monkeypatch, role):
     status = {"installed": True, "enabled": True, "auto_reboot": False}
     monkeypatch.setattr(server.system_mgr, "unattended_status", lambda: status)
@@ -21,7 +21,7 @@ def test_status_is_available_without_expert_mode(monkeypatch, role):
 
 @pytest.mark.parametrize("role,confirmed,expected", [
     ("admin", True, 200), ("admin", False, 403),
-    ("operator", True, 403), ("readonly", True, 403),
+    ("operator", True, 401), ("readonly", True, 403),
 ])
 def test_settings_require_confirmed_admin_without_expert_mode(monkeypatch, role, confirmed, expected):
     calls = []
@@ -40,3 +40,7 @@ def test_settings_require_confirmed_admin_without_expert_mode(monkeypatch, role,
 
 def test_status_requires_login():
     assert TestClient(server.app).get("/api/sysmgr/unattended").status_code == 401
+
+
+def test_unrecognized_session_role_cannot_read_settings():
+    assert client("operator").get("/api/sysmgr/unattended").status_code == 401

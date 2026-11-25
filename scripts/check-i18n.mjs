@@ -153,6 +153,12 @@ const i18n = evaluate(indexSource, "I18N", context);
 mergeLocales(i18n, evaluate(indexSource, "I18N_COMPLETIONS", context, true));
 requireKeyParity("I18N", i18n, "en");
 
+const accounts = evaluate(indexSource, "ACCOUNT_I18N");
+requireKeyParity("ACCOUNT_I18N", accounts, "en", locales);
+const consolePath = new URL("static/vm-console-i18n.js", root);
+if (fs.existsSync(consolePath)) {
+  requireKeyParity("VM_CONSOLE_I18N", evaluate(fs.readFileSync(consolePath, "utf8"), "VM_CONSOLE_I18N"), "en", locales);
+}
 const deviceI18n = evaluate(indexSource, "DEVICE_I18N", context);
 requireKeyParity("DEVICE_I18N", deviceI18n, "en", locales);
 for (const locale of locales) {
@@ -217,6 +223,14 @@ requireExpectedTranslations("COMPOSE_EDITOR_I18N.portConflict", Object.fromEntri
   "pt": "Uma ou mais portas do Compose já estão a ser utilizadas."
 });
 const tileEditorI18n = evaluate(indexSource, "TILE_EDIT_I18N", context);
+for (const [key, messages] of Object.entries(tileEditorI18n)) {
+  for (const locale of locales) {
+    if (!messages[locale]?.trim()) failures.push(`TILE_EDIT_I18N.${key} missing ${locale}`);
+  }
+}
+if (indexSource.includes('class="empty-state">Fehler beim Laden:')) {
+  failures.push("The catalog load error must use the current interface language");
+}
 requireExpectedTranslations("TILE_EDIT_I18N.showAddress", tileEditorI18n.showAddress, {
   de: "Adresse anzeigen", en: "Show address", fr: "Afficher l’adresse",
   it: "Mostra indirizzo", es: "Mostrar dirección", pt: "Mostrar endereço",
@@ -224,6 +238,7 @@ requireExpectedTranslations("TILE_EDIT_I18N.showAddress", tileEditorI18n.showAdd
 const backupWizardI18n = evaluate(indexSource, "BACKUP_WIZARD_I18N", context);
 mergeLocales(backupWizardI18n, evaluate(indexSource, "BACKUP_WIZARD_I18N_COMPLETIONS", context));
 requireKeyParity("BACKUP_WIZARD_I18N", backupWizardI18n, "en", locales);
+requireKeyParity("BACKUP_JOB_I18N", evaluate(indexSource, "BACKUP_JOB_I18N", context), "en", locales);
 requireKeyParity("BACKUP_SOURCE_LABELS", evaluate(indexSource, "BACKUP_SOURCE_LABELS", context), "en", locales);
 for (const name of ["PHRASE_PATTERNS", "TOAST_PATTERNS", "PROGRESS_PATTERNS"]) {
   evaluate(indexSource, name, context).forEach((pattern, index) => {
@@ -351,11 +366,36 @@ if (unknownKeys.length) failures.push(`unknown i18n keys: ${unknownKeys.join(" |
 
 // Standalone network map: the catalog is optional only for isolated legacy checker fixtures.
 const networkMapCatalog = new URL("static/network-map-i18n.json", root);
+const networkMapPage = new URL("static/network-map.html", root);
+if (fs.existsSync(networkMapPage) && !fs.existsSync(networkMapCatalog)) {
+  failures.push("network-map page is missing its translation catalog");
+}
 if (fs.existsSync(networkMapCatalog)) {
   const maps = JSON.parse(fs.readFileSync(networkMapCatalog, "utf8"));
   requireKeyParity("network-map", maps, "en", locales);
+  const markup = fs.readFileSync(networkMapPage, "utf8").replace(/<!--[\s\S]*?-->/g, "");
+  const referenced = new Set(
+    [...markup.matchAll(/\sdata-(?:t|aria|placeholder)\s*=\s*(["'])([^"']*)\1/g)].map(match => match[2]),
+  );
+  for (const file of ["network-map.js", "network-map-details.js"]) {
+    const source = fs.readFileSync(new URL("static/" + file, root), "utf8");
+    for (const match of source.matchAll(/\bt\(\s*(["'])([\w.-]+)\1\s*[,)]/g)) referenced.add(match[2]);
+  }
+  for (const key of referenced) {
+    if (!Object.hasOwn(maps.en || {}, key)) failures.push("network-map UI references missing key: " + key);
+  }
+  requirePlaceholderParity("network-map.en.resultCount", "{shown} {total}", maps.en?.resultCount);
   for (const locale of locales) {
-    const extras = Object.keys(maps[locale] || {}).filter(key => !(key in maps.en));
+    const values = maps[locale] || {};
+    if (values.allNetworks === values.allStatuses) {
+      failures.push("network-map." + locale + " connection and status filters need distinct labels");
+    }
+    for (const key of ["outOfScope", "outOfScopeShort"]) {
+      if (!values[key] || [values.online, values.offline, values.unknown].includes(values[key])) {
+        failures.push("network-map." + locale + "." + key + " must distinguish scan coverage from device reachability");
+      }
+    }
+    const extras = Object.keys(values).filter(key => !Object.hasOwn(maps.en || {}, key));
     if (extras.length) failures.push(`network-map.${locale} extra keys: ${extras.join(", ")}`);
     for (const [key, value] of Object.entries(maps[locale] || {})) {
       if (typeof value !== "string" || !value.trim()) failures.push(`network-map.${locale}.${key} empty`);

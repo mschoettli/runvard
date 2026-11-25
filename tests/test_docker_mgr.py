@@ -111,7 +111,7 @@ def test_list_container_stats_batches_running_containers_and_isolates_errors(mon
 
 def test_check_compose_ports_reports_occupied_host_port(monkeypatch):
     monkeypatch.setattr(docker_mgr, "_compose_owned_ports", lambda name: set())
-    monkeypatch.setattr(docker_mgr, "_port_is_available", lambda port: False)
+    monkeypatch.setattr(docker_mgr, "_port_is_available", lambda port, *args: False)
 
     result = docker_mgr.check_compose_ports("demo", """
 services:
@@ -127,12 +127,14 @@ services:
         "port": 8080,
         "target": 80,
         "reason": "in_use",
+        "host_ip": "0.0.0.0",
+        "protocol": "tcp",
     }]
 
 
 def test_check_compose_ports_allows_existing_project_port(monkeypatch):
-    monkeypatch.setattr(docker_mgr, "_compose_owned_ports", lambda name: {8080})
-    monkeypatch.setattr(docker_mgr, "_port_is_available", lambda port: False)
+    monkeypatch.setattr(docker_mgr, "_compose_owned_ports", lambda name: {(8080, "tcp", "0.0.0.0")})
+    monkeypatch.setattr(docker_mgr, "_port_is_available", lambda port, *args: False)
 
     result = docker_mgr.check_compose_ports("demo", """
 services:
@@ -148,7 +150,7 @@ services:
 
 def test_check_compose_ports_reports_duplicate_yaml_ports(monkeypatch):
     monkeypatch.setattr(docker_mgr, "_compose_owned_ports", lambda name: set())
-    monkeypatch.setattr(docker_mgr, "_port_is_available", lambda port: True)
+    monkeypatch.setattr(docker_mgr, "_port_is_available", lambda port, *args: True)
 
     result = docker_mgr.check_compose_ports("demo", """
 services:
@@ -170,7 +172,7 @@ services:
 def test_ports_view_is_not_exposed_as_app_catalog_entry(monkeypatch, tmp_path):
     monkeypatch.setattr(apps, "APPS_DIR", str(tmp_path))
     monkeypatch.setattr(apps.docker_mgr, "list_compose_projects", lambda: [])
-    monkeypatch.setattr(apps, "_port_is_available", lambda port: True)
+    monkeypatch.setattr(apps, "_port_is_available", lambda port, *args: True)
 
     catalog = apps.get_catalog()
 
@@ -335,3 +337,33 @@ def test_prune_networks_raises_unexpected_cli_error(monkeypatch):
         assert str(exc) == "permission denied"
     else:
         raise AssertionError("expected RuntimeError")
+
+
+def test_existing_nanocpu_limit_uses_matching_docker_resource(tmp_path, monkeypatch):
+    container = SimpleNamespace(id="test-container", attrs={"HostConfig": {"NanoCpus": 500000000}})
+    monkeypatch.setattr(docker_mgr, "_get_client", lambda: SimpleNamespace(
+        containers=SimpleNamespace(get=lambda _: container)))
+    commands = []
+
+    def command(args, **kwargs):
+        commands.append(args)
+        return SimpleNamespace(returncode=0, stderr="")
+
+    monkeypatch.setattr(docker_mgr.subprocess, "run", command)
+    assert docker_mgr.update_container("test-container", "0.75", "128m")["ok"]
+    assert commands == [["docker", "update", "--cpus", "0.75", "--memory", "128m", "test-container"]]
+    assert not docker_mgr.update_container("test-container", "0")["ok"]
+
+
+def test_failed_compose_down_keeps_source_for_retry(tmp_path, monkeypatch):
+    project = tmp_path / "demo"
+    project.mkdir()
+    source = project / "docker-compose.yml"
+    source.write_text("services: {}")
+    monkeypatch.setattr(docker_mgr, "COMPOSE_DIR", str(tmp_path))
+    results = iter([SimpleNamespace(returncode=1, stderr="engine offline", stdout=""),
+                    SimpleNamespace(returncode=0, stderr="", stdout="")])
+    monkeypatch.setattr(docker_mgr.subprocess, "run", lambda *args, **kwargs: next(results))
+    assert not docker_mgr.remove_compose_project("demo")["ok"]
+    assert source.read_text() == "services: {}"
+    assert docker_mgr.remove_compose_project("demo")["ok"] and not project.exists()

@@ -330,7 +330,7 @@ def test_readonly_users_cannot_read_app_compose_secrets(monkeypatch):
     client = TestClient(server.app)
     client.cookies.set(
         server.COOKIE_NAME,
-        server.make_token("reader", 3600, "readonly"),
+        server.make_token("reader", 3600, "readonly", account_salt=None),
     )
 
     response = client.get("/api/apps/get?app_id=papervard")

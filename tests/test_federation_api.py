@@ -23,7 +23,7 @@ def _snapshot():
 def _client(role="admin"):
     client = TestClient(server.app)
     client.cookies.set(
-        server.COOKIE_NAME, server.make_token("tester", 3600, role),
+        server.COOKIE_NAME, server.make_token("tester", 3600, role, account_salt=None),
     )
     return client
 

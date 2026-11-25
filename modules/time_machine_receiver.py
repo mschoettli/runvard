@@ -20,9 +20,9 @@ DEFAULT_ROOT = "/srv/runvard-replicas"
 RSYNC_BINARY = "/usr/bin/rsync"
 _ALLOWED_LONG_OPTIONS = {
     "--server", "--delete-delay", "--partial", "--numeric-ids",
-    "--protect-args", "--delay-updates",
+    "--delay-updates",
 }
-_ALLOWED_SHORT_OPTIONS = {"-logDtpre.iLsfxCIvu"}
+_ALLOWED_SHORT_OPTIONS = {"-logDtpre.iLsfxCIvu", "-lHogDtpre.iLsfxCIvu"}
 
 
 def _safe_destination(value: str, root: str) -> str:
@@ -61,7 +61,10 @@ def validate_original_command(command: str, root: str = DEFAULT_ROOT) -> list[st
     if argv[-2] != ".":
         raise ValueError("Unexpected rsync receiver syntax")
     for argument in argv[1:-2]:
-        if argument.startswith("--") and argument.split("=", 1)[0] not in _ALLOWED_LONG_OPTIONS:
+        if re.fullmatch(r"--bwlimit=[1-9][0-9]{0,7}", argument):
+            if int(argument.split("=")[1]) <= 12_500_000:
+                continue
+        if argument.startswith("--") and argument not in _ALLOWED_LONG_OPTIONS:
             raise ValueError("Unsupported rsync option")
         if argument.startswith("-") and not argument.startswith("--") \
                 and argument not in _ALLOWED_SHORT_OPTIONS:
@@ -75,6 +78,7 @@ def validate_original_command(command: str, root: str = DEFAULT_ROOT) -> list[st
         or not re.fullmatch(r"[a-f0-9]{8,32}", relative[1])
         or relative[2] != "versions"
         or not re.fullmatch(r"\.incomplete-[0-9]{1,20}-[a-f0-9]{8}", relative[3])
+        or os.path.lexists(destination)
     ):
         raise ValueError("Rsync may write only to a managed staging version")
     return [RSYNC_BINARY, *argv[1:-1], destination]
@@ -217,7 +221,9 @@ def main() -> int:
         return 0
     try:
         argv = validate_original_command(original, root)
-    except ValueError:
+        # Each incoming generation gets a fresh private directory.
+        os.makedirs(argv[-1], mode=0o700, exist_ok=False)
+    except (ValueError, OSError):
         print("runvard replica receiver rejected the command", file=sys.stderr)
         return 126
     os.execv(RSYNC_BINARY, argv)

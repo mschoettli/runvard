@@ -117,7 +117,10 @@ def test_save_rejects_blank_name_and_prevents_duplicate_requests():
 def test_update_api_accepts_explicitly_cleared_icon(monkeypatch):
     import server
     received = []
-    monkeypatch.setattr(server.dashboard, 'update_tile', lambda *args: received.append(args))
+    def capture(*args):
+        received.append(args)
+        return {'ok': True}
+    monkeypatch.setattr(server.dashboard, 'update_tile', capture)
     server.dashboard_update('custom', name='Example', url='', icon='', host=None,
                             show_url=False, accent=None, note='', user='test')
     assert received[0][3] == ''
@@ -133,7 +136,7 @@ def test_http_update_can_clear_icon_without_clearing_omitted_icon(monkeypatch):
         return {'ok': True}
     monkeypatch.setattr(server.dashboard, 'update_tile', update)
     client = TestClient(server.app)
-    client.cookies.set(server.COOKIE_NAME, server.make_token('tester', 3600, 'admin'))
+    client.cookies.set(server.COOKIE_NAME, server.make_token('tester', 3600, 'admin', account_salt=None))
     response = client.post('/api/dashboard/update', data={
         'tile_id': 'custom', 'name': 'Example', 'icon': '',
     })
@@ -142,6 +145,26 @@ def test_http_update_can_clear_icon_without_clearing_omitted_icon(monkeypatch):
     response = client.post('/api/dashboard/update', data={'tile_id': 'custom', 'name': 'Example'})
     assert response.status_code == 200
     assert received[-1][3] is None
+
+
+def test_custom_tile_retry_and_concurrent_edit_preserve_persisted_values(tmp_path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+    from modules import dashboard
+
+    monkeypatch.setattr(dashboard, 'DASH_FILE', str(tmp_path / 'dashboard.json'))
+    def add():
+        return dashboard.add_tile('custom', 'request-key', "Alex's server", 'https://example.test')
+    with ThreadPoolExecutor(max_workers=4) as executor:
+        assert all(result['ok'] for result in executor.map(lambda _: add(), range(8)))
+    assert len(dashboard._load()['tiles']) == 1
+    assert dashboard.update_tile('request-key', name='Changed', expected_revision=0)['ok']
+    assert dashboard.update_tile('request-key', name="Alex's server", note='Stale', expected_revision=0) == {
+        'ok': False, 'error': 'tile_conflict',
+    }
+    (saved,) = dashboard._load()['tiles']
+    assert (saved['name'], saved.get('note'), saved['revision']) == ('Changed', None, 1)
+    assert dashboard.add_tile('custom', 'bad', 'Bad', 'not-a-url')['error'] == 'invalid_url'
+    assert dashboard.update_tile('request-key', url='bad')['error'] == 'invalid_url'
 
 
 def test_save_error_preserves_form_and_allows_retry():

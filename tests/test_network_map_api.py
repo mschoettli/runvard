@@ -5,7 +5,7 @@ from modules.network_map import NetworkMap
 
 def client(role=None):
     c = TestClient(server.app)
-    if role: c.cookies.set(server.COOKIE_NAME, server.make_token('tester', 3600, role))
+    if role: c.cookies.set(server.COOKIE_NAME, server.make_token('tester', 3600, role, account_salt=None))
     return c
 
 

@@ -1,0 +1,21 @@
+@font-face{font-family:"Vard Anton";src:url("./Anton-Regular.ttf") format("truetype");font-weight:400;font-style:normal;font-display:swap}
+.vard-brand{display:inline-flex;align-items:center;gap:.5rem;min-width:0;max-width:100%;min-height:2.75rem;color:inherit;text-decoration:none}
+.vard-brand-icon{display:block;flex:0 0 auto;width:2.75rem;height:2.75rem;object-fit:contain;border-radius:0;box-shadow:none}
+.vard-wordmark{font-family:"Vard Anton",Impact,sans-serif!important;font-size:1.75rem!important;font-weight:400!important;font-style:normal;font-synthesis:none;letter-spacing:0!important;line-height:1.15;white-space:nowrap;text-transform:none}
+.vard-brand--recipes .vard-wordmark{font-size:1.375rem!important;white-space:normal}
+.vard-brand--large .vard-brand-icon{width:4rem;height:4rem}
+.vard-brand--large .vard-wordmark{font-size:2.25rem!important}
+.vard-brand--large.vard-brand--recipes .vard-wordmark{font-size:1.75rem!important}
+
+.topbar .logo .vard-brand-icon{width:2rem;height:2rem}.topbar .logo .vard-wordmark{font-size:1.5rem!important;color:var(--text)!important}
+
+.topbar .logo > .vard-brand{min-height:2rem}
+html[data-ui-theme="modern"] .vard-login-brand{display:flex;flex-direction:column;align-items:flex-start;gap:.375rem}
+
+.brand-art{display:inline-block;max-width:100%;vertical-align:middle}
+.login-logo{width:14rem}
+.topbar-wordmark{width:5.25rem;flex-shrink:0}
+.brand-art img{display:block;width:100%;height:auto}
+.brand-art .brand-art-dark,
+html[data-ui-theme="modern"] .brand-art-light{display:none}
+html[data-ui-theme="modern"] .brand-art-dark{display:block}

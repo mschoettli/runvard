@@ -1,6 +1,7 @@
 """Docker: Container, Images, Volumes, Compose - volle Verwaltung."""
 from concurrent.futures import ThreadPoolExecutor, as_completed
 import json
+import math
 import os
 import re
 import shutil
@@ -83,6 +84,11 @@ def list_containers():
                 ports.append(f"{host[0]['HostPort']}:{cport}")
             else:
                 ports.append(cport)
+        resources = c.attrs.get("HostConfig") or {}
+        limit = resources.get("NanoCpus") or 0
+        quota = resources.get("CpuQuota") or 0
+        if not limit and quota > 0:
+            limit = round(quota * 1_000_000_000 / (resources.get("CpuPeriod") or 100000))
         result.append({
             "id": c.short_id,
             "name": c.name,
@@ -90,7 +96,8 @@ def list_containers():
             "status": c.status,
             "state": c.attrs["State"]["Status"],
             "ports": ports,
-            "nano_cpus": (c.attrs.get("HostConfig", {}) or {}).get("NanoCpus", 0) or 0,
+            "nano_cpus": limit,
+            "nano_limit_mode": bool(resources.get("NanoCpus")),
             "mem_limit": (c.attrs.get("HostConfig", {}) or {}).get("Memory", 0) or 0,
             "app_group": _container_app_group(c),
         })
@@ -205,7 +212,8 @@ def create_container(image, name="", ports="", volumes="", env="", restart="no",
     extra = {}
     try:
         if cpus and float(cpus) > 0:
-            extra["nano_cpus"] = int(float(cpus) * 1_000_000_000)
+            extra["cpu_period"] = 100000
+            extra["cpu_quota"] = int(float(cpus) * extra["cpu_period"])
     except ValueError:
         pass
     if memory and memory.strip():
@@ -240,7 +248,20 @@ def update_container(container_id, cpus="", memory=""):
             val = float(cpus)
         except ValueError:
             return {"ok": False, "stderr": "Ungueltiger CPU-Wert"}
-        period = 100000
+        if not math.isfinite(val) or val < 0:
+            return {"ok": False, "stderr": "Ungueltiger CPU-Wert"}
+        if c.attrs["HostConfig"].get("NanoCpus"):
+            # Docker rejects CFS quota updates on containers created with NanoCPUs.
+            # The pinned Python SDK does not expose NanoCPUs on update_container().
+            if val == 0:
+                # The engine ignores NanoCpus=0 on updates to an existing container.
+                return {"ok": False, "error_code": "recreateForUnlimited"}
+            command = ["docker", "update", "--cpus", str(val)]
+            if memory and memory.strip():
+                command.extend(["--memory", memory.strip()])
+            result = subprocess.run([*command, c.id], capture_output=True, text=True, timeout=30)
+            return {"ok": result.returncode == 0, "stderr": result.stderr.strip()}
+        period = c.attrs["HostConfig"].get("CpuPeriod") or 100000
         kwargs["cpu_period"] = period
         kwargs["cpu_quota"] = int(val * period) if val > 0 else -1
     if memory and memory.strip():
@@ -592,7 +613,7 @@ def get_compose(name):
     return data
 
 
-def _port_is_available(port):
+def _port_is_available(port, host_ip="0.0.0.0", protocol="tcp"):
     try:
         port = int(port)
     except (TypeError, ValueError):
@@ -600,9 +621,10 @@ def _port_is_available(port):
     if port <= 0 or port > 65535:
         return False
     try:
-        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
-            sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-            sock.bind(("0.0.0.0", port))
+        family = socket.AF_INET6 if ":" in host_ip else socket.AF_INET
+        kind = socket.SOCK_DGRAM if protocol == "udp" else socket.SOCK_STREAM
+        with socket.socket(family, kind) as sock:
+            sock.bind((host_ip, port))
         return True
     except OSError:
         return False
@@ -627,32 +649,40 @@ def _compose_owned_ports(name):
     for container in containers:
         network = (getattr(container, "attrs", {}) or {}).get("NetworkSettings", {})
         mappings = network.get("Ports", {}) or {}
-        for bindings in mappings.values():
+        for target, bindings in mappings.items():
+            protocol = target.partition("/")[2] or "tcp"
             for binding in bindings or []:
                 try:
-                    ports.add(int(binding.get("HostPort")))
+                    ports.add((int(binding.get("HostPort")), protocol,
+                               binding.get("HostIp") or "0.0.0.0"))
                 except (TypeError, ValueError):
                     continue
     return ports
 
 
+def _bindings_overlap(left, right):
+    if left["port"] != right["port"] or left["protocol"] != right["protocol"]:
+        return False
+    left_ip, right_ip = left["host_ip"], right["host_ip"]
+    if left_ip == right_ip or "::" in (left_ip, right_ip):
+        return True
+    return (":" not in left_ip and ":" not in right_ip
+            and "0.0.0.0" in (left_ip, right_ip))
+
+
 def check_compose_ports(name, content):
     entries = published_ports_from_compose(content)
     owned = _compose_owned_ports(name)
-    counts = {}
-    for entry in entries:
-        counts[entry["port"]] = counts.get(entry["port"], 0) + 1
-
     conflicts = []
-    for entry in entries:
-        port = entry["port"]
-        if counts.get(port, 0) > 1:
+    for index, entry in enumerate(entries):
+        binding = (entry["port"], entry["protocol"], entry["host_ip"])
+        if any(_bindings_overlap(entry, other)
+               for other_index, other in enumerate(entries) if other_index != index):
             conflicts.append({**entry, "reason": "duplicate"})
-        elif port in owned:
+        elif binding in owned:
             continue
-        elif not _port_is_available(port):
+        elif not _port_is_available(entry["port"], entry["host_ip"], entry["protocol"]):
             conflicts.append({**entry, "reason": "in_use"})
-
     return {"ok": not conflicts, "ports": entries, "conflicts": conflicts}
 
 
@@ -726,7 +756,9 @@ def remove_compose_project(name):
         raise ValueError("Invalid Compose project path")
     if not os.path.isdir(path):
         return {"ok": True}
-    subprocess.run(["docker", "compose", "down"], cwd=path,
-                   capture_output=True, text=True, timeout=300)
+    result = subprocess.run(["docker", "compose", "-p", name, "down"], cwd=path,
+                            capture_output=True, text=True, timeout=300)
+    if result.returncode:
+        return {"ok": False, "stderr": result.stderr.strip() or result.stdout.strip()}
     shutil.rmtree(path)
     return {"ok": True}

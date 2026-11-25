@@ -4,8 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Runvard · Sign in</title>
-<link rel="icon" type="image/png" href="/static/runvard-icon.png">
-<link rel="apple-touch-icon" href="/static/runvard-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/brand/icon-32.png"><link rel="icon" href="/static/brand/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/static/brand/icon-180.png">
 <script>
 try{
   const theme=localStorage.getItem('runvard_ui_theme');
@@ -86,12 +86,16 @@ html[data-ui-theme="modern"] .lock-note,html[data-ui-theme="modern"] .foot{color
   *,*::before,*::after{scroll-behavior:auto!important;transition-duration:.01ms!important;animation-duration:.01ms!important;animation-iteration-count:1!important}
 }
 </style>
+
+<link rel="stylesheet" href="/static/brand/brand.css">
 </head>
 <body>
   <div class="login-wrap">
-    <div class="brand">
-      <img class="brand-icon" src="/static/runvard-icon.png" alt="" aria-hidden="true">
-      <div class="logo">Runvard</div>
+    <div class="brand vard-login-brand">
+      <span class="brand-art login-logo">
+        <img class="brand-art-light" src="/static/brand/logo-horizontal-light.png" width="1600" height="491" alt="Runvard">
+        <img class="brand-art-dark" src="/static/brand/logo-horizontal-dark.png" width="1600" height="491" alt="Runvard">
+      </span>
       <div class="sub">Server Panel</div>
     </div>
     <div class="theme-picker" role="group" aria-labelledby="theme-picker-label">

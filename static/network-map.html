@@ -1,15 +1,72 @@
 <!doctype html>
-<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>runvard</title><link rel="icon" href="/static/runvard-icon.png">
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>runvard</title>
 <script src="/static/network-map-theme.js?v=2"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/static/modern-theme.css"><link rel="stylesheet" href="/static/network-map.css?v=4">
-<script defer src="/static/network-map-layout.js?v=4"></script><script defer src="/static/network-map.js?v=4"></script></head>
+<link rel="stylesheet" href="/static/modern-theme.css"><link rel="stylesheet" href="/static/network-map.css?v=5">
+<script defer src="/static/network-map-layout.js?v=5"></script>
+<script defer src="/static/network-map-edges.js?v=5"></script>
+<script defer src="/static/network-map-details.js?v=5"></script>
+<script defer src="/static/network-map.js?v=5"></script>
+<link rel="icon" href="/static/brand/favicon.ico"><link rel="apple-touch-icon" href="/static/brand/icon-180.png">
+<link rel="stylesheet" href="/static/brand/brand.css">
+</head>
 <body data-default-lang="__RUNVARD_DEFAULT_LANG__">
-<header class="topbar"><a class="brand" href="/">RUNVARD</a><span class="header-divider"></span><span data-t="title"></span><nav><a href="/" data-t="back"></a><select id="language" aria-label="Language"><option value="de">Deutsch</option><option value="en">English</option><option value="fr">Français</option><option value="it">Italiano</option><option value="es">Español</option><option value="pt">Português</option></select></nav></header>
-<main><div class="page-heading"><div class="page-heading-copy"><div class="eyebrow" data-t="overview"></div><h1 data-t="title"></h1><p data-t="subtitle"></p></div><div class="actions"><button id="mesh" class="btn ghost" data-t="mesh"></button><button id="settings" class="btn ghost" data-t="settings"></button><button id="scan" class="btn" data-t="scan"></button></div></div>
-<div id="message" role="status" aria-live="polite"></div>
-<div class="workspace"><section class="map-panel"><div class="map-toolbar"><div class="search-wrap"><span id="search-icon" aria-hidden="true"></span><input id="search" type="search" data-placeholder="search"></div><select id="filter"><option value="all" data-t="all"></option><option value="lan" data-t="groupLan"></option><option value="wlan" data-t="groupWlan"></option><option value="unknownConnection" data-t="groupUnknown"></option><option value="zigbee">Zigbee</option><option value="online" data-t="online"></option><option value="offline" data-t="offline"></option><option value="unknown" data-t="unknown"></option></select><span id="count" class="count"></span></div><nav id="group-jumps" class="group-jumps"></nav><div id="viewport" tabindex="0"><div id="canvas"><div id="world"><div id="groups"></div><svg id="edges" aria-hidden="true"></svg><div id="nodes"></div></div></div><p id="empty"></p></div><footer><div class="legend"><span><i class="line observed"></i><span data-t="observed"></span></span><span><i class="line"></i><span data-t="zigbee"></span></span><span><i class="line manual"></i><span data-t="manual"></span></span></div><div class="zoom"><button id="minus" data-aria="zoomOut">−</button><output id="zoom">100%</output><button id="plus" data-aria="zoomIn">+</button><button id="fit" data-t="resetView"></button></div></footer></section><aside class="side-stack"><section class="panel" id="details"></section><section class="integration-panel" id="integration"><div class="integration-title"><span id="integration-icon" aria-hidden="true"></span><div><span class="eyebrow" data-t="integrations"></span><h2>Zigbee2MQTT</h2></div><span id="integration-dot" class="status-dot"></span></div><p id="connection"></p><p id="integration-copy" class="hint"></p><button id="setup-zigbee" class="btn ghost" data-t="setupZigbee"></button></section><section class="integration-panel fritz-panel"><div class="integration-title"><span id="fritz-icon" aria-hidden="true"></span><div><span class="eyebrow" data-t="integrations"></span><h2>FRITZ! Mesh</h2></div><span id="fritz-dot" class="status-dot"></span></div><p id="fritz-status"></p><p class="hint" data-t="fritzHint"></p><button id="setup-fritz" class="btn ghost" data-t="setupFritz"></button></section></aside></div>
-<div class="bottom-bar"><p class="hint" data-t="connectionNote"></p><div class="timestamps"><span id="scan-time"></span><span id="mesh-time"></span><span id="fritz-time"></span></div></div>
+<header class="topbar"><a class="brand vard-brand" href="/"><img class="vard-brand-icon" src="/static/brand/icon.png" alt="" aria-hidden="true" width="44" height="44"><span class="vard-wordmark">Runvard</span></a><span class="header-divider"></span><span data-t="title"></span><nav><a class="dashboard-back" href="/" data-aria="back"><span data-icon="back"></span><span data-t="back"></span></a><select id="language" aria-label="Language"><option value="de">Deutsch</option><option value="en">English</option><option value="fr">Français</option><option value="it">Italiano</option><option value="es">Español</option><option value="pt">Português</option></select></nav></header>
+<main>
+  <div class="page-heading">
+    <div><h1 data-t="title"></h1><p id="overview" class="metrics"></p></div>
+    <button id="integrations" class="btn ghost" aria-haspopup="dialog" aria-controls="sources-dialog"><span data-icon="network"></span><span data-t="integrations"></span></button>
+  </div>
+  <div id="message" role="status" aria-live="polite"></div>
+  <section class="map-panel" aria-labelledby="map-heading">
+    <h2 id="map-heading" class="sr-only" data-t="overview"></h2>
+    <div class="map-toolbar">
+      <div class="search-wrap"><span data-icon="search"></span><input id="search" type="search" data-placeholder="search" autocomplete="off"></div>
+      <select id="network-filter" data-aria="connectionType">
+        <option value="all" data-t="allNetworks"></option><option value="gateway" data-t="gatewayRole"></option>
+        <option value="lan" data-t="groupLan"></option><option value="wlan" data-t="groupWlan"></option>
+        <option value="zigbee">Zigbee</option><option value="unknown" data-t="groupUnknown"></option>
+      </select>
+      <select id="status-filter" data-aria="status"><option value="all" data-t="allStatuses"></option>
+        <option value="online" data-t="online"></option><option value="offline" data-t="offline"></option>
+        <option value="out_of_scope" data-t="outOfScope"></option><option value="unknown" data-t="unknown"></option>
+      </select>
+      <button id="clear-filters" class="btn ghost" hidden data-t="clearFilters"></button>
+      <button id="scan" class="btn" disabled data-t="scan"></button>
+    </div>
+    <div class="map-area">
+      <div id="viewport" tabindex="0" role="region">
+        <div id="canvas"><div id="world"><div id="groups"></div><svg id="edges" aria-hidden="true"></svg><div id="nodes"></div></div></div>
+        <p id="empty" hidden></p>
+      </div>
+      <dialog id="details" aria-labelledby="detail-title"></dialog>
+    </div>
+    <footer>
+      <div class="legend">
+        <span><i class="line observed"></i><span data-t="observed"></span></span>
+        <span><i class="line zigbee"></i><span data-t="zigbee"></span></span>
+        <span><i class="line manual"></i><span data-t="manual"></span></span>
+      </div>
+      <div class="zoom"><button id="minus" data-aria="zoomOut">−</button><output id="zoom">100%</output><button id="plus" data-aria="zoomIn">+</button><button id="fit" data-t="resetView"></button></div>
+    </footer>
+  </section>
+  <div class="bottom-bar"><span id="count" role="status"></span><span id="scan-time"></span></div>
 </main>
-<dialog id="settings-dialog"><form id="settings-form"><div class="dialog-heading"><h2 data-t="settings"></h2><button type="button" id="close-settings" class="btn ghost" data-t="close"></button></div><label><span data-t="networks"></span><textarea id="networks" rows="3" spellcheck="false"></textarea></label><fieldset class="settings-section"><legend>FRITZ! Mesh</legend><label><span data-t="fritzHost"></span><input id="fritz-host" inputmode="decimal" placeholder="192.168.178.1" autocomplete="off"></label><label><span data-t="fritzUser"></span><input id="fritz-user" autocomplete="off"></label><label><span data-t="fritzPassword"></span><input id="fritz-password" type="password" autocomplete="new-password"></label><label class="check"><input id="clear-fritz" type="checkbox"><span data-t="clearFritz"></span></label><p class="hint" data-t="fritzHint"></p></fieldset><fieldset class="settings-section"><legend>Zigbee2MQTT</legend><label><span data-t="zigbeeUrl"></span><input id="zigbee-url" type="url" placeholder="http://192.168.1.2:8080" autocomplete="off"></label><label><span data-t="token"></span><input id="token" type="password" autocomplete="new-password"></label><label class="check"><input id="clear-token" type="checkbox"><span data-t="clearToken"></span></label><p class="hint" data-t="meshHint"></p></fieldset><button class="btn" data-t="save"></button><p id="settings-message" role="status"></p></form></dialog>
+<dialog id="sources-dialog" aria-labelledby="sources-title">
+  <div class="dialog-heading"><h2 id="sources-title" data-t="integrations"></h2><button id="close-sources" class="btn ghost" data-t="close"></button></div>
+  <section class="integration-panel">
+    <h3><span data-icon="network"></span>FRITZ! Mesh</h3>
+    <p id="fritz-status"></p><p id="fritz-time" class="hint"></p><p class="hint" data-t="fritzHint"></p>
+    <button id="setup-fritz" class="btn ghost" data-t="setupFritz"></button>
+  </section>
+  <section class="integration-panel">
+    <h3><span data-icon="zigbee"></span>Zigbee2MQTT</h3>
+    <p id="connection"></p><p id="mesh-time" class="hint"></p><p id="integration-copy" class="hint"></p>
+    <button id="setup-zigbee" class="btn ghost" data-t="setupZigbee"></button>
+    <button id="mesh" class="btn ghost" data-t="mesh"></button>
+  </section>
+  <p class="hint" data-t="connectionNote"></p>
+  <button id="settings" class="btn" data-t="settings"></button>
+</dialog>
+<dialog id="settings-dialog" aria-labelledby="settings-title"><form id="settings-form"><div class="dialog-heading"><h2 id="settings-title" data-t="settings"></h2><button type="button" id="close-settings" class="btn ghost" data-t="close"></button></div><label><span data-t="networks"></span><textarea id="networks" rows="3" spellcheck="false"></textarea></label><fieldset class="settings-section"><legend>FRITZ! Mesh</legend><label><span data-t="fritzHost"></span><input id="fritz-host" inputmode="decimal" placeholder="192.168.178.1" autocomplete="off"></label><label><span data-t="fritzUser"></span><input id="fritz-user" autocomplete="off"></label><label><span data-t="fritzPassword"></span><input id="fritz-password" type="password" autocomplete="new-password"></label><label class="check"><input id="clear-fritz" type="checkbox"><span data-t="clearFritz"></span></label><p class="hint" data-t="fritzHint"></p></fieldset><fieldset class="settings-section"><legend>Zigbee2MQTT</legend><label><span data-t="zigbeeUrl"></span><input id="zigbee-url" type="url" placeholder="http://192.168.1.2:8080" autocomplete="off"></label><label><span data-t="token"></span><input id="token" type="password" autocomplete="new-password"></label><label class="check"><input id="clear-token" type="checkbox"><span data-t="clearToken"></span></label><p class="hint" data-t="meshHint"></p></fieldset><button class="btn" data-t="save"></button><p id="settings-message" role="status"></p></form></dialog>
 </body></html>

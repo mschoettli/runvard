@@ -204,7 +204,9 @@ def test_runvard_update_preinstalls_workspace_without_overwriting_secrets():
     installer = (ROOT / "scripts" / "install-full.sh").read_text()
     assert "install_workspace_catalog_app" in installer
     assert 'install -m 0600 "${bundle}/compose.yaml"' in installer
-    assert 'install -o 999 -g 999 -m 0500 "${bundle}/postgres-init.sh"' in installer
+    assert 'for name in postgres-init.sh restore-probe.sh' in installer
+    assert 'install -m 0500 "${bundle}/${name}"' in installer
+    assert 'os.chown(sys.argv[1], 999, 999)' in installer
     assert 'if [ ! -e "${secret_dir}/${name}" ]' in installer
     assert 'openssl rand -base64 48' in installer
     assert 'chmod 0444 "${secret_dir}/${name}"' in installer

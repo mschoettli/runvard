@@ -4,10 +4,13 @@ Speichert Reihenfolge, URL-Toggle und Custom-Links in dashboard.json.
 """
 import os
 import json
+import fcntl
 import subprocess
+import tempfile
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
+from contextlib import contextmanager
 from urllib.parse import urlparse
 
 import requests
@@ -31,14 +34,29 @@ def _load():
     try:
         with open(DASH_FILE) as f:
             return json.load(f)
-    except Exception:
+    except FileNotFoundError:
         return {"tiles": []}
 
 
 def _save(data):
-    os.makedirs(os.path.dirname(DASH_FILE), exist_ok=True)
-    with open(DASH_FILE, "w") as f:
-        json.dump(data, f, indent=2)
+    fd, tmp = tempfile.mkstemp(dir=os.path.dirname(DASH_FILE), prefix=".dashboard-")
+    try:
+        with os.fdopen(fd, "w") as f:
+            json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(tmp, DASH_FILE)
+    finally:
+        if os.path.exists(tmp):
+            os.unlink(tmp)
+
+
+@contextmanager
+def _dashboard_write():
+    os.makedirs(os.path.dirname(DASH_FILE), mode=0o700, exist_ok=True)
+    with open(str(DASH_FILE) + ".lock", "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
 
 
 def _compose_project_name(tile):
@@ -90,8 +108,12 @@ def _unknown_custom_health(label="Unknown", detail=""):
 
 def _normalize_custom_url(url):
     value = str(url or "").strip()
-    parsed = urlparse(value)
-    if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+    try:
+        parsed = urlparse(value)
+        valid = parsed.scheme in {"http", "https"} and parsed.hostname and parsed.port != 0
+    except ValueError:
+        return ""
+    if not valid or "\\" in value or any(char.isspace() for char in value):
         return ""
     return value
 
@@ -217,6 +239,8 @@ def get_dashboard():
             docker_containers = None
     for t in data.get("tiles", []):
         tile = dict(t)
+        if tile.get("type") == "custom" and not _normalize_custom_url(tile.get("url")):
+            tile["url_valid"] = False
         if tile.get("type") == "app":
             path = os.path.join(APPS_DIR, tile["id"])
             tile["running"] = _compose_running(path, tile["id"])
@@ -261,14 +285,22 @@ def get_dashboard():
     return {"tiles": tiles}
 
 
+@_dashboard_write()
 def add_tile(tile_type, tile_id, name="", url="", icon="", port=0):
     """Fügt eine Kachel hinzu (app oder custom)."""
     data = _load()
+    if tile_type == "custom":
+        url = _normalize_custom_url(url)
+        if not url:
+            return {"ok": False, "error": "invalid_url"}
     # Duplikat-Check
     for t in data["tiles"]:
         if t["id"] == tile_id:
+            if tile_type == "custom" and (t.get("name"), t.get("url"), t.get("icon")) != (name, url, icon):
+                return {"ok": False, "error": "tile_conflict"}
             if tile_type == "compose" and port:
                 t["port"] = port
+                _save(data)
             return {"ok": True, "msg": "Bereits vorhanden"}
     tile = {
         "id": tile_id,
@@ -289,6 +321,7 @@ def add_tile(tile_type, tile_id, name="", url="", icon="", port=0):
     return {"ok": True}
 
 
+@_dashboard_write()
 def remove_tile(tile_id):
     """Entfernt eine Kachel vom Dashboard."""
     data = _load()
@@ -297,6 +330,7 @@ def remove_tile(tile_id):
     return {"ok": True}
 
 
+@_dashboard_write()
 def save_order(order):
     """Speichert die Kachel-Reihenfolge. order = Liste von IDs."""
     data = _load()
@@ -317,12 +351,14 @@ def save_order(order):
     return {"ok": True}
 
 
+@_dashboard_write()
 def toggle_url(tile_id, show):
     """Schaltet die URL-Anzeige für eine Kachel um."""
     data = _load()
     for t in data["tiles"]:
         if t["id"] == tile_id:
             t["show_url"] = show
+            t["revision"] = t.get("revision", 0) + 1
             break
     _save(data)
     return {"ok": True}
@@ -346,12 +382,17 @@ def _normalize_accent(accent):
     return ""
 
 
+@_dashboard_write()
 def update_tile(tile_id, name=None, url=None, icon=None, host=None,
-                show_url=None, accent=None, note=None):
+                show_url=None, accent=None, note=None, expected_revision=None):
     """Aktualisiert Dashboard-Metadaten einer Kachel."""
     data = _load()
     for t in data["tiles"]:
         if t["id"] == tile_id:
+            if expected_revision is not None and expected_revision != t.get("revision", 0):
+                return {"ok": False, "error": "tile_conflict"}
+            if url is not None and not _normalize_custom_url(url):
+                return {"ok": False, "error": "invalid_url"}
             if name is not None:
                 t["name"] = name
             if url is not None:
@@ -378,6 +419,7 @@ def update_tile(tile_id, name=None, url=None, icon=None, host=None,
                     t["host"] = clean_host
                 else:
                     t.pop("host", None)
-            break
-    _save(data)
-    return {"ok": True}
+            t["revision"] = t.get("revision", 0) + 1
+            _save(data)
+            return {"ok": True}
+    return {"ok": False, "error": "tile_conflict"}

@@ -243,24 +243,6 @@ while [ $# -gt 0 ]; do
   esac
 done
 
-case "$LANG_CODE" in
-  en|de) ;;
-  "")
-    if [ "$ASSUME_YES" != "1" ] && [ -t 0 ] && [ -t 1 ]; then
-      echo -e "${CYAN}${BOLD}runvard installer${NC}"
-      echo "  $(t choose_lang)"
-      read -r -p "  > " lang_choice </dev/tty || lang_choice=""
-      case "$lang_choice" in
-        2|de|DE|Deutsch|deutsch) LANG_CODE="de" ;;
-        *) LANG_CODE="en" ;;
-      esac
-    else
-      LANG_CODE="en"
-    fi
-    ;;
-  *) LANG_CODE="en" ;;
-esac
-
 # ------------------------- helpers ------------------------------------
 ask() {
   local prompt="$1" def="$2" ans=""
@@ -378,20 +360,6 @@ install_compose_plugin() {
   fi
 }
 
-sync_program_files() {
-  rsync -a --delete \
-    --exclude 'data' \
-    --exclude 'venv' \
-    --exclude '.venv' \
-    --exclude '.git' \
-    --exclude '.pytest_cache' \
-    --exclude '__pycache__' \
-    --exclude '*.pyc' \
-    --exclude '*.bak*' \
-    --exclude 'tests' \
-    "$SRC"/ "$INSTALL_DIR"/
-}
-
 install_workspace_catalog_app() {
   local bundle="${INSTALL_DIR}/docker-apps/workspace"
   local app_dir="${INSTALL_DIR}/data/apps/workspace"
@@ -409,8 +377,11 @@ install_workspace_catalog_app() {
   umask 077
   install -d -m 0700 "$app_dir" "$secret_dir" "$trust_keys_dir"
   install -m 0600 "${bundle}/compose.yaml" "${app_dir}/docker-compose.yml"
-  install -o 999 -g 999 -m 0500 "${bundle}/postgres-init.sh" "${app_dir}/postgres-init.sh"
-  install -o 999 -g 999 -m 0500 "${bundle}/restore-probe.sh" "${app_dir}/restore-probe.sh"
+  for name in postgres-init.sh restore-probe.sh; do
+    install -m 0500 "${bundle}/${name}" "${app_dir}/${name}"
+    # PostgreSQL runs as this numeric UID/GID inside its container.
+    python3 -c 'import os, sys; os.chown(sys.argv[1], 999, 999)' "${app_dir}/${name}"
+  done
   for name in migration-password app-password; do
     if [ ! -e "${secret_dir}/${name}" ]; then
       openssl rand -base64 48 > "${secret_dir}/${name}"
@@ -433,10 +404,41 @@ SCRIPT_DIR="$(cd "$(dirname "$SCRIPT_PATH")" && pwd)"
 SRC="${RUNVARD_SOURCE_DIR:-$(cd "${SCRIPT_DIR}/.." && pwd)}"
 [ -f "${SRC}/server.py" ] || die "$(t source_missing)"
 
-if [ -f "$ENV_FILE" ]; then
-  # shellcheck source=/dev/null
-  . "$ENV_FILE"
-fi
+# shellcheck source=install-common.sh
+. "$SRC/scripts/install-common.sh"
+SETTINGS="$SRC/scripts/installer-settings.py"
+saved_setting() { python3 "$SETTINGS" get "$ENV_FILE" "$1"; }
+PREVIOUS_PORT="$(saved_setting RUNVARD_PORT)"
+PREVIOUS_PORT="${PREVIOUS_PORT:-8080}"
+DATA_DIR="$(saved_setting RUNVARD_DATA_DIR)"
+DATA_DIR="${DATA_DIR:-${INSTALL_DIR}/data}"
+RUNVARD_USER="${RUNVARD_USER:-$(saved_setting RUNVARD_USER)}"
+RUNVARD_PASS="${RUNVARD_PASS:-$(saved_setting RUNVARD_PASS)}"
+WEB_LANG="${LANG_CODE:-$(saved_setting RUNVARD_LANG)}"
+LANG_CODE="$WEB_LANG"
+
+case "$LANG_CODE" in
+  en|de) ;;
+  "")
+    if [ "$ASSUME_YES" != "1" ] && [ -t 0 ] && [ -t 1 ]; then
+      echo -e "${CYAN}${BOLD}runvard installer${NC}"
+      echo "  $(t choose_lang)"
+      read -r -p "  > " lang_choice </dev/tty || lang_choice=""
+      case "$lang_choice" in
+        2|de|DE|Deutsch|deutsch) LANG_CODE="de" ;;
+        *) LANG_CODE="en" ;;
+      esac
+    else
+      LANG_CODE="en"
+    fi
+    ;;
+  *) LANG_CODE="en" ;;
+esac
+
+case "$WEB_LANG" in
+  en|de|fr|it|es|pt) ;;
+  *) WEB_LANG="$LANG_CODE" ;;
+esac
 
 clear 2>/dev/null || true
 echo -e "${CYAN}${BOLD}"
@@ -452,15 +454,15 @@ echo -e "${NC}  ${DIM}runvard installer${NC}\n"
 # -------------------------- configuration ------------------------------
 step "$(t config)"
 EXISTING_ADMIN=""
-if [ -f /opt/runvard/data/users.json ]; then
+if [ -f "$DATA_DIR/users.json" ]; then
   EXISTING_ADMIN="$(python3 -c '
-import json
+import json, sys
 try:
-    users = json.load(open("/opt/runvard/data/users.json", encoding="utf-8"))
+    users = json.load(open(sys.argv[1], encoding="utf-8"))
 except (OSError, ValueError):
     users = {}
 print(next((name for name, meta in users.items() if meta.get("role") == "admin"), ""))
-' 2>/dev/null || true)"
+' "$DATA_DIR/users.json" 2>/dev/null || true)"
 fi
 ADMIN_USER="$(ask "$(t admin_user)" "${RUNVARD_USER:-${EXISTING_ADMIN:-admin}}")"
 
@@ -491,7 +493,7 @@ if [ "$PRESERVE_ADMIN_PASS" != "1" ] && [ -z "$ADMIN_PASS" ]; then
 fi
 
 while :; do
-  PORT="$(ask "$(t web_port)" "${RUNVARD_PORT:-8080}")"
+  PORT="$(ask "$(t web_port)" "${RUNVARD_PORT:-$PREVIOUS_PORT}")"
   if [[ "$PORT" =~ ^[0-9]+$ ]] && [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ]; then
     break
   fi
@@ -538,9 +540,9 @@ install_compose_plugin
 
 # ----------------------------- 2 files ---------------------------------
 phase "$(t copy_phase)"
-mkdir -p "$INSTALL_DIR" "$INSTALL_DIR/data"
+mkdir -p "$INSTALL_DIR" "$INSTALL_DIR/data" "$DATA_DIR"
 if [ "$SRC" != "$INSTALL_DIR" ]; then
-  sync_program_files
+  python3 "$SETTINGS" sync "$SRC" "$INSTALL_DIR" "$DATA_DIR"
   ok "$(t files_ok)"
 else
   info "Source already matches target; skipping file sync."
@@ -551,11 +553,6 @@ SOURCE_COMMIT="${RUNVARD_SOURCE_COMMIT:-}"
 if [ -z "$SOURCE_COMMIT" ] && [ -d "$SRC/.git" ] && command -v git >/dev/null 2>&1; then
   SOURCE_COMMIT="$(git -C "$SRC" rev-parse HEAD 2>/dev/null || true)"
 fi
-if [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
-  printf '%s\n' "$SOURCE_COMMIT" > "$VERSION_FILE"
-  ok "$(t version_ok)"
-fi
-
 # ----------------------------- 3 python --------------------------------
 phase "$(t venv_phase)"
 PIP="$INSTALL_DIR/venv/bin/pip"
@@ -568,7 +565,7 @@ if [ ! -x "$INSTALL_DIR/venv/bin/python" ]; then
     || die "Could not create Python virtual environment."
 fi
 
-if [ -d "$INSTALL_DIR/wheels" ] && [ -n "$(ls -A "$INSTALL_DIR/wheels" 2>/dev/null)" ]; then
+if bundled_wheels_ready "$PIP" "$INSTALL_DIR"; then
   run_spin "$(t pip_install_offline)" \
     "$PIP" install -q --no-index --find-links "$INSTALL_DIR/wheels" -r "$INSTALL_DIR/requirements.txt" \
     || die "Python package installation from bundled wheels failed."
@@ -594,7 +591,7 @@ raw = sys.stdin.buffer.read().split(b"\0")
 username = raw[0].decode()
 password = raw[1].decode()
 preserve = raw[2].decode() == "1"
-accounts.STORE = "/opt/runvard/data/users.json"
+accounts.STORE = sys.argv[1]
 existing = {item["username"] for item in accounts.list_users()}
 if preserve and username in existing:
     result = {"ok": True}
@@ -602,40 +599,14 @@ else:
     result = accounts.set_password(username, password) if username in existing else accounts.add_user(username, password, "admin")
 if not result.get("ok"):
     raise SystemExit(result.get("error", "account setup failed"))
-' || die "Could not create the administrator account."
-cat > "$ENV_FILE" <<EOF
-# Generated by install.sh - central runvard configuration
-RUNVARD_PORT=${PORT}
-RUNVARD_LANG=${LANG_CODE}
-RUNVARD_DATA_DIR=${INSTALL_DIR}/data
-EOF
-chmod 600 "$ENV_FILE"
-chmod 600 "${INSTALL_DIR}/data/users.json"
+' "$DATA_DIR/users.json" || die "Could not create the administrator account."
+python3 "$SETTINGS" merge "$ENV_FILE" "$PORT" "$WEB_LANG" "$INSTALL_DIR/data"
+chmod 600 "$DATA_DIR/users.json"
 ok "$(t config_ok): ${DIM}${ENV_FILE}${NC}"
 
 # ----------------------------- 5 service -------------------------------
 phase "$(t service_phase)"
-cat > "$SERVICE_FILE" <<EOF
-[Unit]
-Description=runvard Server Panel
-After=network-online.target docker.service
-Wants=network-online.target
-
-[Service]
-Type=simple
-User=root
-WorkingDirectory=${INSTALL_DIR}
-EnvironmentFile=${ENV_FILE}
-ExecStart=${INSTALL_DIR}/venv/bin/uvicorn server:app --host 0.0.0.0 --port ${PORT} --workers 1
-# Optional TLS/HTTPS:
-# ExecStart=${INSTALL_DIR}/venv/bin/uvicorn server:app --host 0.0.0.0 --port ${PORT} --workers 1 --ssl-keyfile ${INSTALL_DIR}/data/certs/<CN>.key --ssl-certfile ${INSTALL_DIR}/data/certs/<CN>.crt
-Restart=always
-RestartSec=5
-
-[Install]
-WantedBy=multi-user.target
-EOF
-chmod 644 "$SERVICE_FILE"
+python3 "$SETTINGS" service "$SERVICE_FILE" "$SRC/runvard.service" "$PREVIOUS_PORT" "$PORT"
 install -m 0644 \
   "$INSTALL_DIR/systemd/runvard-time-machine-maintenance.service" \
   /etc/systemd/system/runvard-time-machine-maintenance.service
@@ -674,18 +645,19 @@ ok "$(t service_ok)"
 # ----------------------------- 6 health --------------------------------
 phase "$(t health_phase)"
 info "$(t wait_service) ..."
-HTTP="000"
+READY=""
 for _ in $(seq 1 20); do
-  HTTP="$(curl -s -o /dev/null -w '%{http_code}' --max-time 2 "http://127.0.0.1:${PORT}/login" || true)"
-  case "$HTTP" in
-    200|302) break ;;
-  esac
+  if READY="$(probe_local_login "$PORT")"; then break; fi
   sleep 1
 done
-case "$HTTP" in
-  200|302) ok "$(t health_ok) HTTP ${HTTP}" ;;
-  *) die "$(t health_fail)" ;;
-esac
+[ -n "$READY" ] || die "$(t health_fail)"
+read -r SCHEME HTTP PORT <<< "$READY"
+ok "$(t health_ok) HTTP ${HTTP}"
+
+if [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+  record_version "$VERSION_FILE" "$SOURCE_COMMIT"
+  ok "$(t version_ok)"
+fi
 
 HOST_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 [ -n "$HOST_IP" ] || HOST_IP="127.0.0.1"
@@ -693,7 +665,7 @@ HOST_IP="$(hostname -I 2>/dev/null | awk '{print $1}')"
 echo
 echo -e "${GREEN}${BOLD}$(t done)${NC}"
 echo
-echo -e "  $(t url)      : ${BOLD}http://${HOST_IP}:${PORT}${NC}"
+echo -e "  $(t url)      : ${BOLD}${SCHEME}://${HOST_IP}:${PORT}${NC}"
 echo -e "  $(t user)     : ${BOLD}${ADMIN_USER}${NC}"
 if [ "$GEN_PASS" = "1" ]; then
   printf '  %s : %s%s%s\n' "$(t password)" "$BOLD" "$ADMIN_PASS" "$NC" >/dev/tty

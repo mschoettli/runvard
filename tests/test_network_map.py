@@ -18,13 +18,62 @@ def test_scan_preserves_names_positions_offline_devices_and_never_invents_edges(
     manager = api().NetworkMap(tmp_path)
     manager.merge_lan([{'id': 'lan:aa:bb', 'name': 'NAS', 'ip': '192.168.1.2', 'status': 'online'}])
     manager.edit_device('lan:aa:bb', {'label': 'Archive', 'room': 'Office', 'x': 20, 'y': 50})
-    manager.merge_lan([])
+    manager.merge_lan([], probed_hosts={'192.168.1.2'})
     snapshot = api().NetworkMap(tmp_path).snapshot()
     device = snapshot['devices'][0]
     assert device['label'] == 'Archive'
     assert device['x'] == 20
     assert device['status'] == 'offline'
     assert snapshot['edges'] == []
+
+
+def test_scan_status_follows_probed_addresses_after_scope_changes(monkeypatch, tmp_path):
+    manager = api().NetworkMap(tmp_path)
+    previous_ip = '192.168.1.2'
+    current_ip = '192.168.2.1'
+    manager.merge_lan([{'ip': previous_ip}, {'ip': current_ip}])
+    manager.edit_device('lan:' + previous_ip, {'label': 'Printer'})
+    sensor = {'nodes': [{'uid': 'sensor', 'device_mac_address': 'aa:bb:cc:00:00:01'}]}
+    manager.ingest_fritz(sensor, [], current_ip)
+    manager = api().NetworkMap(tmp_path)
+    previous_seen = manager.state['devices']['lan:' + previous_ip]['last_seen']
+
+    responses = []
+    monkeypatch.setattr(api(), 'probe', lambda ip: {'ip': ip} if ip in responses else None)
+    monkeypatch.setattr(api(), 'neighbor_macs', lambda: {})
+    manager.configure({'networks': [current_ip + '/32']})
+    assert manager.scan()
+    devices = manager.state['devices']
+    assert devices['lan:' + current_ip]['status'] == 'offline'
+    previous = devices['lan:' + previous_ip]
+    assert previous['status'] == 'out_of_scope'
+    assert previous['last_seen'] == previous_seen
+    assert previous['label'] == 'Printer'
+    assert devices['lan:aa:bb:cc:00:00:01']['status'] == 'unknown'
+
+    manager.configure({'networks': [previous_ip + '/32']})
+    assert manager.scan()
+    assert previous['status'] == 'offline'
+    assert previous['last_seen'] == previous_seen
+    responses.append(previous_ip)
+    assert manager.scan()
+    assert previous['status'] == 'online'
+    assert devices['lan:' + current_ip]['status'] == 'out_of_scope'
+
+
+def test_fritz_address_change_does_not_inherit_reachability(monkeypatch, tmp_path):
+    manager = api().NetworkMap(tmp_path)
+    ip, mac = '192.168.1.2', 'aa:bb:cc:00:00:01'
+    manager.merge_lan([{'ip': ip, 'mac': mac}])
+    report = {'nodes': [{'uid': 'sensor', 'device_mac_address': mac}]}
+    manager.configure({'networks': [ip + '/32'], 'fritz_host': '192.168.1.1'})
+    monkeypatch.setattr(api(), 'probe', lambda address: {'ip': address})
+    monkeypatch.setattr(api(), 'neighbor_macs', lambda: {ip: mac})
+    monkeypatch.setattr(api(), 'read_topology', lambda *args: (report, [{'mac': mac, 'ip': '192.168.2.2'}]))
+    assert manager.scan()
+    device, = manager.snapshot()['devices']
+    assert device['ip'] == '192.168.2.2'
+    assert device['status'] == 'out_of_scope'
 
 
 def test_zigbee_devices_mesh_and_sleeping_sensor(tmp_path):

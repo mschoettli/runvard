@@ -16,6 +16,7 @@ import requests
 import subprocess
 import ipaddress
 import socket
+from typing import NamedTuple
 
 from fastapi import FastAPI, Request, Depends, HTTPException, WebSocket, \
     WebSocketDisconnect, UploadFile, File, Form
@@ -23,12 +24,16 @@ from fastapi.responses import HTMLResponse, FileResponse, JSONResponse, \
     RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import HTTPBasic, HTTPBasicCredentials
+from fastapi.responses import StreamingResponse
+from starlette.background import BackgroundTask
+from urllib.parse import quote
 
 from modules import (system, terminal, files, storage, docker_mgr, services,
                      vms, backup, shares, network, security, monitoring,
                      system_mgr, apps, dashboard, metrics, accounts, audit,
                      ports, time_machine, path_picker)
 from modules import security_tokens, auth_config, workspace_app
+from modules.backup_scheduler import BackupScheduler
 from modules.device_access import DeviceAccessStore, LocalTelemetry, FIELDS as DEVICE_FIELDS, snapshot_metrics, number
 from modules.network_map import NetworkMap
 from modules.external_servers import ExternalServerManager
@@ -37,7 +42,18 @@ from modules.federation import FederationManager
 from modules.federation.crypto import public_key_fingerprint
 from modules.federation.service import REDEEM_PATH, STATUS_PATH, SYNC_PATH
 
-app = FastAPI(title="runvard", docs_url=None, redoc_url=None)
+class AuditedJSONResponse(JSONResponse):
+    def render(self, content):
+        self.operation_failed = isinstance(content, dict) and content.get("ok") is False
+        return super().render(content)
+
+    async def __call__(self, scope, receive, send):
+        if self.operation_failed:
+            scope.setdefault("state", {})["operation_failed"] = True
+        await super().__call__(scope, receive, send)
+
+
+app = FastAPI(title="runvard", docs_url=None, redoc_url=None, default_response_class=AuditedJSONResponse)
 http_basic = HTTPBasic()
 
 
@@ -51,21 +67,25 @@ async def _api_exception_handler(request: Request, exc: Exception):
 
 @app.middleware("http")
 async def _audit_mw(request: Request, call_next):
-    response = await call_next(request)
+    m = request.method
+    if m not in ("POST", "PUT", "PATCH", "DELETE") or not request.url.path.startswith("/api"):
+        return await call_next(request)
+    parsed = _parse_token(request.cookies.get(COOKIE_NAME))
+    who = parsed[0] if parsed else "?"
+    response = None
     try:
-        m = request.method
-        if m in ("POST", "PUT", "DELETE") and request.url.path.startswith("/api"):
-            parsed = _parse_token(request.cookies.get(COOKIE_NAME))
-            who = parsed[0] if parsed else "?"
+        response = await call_next(request)
+        return response
+    finally:
+        try:
             audit.record_event(
                 user=who,
                 action=f"{m} {request.url.path}",
-                ok=response.status_code < 400,
+                ok=response is not None and response.status_code < 400 and not getattr(request.state, "operation_failed", False),
                 remote=request.client.host if request.client else "",
             )
-    except Exception:
-        pass
-    return response
+        except Exception:
+            pass
 
 # Hintergrund-Thread: prüft alle 12h auf App-Updates
 try:
@@ -87,6 +107,7 @@ DATA_DIR = os.environ.get("RUNVARD_DATA_DIR", os.path.join(BASE_DIR, "data"))
 os.makedirs(DATA_DIR, mode=0o700, exist_ok=True)
 os.chmod(DATA_DIR, 0o700)
 backup.configure_data_dir(DATA_DIR)
+BACKUP_SCHEDULER = BackupScheduler(backup.list_jobs, backup.run_scheduled_job)
 SECRET_FILE = os.path.join(DATA_DIR, "secret.key")
 AUTH_CFG_FILE = os.path.join(DATA_DIR, "auth.json")
 accounts.STORE = os.path.join(DATA_DIR, "users.json")
@@ -116,10 +137,12 @@ def _start_federation_worker():
         FEDERATION.start()
     if os.environ.get("RUNVARD_EXTERNAL_SERVERS_NO_WORKER") != "1":
         EXTERNAL_SERVERS.start()
+    BACKUP_SCHEDULER.start()
 
 
 @app.on_event("shutdown")
 def _stop_federation_worker():
+    BACKUP_SCHEDULER.stop()
     NETWORK_MAP.stop()
     terminal.kill_all_sessions()
     FEDERATION.stop()
@@ -203,15 +226,26 @@ def _b64d(s):
     return base64.urlsafe_b64decode(s + "=" * (-len(s) % 4))
 
 
-def make_token(username, ttl, role="admin", expert=False):
-    expert_flag = "1" if expert else "0"
-    payload = f"{username}|{role}|{expert_flag}|{int(time.time()) + ttl}".encode()
+class Session(NamedTuple):
+    username: str
+    role: str
+    expert: bool
+    expires_at: int
+    account_salt: str | None
+
+
+def _sign_session(session):
+    payload = json.dumps(session, separators=(",", ":")).encode()
     sig = hmac.new(_secret(), payload, hashlib.sha256).digest()
     return _b64e(payload) + "." + _b64e(sig)
 
 
+def make_token(username, ttl, role="admin", expert=False, *, account_salt):
+    # A verified federation claim has no corresponding local credential.
+    return _sign_session(Session(username, role, expert, int(time.time()) + ttl, account_salt))
+
+
 def _parse_token(token):
-    """Gibt (username, role, expert) zurück oder None. Akzeptiert Alt-Tokens."""
     if not token or "." not in token:
         return None
     try:
@@ -220,22 +254,21 @@ def _parse_token(token):
         expected = hmac.new(_secret(), payload, hashlib.sha256).digest()
         if not hmac.compare_digest(_b64d(s_b64), expected):
             return None
-        parts = payload.decode().split("|")
-        if len(parts) == 4:
-            username, role, expert, exp = parts
-        elif len(parts) == 3:
-            username, role, exp = parts
-            expert = "0"
-        elif len(parts) == 2:
-            username, exp = parts
-            role = "admin"
-            expert = "0"
-        else:
+        # Older cookies lack a local/federated identity binding. Reauthentication
+        # establishes the correct identity after upgrading.
+        session = Session(*json.loads(payload))
+        if session.expires_at <= int(time.time()) or session.role not in accounts.ROLES:
             return None
-        if int(exp) < int(time.time()):
-            return None
-        return (username, role, expert == "1")
-    except Exception:
+        if session.account_salt is not None:
+            account = accounts.session_account(session.username)
+            if not account or account.get("salt") != session.account_salt:
+                return None
+            role = account.get("role", "admin")
+            if role not in accounts.ROLES:
+                return None
+            session = session._replace(role=role, expert=session.expert and role == "admin")
+        return session
+    except (TypeError, ValueError, UnicodeError, OSError):
         return None
 
 
@@ -520,18 +553,17 @@ def login_page(request: Request):
 
 @app.get("/vm-console", response_class=HTMLResponse)
 def vm_console_page(name: str, user: str = Depends(require_admin)):
-    import html as _html
     import re as _re
     if not _re.match(r"^[A-Za-z0-9][A-Za-z0-9_.\- ]{0,127}$", name):
         raise HTTPException(status_code=400, detail="Invalid VM name")
-    safe_name = _html.escape(name, quote=True)
     json_name = json.dumps(name)
     return HTMLResponse(f"""<!DOCTYPE html>
-<html lang="en">
+<html lang="{_default_lang()}">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>{safe_name} console - runvard</title>
+<title>Runvard</title>
+<script src="/static/vm-console-i18n.js"></script>
 <link rel="icon" type="image/png" href="/static/runvard-icon.png">
 <style>
 *{{margin:0;padding:0;box-sizing:border-box}}
@@ -550,20 +582,28 @@ button:hover{{background:rgba(122,74,255,.12);border-color:rgba(122,74,255,.35);
 </head>
 <body>
 <div class="bar">
-  <span class="name">Console: {safe_name}</span>
-  <button id="scale" type="button" onclick="toggleScale()">Fit</button>
-  <button type="button" onclick="connect()">Reconnect</button>
-  <button type="button" onclick="window.close()">Close</button>
-  <span id="status" class="status"><span class="dot"></span>connecting...</span>
+  <span class="name" id="vm-name"></span>
+  <button id="scale" type="button" onclick="toggleScale()" data-label="fit"></button>
+  <button type="button" onclick="connect()" data-label="reconnect"></button>
+  <button type="button" onclick="window.close()" data-label="close"></button>
+  <span id="status" class="status"><span class="dot"></span><span id="status-copy"></span></span>
 </div>
 <div id="screen" class="fit"></div>
 <script>
 const VM_NAME={json_name};
+let language=document.documentElement.lang;
+try{{language=localStorage.getItem('runvard_language')||language;}}catch(e){{}}
+const labels=VM_CONSOLE_I18N[language]||VM_CONSOLE_I18N.en;
+document.documentElement.lang=VM_CONSOLE_I18N[language]?language:'en';
+const consoleTitle=labels.title.replace('{{name}}',VM_NAME);
+document.title=consoleTitle+' · Runvard';
+document.getElementById('vm-name').textContent=consoleTitle;
+document.querySelectorAll('[data-label]').forEach(el=>{{el.textContent=labels[el.dataset.label];}});
 let rfb=null;
 let scaleMode='fit';
 const screen=document.getElementById('screen');
 const statusEl=document.getElementById('status');
-function setStatus(text,tone=''){{statusEl.className='status '+tone;statusEl.innerHTML='<span class="dot"></span>'+text;}}
+function setStatus(key,tone=''){{statusEl.className='status '+tone;document.getElementById('status-copy').textContent=labels[key];}}
 function resolveRfbConstructor(mod){{
   let candidate=mod;
   for(let i=0;i<4&&candidate&&typeof candidate!=='function';i++){{
@@ -572,12 +612,7 @@ function resolveRfbConstructor(mod){{
   return typeof candidate==='function'?candidate:null;
 }}
 async function loadRfb(){{
-  try{{
-    const mod=await import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.5.0/lib/rfb.js/+esm');
-    const RFB=resolveRfbConstructor(mod);
-    if(RFB)return RFB;
-  }}catch(e){{}}
-  const mod=await import('https://cdn.jsdelivr.net/npm/@novnc/novnc@1.5.0/+esm');
+  const mod=await import('/static/vendor/novnc-1.5.0/rfb.js');
   const RFB=resolveRfbConstructor(mod);
   if(!RFB)throw new Error('RFB export not found');
   return RFB;
@@ -586,7 +621,7 @@ function applyScale(){{
   if(!rfb)return;
   rfb.scaleViewport=scaleMode==='fit';
   screen.classList.toggle('fit',scaleMode==='fit');
-  document.getElementById('scale').textContent=scaleMode==='fit'?'Fit':'1:1';
+  document.getElementById('scale').textContent=scaleMode==='fit'?labels.fit:'1:1';
 }}
 function toggleScale(){{
   scaleMode=scaleMode==='fit'?'native':'fit';
@@ -595,7 +630,7 @@ function toggleScale(){{
 async function connect(){{
   if(rfb){{try{{rfb.disconnect();}}catch(e){{}}rfb=null;}}
   screen.innerHTML='';
-  setStatus('connecting...');
+  setStatus('connecting');
   try{{
     const RFB=await loadRfb();
     const proto=location.protocol==='https:'?'wss':'ws';
@@ -605,8 +640,8 @@ async function connect(){{
     applyScale();
     rfb.addEventListener('connect',()=>setStatus('connected','ok'));
     rfb.addEventListener('disconnect',()=>setStatus('disconnected','bad'));
-    rfb.addEventListener('securityfailure',()=>setStatus('authentication failed','bad'));
-  }}catch(e){{setStatus('error: '+e.message,'bad');}}
+    rfb.addEventListener('securityfailure',()=>setStatus('authFailed','bad'));
+  }}catch(e){{setStatus('error','bad');}}
 }}
 window.addEventListener('beforeunload',()=>{{if(rfb)try{{rfb.disconnect();}}catch(e){{}}}});
 connect();
@@ -621,12 +656,12 @@ def api_login(request: Request, username: str = Form(...),
     ip = request.client.host if request.client else "?"
     if not _rate_ok(ip):
         raise HTTPException(status_code=429, detail="Too many attempts")
-    role = accounts.verify(username, password)
-    if not role:
+    account = accounts.authenticated_account(username, password)
+    if not account:
         raise HTTPException(status_code=401, detail="Unauthorized")
     ttl = SESSION_TTL_REMEMBER if remember == "1" else SESSION_TTL
     resp = JSONResponse({"ok": True})
-    resp.set_cookie(COOKIE_NAME, make_token(username, ttl, role), max_age=ttl,
+    resp.set_cookie(COOKIE_NAME, make_token(username, ttl, account.get("role", "admin"), account_salt=account["salt"]), max_age=ttl,
                     httponly=True, samesite="strict",
                     secure=_is_https(request), path="/")
     return resp
@@ -664,9 +699,10 @@ def api_expert_mode(request: Request, enabled: str = Form(...),
     on = str(enabled).lower() in ("1", "true", "on", "yes")
     resp = JSONResponse({"ok": True, "expert": on})
     parsed = _parse_token(request.cookies.get(COOKIE_NAME))
-    role = parsed[1] if parsed else "admin"
-    resp.set_cookie(COOKIE_NAME, make_token(user, SESSION_TTL, role, on),
-                    max_age=SESSION_TTL, httponly=True, samesite="strict",
+    if not parsed or parsed.role != "admin":
+        raise HTTPException(status_code=403, detail="Admin required")
+    resp.set_cookie(COOKIE_NAME, _sign_session(parsed._replace(expert=on)),
+                    max_age=max(0, parsed.expires_at - int(time.time())), httponly=True, samesite="strict",
                     secure=_is_https(request), path="/")
     return resp
 
@@ -713,10 +749,10 @@ def btop_page(user: str = Depends(auth)):
 <html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>btop – runvard</title>
 <link rel="icon" type="image/svg+xml" href="/static/btop-icon.svg">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
-<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xterm-addon-unicode11@0.6.0/lib/xterm-addon-unicode11.min.js"></script>
+<link rel="stylesheet" href="/static/vendor/xterm-5.3.0/xterm.css">
+<script src="/static/vendor/xterm-5.3.0/xterm.js"></script>
+<script src="/static/vendor/xterm-addon-fit-0.8.0/xterm-addon-fit.js"></script>
+<script src="/static/vendor/xterm-addon-unicode11-0.6.0/xterm-addon-unicode11.js"></script>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;background:#0a0810;overflow:hidden}
@@ -990,13 +1026,16 @@ def files_read(path: str, user: str = Depends(auth)):
     except Exception as e: raise HTTPException(400, str(e))
 
 @app.post("/api/files/write")
-def files_write(path: str = Form(...), content: str = Form(...), user: str = Depends(auth)):
-    try: return files.write_file(path, content)
+def files_write(path: str = Form(...), content: str = Form(...), revision: str | None = Form(None),
+                user: str = Depends(auth)):
+    try: return files.write_file(path, content, revision)
+    except files.FileEditConflict as e: raise HTTPException(409, str(e))
     except Exception as e: raise HTTPException(400, str(e))
 
 @app.post("/api/files/rename")
 def files_rename(path: str = Form(...), new_name: str = Form(...), user: str = Depends(auth)):
     try: return files.rename(path, new_name)
+    except FileExistsError: raise HTTPException(409, "nameConflict")
     except Exception as e: raise HTTPException(400, str(e))
 
 @app.post("/api/files/copy")
@@ -1022,7 +1061,7 @@ def files_delete(path: str = Form(...), user: str = Depends(confirmed_auth)):
 @app.get("/api/files/download")
 def files_download(path: str, user: str = Depends(auth)):
     if files._bl(path): raise HTTPException(403, "Gesperrt")
-    return FileResponse(path, filename=os.path.basename(path))
+    return _download_file_or_directory(path, os.path.basename(path))
 
 @app.get("/api/files/preview")
 def files_preview(path: str, user: str = Depends(auth)):
@@ -1070,11 +1109,13 @@ def _file_selection(paths: str = Form(""), paths_json: str = Form("")):
 @app.post("/api/files/zip")
 def files_zip(output: str = Form(...), user: str = Depends(auth), paths: list[str] = Depends(_file_selection)):
     try: return files.make_zip(paths, output)
+    except FileExistsError: raise HTTPException(409, "nameConflict")
     except Exception as e: raise HTTPException(400, str(e))
 
 @app.post("/api/files/unzip")
 def files_unzip(path: str = Form(...), dst_dir: str = Form(...), user: str = Depends(auth)):
     try: return files.extract_zip(path, dst_dir)
+    except FileExistsError: raise HTTPException(409, "nameConflict")
     except Exception as e: raise HTTPException(400, str(e))
 
 @app.post("/api/files/job")
@@ -1127,11 +1168,25 @@ def files_mounts(user: str = Depends(auth)):
 def files_share_delete(token: str = Form(...), user: str = Depends(confirmed_auth)):
     return files.delete_share(token)
 
+def _download_file_or_directory(path, name):
+    if files._bl(path) or not os.path.exists(path):
+        raise HTTPException(404)
+    if os.path.isdir(path):
+        stream = files.directory_download(path)
+        headers = {"Content-Disposition": "attachment; filename*=UTF-8''" + quote(name + ".zip", safe=""),
+                   "Content-Length": str(os.fstat(stream.fileno()).st_size)}
+        return StreamingResponse(iter(lambda: stream.read(128 * 1024), b""), headers=headers,
+                                 media_type="application/zip", background=BackgroundTask(stream.close))
+    if not os.path.isfile(path):
+        raise HTTPException(404)
+    return FileResponse(path, filename=name)
+
+
 @app.get("/dl/{token}")
 def files_public_download(token: str):
     share = files.resolve_share(token)
     if not share: raise HTTPException(404, "Link ungültig")
-    return FileResponse(share["path"], filename=share["name"])
+    return _download_file_or_directory(share["path"], share["name"])
 
 @app.post("/api/files/samba-share")
 def files_samba_share(path: str = Form(...), name: str = Form(...),
@@ -1736,8 +1791,11 @@ def backup_browse(path: str = "/", user: str = Depends(auth)):
 
 @app.post("/api/backup/validate")
 def backup_validate(source: str = Form(...), dest: str = Form(...),
+                    managed: bool = Form(False),
                     user: str = Depends(require_admin)):
     try:
+        if managed:
+            dest = backup.managed_destination(source, dest)
         return backup.validate_paths(source, dest)
     except (OSError, ValueError) as e:
         raise HTTPException(400, str(e))
@@ -1756,6 +1814,25 @@ def backup_add(name: str = Form(...), source: str = Form(...),
 @app.post("/api/backup/run")
 def backup_run(job_id: int = Form(...), user: str = Depends(require_admin)):
     return backup.run_job(job_id)
+
+
+@app.post("/api/backup/schedule-enabled")
+def backup_schedule_enabled(job_id: int = Form(...), enabled: bool = Form(...),
+                            user: str = Depends(require_admin)):
+    try:
+        return backup.schedule_enabled(job_id, enabled)
+    except KeyError:
+        raise HTTPException(404, "Backup job not found")
+
+
+@app.post("/api/backup/remove")
+def backup_remove(job_id: int = Form(...), user: str = Depends(require_admin)):
+    try:
+        return backup.delete_job(job_id)
+    except KeyError:
+        raise HTTPException(404, "Backup job not found")
+    except ValueError as exc:
+        raise HTTPException(409, str(exc))
 
 
 @app.get("/api/backup/history")
@@ -2616,7 +2693,11 @@ def dashboard_add(tile_type: str = Form(...), tile_id: str = Form(...),
                   name: str = Form(""), url: str = Form(""),
                   icon: str = Form(""), port: int = Form(0),
                   user: str = Depends(auth)):
-    return dashboard.add_tile(tile_type, tile_id, name, url, icon, port)
+    result = dashboard.add_tile(tile_type, tile_id, name, url, icon, port)
+    if result.get("ok") is False:
+        status = 409 if result["error"] == "tile_conflict" else 422
+        raise HTTPException(status_code=status, detail=result["error"])
+    return result
 
 
 @app.post("/api/dashboard/remove")
@@ -2641,10 +2722,14 @@ def dashboard_update(tile_id: str = Form(...), name: str = Form(""),
                      host: str = Form(None),
                      show_url: bool = Form(None),
                      accent: str = Form(None), note: str = Form(None),
+                     expected_revision: int | None = Form(None),
                      user: str = Depends(auth)):
-    return dashboard.update_tile(tile_id, name or None, url or None,
-                                 icon, host, show_url,
-                                 accent, note)
+    result = dashboard.update_tile(tile_id, name or None, url or None,
+                                   icon, host, show_url, accent, note, expected_revision)
+    if result.get("ok") is False:
+        status = 409 if result["error"] == "tile_conflict" else 422
+        raise HTTPException(status_code=status, detail=result["error"])
+    return result
 
 
 # ============ Multi-server federation ============
@@ -2789,11 +2874,12 @@ async def federation_peer_sso_redeem(request: Request):
 
 @app.post("/api/federation/v1/sso/start", response_class=HTMLResponse)
 def federation_sso_start(
-    request: Request, node_id: str = Form(...), user: str = Depends(auth),
+    request: Request, node_id: str = Form(...),
 ):
     parsed = _parse_token(request.cookies.get(COOKIE_NAME))
-    role = parsed[1] if parsed else "admin"
-    expert = bool(parsed[2]) if parsed else True
+    if not parsed:
+        raise HTTPException(status_code=401, detail="Unauthorized")
+    user, role, expert = parsed[:3]
     try:
         target, ticket = FEDERATION.start_sso(
             node_id, user, role, expert,
@@ -2841,7 +2927,7 @@ def federation_sso_accept(request: Request, ticket: str = Form(...)):
     response.set_cookie(
         COOKIE_NAME,
         make_token(
-            claim["username"], SESSION_TTL, claim["role"], claim["expert"],
+            claim["username"], SESSION_TTL, claim["role"], claim["expert"], account_salt=None,
         ),
         max_age=SESSION_TTL, httponly=True, samesite="lax",
         secure=_is_https(request), path="/",

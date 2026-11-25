@@ -17,7 +17,7 @@ def _client(*, expert=False, role="admin"):
     client = TestClient(server.app)
     client.cookies.set(
         server.COOKIE_NAME,
-        server.make_token("tester", 3600, role, expert=expert),
+        server.make_token("tester", 3600, role, expert=expert, account_salt=None),
     )
     return client
 

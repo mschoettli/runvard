@@ -1,7 +1,7 @@
 'use strict';
 (async()=>{
  const $=id=>document.getElementById(id);
- const catalogs=await (await fetch('/static/network-map-i18n.json?v=4')).json();
+ const catalogs=await (await fetch('/static/network-map-i18n.json?v=5')).json();
  let lang;try{lang=localStorage.getItem('runvard_language');}catch(_){}
  lang=lang||document.body.dataset.defaultLang||'en';if(!catalogs[lang])lang='en';
  const t=key=>catalogs[lang][key]||catalogs[lang].error;
@@ -18,122 +18,455 @@
   select:['M5 3l13 8-6 2-3 6zM14 15l4 5'],
   sensor:['M8 3h8v18H8zM11 7h2M11 17h2'],
   chevron:['M7 10l5 5 5-5'],
+  back:['M19 12H5m6-6-6 6 6 6'],
+  switch:['M2 6h20v12H2zM5 10h2m2 0h2m2 0h2m2 0h2'],
+  gateway:['M3 13h18v7H3zM6 13V5m12 8V5M7 17h1m3 0h1'],
+  grip:['M9 5h.01M15 5h.01M9 12h.01M15 12h.01M9 19h.01M15 19h.01'],
+  unavailable:['M12 3a9 9 0 1 0 0 18 9 9 0 0 0 0-18','M8 12h8'],
   refresh:['M20 7a8 8 0 1 0 1 7M20 3v5h-5']
  };
  function icon(name){const svg=document.createElementNS('http://www.w3.org/2000/svg','svg');svg.setAttribute('viewBox','0 0 24 24');svg.setAttribute('class','icon');svg.setAttribute('aria-hidden','true');for(const d of iconPaths[name]||iconPaths.device){const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',d);svg.append(path);}return svg;}
- function deviceIcon(d){return d.network==='zigbee'?(d.kind==='Coordinator'||d.kind==='Router'?'zigbee':'sensor'):d.kind==='router'?'wifi':d.kind==='bridge'?'zigbee':d.ports?.includes(22)?'server':'device';}
- let state={devices:[],edges:[],settings:{networks:[]},can_edit:false},selected='',stage={width:300,height:200,positions:{},groups:[],cardWidth:210,cardHeight:96},positions=new Map(),scale=1,busy=false,dragging=false,formDirty=false,editOpen=false,signature='',lastDetailId='';
- const expandedGroups=new Set(),seenDevices=new Set();
- const reducedMotion=window.matchMedia('(prefers-reduced-motion: reduce)');
- reducedMotion.addEventListener('change',()=>{if(reducedMotion.matches)document.querySelectorAll('.node').forEach(n=>n.getAnimations().forEach(a=>a.cancel()));});
- const originLabel=e=>t(e.origin==='manual'?'manual':e.origin==='fritz'?'fritzOrigin':'zigbee');
- const label=d=>d.label||d.name||d.ip||d.id;
- const date=value=>value?new Date(value*1000).toLocaleString(lang):t('never');
- const status=d=>['online','offline'].includes(d.status)?d.status:'unknown';
- function translate(){document.documentElement.lang=lang;document.title=t('title')+' · runvard';$('language').value=lang;
-  document.querySelectorAll('[data-t]').forEach(e=>e.textContent=t(e.dataset.t));document.querySelectorAll('[data-placeholder]').forEach(e=>{e.placeholder=t(e.dataset.placeholder);e.setAttribute('aria-label',t(e.dataset.placeholder));});document.querySelectorAll('[data-aria]').forEach(e=>e.setAttribute('aria-label',t(e.dataset.aria)));
-  $('language').setAttribute('aria-label',t('language'));$('filter').setAttribute('aria-label',t('all'));$('viewport').setAttribute('aria-label',t('title'));$('viewport').title=t('mapHelp');}
- function message(key){$('message').textContent=key?t(key):'';}
- async function request(action,data={}){const r=await fetch('/api/network-map/'+action,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});if(r.status===401){location.href='/login';throw Error('error');}if(!r.ok)throw Error(r.status===400?'invalid':'error');return r.json();}
- function allGroups(){return RunvardMapLayout.layoutGroups(state.devices,state.edges,$('viewport').clientWidth,expandedGroups);}
- function visible(){const query=$('search').value.toLocaleLowerCase(lang),filter=$('filter').value,groups=allGroups().deviceGroups;return state.devices.filter(d=>{
-  const group=groups[d.id];const match=filter==='all'||filter==='unknownConnection'&&group==='unknown'||['lan','wlan','zigbee'].includes(filter)&&group===filter||['online','offline','unknown'].includes(filter)&&status(d)===filter;
-  return match&&[label(d),d.name,d.ip,d.mac,d.room,d.manufacturer,d.model].filter(Boolean).join(' ').toLocaleLowerCase(lang).includes(query);
- });}
- function layout(){stage=RunvardMapLayout.layoutGroups(visible(),state.edges,$('viewport').clientWidth,expandedGroups);positions=new Map(Object.entries(stage.positions));}
- function transform(){$('world').style.width=stage.width+'px';$('world').style.height=stage.height+'px';$('world').style.transform=`scale(${scale})`;$('canvas').style.width=Math.ceil(stage.width*scale)+'px';$('canvas').style.height=Math.ceil(stage.height*scale)+'px';$('zoom').textContent=Math.round(scale*100)+'%';}
- function resetView(){scale=1;layout();renderMap();$('viewport').scrollTo({left:0,top:0});}
- function drawEdges(){const svg=$('edges');svg.replaceChildren();const groups=new Map(stage.groups.map(g=>[g.network,g]));const rendered=new Set();
-  for(const [index,e] of state.edges.entries()){
-   const a=positions.get(e.source),b=positions.get(e.target);if(!a||!b)continue;
-   const key=[e.origin,...[e.source,e.target].sort()].join(':');if(rendered.has(key))continue;rendered.add(key);
-   const sourceGroup=stage.deviceGroups[e.source],targetGroup=stage.deviceGroups[e.target],ga=groups.get(sourceGroup),gb=groups.get(targetGroup);
-   const ax=a.x+105,ay=a.y+48,bx=b.x+105,by=b.y+48;let route;
-   if(ga&&gb&&sourceGroup===targetGroup){const lane=ga.x+12+(index%3)*3;route=`M ${a.x} ${ay} H ${lane} V ${by} H ${b.x}`;}
-   else{const lane=Math.min(ga?.y??168,gb?.y??168)-14-(index%3)*7;
-    const fromX=ga?ga.x+ga.width+(stage.width<860?8:-10):ax,toX=gb?gb.x+(stage.width<860?-8:12):bx;
-    route=ga?`M ${a.x+210} ${ay} H ${fromX} V ${lane}`:`M ${ax} ${a.y+96} V ${lane}`;
-    route+=` H ${toX}`+(gb?` V ${by} H ${b.x}`:` V ${b.y}`);
-   }
-   const path=document.createElementNS(svg.namespaceURI,'path');path.setAttribute('d',route);path.setAttribute('fill','none');path.classList.add(e.origin==='manual'?'manual':e.origin==='fritz'?'observed':'zigbee');
-   if(selected)path.classList.add(e.source===selected||e.target===selected?'selected':'dim');
-   const title=document.createElementNS(svg.namespaceURI,'title');title.textContent=originLabel(e)+(e.lqi!=null?' · LQI '+e.lqi:'');path.append(title);svg.append(path);
-   if(e.source===selected||e.target===selected){const text=document.createElementNS(svg.namespaceURI,'text');text.setAttribute('x',ga&&gb&&ga===gb?bx:(ax+bx)/2);text.setAttribute('y',ga&&gb&&ga===gb?b.y-8:Math.min(ga?.y??168,gb?.y??168)-22-(index%3)*7);text.textContent=e.lqi!=null?'LQI '+e.lqi:e.type==='wlan'?t('groupWlan'):e.type==='lan'?'LAN':originLabel(e);text.setAttribute('text-anchor','middle');text.classList.add('edge-label');svg.append(text);}
+ const kindKeys = {gateway:'gatewayRole', coordinator:'coordinator', router:'routerRole', switch:'switchRole', repeater:'repeaterRole', bridge:'bridgeRole', endpoint:'endDevice'};
+ const groupKeys = {lan:'groupLan', wlan:'groupWlan', unknown:'groupUnknown'};
+ const expandedGroups = new Set();
+ // Keep folded groups independently for the phone accordion and the desktop map.
+ const folds = new Map();
+ const viewport = $('viewport');
+ let state = {devices:[], edges:[], settings:{networks:[]}, can_edit:false};
+ let topology = RunvardMapLayout.classifyTopology([], []);
+ let stage, matches = [], filtering = false, contextId = '', selected = '', scale = 1;
+ let signature = null, pendingRefresh = null, dragging = false, messageKey = '';
+ const label = d => d.label || d.name || d.ip || d.ieee || d.id;
+ const date = value => value ? new Date(value * 1000).toLocaleString(lang) : t('never');
+ const groupLabel = key => key === 'zigbee' ? 'Zigbee' : t(groupKeys[key]);
+ const kindLabel = d => t(kindKeys[topology.deviceKinds[d.id]] || 'endDevice');
+ const statusCode = d => ['online', 'offline', 'out_of_scope'].includes(d.status) ? d.status : 'unknown';
+ const status = d => statusCode(d) === 'out_of_scope' ? 'outOfScope' : statusCode(d);
+ const originLabel = e => t(e.origin === 'manual' ? 'manual' : e.origin === 'fritz' ? 'fritzOrigin' : 'zigbee');
+ const foldMode = () => (viewport.clientWidth < 600 ? 'mobile' : 'desktop') + (filtering ? '-filtered' : '');
+ function deviceIcon(d) {
+  const kind = topology.deviceKinds[d.id];
+  if (kind === 'gateway' || kind === 'switch') return kind;
+  if (kind === 'coordinator' || d.network === 'zigbee' && kind === 'router') return 'zigbee';
+  if (kind === 'router' || kind === 'repeater') return 'wifi';
+  if (kind === 'bridge') return 'network';
+  return d.network === 'zigbee' ? 'sensor' : d.ports?.includes(22) ? 'server' : 'device';
+ }
+ function translate() {
+  document.documentElement.lang = lang;
+  document.title = t('title') + ' · Runvard';
+  $('language').value = lang;
+  document.querySelectorAll('[data-t]').forEach(e => e.textContent = t(e.dataset.t));
+  document.querySelectorAll('[data-aria]').forEach(e => e.setAttribute('aria-label', t(e.dataset.aria)));
+  const search = $('search');
+  search.placeholder = t('search');
+  search.setAttribute('aria-label', t('search'));
+  $('language').setAttribute('aria-label', t('language'));
+  viewport.setAttribute('aria-label', t('title'));
+  viewport.title = t('mapHelp');
+  message(messageKey);
+ }
+ function message(key) {
+  messageKey = key;
+  $('message').textContent = key ? t(key) : '';
+ }
+ async function request(action, data = {}) {
+  const r = await fetch('/api/network-map/' + action, {
+   method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(data)
+  });
+  if (r.status === 401) location.href = '/login';
+  if (!r.ok) throw Error(r.status === 400 ? 'invalid' : 'error');
+  return r.json();
+ }
+ function layout() {
+  const query = $('search').value.trim().toLocaleLowerCase(lang);
+  const network = $('network-filter').value, reachability = $('status-filter').value;
+  filtering = Boolean(query || network !== 'all' || reachability !== 'all');
+  matches = state.devices.filter(d => {
+   if (network !== 'all' && network !== topology.deviceGroups[d.id]) return false;
+   if (reachability !== 'all' && reachability !== statusCode(d)) return false;
+   return !query || [label(d), d.name, d.ip, d.mac, d.ieee, d.room, d.manufacturer, d.model]
+    .filter(Boolean).some(value => String(value).toLocaleLowerCase(lang).includes(query));
+  });
+  contextId = '';
+  let shown = matches;
+  if (!query && matches.length && ['lan','wlan'].includes(network) && topology.gateway) {
+   contextId = topology.gateway;
+   shown = [state.devices.find(d => d.id === contextId), ...matches];
+  }
+  stage = RunvardMapLayout.layoutGroups(shown, state.edges, viewport.clientWidth, expandedGroups, {
+   topology, filtering:filtering || !state.devices.length, collapsed:folds.get(foldMode())
+  });
+ }
+ function transform() {
+  $('world').style.width = stage.width + 'px';
+  $('world').style.height = stage.height + 'px';
+  $('world').style.transform = 'scale(' + scale + ')';
+  $('canvas').style.width = Math.ceil(stage.width * scale) + 'px';
+  $('canvas').style.height = Math.ceil(stage.height * scale) + 'px';
+  $('zoom').textContent = Math.round(scale * 100) + '%';
+ }
+ function drawEdges() {
+  const svg = $('edges');
+  const paths = document.createDocumentFragment();
+  for (const {edge, path} of RunvardMapEdges.routes(stage, state.edges)) {
+   const line = document.createElementNS(svg.namespaceURI, 'path');
+   line.setAttribute('d', path);
+   line.dataset.source = edge.source;
+   line.dataset.target = edge.target;
+   line.classList.add(edge.origin === 'manual' ? 'manual' : edge.origin === 'fritz' ? 'observed' : 'zigbee');
+   const title = document.createElementNS(svg.namespaceURI, 'title');
+   title.textContent = originLabel(edge) + (edge.lqi == null ? '' : ' · LQI ' + edge.lqi);
+   line.append(title);
+   paths.append(line);
+  }
+  svg.replaceChildren(paths);
+ }
+ function highlight() {
+  const neighbors = topology.neighbors.get(selected);
+  for (const node of $('nodes').querySelectorAll('.node')) {
+   const id = node.dataset.id, active = id === selected, nearby = Boolean(neighbors?.has(id));
+   node.classList.toggle('selected', active);
+   node.classList.toggle('neighbor-node', nearby);
+   node.classList.toggle('subdued', Boolean(selected) && !nearby && !active || id === contextId && !active && !nearby);
+   node.setAttribute('aria-pressed', String(active));
+  }
+  for (const line of $('edges').children) {
+   const active = selected && [line.dataset.source, line.dataset.target].includes(selected);
+   line.classList.toggle('selected', Boolean(active));
+   line.classList.toggle('dim', Boolean(selected && !active));
+  }
+  // Selected wires remain visible where several routes share a corridor.
+  for (const line of $('edges').querySelectorAll('.selected')) $('edges').append(line);
+ }
+ const details = RunvardMapDetails.create({
+  getState:() => state, t, el, icon, deviceIcon, kindLabel, label, status, date, originLabel, request, refresh,
+  onSelection:id => { selected = id; highlight(); }, revealNode:focusNode
+ });
+ function rect(element, {x,y,width,height}) {
+  Object.assign(element.style, {left:x+'px', top:y+'px', width:width+'px', height:height+'px'});
+ }
+ function currentFolds() {
+  return new Set(stage.groups.filter(g => g.collapsed && g.count).map(g => g.network));
+ }
+ function renderGroup(group, boxes, controls) {
+  const box = el('div', 'network-group ' + group.network);
+  rect(box, group);
+  boxes.append(box);
+  const head = el(group.canCollapse ? 'button' : 'div', 'group-label');
+  head.dataset.group = group.network;
+  head.style.left = group.x + 8 + 'px';
+  head.style.top = group.y + 4 + 'px';
+  head.append(icon(({lan:'network',wlan:'wifi',zigbee:'zigbee',unknown:'link'})[group.network]),
+   el('span','',groupLabel(group.network)), el('span','group-count',group.count));
+  if (group.canCollapse) {
+   head.setAttribute('aria-expanded', String(!group.collapsed));
+   head.append(icon('chevron'));
+   head.lastChild.classList.add('group-chevron');
+   head.onclick = () => {
+    const collapsed = currentFolds();
+    if (group.collapsed) collapsed.delete(group.network);
+    else collapsed.add(group.network);
+    folds.set(foldMode(), collapsed);
+    renderMap();
+   };
+  }
+  controls.append(head);
+  if (!group.count && !group.collapsed) {
+   const empty = el('p','group-empty',t('emptyGroup'));
+   empty.style.left = group.x + 16 + 'px';
+   empty.style.top = group.contentTop + 'px';
+   controls.append(empty);
+  }
+  if (group.control) {
+   const button = el('button','group-toggle',group.hidden
+    ? '+ ' + group.hidden + ' ' + t(group.hidden === 1 ? 'moreDevice' : 'moreDevices') : t('collapseGroup'));
+   button.dataset.more = group.network;
+   button.setAttribute('aria-expanded', String(!group.hidden));
+   rect(button, group.control);
+   button.onclick = () => {
+    if (group.hidden) expandedGroups.add(group.network);
+    else expandedGroups.delete(group.network);
+    renderMap();
+   };
+   controls.append(button);
   }
  }
- function renderMap(animateLayout=false){
-  const nodes=$('nodes'),oldPositions=new Map([...nodes.querySelectorAll('.node')].map(n=>[n.dataset.id,{x:parseFloat(n.style.left),y:parseFloat(n.style.top)}])),focusId=document.activeElement?.dataset?.id;
-  nodes.replaceChildren();$('groups').replaceChildren();$('group-jumps').replaceChildren();$('group-jumps').setAttribute('aria-label',t('title'));const devices=visible();$('count').textContent=devices.length+' / '+state.devices.length;$('empty').textContent=state.devices.length?(devices.length?'':t('noResults')):t('empty');
-  for(const group of stage.groups){
-   const box=el('div','network-group '+group.network+(stage.deviceGroups[selected]===group.network?' active':''));Object.assign(box.style,{left:group.x+'px',top:group.y+'px',width:group.width+'px',height:group.height+'px'});$('groups').append(box);
-   const heading=el(group.control?'button':'div','group-label'+(group.control?' group-heading':''));heading.dataset.groupHeading=group.network;heading.tabIndex=group.control?0:-1;if(group.control){heading.type='button';heading.setAttribute('aria-expanded',String(expandedGroups.has(group.network)));heading.classList.toggle('expanded',expandedGroups.has(group.network));}heading.style.left=(group.x+20)+'px';heading.style.top=(group.y+22)+'px';heading.append(icon(group.network==='zigbee'?'zigbee':group.network==='wlan'?'wifi':group.network==='unknown'?'link':'network'),el('span','',group.network==='zigbee'?'Zigbee':t(group.network==='lan'?'groupLan':group.network==='wlan'?'groupWlan':'groupUnknown')),el('span','group-count',group.count+' '+t(group.count===1?'device':'devices')));if(group.control){const arrow=icon('chevron');arrow.classList.add('group-chevron');heading.append(arrow);heading.onclick=()=>{expandedGroups.has(group.network)?expandedGroups.delete(group.network):expandedGroups.add(group.network);layout();renderMap(true);document.querySelector(`[data-group-heading="${group.network}"]`)?.focus({preventScroll:true});};}nodes.append(heading);
-   const jump=el('button','group-jump'+(stage.deviceGroups[selected]===group.network?' active':''),(group.network==='zigbee'?'Zigbee':t(group.network==='lan'?'groupLan':group.network==='wlan'?'groupWlan':'groupUnknown'))+' · '+group.count);jump.type='button';jump.setAttribute('aria-controls','viewport');jump.onclick=()=>{$('viewport').scrollTo({left:Math.max(0,group.x*scale-12),top:Math.max(0,group.y*scale-12),behavior:reducedMotion.matches?'auto':'smooth'});document.querySelector(`[data-group-heading="${group.network}"]`)?.focus({preventScroll:true});};$('group-jumps').append(jump);
-   if(group.network==='unknown'){const note=el('p','group-note',t('unknownHint'));Object.assign(note.style,{left:(group.x+20)+'px',top:(group.y+48)+'px',width:(group.width-40)+'px'});nodes.append(note);}
-   if(!group.count){const empty=el('div','group-empty');empty.style.left=(group.x+24)+'px';empty.style.top=(group.y+76)+'px';empty.style.width=(group.width-48)+'px';empty.append(el('p','hint',t('emptyGroup')));if(state.can_edit){const setup=el('button','btn ghost',t(group.network==='zigbee'?'setupZigbee':'setupFritz'));setup.onclick=()=>openSettings(group.network==='zigbee'?'zigbee':'fritz');empty.append(setup);}nodes.append(empty);}
-   if(group.control){const control=el('button','group-toggle');control.dataset.group=group.network;const r=group.control;Object.assign(control.style,{left:r.x+'px',top:r.y+'px',width:r.width+'px',height:r.height+'px'});control.textContent=group.hidden?'+ '+group.hidden+' '+t(group.hidden===1?'moreDevice':'moreDevices'):t('collapseGroup');control.setAttribute('aria-expanded',expandedGroups.has(group.network)?'true':'false');control.onclick=()=>{expandedGroups.has(group.network)?expandedGroups.delete(group.network):expandedGroups.add(group.network);layout();renderMap(true);document.querySelector(`[data-group="${group.network}"]`)?.focus({preventScroll:true});};nodes.append(control);}
+ function buildNode(d) {
+  const role = stage.deviceRoles[d.id], code = statusCode(d);
+  const node = el('button', 'node ' + role + ' ' + code);
+  node.type = 'button';
+  node.dataset.id = d.id;
+  node.dataset.group = stage.deviceGroups[d.id];
+  node.setAttribute('aria-haspopup','dialog');
+  node.setAttribute('aria-controls','details');
+  rect(node, {...stage.positions[d.id], ...stage.sizes[d.id]});
+  const symbol = el('span','node-icon');
+  symbol.append(icon(deviceIcon(d)));
+  const copy = el('span','node-copy');
+  if (role !== 'endpoint') copy.append(el('span','node-role',kindLabel(d)));
+  copy.append(el('strong','',label(d)));
+  const address = [d.ip, d.room, d.ieee, d.model, d.manufacturer].find(value => value && value !== label(d));
+  const secondary = el('small','node-meta');
+  if (code === 'offline' || code === 'out_of_scope') {
+   secondary.append(icon('unavailable'), el('span','',t(code === 'offline' ? 'offline' : 'outOfScopeShort')));
+  } else {
+   if (code === 'online') secondary.append(el('i','status-dot online'));
+   secondary.append(el('span','',address || t(status(d))));
   }
-  for(const d of devices){const p=positions.get(d.id);if(!p)continue;const b=el('button','node '+status(d)+(selected===d.id?' selected':'')+(stage.deviceGroups[d.id]==='gateway'?' gateway-node':''));b.type='button';b.dataset.id=d.id;b.style.left=p.x+'px';b.style.top=p.y+'px';
-   const symbol=el('span','node-icon');symbol.append(icon(deviceIcon(d)));const copy=el('span','node-copy');copy.append(el('strong','',label(d)));const secondary=label(d)===(d.ip||d.ieee)?(d.manufacturer||t('unnamed')):(d.ip||d.ieee||d.model||'');copy.append(el('small','',secondary));b.append(symbol,copy,el('i','status-dot '+status(d)));
-   if(state.can_edit&&stage.deviceGroups[d.id]!=='gateway'){const grip=el('span','node-grip','⠿');grip.setAttribute('aria-hidden','true');b.append(grip);}
-   b.title=label(d)+' · '+(d.ip||d.ieee||'')+' · '+t(status(d));b.setAttribute('aria-label',label(d)+' · '+t(status(d)));b.setAttribute('aria-pressed',selected===d.id?'true':'false');
-   b.onclick=()=>{if(b.dataset.moved==='1'){b.dataset.moved='';return;}select(d.id);};b.addEventListener('pointerdown',e=>nodeDrag(e,b,d));nodes.append(b);
-   if(!seenDevices.has(d.id)){if(!reducedMotion.matches&&!document.hidden){b.classList.add('node-enter');b.style.setProperty('--enter-delay',Math.min(180,seenDevices.size*20)+'ms');b.addEventListener('animationend',()=>b.classList.remove('node-enter'),{once:true});}seenDevices.add(d.id);}
-   const old=oldPositions.get(d.id);if(animateLayout&&old&&!reducedMotion.matches&&!document.hidden){b.animate([{transform:`translate(${old.x-p.x}px,${old.y-p.y}px)`},{transform:'translate(0,0)'}],{duration:200,easing:'cubic-bezier(.2,.7,.2,1)'});}
-   if(focusId===d.id)b.focus({preventScroll:true});
+  copy.append(secondary);
+  node.append(symbol,copy);
+  if (state.can_edit && role !== 'gateway' && !filtering) {
+   const grip = el('span','node-grip');
+   grip.append(icon('grip'));
+   node.append(grip);
+   node.addEventListener('pointerdown', e => nodeDrag(e, node, d));
   }
-  drawEdges();transform();
+  const description = [label(d),kindLabel(d),address,t(status(d))].filter(Boolean);
+  if (d.id === contextId) {
+   node.classList.add('context-node');
+   description.push(t('filterContext'));
+  }
+  node.title = description.join(' · ');
+  node.setAttribute('aria-label',node.title);
+  node.onclick = () => { if (!node.suppressClick) details.select(d.id); };
+  return node;
  }
- function select(id){selected=id;formDirty=false;editOpen=false;renderMap();renderDetails();}
- function field(form,key,value,tag='input'){const l=el('label'),input=el(tag);input.name=key;input.value=value||'';input.maxLength=key==='notes'?1000:160;l.append(el('span','',t(key)),input);form.append(l);return input;}
- function summary(root){const title=el('div','overview-title');title.append(icon('network'),el('h2','',t('overview')));root.append(title,el('div','overview-count',state.devices.length),el('div','overview-label',t(state.devices.length===1?'device':'devices')));const stats=el('div','summary-stats');
-  for(const key of ['online','offline']){const stat=el('div','summary-stat');stat.append(el('i','status-dot '+key),el('strong','',state.devices.filter(d=>status(d)===key).length),el('span','',t(key)));stats.append(stat);}root.append(stats);const graphic=el('div','selection-visual');graphic.append(icon('select'));root.append(graphic,el('p','hint',t('selectionHint')));
-  const row=el('div','kv');row.append(el('span','',t('connections')),el('strong','',state.edges.length));root.append(row);}
- function renderDetails(){const root=$('details');root.replaceChildren();const d=state.devices.find(x=>x.id===selected);if(!d){summary(root);return;}
-  const heading=el('div','detail-heading'),symbol=el('span','node-icon');symbol.append(icon(deviceIcon(d)));heading.append(symbol,el('h2','',label(d)));if(lastDetailId!==d.id){heading.classList.add('detail-enter');lastDetailId=d.id;}root.append(heading);const badge=el('div','detail-status');badge.append(el('i','status-dot '+status(d)),el('span','',t(status(d))));root.append(badge);
-  const kind=d.kind==='Coordinator'?'coordinator':d.kind==='Router'||d.kind==='router'?'router':'endDevice';root.append(el('div','device-kind',t(kind)+(d.room?' · '+d.room:'')));
-  for(const [key,value] of [['IP',d.ip],['MAC',d.mac],['IEEE',d.ieee],['manufacturer',d.manufacturer],['model',d.model],['battery',d.battery!=null?d.battery+' %':null],['lqi',d.linkquality],['lastSeen',d.last_seen?date(d.last_seen):null]]){if(value==null||value==='')continue;const row=el('div','kv'+(['IP','MAC','IEEE'].includes(key)?' mono':''));row.append(el('span','',['IP','MAC','IEEE'].includes(key)?key:t(key)),el('strong','',String(value)));root.append(row);}
-  root.append(el('h3','',t('connections')));const neighbors=el('div','neighbors');const links=state.edges.filter(e=>e.source===d.id||e.target===d.id);
-  for(const e of links){const other=state.devices.find(x=>x.id===(e.source===d.id?e.target:e.source));if(!other)continue;const button=el('button','neighbor'),copy=el('span');copy.append(el('strong','',label(other)),el('small','',originLabel(e)+(e.lqi!=null?' · LQI '+e.lqi:'')));button.append(icon(deviceIcon(other)),copy);button.onclick=()=>{select(other.id);focusNode(other.id);};neighbors.append(button);}
-  if(!links.length){const empty=el('div','connection-empty');empty.append(icon('link'),el('p','',t('noConnections')));neighbors.append(empty);}root.append(neighbors);
-  if(!state.can_edit){root.append(el('p','hint',t('readOnly')));return;}
-  const editor=el('details','editor');editor.open=editOpen;const disclosure=el('summary');disclosure.append(icon('edit'),el('span','',t('edit')));editor.append(disclosure);editor.addEventListener('toggle',()=>{editOpen=editor.open;});
-  const form=el('form');form.oninput=()=>{formDirty=true;};field(form,'name',d.label).name='label';field(form,'room',d.room);field(form,'notes',d.notes,'textarea');const parent=field(form,'parent','','select');parent.append(new Option(t('none'),''));for(const other of state.devices.filter(x=>x.id!==d.id))parent.append(new Option(label(other),other.id));parent.value=d.parent||'';
-  const connection=field(form,'connectionType','','select');connection.name='connection_type';for(const key of ['unknown','lan','wlan'])connection.append(new Option(t(key==='unknown'?'groupUnknown':key==='lan'?'groupLan':'groupWlan'),key));connection.value=d.connection_type||'unknown';
-  const save=el('button','btn',t('save'));form.append(save);form.onsubmit=async e=>{e.preventDefault();save.disabled=true;try{await request('device',{id:d.id,...Object.fromEntries(new FormData(form))});formDirty=false;editOpen=false;await refresh(true);message('saved');}catch(err){message(err.message);}finally{save.disabled=false;}};editor.append(form);root.append(editor);}
- function focusNode(id){
-  if(!positions.has(id)){const key=allGroups().deviceGroups[id];if(key)expandedGroups.add(key);$('filter').value='all';$('search').value='';layout();renderMap(true);}
-  const p=positions.get(id);if(p)$('viewport').scrollTo({left:Math.max(0,(p.x+105)*scale-$('viewport').clientWidth/2),top:Math.max(0,(p.y+48)*scale-$('viewport').clientHeight/2)});
+ function renderMap() {
+  const active = document.activeElement;
+  const focusKey = $('nodes').contains(active) ? ['id','more','group'].find(key => active.dataset[key]) : null;
+  const focusValue = focusKey && active.dataset[focusKey];
+  layout();
+  const boxes = document.createDocumentFragment(), nodes = document.createDocumentFragment();
+  for (const group of stage.groups) renderGroup(group, boxes, nodes);
+  for (const device of state.devices) {
+   if (stage.positions[device.id]) nodes.append(buildNode(device));
+  }
+  $('groups').replaceChildren(boxes);
+  $('nodes').replaceChildren(nodes);
+  drawEdges();
+  highlight();
+  transform();
+  const empty = $('empty');
+  empty.hidden = Boolean(matches.length);
+  empty.textContent = matches.length ? '' : t(state.devices.length ? 'noResults' : 'empty');
+  $('clear-filters').hidden = !filtering;
+  $('count').textContent = filtering ? t('resultCount').replace('{shown}',matches.length).replace('{total}',state.devices.length) : '';
+  if (focusKey) {
+   const element = [...$('nodes').querySelectorAll('button')].find(b => b.dataset[focusKey] === focusValue);
+   (element || viewport).focus({preventScroll:true});
+  }
  }
- function nodeDrag(e,node,d){if(e.button!==0||!state.can_edit||stage.deviceGroups[d.id]==='gateway'||(e.pointerType==='touch'&&!e.target.closest('.node-grip')))return;e.stopPropagation();node.setPointerCapture(e.pointerId);const start={x:e.clientX,y:e.clientY,p:{...positions.get(d.id)}};let moved=false;
-  node.onpointermove=event=>{const dx=(event.clientX-start.x)/scale,dy=(event.clientY-start.y)/scale;if(Math.abs(dx)+Math.abs(dy)<5&&!moved)return;moved=true;dragging=true;const g=stage.groups.find(g=>g.network===stage.deviceGroups[d.id]);const p={x:Math.max(g.x+12,Math.min(g.x+g.width-222,start.p.x+dx)),y:Math.max(g.y+(g.network==='unknown'?(stage.width<600?148:100):72),Math.min(g.y+g.height-120,start.p.y+dy))};positions.set(d.id,p);node.style.left=p.x+'px';node.style.top=p.y+'px';stage.width=Math.max(stage.width,p.x+240);stage.height=Math.max(stage.height,p.y+120);drawEdges();transform();};
-  const finish=async()=>{node.onpointermove=null;node.onpointerup=null;node.onpointercancel=null;dragging=false;if(!moved)return;node.dataset.moved='1';const p=positions.get(d.id);try{await request('device',{id:d.id,...p,layout_group:stage.deviceGroups[d.id]});d.x=p.x;d.y=p.y;d.layout_group=stage.deviceGroups[d.id];}catch(err){positions.set(d.id,start.p);layout();renderMap();message(err.message);}};node.onpointerup=finish;node.onpointercancel=finish;}
- $('viewport').addEventListener('pointerdown',e=>{if(e.button!==0||e.pointerType!=='mouse'||e.target.closest('button'))return;const v=$('viewport'),start={x:e.clientX,y:e.clientY,left:v.scrollLeft,top:v.scrollTop};v.setPointerCapture(e.pointerId);v.onpointermove=ev=>{dragging=true;v.scrollLeft=start.left+start.x-ev.clientX;v.scrollTop=start.top+start.y-ev.clientY;};v.onpointerup=v.onpointercancel=()=>{dragging=false;v.onpointermove=null;v.onpointerup=null;v.onpointercancel=null;};});
- function zoom(factor){const v=$('viewport'),x=(v.scrollLeft+v.clientWidth/2)/scale,y=(v.scrollTop+v.clientHeight/2)/scale;scale=Math.max(.6,Math.min(1.8,scale*factor));transform();v.scrollLeft=x*scale-v.clientWidth/2;v.scrollTop=y*scale-v.clientHeight/2;}
- $('viewport').addEventListener('wheel',e=>{if(e.ctrlKey||e.metaKey){e.preventDefault();zoom(e.deltaY<0?1.1:1/1.1);}},{passive:false});
- $('viewport').addEventListener('keydown',e=>{if(e.target!==$('viewport'))return;if(e.key==='+'||e.key==='='){e.preventDefault();zoom(1.15);}else if(e.key==='-'){e.preventDefault();zoom(1/1.15);}else if(e.key==='0')resetView();});
- $('plus').onclick=()=>zoom(1.15);$('minus').onclick=()=>zoom(1/1.15);$('fit').onclick=resetView;
- $('search').oninput=$('filter').onchange=()=>{layout();renderMap();$('viewport').scrollTo({top:0,left:0});};
- $('language').onchange=()=>{lang=$('language').value;try{localStorage.setItem('runvard_language',lang);}catch(_){}translate();layout();renderMap();renderDetails();renderStatus();};
- function openSettings(section=''){
-  $('networks').value=state.settings.networks.join('\n');const found=state.devices.filter(d=>d.zigbee_url);$('zigbee-url').value=state.settings.zigbee_url||(found.length===1?found[0].zigbee_url:'');$('token').value='';$('clear-token').checked=false;
-  const gateway=state.devices.find(d=>d.gateway)||state.devices.find(d=>/FRITZ!Box/i.test(d.model||d.name||''));$('fritz-host').value=state.settings.fritz_host||gateway?.ip||'';$('fritz-user').value=state.settings.fritz_user||'';$('fritz-password').value='';$('clear-fritz').checked=false;
-  $('settings-message').textContent='';$('settings-dialog').showModal();if(section==='zigbee')$('zigbee-url').focus();if(section==='fritz')$('fritz-host').focus();
+ function focusNode(id) {
+  if (!stage.positions[id]) {
+   $('search').value = '';
+   $('network-filter').value = $('status-filter').value = 'all';
+   layout();
+   const group = topology.deviceGroups[id], collapsed = currentFolds();
+   collapsed.delete(group);
+   expandedGroups.add(group);
+   folds.set(foldMode(),collapsed);
+   renderMap();
+  }
+  const p = stage.positions[id], size = stage.sizes[id];
+  if (p) viewport.scrollTo({left:(p.x+size.width/2)*scale-viewport.clientWidth/2, top:(p.y+size.height/2)*scale-viewport.clientHeight/2});
  }
- function renderStatus(){
-  $('scan').replaceChildren(icon('refresh'),el('span','',t(state.scanning?'scanning':'scan')));$('scan').classList.toggle('scanning',state.scanning);$('scan').setAttribute('aria-busy',String(state.scanning));$('scan').disabled=!state.can_edit||state.scanning;$('settings').disabled=!state.can_edit;$('mesh').hidden=!state.connected;$('mesh').disabled=!state.can_edit||!state.connected;
-  $('connection').textContent=t(state.connected?'connected':state.settings.zigbee_url?'disconnected':'zigbeeMissing');$('integration-dot').className='status-dot '+(state.connected?'online':'unknown');
-  $('integration-copy').textContent=state.connected?t('meshTime')+': '+date(state.mesh_at):t(state.devices.filter(d=>d.zigbee_url).length===1?'setupFound':'setupCopy');$('setup-zigbee').hidden=state.connected;$('setup-zigbee').disabled=!state.can_edit;
-  $('fritz-status').textContent=t(state.fritz_error?'fritzError':state.fritz_at?'fritzReady':'fritzNotSet');$('fritz-dot').className='status-dot '+(state.fritz_error?'offline':state.fritz_at?'online':'unknown');$('setup-fritz').disabled=!state.can_edit;$('setup-fritz').textContent=t(state.settings.fritz_host?'settings':'setupFritz');document.querySelector('.fritz-panel .hint').hidden=!!state.settings.fritz_host;$('fritz-time').textContent=t('fritzTime')+': '+date(state.fritz_at);
-  $('scan-time').textContent=t('scanTime')+': '+date(state.scan_at);$('mesh-time').textContent=t('meshTime')+': '+date(state.mesh_at);
+ function nodeDrag(event, node, device) {
+  if (event.button !== 0 || event.pointerType === 'touch' && !event.target.closest('.node-grip')) return;
+  event.stopPropagation();
+  const group = stage.groups.find(g => g.network === stage.deviceGroups[device.id]);
+  const size = stage.sizes[device.id], start = {...stage.positions[device.id]};
+  let moved = false, frame;
+  const redraw = () => { drawEdges(); highlight(); frame = null; };
+  node.setPointerCapture(event.pointerId);
+  node.onpointermove = e => {
+   const dx = (e.clientX-event.clientX)/scale, dy = (e.clientY-event.clientY)/scale;
+   if (!moved && Math.abs(dx)+Math.abs(dy) < 5) return;
+   moved = dragging = true;
+   const p = {
+    x:Math.max(group.x+12, Math.min(group.x+group.width-size.width-12,start.x+dx)),
+    y:Math.max(group.contentTop, Math.min((group.control?.y ?? group.y+group.height)-size.height-8,start.y+dy))
+   };
+   stage.positions[device.id] = p;
+   rect(node,{...p,...size});
+   if (!frame) frame = requestAnimationFrame(redraw);
+  };
+  node.onpointerup = node.onpointercancel = async e => {
+   node.onpointermove = node.onpointerup = node.onpointercancel = null;
+   if (!moved) return;
+   cancelAnimationFrame(frame);
+   node.suppressClick = true;
+   setTimeout(() => {node.suppressClick = false;}, 0);
+   const p = stage.positions[device.id];
+   try {
+    if (e.type !== 'pointercancel') {
+     const patch = {...p,layout_group:group.network};
+     await request('device',{id:device.id,...patch});
+     Object.assign(device,patch);
+    }
+   } catch(err) { message(err.message); }
+   finally { dragging = false; renderMap(); }
+  };
  }
- async function refresh(force=false){if(busy||dragging)return;busy=true;try{const r=await fetch('/api/network-map',{cache:'no-store'});if(r.status===401){location.href='/login';return;}if(!r.ok)throw Error('error');const next=await r.json(),nextSignature=JSON.stringify([next.devices,next.edges,next.can_edit]);state=next;
-   if(force||signature!==nextSignature){signature=nextSignature;layout();renderMap();if(!formDirty&&!editOpen)renderDetails();}renderStatus();if(state.error||state.zigbee_error)message('error');
-  }catch(_){message('error');}finally{busy=false;}}
- $('scan').onclick=async()=>{try{await request('scan');state.scanning=true;renderStatus();setTimeout(()=>refresh(),500);}catch(err){message(err.message);}};
- $('mesh').onclick=async()=>{try{await request('mesh');message('meshPending');}catch(err){message(err.message);}};
- $('settings').onclick=()=>openSettings();$('setup-zigbee').onclick=()=>openSettings('zigbee');$('setup-fritz').onclick=()=>openSettings('fritz');$('close-settings').onclick=()=>$('settings-dialog').close();
- $('settings-form').onsubmit=async e=>{e.preventDefault();const button=e.submitter;if(button)button.disabled=true;try{await request('settings',{networks:$('networks').value.split('\n').map(x=>x.trim()).filter(Boolean),zigbee_url:$('zigbee-url').value.trim(),token:$('token').value,clear_token:$('clear-token').checked,fritz_host:$('fritz-host').value.trim(),fritz_user:$('fritz-user').value.trim(),fritz_password:$('fritz-password').value,clear_fritz_password:$('clear-fritz').checked});$('settings-dialog').close();if($('fritz-host').value.trim())await request('scan');await refresh(true);message('saved');}catch(err){$('settings-message').textContent=t(err.message);}finally{if(button)button.disabled=false;}};
- let resizeTimer;window.addEventListener('resize',()=>{clearTimeout(resizeTimer);resizeTimer=setTimeout(()=>{if(!dragging){layout();renderMap();}},120);});
- $('fritz-icon').append(icon('network'));$('search-icon').append(icon('search'));$('integration-icon').append(icon('zigbee'));
- translate();await refresh(true);setInterval(()=>{if(!document.hidden)refresh();},5000);
+ viewport.addEventListener('pointerdown',e => {
+  if (e.button !== 0 || e.pointerType !== 'mouse' || e.target.closest('button')) return;
+  const {scrollLeft,scrollTop} = viewport;
+  viewport.setPointerCapture(e.pointerId);
+  viewport.onpointermove = ev => {
+   dragging = true;
+   viewport.scrollLeft = scrollLeft + e.clientX - ev.clientX;
+   viewport.scrollTop = scrollTop + e.clientY - ev.clientY;
+  };
+  viewport.onpointerup = viewport.onpointercancel = () => {
+   dragging = false; viewport.onpointermove = viewport.onpointerup = viewport.onpointercancel = null;
+  };
+ });
+ function zoom(factor) {
+  if (!stage) return;
+  const x = (viewport.scrollLeft+viewport.clientWidth/2)/scale, y = (viewport.scrollTop+viewport.clientHeight/2)/scale;
+  scale = Math.max(.6,Math.min(1.8,scale*factor));
+  transform();
+  viewport.scrollTo({left:x*scale-viewport.clientWidth/2,top:y*scale-viewport.clientHeight/2});
+ }
+ function resetView() { scale = 1; renderMap(); viewport.scrollTo({left:0,top:0}); }
+ viewport.addEventListener('wheel',e => {
+  if (e.ctrlKey || e.metaKey) {e.preventDefault(); zoom(e.deltaY < 0 ? 1.1 : 1/1.1);}
+ },{passive:false});
+ viewport.addEventListener('keydown',e => {
+  if (e.target !== viewport) return;
+  if (['+','=','-','0'].includes(e.key)) {
+   e.preventDefault();
+   if (e.key === '0') resetView(); else zoom(e.key === '-' ? 1/1.15 : 1.15);
+  }
+ });
+ $('plus').onclick = () => zoom(1.15);
+ $('minus').onclick = () => zoom(1/1.15);
+ $('fit').onclick = resetView;
+ function filtersChanged() {
+  folds.delete('mobile-filtered'); folds.delete('desktop-filtered');
+  renderMap();
+  if (selected && !stage.positions[selected]) {
+   const focused = document.activeElement;
+   details.close();
+   focused?.focus({preventScroll:true});
+  }
+  viewport.scrollTo({top:0,left:0});
+ }
+ $('search').oninput = $('network-filter').onchange = $('status-filter').onchange = filtersChanged;
+ $('clear-filters').onclick = () => {
+  $('network-filter').value = $('status-filter').value = 'all';
+  $('search').value = '';
+  filtersChanged();
+  $('search').focus();
+ };
+ $('language').onchange = () => {
+  lang = $('language').value;
+  try {localStorage.setItem('runvard_language',lang);} catch(_) {}
+  translate(); renderMap(); details.render(true); renderStatus();
+ };
+ function openSettings(section='') {
+  $('networks').value = state.settings.networks.join('\n');
+  const found = state.devices.filter(d => d.zigbee_url);
+  $('zigbee-url').value = state.settings.zigbee_url || (found.length === 1 ? found[0].zigbee_url : '');
+  $('token').value = $('fritz-password').value = '';
+  $('clear-token').checked = $('clear-fritz').checked = false;
+  $('fritz-host').value = state.settings.fritz_host || state.devices.find(d => d.id === topology.gateway)?.ip || '';
+  $('fritz-user').value = state.settings.fritz_user || '';
+  $('settings-message').textContent = '';
+  $('settings-dialog').showModal();
+  if (section) $(section === 'zigbee' ? 'zigbee-url' : 'fritz-host').focus();
+ }
+ function renderStatus() {
+  const n = state.devices.length, links = state.edges.length;
+  const metrics = [n+' '+t(n === 1 ? 'device' : 'devices'), links+' '+t(links === 1 ? 'connectionSingular' : 'connections')];
+  for (const key of ['online','offline']) {
+   const count = state.devices.filter(d => statusCode(d) === key).length;
+   if (count) metrics.push(count+' '+t(key));
+  }
+  $('overview').replaceChildren(...metrics.map(text => el('span','',text)));
+  $('scan').replaceChildren(icon('refresh'),el('span','',t(state.scanning ? 'scanning' : 'scan')));
+  $('scan').title = t(state.scanning ? 'scanning' : 'scan');
+  $('scan').setAttribute('aria-busy',String(Boolean(state.scanning)));
+  $('scan').disabled = !state.can_edit || state.scanning;
+  $('settings').disabled = $('setup-zigbee').disabled = $('setup-fritz').disabled = !state.can_edit;
+  $('mesh').hidden = !state.connected;
+  $('mesh').disabled = !state.can_edit || !state.connected;
+  $('connection').textContent = t(state.connected ? 'connected' : state.settings.zigbee_url ? 'disconnected' : 'zigbeeMissing');
+  $('integration-copy').textContent = state.connected ? '' : t(state.devices.filter(d => d.zigbee_url).length === 1 ? 'setupFound' : 'setupCopy');
+  $('setup-zigbee').hidden = state.connected;
+  $('fritz-status').textContent = t(!state.settings.fritz_host ? 'fritzNotSet' : state.fritz_error ? 'fritzError' : state.fritz_at ? 'fritzReady' : 'fritzPending');
+  $('setup-fritz').textContent = t(state.settings.fritz_host ? 'settings' : 'setupFritz');
+  for (const [id,key,at] of [['scan-time','scanTime',state.scan_at],['mesh-time','meshTime',state.mesh_at],['fritz-time','fritzTime',state.fritz_at]]) {
+   $(id).textContent = t(key) + ' · ' + date(at);
+  }
+ }
+ async function refresh(force=false) {
+  if (pendingRefresh) {
+   await pendingRefresh;
+   if (!force) return;
+  }
+  if (dragging && !force) return;
+  const read = async () => {
+   try {
+    const response = await fetch('/api/network-map',{cache:'no-store'});
+    if (response.status === 401) {location.href = '/login'; return;}
+    if (!response.ok) throw Error('error');
+    const next = await response.json();
+    const nextSignature = JSON.stringify([next.devices,next.edges,next.can_edit]);
+    state = next;
+    if (force || signature !== nextSignature) {
+     signature = nextSignature;
+     topology = RunvardMapLayout.classifyTopology(state.devices,state.edges);
+     renderMap();
+     details.render();
+    }
+    renderStatus();
+    if (state.error || state.zigbee_error) message('error');
+    else if (messageKey === 'error') message('');
+   } catch(_) { message('error'); }
+  };
+  const current = read();
+  pendingRefresh = current;
+  try { await current; } finally { if (pendingRefresh === current) pendingRefresh = null; }
+ }
+ $('scan').onclick = async () => {
+  $('scan').disabled = true;
+  try {
+   await request('scan'); state.scanning = true; renderStatus();
+   setTimeout(refresh,500);
+  } catch(err) { message(err.message); renderStatus(); }
+ };
+ $('mesh').onclick = async () => {
+  try {await request('mesh'); $('sources-dialog').close(); message('meshPending');} catch(err) { $('sources-dialog').close(); message(err.message); }
+ };
+ $('integrations').onclick = () => $('sources-dialog').showModal();
+ $('close-sources').onclick = () => $('sources-dialog').close();
+ $('settings').onclick = () => openSettings();
+ $('setup-zigbee').onclick = () => openSettings('zigbee');
+ $('setup-fritz').onclick = () => openSettings('fritz');
+ $('close-settings').onclick = () => $('settings-dialog').close();
+ $('settings-form').onsubmit = async e => {
+  e.preventDefault();
+  const submit = e.submitter;
+  if (submit) submit.disabled = true;
+  try {
+   await request('settings',{networks:$('networks').value.split('\n').map(x=>x.trim()).filter(Boolean),
+    zigbee_url:$('zigbee-url').value.trim(), token:$('token').value, clear_token:$('clear-token').checked,
+    fritz_host:$('fritz-host').value.trim(), fritz_user:$('fritz-user').value.trim(), fritz_password:$('fritz-password').value, clear_fritz_password:$('clear-fritz').checked});
+   if ($('fritz-host').value.trim()) await request('scan');
+   $('settings-dialog').close();
+   $('sources-dialog').close();
+   await refresh(true); message('saved');
+  } catch(err) { $('settings-message').textContent = t(err.message); }
+  finally { if (submit) submit.disabled = false; }
+ };
+ // Opening the desktop details pane also changes the width available to the graph.
+ const observer = new ResizeObserver(() => {
+  if (!dragging && stage && stage.width !== Math.max(270,viewport.clientWidth)) renderMap();
+ });
+ observer.observe(viewport);
+ document.querySelectorAll('[data-icon]').forEach(e => e.append(icon(e.dataset.icon)));
+ translate();
+ await refresh(true);
+ setInterval(() => {if (!document.hidden) refresh();},5000);
 })();

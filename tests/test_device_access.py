@@ -25,7 +25,7 @@ def setup(tmp_path, monkeypatch):
     })
     client = TestClient(server.app)
     admin = TestClient(server.app)
-    admin.cookies.set(server.COOKIE_NAME, server.make_token('admin', 3600))
+    admin.cookies.set(server.COOKIE_NAME, server.make_token('admin', 3600, account_salt=None))
     return store, client, admin
 
 
@@ -66,7 +66,7 @@ def test_device_token_never_grants_session_or_admin_access(setup):
     assert admin.get('/api/devices/metrics').status_code == 401
     for credential in ['', 'Bearer wrong', 'Basic wrong']:
         assert client.get('/api/devices/metrics', headers={'Authorization': credential}).status_code == 401
-    admin.cookies.set(server.COOKIE_NAME, server.make_token('reader', 3600, 'readonly'))
+    admin.cookies.set(server.COOKIE_NAME, server.make_token('reader', 3600, 'readonly', account_salt=None))
     assert create(admin).status_code == 403
 
 

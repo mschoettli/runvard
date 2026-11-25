@@ -176,7 +176,7 @@ def test_port_validation_uses_effective_override_configuration(monkeypatch, tmp_
         return SimpleNamespace(returncode=0, stdout='{"services":{"web":{"ports":[{"target":80,"published":"9090"}]}}}', stderr='')
     monkeypatch.setattr(docker_mgr.subprocess, 'run', run)
     monkeypatch.setattr(docker_mgr, '_compose_owned_ports', lambda name: set())
-    monkeypatch.setattr(docker_mgr, '_port_is_available', lambda port: port != 9090)
+    monkeypatch.setattr(docker_mgr, '_port_is_available', lambda port, *args: port != 9090)
     result = docker_mgr.check_compose_source_ports('demo', [base.read_text(), 'services: {web: {ports: ["${HTTP_PORT}:80"]}}'], True, 'HTTP_PORT=9090\n')
     assert result['ok'] is False
     assert result['conflicts'][0]['port'] == 9090
@@ -187,7 +187,7 @@ def test_standalone_existing_ports_are_owned(monkeypatch, tmp_path):
     c = container('web')
     c.attrs['NetworkSettings'] = {'Ports': {'80/tcp': [{'HostPort': '8080'}]}}
     install_containers(monkeypatch, tmp_path, [c])
-    assert docker_mgr._compose_owned_ports('container:web') == {8080}
+    assert docker_mgr._compose_owned_ports('container:web') == {(8080, 'tcp', '0.0.0.0')}
 
 
 def test_runtime_tmpfs_is_valid_compose_list(monkeypatch, tmp_path):

@@ -6,7 +6,7 @@ from modules import jobs
 
 def _client(role="admin"):
     client = TestClient(server.app)
-    token = server.make_token("tester", 3600, role)
+    token = server.make_token("tester", 3600, role, account_salt=None)
     client.cookies.set(server.COOKIE_NAME, token)
     return client
 
@@ -353,7 +353,8 @@ def test_vm_console_page_renders_for_admin(monkeypatch):
     response = _client().get("/vm-console?name=debian-vm")
 
     assert response.status_code == 200
-    assert "Console: debian-vm" in response.text
+    assert 'const VM_NAME="debian-vm";' in response.text
+    assert "/static/vm-console-i18n.js" in response.text
     assert "/ws/vnc?name=" in response.text
 
 

@@ -36,6 +36,19 @@ def validate_network(value):
     return net
 
 
+def lan_scan_status(address, probed_hosts, *, when_probed):
+    """Classify an address using the coverage of one completed scan."""
+    if probed_hosts is None or not isinstance(address, str):
+        return 'unknown'
+    try:
+        ip = ipaddress.IPv4Address(address)
+    except ipaddress.AddressValueError:
+        return 'unknown'
+    if ip.is_unspecified:
+        return 'unknown'
+    return when_probed if str(ip) in probed_hosts else 'out_of_scope'
+
+
 def zigbee_endpoint(value):
     url = urlsplit(value)
     if url.scheme not in ('http', 'https') or url.username or url.password or url.query or url.fragment:
@@ -224,12 +237,15 @@ class NetworkMap:
                 self.state['edges'].append({'source': parent, 'target': identity, 'origin': 'manual', **({'type':device['connection_type']} if device.get('connection_type') else {})})
             self.save()
 
-    def ingest_fritz(self, report, hosts, gateway_ip):
+    def ingest_fritz(self, report, hosts, gateway_ip, *, probed_hosts=None):
         with self.lock:
             devices, edges = parse_topology(report, hosts, self.state['devices'], gateway_ip)
             manual = {d['id'] for d in self.state['devices'].values() if d.get('parent')}
             for item in devices:
                 d = self.state['devices'].setdefault(item['id'], {})
+                if item.get('ip') != d.get('ip'):
+                    # The scan preceded this address assignment reported by FRITZ!.
+                    item['status'] = lan_scan_status(item.get('ip'), probed_hosts, when_probed='unknown')
                 if item['id'] in manual: item.pop('connection_type', None)
                 d.update(item)
             self.state['edges'] = [e for e in self.state['edges'] if e['origin'] != 'fritz'] + [e for e in edges if e['target'] not in manual]
@@ -237,21 +253,21 @@ class NetworkMap:
             self.fritz_error = ''
             self.save()
 
-    def refresh_fritz(self):
+    def refresh_fritz(self, *, probed_hosts=None):
         with self.lock:
             settings = dict(self.state['settings'])
         if not settings.get('fritz_host'): return
         try:
             topology, hosts = read_topology(settings['fritz_host'], settings.get('fritz_user',''), self.secrets.get('fritz').get('password',''))
-            self.ingest_fritz(topology, hosts, settings['fritz_host'])
+            self.ingest_fritz(topology, hosts, settings['fritz_host'], probed_hosts=probed_hosts)
         except Exception:
             self.fritz_error = 'fritz_failed'
 
-    def merge_lan(self, found):
+    def merge_lan(self, found, *, probed_hosts=None):
         with self.lock:
             for d in self.state['devices'].values():
-                if d.get('network') == 'lan':
-                    d['status'] = 'offline'
+                if d.get('network') == 'lan' and probed_hosts is not None:
+                    d['status'] = lan_scan_status(d.get('ip'), probed_hosts, when_probed='offline')
             for item in found:
                 identity = item.get('id') or 'lan:' + (item.get('mac') or item['ip'])
                 # Promote IP identity once a MAC becomes available, preserving annotations.
@@ -278,16 +294,16 @@ class NetworkMap:
                 networks = self.state['settings']['networks'] or local_networks()
             if not networks:
                 raise ValueError('no_supported_network')
-            hosts = [str(ip) for n in networks for ip in validate_network(n).hosts()]
+            hosts = dict.fromkeys(str(ip) for n in networks for ip in validate_network(n).hosts())
             found = []
             with ThreadPoolExecutor(max_workers=24) as pool:
-                for item in pool.map(probe, dict.fromkeys(hosts)):
+                for item in pool.map(probe, hosts):
                     if item: found.append(item)
             macs = neighbor_macs()
             for item in found:
                 if item['ip'] in macs: item['mac'] = macs[item['ip']]
-            self.merge_lan(found)
-            self.refresh_fritz()
+            self.merge_lan(found, probed_hosts=hosts)
+            self.refresh_fritz(probed_hosts=hosts)
             self.error = ''
             return True
         except Exception:

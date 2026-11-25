@@ -56,37 +56,25 @@ done
 command -v rsync >/dev/null 2>&1 || die "rsync is required."
 command -v systemctl >/dev/null 2>&1 || die "systemctl is required."
 
+# shellcheck source=scripts/install-common.sh
+. "$SRC/scripts/install-common.sh"
+
 info "Updating runvard..."
 
-rsync -a --delete \
-  --exclude 'data' \
-  --exclude 'venv' \
-  --exclude '.venv' \
-  --exclude '.git' \
-  --exclude '.pytest_cache' \
-  --exclude '__pycache__' \
-  --exclude '*.pyc' \
-  --exclude '*.bak*' \
-  --exclude 'tests' \
-  "$SRC"/ "$INSTALL_DIR"/
+SETTINGS="$SRC/scripts/installer-settings.py"
+DATA_DIR="$(python3 "$SETTINGS" get "$ENV_FILE" RUNVARD_DATA_DIR)"
+python3 "$SETTINGS" sync "$SRC" "$INSTALL_DIR" "${DATA_DIR:-$INSTALL_DIR/data}"
 ok "Program files synced."
 
 SOURCE_COMMIT="${RUNVARD_SOURCE_COMMIT:-}"
 if [ -z "$SOURCE_COMMIT" ] && [ -d "$SRC/.git" ] && command -v git >/dev/null 2>&1; then
   SOURCE_COMMIT="$(git -C "$SRC" rev-parse HEAD 2>/dev/null || true)"
 fi
-if [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
-  printf '%s\n' "$SOURCE_COMMIT" > "$VERSION_FILE"
-  ok "Version recorded."
-else
-  warn "No valid source commit found; version file was not updated."
-fi
-
 if [ "${RUNVARD_SKIP_PIP:-0}" = "1" ]; then
   warn "Skipping Python dependency refresh because RUNVARD_SKIP_PIP=1."
 else
   PIP="$INSTALL_DIR/venv/bin/pip"
-  if [ -d "$INSTALL_DIR/wheels" ] && [ -n "$(ls -A "$INSTALL_DIR/wheels" 2>/dev/null)" ]; then
+  if bundled_wheels_ready "$PIP" "$INSTALL_DIR"; then
     info "Installing Python dependencies from bundled wheels..."
     "$PIP" install -q --no-index --find-links "$INSTALL_DIR/wheels" -r "$INSTALL_DIR/requirements.txt"
     info "Upgrading pip..."
@@ -104,17 +92,19 @@ info "Restarting runvard..."
 systemctl restart runvard
 sleep 3
 
-# shellcheck source=/dev/null
-. "$ENV_FILE"
-HTTP="$(curl -s -o /dev/null -w '%{http_code}' --max-time 3 "http://127.0.0.1:${RUNVARD_PORT:-8080}/login" || true)"
+PORT="$(python3 "$SETTINGS" get "$ENV_FILE" RUNVARD_PORT)"
+if READY="$(probe_local_login "${PORT:-8080}")"; then
+  read -r SCHEME HTTP PORT <<< "$READY"
+  ok "Update succeeded. runvard responded with HTTP ${HTTP}."
+else
+  warn "Update finished, but runvard did not respond as expected."
+  journalctl -u runvard -n 30 --no-pager || true
+  exit 1
+fi
 
-case "$HTTP" in
-  200|302)
-    ok "Update succeeded. runvard responded with HTTP ${HTTP}."
-    ;;
-  *)
-    warn "Update finished, but runvard did not respond as expected (HTTP ${HTTP})."
-    journalctl -u runvard -n 30 --no-pager || true
-    exit 1
-    ;;
-esac
+if [[ "$SOURCE_COMMIT" =~ ^[0-9a-f]{40}$ ]]; then
+  record_version "$VERSION_FILE" "$SOURCE_COMMIT"
+  ok "Version recorded."
+else
+  warn "No valid source commit found; version file was not updated."
+fi

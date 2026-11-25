@@ -6,7 +6,7 @@ import server
 def client(monkeypatch, role='admin'):
     monkeypatch.setattr(server, 'login_enabled', lambda: True)
     c = TestClient(server.app)
-    c.cookies.set(server.COOKIE_NAME, server.make_token('tester', 3600, role))
+    c.cookies.set(server.COOKIE_NAME, server.make_token('tester', 3600, role, account_salt=None))
     return c
 
 

@@ -63,6 +63,12 @@ def test_backup_common_source_labels_are_localized_in_the_wizard():
     assert "homes:'Benutzerordner'" in source
 
 
+def test_backup_cards_translate_persisted_schedule_values():
+    html = HTML.read_text(encoding="utf-8")
+    assert "daily:'Daily',weekly:'Weekly',hourly:'Hourly',manual:'Manual'" in html
+    assert "uiText(scheduleLabels[x.schedule]" in html
+
+
 def test_backup_wizard_has_scoped_modern_theme_surfaces_and_typography():
     source = MODERN_THEME.read_text(encoding="utf-8")
 

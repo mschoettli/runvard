@@ -447,7 +447,7 @@ function guideHtml(kind,text){
   const checks=guide.checks.map(item=>`<li>${esc(item)}</li>`).join('');
   const commands=(COMMANDS[kind]||[]).map(command=>commandHtml(command,text)).join('');
   const source=SOURCES[kind];
-  return `<header class="guide-head"><span class="guide-icon" aria-hidden="true">${esc({runvard:'⬡',proxmox:'P',linux:'>_',windows:'⊞',generic:'↗'}[kind])}</span>
+  return `<header class="guide-head"><span class="guide-icon" aria-hidden="true">${esc({runvard:'⬡',proxmox:'P',linux:'>_',windows:'⊞',generic:'◎'}[kind])}</span>
     <div><h2>${esc(guide.title)}</h2><p>${esc(guide.summary)}</p></div></header>
     <div class="guide-body">
       <section><h3 class="section-title">${esc(text.steps)}</h3><div class="steps">${steps}</div></section>
@@ -455,7 +455,7 @@ function guideHtml(kind,text){
       <section><h3 class="section-title">${esc(text.fields)}</h3><ul class="field-list">${fields}</ul></section>
       <section><h3 class="section-title">${esc(text.checks)}</h3><ul class="check-list">${checks}</ul></section>
       <section class="security"><h3 class="section-title">${esc(text.security)}</h3><p>${esc(guide.security)}</p></section>
-      <a class="guide-source" href="${esc(source)}" target="_blank" rel="noopener noreferrer">${esc(text.source)} <span aria-hidden="true">↗</span></a>
+      <a class="guide-source" href="${esc(source)}" target="_blank" rel="noopener noreferrer">${esc(text.source)}</a>
     </div>`;
 }
 function render(language){

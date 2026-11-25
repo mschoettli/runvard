@@ -4,23 +4,24 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>runvard</title>
-<link rel="icon" type="image/png" href="/static/runvard-icon.png">
-<link rel="apple-touch-icon" href="/static/runvard-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="/static/brand/icon-32.png"><link rel="icon" href="/static/brand/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/static/brand/icon-180.png">
 <script>
 try{const theme=localStorage.getItem('runvard_ui_theme');document.documentElement.dataset.uiTheme=theme==='original'||theme==='tech'?'tech':'modern';}catch(e){document.documentElement.dataset.uiTheme='modern';}
 </script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css">
-<script src="https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xterm-addon-web-links@0.9.0/lib/xterm-addon-web-links.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xterm-addon-search@0.13.0/lib/xterm-addon-search.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/xterm-addon-unicode11@0.6.0/lib/xterm-addon-unicode11.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/marked/12.0.0/marked.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Sortable/1.15.0/Sortable.min.js"></script>
+<link rel="stylesheet" href="/static/vendor/xterm-5.3.0/xterm.css">
+<script src="/static/vendor/xterm-5.3.0/xterm.js"></script>
+<script src="/static/vendor/xterm-addon-fit-0.8.0/xterm-addon-fit.js"></script>
+<script src="/static/vendor/xterm-addon-web-links-0.9.0/xterm-addon-web-links.js"></script>
+<script src="/static/vendor/xterm-addon-search-0.13.0/xterm-addon-search.js"></script>
+<script src="/static/vendor/xterm-addon-unicode11-0.6.0/xterm-addon-unicode11.js"></script>
+<script src="/static/vendor/chart.js-4.4.1/chart.umd.js"></script>
+<script src="/static/vendor/marked-12.0.0/marked.min.js"></script>
+<script src="/static/vendor/sortablejs-1.15.0/Sortable.min.js"></script>
 <script src="/static/docker-modern.js?v=20261005-dashboard"></script>
+<script src="/static/docker-view.js"></script>
 <script src="/static/compose-editor.js?v=20261118-footer"></script>
 <style>
 :root{--bg:#0a0b14;--bg2:rgba(13,14,26,.85);--bg3:rgba(17,18,33,.65);--glass:rgba(255,255,255,.04);--glass-hover:rgba(122,74,255,.08);--border:rgba(255,255,255,.08);--border-accent:rgba(122,74,255,.3);--text:#f0f0ff;--text2:rgba(240,240,255,.55);--text3:rgba(240,240,255,.28);--accent:#7a4aff;--accent-light:#9d7aff;--green:#22c55e;--yellow:#eab308;--red:#ef4444;--radius:12px;--blur:blur(16px)}
@@ -754,7 +755,12 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .dash-status.pending{background:#93c5fd;box-shadow:0 0 6px rgba(96,165,250,.45)}
 .dash-status.ext{background:rgba(96,165,250,.6);box-shadow:0 0 6px rgba(96,165,250,.3)}
 .dash-tile .dash-dots{position:absolute;z-index:2;top:7px;left:7px;width:18px;height:18px;border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:10px;color:rgba(255,255,255,.35);cursor:pointer;letter-spacing:-1px;transition:all .15s;opacity:0}
-.dash-tile:hover .dash-dots{opacity:1}
+.dash-tile:hover .dash-dots,.dash-dots:focus-visible{opacity:1}
+.dash-dots{border:0;background:transparent;padding:0}
+.tile,.modal-tab{font-family:inherit;color:inherit}
+.modal-tab{border:0;border-bottom:2px solid transparent;background:transparent}
+.tile:focus-visible,.modal-tab:focus-visible,.dash-dots:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+body:not(.dashboard-admin) .dash-add-btn{display:none}
 .dash-dots:hover{background:rgba(255,255,255,.1);color:rgba(255,255,255,.6)}
 .dash-tile-icon{width:34px;height:34px;border-radius:9px;background:color-mix(in srgb,var(--tile-accent) 16%,rgba(255,255,255,.05));border:.5px solid color-mix(in srgb,var(--tile-accent) 38%,var(--border));display:flex;align-items:center;justify-content:center;font-size:18px;overflow:hidden}
 .dash-tile-icon img{width:22px;height:22px;object-fit:contain}
@@ -799,11 +805,12 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .tile-edit-status:empty{display:none}
 .tile-edit-error{color:var(--red);font-size:12px;line-height:1.5;margin:12px 24px}
 .tile-edit-error:empty{display:none}
+.tile-edit-actions .tile-edit-error{flex:1 0 100%;margin:0}
 .tile-edit-option{display:flex;align-items:flex-start;gap:12px;cursor:pointer}
 .tile-edit-option input{width:18px;height:18px;flex:0 0 18px;margin:2px 0 0;accent-color:var(--accent)}
 .tile-edit-option strong{display:block;font-size:12px;color:var(--text)}
 .tile-edit-option span span{display:block;font-size:11px;line-height:1.5;color:var(--text3);margin-top:4px}
-.tile-edit-actions{position:sticky;bottom:0;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding:16px 24px;background:var(--bg3);border-top:1px solid var(--border);z-index:1}
+.tile-edit-actions{position:sticky;bottom:0;display:flex;justify-content:flex-end;flex-wrap:wrap;gap:8px;padding:16px 24px;background:var(--bg);border-top:1px solid var(--border);z-index:1}
 @media(max-width:640px){.tile-edit-layout{grid-template-columns:minmax(0,1fr);gap:24px;padding:16px}.tile-edit-preview-wrap{display:grid;grid-template-columns:minmax(0,1fr) 132px;column-gap:16px;align-items:start}.tile-edit-preview-label{grid-column:1;grid-row:1}.tile-edit-preview{grid-column:2;grid-row:1/3}.tile-edit-preview-caption{grid-column:1;grid-row:2;margin:0}.tile-edit-card .form-head,.tile-edit-actions{padding:12px 16px}.tile-edit-error{margin:12px 16px}}
 @media(prefers-reduced-motion:reduce){.tile-edit-card{animation:none}}
 
@@ -831,7 +838,6 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 .connected-server-health.offline,.connected-server-health.incompatible{background:var(--red)}
 .connected-server-card-actions{margin-left:auto;display:flex;align-items:center;gap:.5rem;flex:0 0 auto}
 .connected-server-update{min-width:1.125rem;height:1.125rem;padding:0 .3125rem;border-radius:.375rem;background:rgba(122,74,255,.24);color:#c4b5fd;font-size:.625rem;font-weight:700;display:flex;align-items:center;justify-content:center}
-.connected-server-external{width:.5625rem;height:.5625rem;color:var(--text3);display:block}
 .connected-server-metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:.75rem}
 .connected-server-metric{min-width:0}
 .connected-server-metric-label{display:block;margin-bottom:.1875rem;font-size:.625rem;color:var(--text3);text-transform:uppercase;letter-spacing:.04em}
@@ -1100,12 +1106,17 @@ tr.sel-row td{background:rgba(139,92,246,.1);}
 
 </style>
 <link rel="stylesheet" href="/static/modern-theme.css?v=b3cdacaa982e">
+
+<link rel="stylesheet" href="/static/brand/brand.css">
 </head>
 <body>
 
 <div class="topbar">
   <div class="logo">
-    <strong class="logo-wordmark">RUNVARD</strong>
+    <span class="brand-art topbar-wordmark">
+      <img class="brand-art-light" src="/static/brand/wordmark-light.svg" width="622" height="192" alt="Runvard">
+      <img class="brand-art-dark" src="/static/brand/wordmark-dark.svg" width="622" height="192" alt="Runvard">
+    </span>
     <span class="logo-host" id="hostname">…</span>
   </div>
   <div class="topbar-center">
@@ -1391,7 +1402,11 @@ async function requestDangerConfirm(meta){
     });
   });
 }
-const fmtBytes=b=>{if(!b)return'0 B';const u=['B','KB','MB','GB','TB'],i=Math.floor(Math.log(b)/Math.log(1024));return(b/Math.pow(1024,i)).toFixed(1)+' '+u[i];};
+function fmtNumber(value,digits){
+  const options=digits===undefined?{}:{minimumFractionDigits:digits,maximumFractionDigits:digits};
+  return Number(value).toLocaleString(currentLanguage(),options);
+}
+const fmtBytes=b=>{if(!b)return'0 B';const u=['B','KB','MB','GB','TB'],i=Math.floor(Math.log(b)/Math.log(1024));return fmtNumber(b/Math.pow(1024,i),1)+' '+u[i];};
 const fmtVmMemory=b=>{if(!b)return'0 B';const gb=b/1073741824;if(gb>=1){const rounded=Math.round(gb);return(Math.abs(gb-rounded)<.15?rounded:parseFloat(gb.toFixed(gb>=10?0:1)))+' GB';}return fmtBytes(b);};
 const fmtUptime=s=>{const d=Math.floor(s/86400),h=Math.floor((s%86400)/3600),m=Math.floor((s%3600)/60);return`${d}d ${h}h ${m}m`;};
 const esc=s=>(s||'').toString().replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
@@ -2705,7 +2720,6 @@ const UI_PHRASES={
     "not reserved":"nicht reserviert",
     "reserved":"reserviert",
     "running":"Läuft",
-    "runvard logins – separate from OS users. The env admin always stays valid.":"runvard-Logins – getrennt von den OS-Benutzern. Der Env-Admin bleibt immer gültig.",
     "runvard repository":"runvard-Repository",
     "runvard update":"runvard-Update",
     "selected":"ausgewählt",
@@ -2731,7 +2745,6 @@ const UI_PHRASES={
     "↑ Up":"↑ Hoch",
     "↑ Upload":"↑ Hochladen",
     "↓ Download":"↓ Herunterladen",
-    "↗ Open":"↗ Öffnen",
     "↩ Restore":"↩ Wiederherstellen",
     "↻ Check updates":"↻ Updates prüfen",
     "↻ Reconnect":"↻ Neu verbinden",
@@ -3679,7 +3692,6 @@ const UI_PHRASES={
     "not reserved":"non réservé",
     "reserved":"réservé",
     "running":"en cours",
-    "runvard logins – separate from OS users. The env admin always stays valid.":"Connexions runvard – distinctes des utilisateurs OS. L’admin env reste toujours valide.",
     "runvard repository":"Dépôt runvard",
     "runvard update":"mise à jour runvard",
     "selected":"sélectionné(s)",
@@ -3702,7 +3714,6 @@ const UI_PHRASES={
     "↑ Update":"↑ Mettre à jour",
     "↑ Upload":"↑ Importer",
     "↓ Download":"↓ Télécharger",
-    "↗ Open":"↗ Ouvrir",
     "↩ Restore":"↩ Restaurer",
     "↻ Check updates":"↻ Vérifier les mises à jour",
     "↻ Reconnect":"↻ Reconnecter",
@@ -4646,7 +4657,6 @@ const UI_PHRASES={
     "not reserved":"non riservato",
     "reserved":"riservato",
     "running":"in esecuzione",
-    "runvard logins – separate from OS users. The env admin always stays valid.":"Accessi runvard – separati dagli utenti del sistema. L’admin env resta sempre valido.",
     "runvard repository":"Repository runvard",
     "runvard update":"aggiornamento runvard",
     "selected":"selezionato/i",
@@ -4669,7 +4679,6 @@ const UI_PHRASES={
     "↑ Update":"↑ Aggiorna",
     "↑ Upload":"↑ Carica",
     "↓ Download":"↓ Scarica",
-    "↗ Open":"↗ Apri",
     "↩ Restore":"↩ Ripristina",
     "↻ Check updates":"↻ Controlla aggiornamenti",
     "↻ Reconnect":"↻ Riconnetti",
@@ -5621,7 +5630,6 @@ const UI_PHRASES={
     "not reserved":"no reservado",
     "reserved":"reservado",
     "running":"en ejecución",
-    "runvard logins – separate from OS users. The env admin always stays valid.":"Inicios de sesión de runvard – separados de los usuarios del SO. El admin de entorno siempre sigue siendo válido.",
     "runvard repository":"Repositorio de runvard",
     "runvard update":"actualización de runvard",
     "selected":"seleccionado(s)",
@@ -5644,7 +5652,6 @@ const UI_PHRASES={
     "↑ Update":"↑ Actualizar",
     "↑ Upload":"↑ Subir",
     "↓ Download":"↓ Descargar",
-    "↗ Open":"↗ Abrir",
     "↩ Restore":"↩ Restaurar",
     "↻ Check updates":"↻ Buscar actualizaciones",
     "↻ Reconnect":"↻ Reconectar",
@@ -6596,7 +6603,6 @@ const UI_PHRASES={
     "not reserved":"não reservado",
     "reserved":"reservado",
     "running":"em execução",
-    "runvard logins – separate from OS users. The env admin always stays valid.":"Inícios de sessão runvard – separados dos utilizadores do SO. O admin de ambiente permanece sempre válido.",
     "runvard repository":"Repositório runvard",
     "runvard update":"atualização runvard",
     "selected":"selecionado(s)",
@@ -6619,7 +6625,6 @@ const UI_PHRASES={
     "↑ Update":"↑ Atualizar",
     "↑ Upload":"↑ Carregar",
     "↓ Download":"↓ Transferir",
-    "↗ Open":"↗ Abrir",
     "↩ Restore":"↩ Restaurar",
     "↻ Check updates":"↻ Verificar atualizações",
     "↻ Reconnect":"↻ Religar",
@@ -8370,7 +8375,9 @@ function openFormOverlay(focusSelector){
     formReturnFocus=document.activeElement;
   }
   overlay.classList.add('open');
+  const initialFocus=document.activeElement;
   requestAnimationFrame(()=>{
+    if(!overlay.classList.contains('open')||(document.activeElement!==initialFocus&&overlay.contains(document.activeElement)))return;
     const target=(focusSelector&&overlay.querySelector(focusSelector))
       ||formOverlayFocusable()[0];
     target?.focus();
@@ -8588,6 +8595,7 @@ async function loadAuthStatus(){
   try{
     const s=await api('/auth/status');
     currentAuthStatus=s;
+    document.body.classList.toggle('dashboard-admin',s.role==='admin');
     setTopbarUser(s.user||tr('loginDisabled'));
     const h=$('#um-head'); if(h) h.innerHTML=s.user?`${esc(tr('signedInAs'))} <strong>${esc(s.user)}</strong>`:tr('loginDisabledHead');
     const devices=$('#um-devices');if(devices)devices.style.display=s.role==='admin'?'block':'none';
@@ -8605,21 +8613,91 @@ async function doLogout(){
   location.href='/login';
 }
 // ── runvard-Konten (RBAC) ──
+const ACCOUNT_I18N={
+  "de": {
+    "intro": "Runvard-Konten sind von den Betriebssystemkonten getrennt. Nach der Ersteinrichtung wird das hier gespeicherte Passwort verwendet.",
+    "last_admin": "Mindestens ein Administratorkonto muss erhalten bleiben.",
+    "account_exists": "Dieser Benutzername ist bereits vergeben.",
+    "invalid_username": "Gib einen gültigen Benutzernamen ein.",
+    "unknown_account": "Dieses Konto existiert nicht.",
+    "password_required": "Gib ein Passwort ein.",
+    "invalid_role": "Wähle eine gültige Rolle.",
+    "toggleRole": "Rolle ändern"
+  },
+  "en": {
+    "intro": "Runvard accounts are separate from operating system accounts. After initial setup, the password stored here is used.",
+    "last_admin": "At least one administrator account must remain.",
+    "account_exists": "This username is already in use.",
+    "invalid_username": "Enter a valid username.",
+    "unknown_account": "This account does not exist.",
+    "password_required": "Enter a password.",
+    "invalid_role": "Select a valid role.",
+    "toggleRole": "Change role"
+  },
+  "fr": {
+    "intro": "Les comptes Runvard sont distincts des comptes du système. Après la configuration initiale, le mot de passe enregistré ici est utilisé.",
+    "last_admin": "Au moins un compte administrateur doit être conservé.",
+    "account_exists": "Ce nom d’utilisateur est déjà utilisé.",
+    "invalid_username": "Saisissez un nom d’utilisateur valide.",
+    "unknown_account": "Ce compte n’existe pas.",
+    "password_required": "Saisissez un mot de passe.",
+    "invalid_role": "Sélectionnez un rôle valide.",
+    "toggleRole": "Changer le rôle"
+  },
+  "it": {
+    "intro": "Gli account Runvard sono separati dagli account del sistema operativo. Dopo la configurazione iniziale viene usata la password salvata qui.",
+    "last_admin": "Deve rimanere almeno un account amministratore.",
+    "account_exists": "Questo nome utente è già in uso.",
+    "invalid_username": "Inserisci un nome utente valido.",
+    "unknown_account": "Questo account non esiste.",
+    "password_required": "Inserisci una password.",
+    "invalid_role": "Seleziona un ruolo valido.",
+    "toggleRole": "Cambia ruolo"
+  },
+  "es": {
+    "intro": "Las cuentas de Runvard son independientes de las del sistema operativo. Tras la configuración inicial se utiliza la contraseña guardada aquí.",
+    "last_admin": "Debe quedar al menos una cuenta de administrador.",
+    "account_exists": "Este nombre de usuario ya está en uso.",
+    "invalid_username": "Introduce un nombre de usuario válido.",
+    "unknown_account": "Esta cuenta no existe.",
+    "password_required": "Introduce una contraseña.",
+    "invalid_role": "Selecciona un rol válido.",
+    "toggleRole": "Cambiar rol"
+  },
+  "pt": {
+    "intro": "As contas do Runvard são independentes das contas do sistema operativo. Após a configuração inicial, é utilizada a palavra-passe guardada aqui.",
+    "last_admin": "Tem de existir pelo menos uma conta de administrador.",
+    "account_exists": "Este nome de utilizador já está em uso.",
+    "invalid_username": "Introduza um nome de utilizador válido.",
+    "unknown_account": "Esta conta não existe.",
+    "password_required": "Introduza uma palavra-passe.",
+    "invalid_role": "Selecione uma função válida.",
+    "toggleRole": "Alterar função"
+  }
+};
+function accountText(key){return ACCOUNT_I18N[currentLanguage()][key];}
+async function accountRequest(action,data){
+  if('username' in data&&!data.username.trim())throw new Error(accountText('invalid_username'));
+  if('password' in data&&!data.password)throw new Error(accountText('password_required'));
+  const result=await post('/accounts/'+action,data);
+  if(result?.ok===false)throw new Error(accountText(result.error)||uiText('Error'));
+  return result;
+}
 let _accts=[];
 window.accountsManage=async()=>{closeUserMenu();await renderAccounts();};
 async function renderAccounts(){
   try{const r=await api('/accounts');_accts=r.users||[];}catch(e){toast('Error: '+e.message,'error');return;}
-  $('#form-head').innerHTML='<span>👥</span> runvard-Konten';
+  $('#form-head').innerHTML='<span>👥</span> '+esc(tr('runvardAccounts'));
   $('#form-body').innerHTML=`
-    <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5">runvard logins – separate from OS users. The env admin always stays valid. <strong>Read only</strong> blocks all changing actions (incl. terminal/shell/console).</div>
+    <div style="font-size:11px;color:var(--text3);margin-bottom:12px;line-height:1.5">${esc(accountText('intro'))} <strong>Read only</strong> blocks all changing actions (incl. terminal/shell/console).</div>
     <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:16px">
       ${_accts.length?_accts.map(u=>`
         <div style="display:flex;align-items:center;gap:10px;background:var(--bg3);border:1px solid var(--border);border-radius:10px;padding:10px 12px">
           <span style="flex:1;font-weight:500">${esc(u.username)}</span>
           <span class="status-pill ${u.role==='admin'?'run':'stop'}" style="font-size:10px">${u.role==='admin'?'Admin':'Read only'}</span>
-          <button class="btn icon" title="Rolle umschalten" onclick="acctRole('${esc(u.username)}','${u.role==='admin'?'readonly':'admin'}')" style="width:26px;height:26px;font-size:12px">⇅</button>
-          <button class="btn icon" title="Change password" onclick="acctPass('${esc(u.username)}')" style="width:26px;height:26px;font-size:13px">⚿</button>
-          <button class="btn icon danger" title="Delete" onclick="acctDel('${esc(u.username)}')" style="width:26px;height:26px;font-size:12px">✕</button>
+          <button class="btn icon" title="${esc(accountText('toggleRole'))}" onclick="acctRole(${esc(JSON.stringify(u.username))},'${u.role==='admin'?'readonly':'admin'}')" style="width:26px;height:26px;font-size:12px">⇅</button>
+          <button class="btn icon" title="Change password" onclick="acctPass(${esc(JSON.stringify(u.username))})" style="width:26px;height:26px;font-size:13px">⚿</button>
+          <button class="btn icon danger" title="Delete" onclick="acctDel(${esc(JSON.stringify(u.username))})" style="width:26px;height:26px;font-size:12px">✕</button>
         </div>`).join(''):'<div class="empty-state" style="padding:16px">No additional accounts</div>'}
     </div>
     <div class="form-actions">
@@ -8632,10 +8710,10 @@ window.acctAddForm=()=>openForm('Create account','👥',[
   {name:'username',label:'Username',placeholder:'monitor'},
   {name:'password',label:'Password',type:'password'},
   {name:'role',label:'Rolle',type:'select',options:[{value:'readonly',label:'Read only'},{value:'admin',label:'Administrator'}]},
-],async d=>{try{const r=await post('/accounts/add',d);if(r&&r.ok===false){toast(r.error||'Error','error');return;}closeForm();toast('Account created');renderAccounts();}catch(e){toast(e.message,'error');}});
-window.acctPass=username=>openForm('Change password: '+username,'⚿',[{name:'password',label:'New password',type:'password'}],async d=>{try{const r=await post('/accounts/password',{username,password:d.password});if(r&&r.ok===false){toast(r.error||'Error','error');return;}closeForm();toast('Password changed');}catch(e){toast(e.message,'error');}});
-window.acctRole=async(username,role)=>{try{const r=await post('/accounts/role',{username,role});if(r&&r.ok===false){toast(r.error||'Error','error');return;}toast(uiText('Role')+': '+(role==='admin'?'Admin':uiText('Read only')));renderAccounts();}catch(e){toast(e.message,'error');}};
-window.acctDel=username=>confirmDelete('Delete account',`Delete runvard account "${username}"?`,async()=>{try{await post('/accounts/delete',{username});toast('Account deleted');renderAccounts();}catch(e){toast(e.message,'error');}});
+],async d=>{try{await accountRequest('add',d);closeForm();toast('Account created');renderAccounts();}catch(e){toast(e.message,'error');}});
+window.acctPass=username=>openForm('Change password: '+username,'⚿',[{name:'password',label:'New password',type:'password'}],async d=>{try{await accountRequest('password',{username,password:d.password});closeForm();toast('Password changed');}catch(e){toast(e.message,'error');}});
+window.acctRole=async(username,role)=>{try{await accountRequest('role',{username,role});toast(uiText('Role')+': '+(role==='admin'?'Admin':uiText('Read only')));renderAccounts();}catch(e){toast(e.message,'error');}};
+window.acctDel=username=>confirmDelete('Delete account',`Delete runvard account "${username}"?`,async()=>{try{await accountRequest('delete',{username});toast('Account deleted');renderAccounts();}catch(e){toast(e.message,'error');}});
 
 // Read-only device access: dedicated tokens, no user accounts.
 const DEVICE_I18N={
@@ -8992,20 +9070,26 @@ function deviceTokenResult(token){
 loadAuthStatus();
 
 // ═══ Sparklines ═══
-function makeSpark(id,color){return new Chart($(id),{type:'line',data:{labels:Array(30).fill(''),datasets:[{data:Array(30).fill(0),borderColor:color,borderWidth:1.5,fill:true,backgroundColor:color+'22',tension:.4,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false,min:0,max:100}},animation:false}});}
+function createChart(canvas, config){
+  if (!canvas || typeof Chart !== 'function') return null;
+  try { return new Chart(canvas, config); }
+  catch (error) { console.warn('Chart initialization failed', error); return null; }
+}
+function makeSpark(id,color){return createChart($(id),{type:'line',data:{labels:Array(30).fill(''),datasets:[{data:Array(30).fill(0),borderColor:color,borderWidth:1.5,fill:true,backgroundColor:color+'22',tension:.4,pointRadius:0}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false,min:0,max:100}},animation:false}});}
 const cpuSpark=makeSpark('#cpu-spark','#8b5cf6'),ramSpark=makeSpark('#ram-spark','#06b6d4'),netSpark=makeSpark('#net-spark','#22c55e');
 function syncDashboardChartTheme(){
   const colors=isModernUi()?['#3973e6','#5d8be8','#79a3ec']:['#8b5cf6','#06b6d4','#22c55e'];
   [cpuSpark,ramSpark,netSpark].forEach((chart,index)=>{
+    if (!chart) return;
     chart.data.datasets[0].borderColor=colors[index];
     chart.data.datasets[0].backgroundColor=colors[index]+'22';
     chart.update('none');
   });
 }
 syncDashboardChartTheme();
-function pushData(c,v){c.data.datasets[0].data.shift();c.data.datasets[0].data.push(v);c.update('none');}
-async function poll(){try{const s=await api('/system/stats');$('#cpu-val').textContent=s.cpu.percent;$('#cpu-sub').textContent=`${s.cpu.cores} ${uiText('cores')} · ${s.cpu.freq||'?'} MHz`;pushData(cpuSpark,s.cpu.percent);$('#ram-val').textContent=(s.memory.used/1073741824).toFixed(1);$('#ram-sub').textContent=`${fmtBytes(s.memory.total)} · ${s.memory.percent}%`;pushData(ramSpark,s.memory.percent);const mb=(s.network.down_rate/1048576).toFixed(1);$('#net-val').textContent=mb;$('#net-sub').innerHTML=`▲ ${(s.network.up_rate/1048576).toFixed(1)} ▼ ${mb} MB/s`;pushData(netSpark,Math.min(100,s.network.down_rate/1048576*2));}catch(e){}}
-api('/system/disks').then(d=>{if(d.length){const r=d.find(x=>x.mountpoint==='/')||d[0];$('#disk-val').textContent=r.percent;$('#disk-bar').style.width=r.percent+'%';$('#disk-sub').textContent=`${fmtBytes(r.used)} / ${fmtBytes(r.total)}`;}});
+function pushData(c,v){if (!c) return; c.data.datasets[0].data.shift();c.data.datasets[0].data.push(v);c.update('none');}
+async function poll(){try{const s=await api('/system/stats');$('#cpu-val').textContent=fmtNumber(s.cpu.percent);$('#cpu-sub').textContent=`${fmtNumber(s.cpu.cores)} ${uiText('cores')} · ${s.cpu.freq||'?'} MHz`;pushData(cpuSpark,s.cpu.percent);$('#ram-val').textContent=fmtNumber(s.memory.used/1073741824,1);$('#ram-sub').textContent=`${fmtBytes(s.memory.total)} · ${fmtNumber(s.memory.percent)}%`;pushData(ramSpark,s.memory.percent);const mb=fmtNumber(s.network.down_rate/1048576,1);$('#net-val').textContent=mb;$('#net-sub').innerHTML=`▲ ${fmtNumber(s.network.up_rate/1048576,1)} ▼ ${mb} MB/s`;pushData(netSpark,Math.min(100,s.network.down_rate/1048576*2));}catch(e){}}
+api('/system/disks').then(d=>{if(d.length){const r=d.find(x=>x.mountpoint==='/')||d[0];$('#disk-val').textContent=fmtNumber(r.percent);$('#disk-bar').style.width=r.percent+'%';$('#disk-sub').textContent=`${fmtBytes(r.used)} / ${fmtBytes(r.total)}`;}});
 poll();setInterval(poll,2000);
 let _badgeTick=0;setInterval(()=>{if(++_badgeTick%5===0)loadTileBadges();},2000);
 
@@ -9340,8 +9424,8 @@ function connectedServerRenderKey(node){
 function connectedServerCardHtml(node){
   const snapshot=node.snapshot||{},history=connectedServerHistory(node);
   const offline=!['online','degraded'].includes(node.health);
-  const percent=value=>value==null?'—':`${Number(value).toFixed(1)}%`;
-  const network=snapshot.network_down_rate==null?'—':`${(Number(snapshot.network_down_rate)/1048576).toFixed(1)} MB/s`;
+  const percent=value=>value==null?'—':`${fmtNumber(value,1)}%`;
+  const network=snapshot.network_down_rate==null?'—':`${fmtNumber(Number(snapshot.network_down_rate)/1048576,1)} MB/s`;
   const updates=Number(snapshot.updates)||0;
   const name=node.name||node.hostname||node.node_id;
   const status=fedText(node.health||'unknown');
@@ -9349,7 +9433,7 @@ function connectedServerCardHtml(node){
   return `<article class="connected-server-card${offline?' is-offline':''}" data-node-id="${esc(node.node_id)}" data-render-key="${connectedServerRenderKey(node)}" role="link" tabindex="0" aria-label="${esc(aria)}" onclick="connectedServerOpen('${esc(node.node_id)}')" onkeydown="connectedServerKey(event,'${esc(node.node_id)}')">
     <div class="connected-server-top">
       <div class="connected-server-name"><span class="connected-server-health ${esc(node.health||'unknown')}" aria-hidden="true"></span><span class="connected-server-name-text">${esc(name)}</span></div>
-      <div class="connected-server-card-actions">${updates>0?`<span class="connected-server-update" title="${esc(fedText('updates'))}">${updates}</span>`:''}<svg class="connected-server-external" viewBox="0 0 12 12" aria-hidden="true"><path d="M4.5 2H2.8A1.8 1.8 0 0 0 1 3.8v5.4A1.8 1.8 0 0 0 2.8 11h5.4A1.8 1.8 0 0 0 10 9.2V7.5M7 1h4v4M11 1 5.5 6.5" fill="none" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg></div>
+      <div class="connected-server-card-actions">${updates>0?`<span class="connected-server-update" title="${esc(fedText('updates'))}">${updates}</span>`:''}</div>
     </div>
     <div class="connected-server-metrics">
       ${connectedServerMetricHtml('cpu','CPU',percent(snapshot.cpu_percent),history.cpu,offline)}
@@ -9509,7 +9593,7 @@ window.openServerTypePicker=()=>{
     <div class="server-type-divider">
       <span>${esc(fedText('statusAndLinks'))}</span>
       <span class="server-type-divider-line" aria-hidden="true"></span>
-      <a class="server-connection-guide-link" href="/static/server-connection-guide.html" target="_blank" rel="noopener noreferrer">${esc(fedText('connectionGuide'))}<span aria-hidden="true">↗</span></a>
+      <a class="server-connection-guide-link" href="/static/server-connection-guide.html" target="_blank" rel="noopener noreferrer">${esc(fedText('connectionGuide'))}</a>
     </div>
     <div class="server-type-external-grid">${choices.slice(1).map(choice=>serverTypeChoiceHtml(choice)).join('')}</div>`;
   openFormOverlay('.server-type-choice');
@@ -9654,7 +9738,8 @@ function renderTiles(){
   if(!tilesEl)return;
   tilesEl.innerHTML='';
   TILES.forEach((t,i)=>{
-    const el=document.createElement('div');
+    const el=document.createElement('button');
+    el.type='button';
     el.className='tile';
     el.style.animationDelay=(i*.03)+'s';
     el.dataset.id=t.id;
@@ -9766,9 +9851,12 @@ loadTileBadges();
 
 // ═══ Modal ═══
 let currentTile=null,currentTab=null,termWs=null;
+let appsRenderVersion=0,modalOpener=null;
 applyLanguage();
 loadTileBadges();
 function openModal(tile){
+  ++appsRenderVersion;
+  if(!$('#overlay').classList.contains('open'))modalOpener=document.activeElement;
   const tabs=visibleTabs(tile);
   currentTile=tile;currentTab=tabs.length?tabs[0].tab:null;resetSearch();
   const modal=$('#overlay .modal');
@@ -9779,8 +9867,40 @@ function openModal(tile){
   const tabsEl=$('#modal-tabs');tabsEl.innerHTML='';
   const hasSearch=['services','docker','vms','system'].includes(tile.id);
   $('#search-btn').style.display=hasSearch?'flex':'none';
-  if(tile.tabs){tabs.forEach(({tab,index},i)=>{const tb=document.createElement('div');tb.className='modal-tab'+(i===0?' active':'');tb.dataset.tab=tab;tb.textContent=tabLabel(tile,tab,index);tb.onclick=()=>{currentTab=tab;document.querySelectorAll('.modal-tab').forEach(x=>x.classList.remove('active'));tb.classList.add('active');resetSearch();renderTab(tile.id,tab);};tabsEl.appendChild(tb);});applySystemUpdateTabBadge();renderTab(tile.id,currentTab);}
-  else renderTab(tile.id,null);
+  if(tile.tabs){
+    tabsEl.setAttribute('role','tablist');
+    tabs.forEach(({tab,index},i)=>{
+      const button=document.createElement('button');
+      button.type='button';button.className='modal-tab'+(i===0?' active':'');button.dataset.tab=tab;
+      button.id='runvard-modal-tab-'+i;
+      button.setAttribute('role','tab');button.setAttribute('aria-selected',String(i===0));
+      button.setAttribute('aria-controls','modal-body');button.tabIndex=i===0?0:-1;
+      button.textContent=tabLabel(tile,tab,index);
+      button.onclick=()=>{
+        currentTab=tab;
+        $('#modal-body').setAttribute('aria-labelledby',button.id);
+        tabsEl.querySelectorAll('.modal-tab').forEach(other=>{
+          const selected=other===button;
+          other.classList.toggle('active',selected);other.setAttribute('aria-selected',String(selected));other.tabIndex=selected?0:-1;
+        });
+        resetSearch();renderTab(tile.id,tab);
+      };
+      button.onkeydown=event=>{
+        const last=tabs.length-1;
+        const destination={ArrowRight:(i+1)%tabs.length,ArrowLeft:(i+last)%tabs.length,Home:0,End:last}[event.key];
+        if(destination===undefined)return;
+        event.preventDefault();const next=tabsEl.querySelectorAll('.modal-tab')[destination];next.focus();next.click();
+      };
+      tabsEl.appendChild(button);
+    });
+    $('#modal-body').setAttribute('role','tabpanel');
+    $('#modal-body').setAttribute('aria-labelledby','runvard-modal-tab-0');
+    applySystemUpdateTabBadge();renderTab(tile.id,currentTab);
+  }
+  else{
+    tabsEl.removeAttribute('role');$('#modal-body').removeAttribute('role');$('#modal-body').removeAttribute('aria-labelledby');
+    renderTab(tile.id,null);
+  }
   if(tile.id==='docker'){
     const link=document.createElement('button');
     link.className='btn ghost sm';
@@ -9791,6 +9911,7 @@ function openModal(tile){
     tabsEl.appendChild(link);
   }
   $('#overlay').classList.add('open');
+  (tabsEl.querySelector('.modal-tab.active')||modal.querySelector('.modal-close')).focus();
 }
 function syncModalLanguage(){
   if(!currentTile)return;
@@ -9806,6 +9927,7 @@ function syncModalLanguage(){
 }
 function openTileById(id){const t=TILES.find(x=>x.id===id);if(t)openModal(t);}
 function closeModal(){
+  ++appsRenderVersion;
   if(currentTile?.id==='files'){
     ++fileRenderVersion;
     clearTimeout(fileSearchTimer);
@@ -9813,6 +9935,8 @@ function closeModal(){
     toggleFileSelectionMode(false);
   }
   $('#overlay').classList.remove('open');
+  if(modalOpener?.isConnected)modalOpener.focus();
+  modalOpener=null;
   if(termWs){termWs.close();termWs=null;}
   if(typeof window._termDispose==='function'){try{window._termDispose();}catch(e){}}
   if(typeof _dockerStatsTimer!=='undefined'&&_dockerStatsTimer){clearInterval(_dockerStatsTimer);_dockerStatsTimer=null;}
@@ -10058,7 +10182,7 @@ function fedNodeHtml(node,admin){
     </div>
     <div class="fed-actions">
       ${node.current?`<span class="status-pill">${esc((s.version||node.runvard_version||'unknown').slice(0,12))}</span>`:
-      `<button class="btn sm" onclick="fedSwitch('${node.node_id}')" ${switchable?'':'disabled'}>${esc(fedText('open'))} ↗</button>
+      `<button class="btn sm" onclick="fedSwitch('${node.node_id}')" ${switchable?'':'disabled'}>${esc(fedText('open'))}</button>
       ${admin?`<button class="btn icon danger" title="${esc(fedText('revoke'))}" onclick="fedRevoke('${node.node_id}')">✕</button>`:''}`}
     </div>
   </article>`;
@@ -10409,6 +10533,10 @@ const QUICKLINKS=[
 const compactFileScreen=window.matchMedia('(max-width: 760px)');
 let currentPath='/root', clipboard=null, viewMode=compactFileScreen.matches?'list':'grid', sortBy='name', sortDir='asc', selectedFiles=new Set(), fileSelectionOrder=[], fileEntryMeta=new Map(), lastSelectedPath=null, watchedFileJob=null, filesHotkeysReady=false, filesGlobalDropReady=false, fileDragPayload=null, fileExternalDragDepth=0;
 const FILE_I18N={
+  nameConflict:{de:'Am Ziel gibt es bereits einen Eintrag mit diesem Namen.',en:'An item with this name already exists at the destination.',fr:'Un élément portant ce nom existe déjà à destination.',it:'Nella destinazione esiste già un elemento con questo nome.',es:'Ya existe un elemento con este nombre en el destino.',pt:'Já existe um item com este nome no destino.'},
+  editConflict:{de:'Die Datei wurde geändert. Sichere deinen Entwurf und öffne die Datei erneut.',en:'The file has changed. Keep a copy of your draft and reopen the file.',fr:'Le fichier a changé. Gardez une copie de vos modifications et rouvrez le fichier.',it:'Il file è cambiato. Conserva una copia delle modifiche e riapri il file.',es:'El archivo ha cambiado. Guarda una copia del borrador y vuelve a abrir el archivo.',pt:'O ficheiro foi alterado. Guarde uma cópia do rascunho e volte a abrir o ficheiro.'},
+  unsupportedEncoding:{de:'Nur Leseansicht. Der Editor unterstützt UTF-8-Textdateien.',en:'Read-only preview. The editor supports UTF-8 text files.',fr:'Aperçu en lecture seule. L’éditeur prend en charge les fichiers texte UTF-8.',it:'Anteprima in sola lettura. L’editor supporta file di testo UTF-8.',es:'Vista de solo lectura. El editor admite archivos de texto UTF-8.',pt:'Pré-visualização só de leitura. O editor suporta ficheiros de texto UTF-8.'},
+  mixedEndings:{de:'Nur Leseansicht. Die Datei verwendet unterschiedliche Zeilenenden.',en:'Read-only preview. The file contains mixed line endings.',fr:'Aperçu en lecture seule. Le fichier contient plusieurs types de fins de ligne.',it:'Anteprima in sola lettura. Il file contiene terminazioni di riga diverse.',es:'Vista de solo lectura. El archivo contiene distintos finales de línea.',pt:'Pré-visualização só de leitura. O ficheiro contém diferentes terminações de linha.'},
   places:{de:'Orte',en:'Places',fr:'Emplacements',it:'Posizioni',es:'Ubicaciones',pt:'Localizações'},
   mountedDrives:{de:'Eingebundene Laufwerke',en:'Mounted drives',fr:'Volumes montés',it:'Unità montate',es:'Unidades montadas',pt:'Unidades montadas'},
   otherDriveLocations:{de:'Weitere Laufwerksorte',en:'Other drive locations',fr:'Autres emplacements de volumes',it:'Altri percorsi delle unità',es:'Otras ubicaciones de unidades',pt:'Outras localizações de unidades'},
@@ -10496,6 +10624,11 @@ const FILE_I18N={
   error:{de:'Fehler',en:'error',fr:'erreur',it:'errore',es:'error',pt:'erro'},
   unknown:{de:'unbekannt',en:'unknown',fr:'inconnu',it:'sconosciuto',es:'desconocido',pt:'desconhecido'},
 };
+function fileErrorMessage(error){
+  const key=error?.body?.detail;
+  return typeof key==='string'&&Object.hasOwn(FILE_I18N,key)?fileText(key):error.message;
+}
+
 function fileText(key,...args){
   const dict=FILE_I18N[key]||{};
   const text=dict[currentLanguage()]||dict.en||key;
@@ -11417,17 +11550,29 @@ window.openFile=async path=>{
     if(version!==fileRenderVersion||currentTile?.id!=='files')return;
     const isMd=/\.(md|markdown)$/i.test(path);
     const filename=esc(path.split('/').pop());
-    const editor=`<textarea id="md-edit" aria-label="${filename}" translate="no" ${d.readonly?'readonly':''}>${esc(d.content)}</textarea>`;
+    const editor=`<textarea id="md-edit" aria-label="${filename}" translate="no" ${d.readonly?'readonly':''}></textarea>`;
     body.innerHTML=`<div class="file-editor">
       <div class="toolbar">
         <button class="btn ghost sm" onclick="renderFiles($('#modal-body'))">← ${esc(uiText('Back'))}</button>
         ${d.readonly?'':`<button class="btn sm" id="file-save">${esc(uiText('Save'))}</button>`}
       </div>
       <strong class="file-editor-name" translate="no">${filename}</strong>
+      ${d.reason?`<p role="status">${esc(fileText(d.reason))}</p>`:''}
       ${isMd?`<div class="md-split">${editor}<div class="md-preview" id="md-prev" translate="no"></div></div>`:editor}
     </div>`;
     const save=body.querySelector('#file-save');
-    if(save)save.onclick=()=>saveFile(path);
+    const input=body.querySelector('#md-edit');
+    input.value=d.content;
+    let revision=d.revision;
+    if(save)save.onclick=async()=>{
+      save.disabled=true;
+      try{
+        const result=await post('/files/write',{path,content:input.value,revision});
+        revision=result.revision;
+        toast(uiText('Saved'));
+      }catch(error){toast(fileErrorMessage(error),'error');}
+      finally{save.disabled=false;}
+    };
     if(isMd){
       body.querySelector('#md-edit').oninput=updatePreview;
       updatePreview();
@@ -11435,13 +11580,6 @@ window.openFile=async path=>{
   }catch(e){ toast(uiText('File not readable: ')+e.message,'error'); }
 };
 window.updatePreview=()=>{const p=$('#md-prev');if(p)p.innerHTML=marked.parse($('#md-edit').value);};
-window.saveFile=async path=>{
-  try{
-    await post('/files/write',{path,content:$('#md-edit').value});
-    toast(uiText('Saved'));
-  }catch(e){toast(e.message,'error');}
-};
-
 // Suche
 window.fileSearch=query=>{
   clearTimeout(fileSearchTimer);
@@ -11508,7 +11646,7 @@ window.downloadFile=path=>{
 };
 
 // Umbenennen
-window.renameForm=path=>openForm(uiText('Rename'),'✎',[{name:'new_name',label:uiText('New name'),value:path.split('/').pop()}],async d=>{try{await post('/files/rename',{path,new_name:d.new_name});closeForm();toast('Renamed');renderFiles($('#modal-body'));}catch(e){toast(e.message,'error');}});
+window.renameForm=path=>openForm(uiText('Rename'),'✎',[{name:'new_name',label:uiText('New name'),value:path.split('/').pop()}],async d=>{try{await post('/files/rename',{path,new_name:d.new_name});closeForm();toast('Renamed');renderFiles($('#modal-body'));}catch(e){toast(fileErrorMessage(e),'error');}});
 
 // Kopieren / Ausschneiden / Einfügen
 function selectedOrPath(path){
@@ -11573,7 +11711,7 @@ window.zipFile=async path=>{
 window.unzipFile=async path=>{
   startTopProgress('Unpacking ZIP',100);
   try{setTopProgress(15,'Unpacking ZIP');await post('/files/unzip',{path,dst_dir:currentPath});setTopProgress(95,'Unpacking ZIP');finishTopProgress('Unpacked');toast('Unpacked');renderFiles($('#modal-body'));}
-  catch(e){failTopProgress('Unpack failed');toast(e.message,'error');}
+  catch(e){failTopProgress('Unpack failed');toast(fileErrorMessage(e),'error');}
 };
 
 // Share-Link
@@ -11681,7 +11819,7 @@ window.emptyTrash=()=>confirmDelete(uiText('Empty trash'),fileText('emptyTrashCo
     if(currentTile?.id==='files'&&currentPath==='__trash__')renderTrash($('#modal-body'));
   }catch(e){toast(e.message,'error');}
 });
-window.restoreTrash=async(id,name)=>{try{await post('/files/trash/restore',{item_id:id});toast(fileText('restored',name));if(currentTile?.id==='files'&&currentPath==='__trash__')renderTrash($('#modal-body'));}catch(e){toast(e.message,'error');}};
+window.restoreTrash=async(id,name)=>{try{const {dst}=await post('/files/trash/restore',{item_id:id});toast(fileText('restored',dst?.split('/').pop()||name));if(currentTile?.id==='files'&&currentPath==='__trash__')renderTrash($('#modal-body'));}catch(e){toast(e.message,'error');}};
 
 
 
@@ -12166,6 +12304,10 @@ function startDockerCardStats(body){
   load();
   _dockerCardStatsTimer=setInterval(load,5000);
 }
+function dockerLimitsAction(container){
+  if(currentAuthStatus.role!=='admin')return '';
+  return `<button type="button" data-container-limits="${esc(container.id)}" onclick="dockerLimitsForm(this.dataset.containerLimits)">${esc(appUi('resourceLimits'))}</button>`;
+}
 function dockerServiceCard(container){
   const pending=dockerPendingActions.get(container.id);
   const state=dockerStatePresentation(container.state,pending);
@@ -12200,6 +12342,7 @@ function dockerServiceCard(container){
     running&&webPort?`<button onclick="dockerAct('${container.id}','restart')">${esc(uiText('Restart'))}</button>`:'',
     running?`<button onclick="dockerAct('${container.id}','stop')">${esc(uiText('Stop'))}</button>`:'',
     webPort&&running?`<button onclick="dockerStats('${container.id}','${esc(container.name)}')">${esc(uiText('Stats'))}</button>`:'',
+    dockerLimitsAction(container),
     composeProject?`<button onclick="dashCompose(${composeId})">${esc(uiText('Edit'))}</button>`:`<button onclick="composeEdit('container:'+${esc(JSON.stringify(container.name))})">${esc(uiText('Edit'))}</button>`,
     `<button onclick="dockerContainerAddToDashboard(${groupKeyArg},${groupNameArg},${groupKindArg},${groupProjectArg},${webPort||0})">${esc(uiText('Show on dashboard'))}</button>`,
     `<button class="danger" onclick="dockerDel('${container.id}','${esc(container.name)}')">${esc(uiText('Delete'))}</button>`,
@@ -12251,47 +12394,6 @@ window.dockerContainerAddToDashboard=async(key,name,kind,project,port)=>{
     await dockerSaveGroupToDashboard(group,dockerModernCatalogEntry(group,catalog.apps||[]),port);
   }catch(e){toast('Error: '+e.message,'error');}
 };
-async function renderDocker(body,tab){
- const av=await api('/docker/available');if(!av.available){body.innerHTML='<div class="empty-state">🐳 Docker unavailable</div>';return;}
- if(tab==='Container'||!tab){
-   const c=await api('/docker/containers');
-   body.innerHTML=`<div class="sec-hdr" style="margin-bottom:14px"><h3>Container</h3><button class="btn" onclick="dockerCreateForm()">+ Container</button></div>
-   <table style="table-layout:fixed;width:100%"><thead><tr><th style="width:20%">Name</th><th>Image</th><th style="width:85px">Status</th><th style="width:120px">Ports</th><th style="width:240px;text-align:right;padding-right:16px">Aktionen</th></tr></thead><tbody>
-   ${c.map(x=>{const pending=dockerPendingActions.get(x.id);return `<tr>
-     <td style="font-weight:500;overflow:hidden;text-overflow:ellipsis">${esc(x.name)}</td>
-     <td style="color:var(--text2);font-size:11px;font-family:'JetBrains Mono',monospace;overflow:hidden;text-overflow:ellipsis">${esc(x.image)}</td>
-     <td>${pending?statusBadge(appPendingLabel(pending),'warn'):`<span class="status-pill ${x.state==='running'?'run':'stop'}" style="font-size:10px">${x.state}</span>`}</td>
-     <td style="font-size:11px;color:var(--text3)">${x.ports.join(', ')||'—'}</td>
-     <td style="text-align:right;padding-right:16px">
-       <div style="display:inline-flex;gap:4px">
-         <button class="btn icon play" title="${x.state==='running'?'Restart':'Start'}" onclick="dockerAct('${x.id}','${x.state==='running'?'restart':'start'}')" ${pending?'disabled ':''}style="width:26px;height:26px;font-size:12px">${x.state==='running'?'↻':'▶'}</button>
-         <button class="btn icon stop" title="Stop" onclick="dockerAct('${x.id}','stop')" ${pending||x.state!=='running'?'disabled style="opacity:.3;width:26px;height:26px;font-size:12px"':'style="width:26px;height:26px;font-size:12px"'}>⏹</button>
-         <button class="btn icon" title="Statistik" onclick="dockerStats('${x.id}','${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">📊</button>
-         <button class="btn icon play" title="Shell (exec)" onclick="dockerExec('${x.id}','${esc(x.name)}')" ${x.state!=='running'?'disabled style="opacity:.3;width:26px;height:26px;font-size:12px"':'style="width:26px;height:26px;font-size:12px"'}>⌨</button>
-         <button class="btn icon" title="CPU-/RAM-Limits" onclick="dockerLimitsForm('${x.id}','${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">⚖</button>
-         <button class="btn icon" title="Logs" onclick="dockerLogs('${x.id}','${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">≡</button>
-         <button class="btn icon danger" title="Delete" onclick="dockerDel('${x.id}','${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">✕</button>
-       </div>
-     </td></tr>`}).join('')||'<tr><td colspan="5"><div class="empty-state">No containers</div></td></tr>'}</tbody></table>`;}
- else if(tab==='Compose'){
-   const p=await api('/docker/compose');
-   body.innerHTML=`<div class="sec-hdr" style="margin-bottom:14px"><h3>${esc(uiText('Compose projects'))}</h3><button class="btn" onclick="composeForm()">+ ${esc(uiText('Project'))}</button></div>${composeProjectCards(p)}`;}
- else if(tab==='Images'){
-   const im=await api('/docker/images');
-   body.innerHTML=`<div class="sec-hdr"><h3>Images</h3><div style="display:flex;gap:8px"><button class="btn ghost" onclick="dockerSearchForm()">🔍 Registry search</button><button class="btn" onclick="pullForm()">+ Pull image</button></div></div>
-   <table style="table-layout:fixed"><thead><tr><th>Tags</th><th style="width:100px">Size</th><th style="width:50px;text-align:right"></th></tr></thead><tbody>
-   ${im.map(x=>`<tr>
-     <td style="font-size:11px;font-family:'JetBrains Mono',monospace;overflow:hidden;text-overflow:ellipsis">${esc(x.tags.join(', '))||x.id.slice(0,12)}</td>
-     <td style="color:var(--text2);font-size:12px">${fmtBytes(x.size)}</td>
-     <td style="text-align:right"><button class="btn icon danger" title="Delete" onclick="imageDel('${x.id}','${esc(x.tags[0]||x.id)}')" style="width:26px;height:26px;font-size:12px">✕</button></td>
-   </tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">No images</div></td></tr>'}</tbody></table>`;}
- else{
-   const v=await api('/docker/volumes');
-   body.innerHTML=`<div class="sec-hdr"><h3>Volumes</h3></div>
-   <table><thead><tr><th>Name</th><th>Driver</th><th>Mountpoint</th><th style="width:50px;text-align:right"></th></tr></thead><tbody>
-   ${v.map(x=>`<tr><td style="font-weight:500">${esc(x.name)}</td><td style="color:var(--text2)">${x.driver}</td><td class="mono" style="font-size:11px;color:var(--text3)">${esc(x.mountpoint)}</td><td style="text-align:right"><button class="btn icon danger" title="Delete" onclick="volumeDel('${esc(x.name)}')" style="width:26px;height:26px;font-size:12px">✕</button></td></tr>`).join('')||'<tr><td colspan="4"><div class="empty-state">No volumes</div></td></tr>'}</tbody></table>`;}
-}
-
 // Punkt 2: Icon-Buttons + Punkt 4: Bestätigung
 window.dockerAct=async(id,action)=>{
   dockerPendingActions.set(id,action);
@@ -12374,7 +12476,36 @@ window.dockerExecBack=()=>{
   renderDocker(b,'Container');
 };
 window.dockerCreateForm=()=>openForm('Create container','🐳',[{name:'image',label:'Image',placeholder:'nginx:latest'},{name:'name',label:'Name (optional)',placeholder:'mein-container'},{name:'ports',label:'Ports',placeholder:'8080:80,8443:443',hint:'host:container, comma-separated'},{name:'volumes',label:'Volumes',placeholder:'/host/pfad:/container/pfad',picker:{purpose:'container-host',mode:'folder'}},{name:'env',label:'Env-Variablen',placeholder:'KEY=wert,KEY2=wert2'},{name:'cpus',label:'CPU-Limit',placeholder:'e.g. 1.5 (empty = unlimited)'},{name:'memory',label:'RAM-Limit',placeholder:'e.g. 512m or 2g (empty = unlimited)'},{name:'restart',label:'Restart-Policy',type:'select',options:['no','always','unless-stopped','on-failure']}],async d=>{if(d.volumes&&!d.volumes.includes(':'))d.volumes+=':/data';closeForm();toast('Erstelle Container…');try{await post('/docker/create',d);toast('Container running');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}});
-window.dockerLimitsForm=async(id,name)=>{const c=await api('/docker/containers');const cur=c.find(x=>x.id===id)||{};const cpus=cur.nano_cpus?(cur.nano_cpus/1e9).toString():'';const mem=cur.mem_limit?Math.round(cur.mem_limit/1048576)+'m':'';openForm('Limits: '+name,'📊',[{name:'cpus',label:'CPU-Limit',value:cpus,placeholder:'z. B. 1.5',hint:'0 = unlimited, empty = unchanged'},{name:'memory',label:'RAM-Limit',value:mem,placeholder:'z. B. 512m / 2g',hint:'empty = unchanged'}],async d=>{closeForm();toast('Setze Limits…');try{const r=await post('/docker/update',{container_id:id,cpus:d.cpus,memory:d.memory});if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}toast('Limits updated');renderDocker($('#modal-body'),'Container');}catch(e){toast('Error: '+e.message,'error');}});};
+window.dockerLimitsForm=async id=>{
+  try{
+    const containers=await api('/docker/containers');
+    const current=containers.find(container=>container.id===id);
+    if(!current){toast(appUi('containerMissing'),'error');return;}
+    const cpus=current.nano_cpus?String(current.nano_cpus/1e9):'';
+    const bytes=Number(current.mem_limit)||0;
+    const memory=bytes&&bytes%1048576===0?(bytes/1048576)+'m':bytes?String(bytes):'';
+    openForm(appUi('resourceLimits')+' · '+current.name,'📊',[
+      {name:'cpus',label:appUi('cpuLimit'),value:cpus,placeholder:'1.5',hint:current.nano_limit_mode?appUi('recreateForUnlimited'):'0 = unlimited, empty = unchanged'},
+      {name:'memory',label:appUi('memoryLimit'),value:memory,placeholder:'512m',hint:'empty = unchanged'}
+    ],async values=>{
+      const button=$('#form-go');
+      if(button.disabled)return;
+      const cpuValue=values.cpus.trim(),memoryValue=values.memory.trim();
+      const changes={container_id:id};
+      if(cpuValue&&cpuValue!==cpus)changes.cpus=cpuValue;
+      if(memoryValue&&memoryValue!==memory)changes.memory=memoryValue;
+      if(!('cpus' in changes)&&!('memory' in changes)){closeForm();return;}
+      button.disabled=true;
+      try{
+        const result=await post('/docker/update',changes);
+        if(!result.ok){toast(result.error_code?appUi(result.error_code):result.stderr||uiText('Error'),'error');return;}
+        if(button.isConnected){closeForm();toast(uiText('Limits updated'));}
+        if($('#overlay').classList.contains('open')&&currentTile?.id==='docker')renderDocker($('#modal-body'),'Container');
+      }catch(error){toast(uiText('Error')+' · '+error.message,'error');}
+      finally{button.disabled=false;}
+    });
+  }catch(error){toast(uiText('Error')+' · '+error.message,'error');}
+};
 window.dockerSearchForm=()=>openForm('Registry-Suche','🔍',[{name:'term',label:'Suchbegriff',placeholder:'z. B. postgres'}],async d=>{closeForm();if(!d.term){return;}toast('Suche…');try{const r=await api('/docker/search?term='+encodeURIComponent(d.term));if(r&&r.ok===false){toast(r.stderr||'Error','error');return;}renderDockerSearch($('#modal-body'),d.term,r.results||[]);}catch(e){toast('Error: '+e.message,'error');}});
 function renderDockerSearch(body,term,results){
   body.innerHTML=`<div class="toolbar"><button class="btn ghost sm" onclick="renderDocker($('#modal-body'),'Images')">← Back</button><span style="padding:6px;color:var(--text2)">Results for "${esc(term)}"</span></div>
@@ -12858,6 +12989,19 @@ const BACKUP_WIZARD_I18N_COMPLETIONS={
   pt:{title:'Nova cópia de segurança',data:'Dados',target:'Destino',schedule:'Agendamento',review:'Revisão',step:'Passo',sourceTitle:'O que pretende guardar?',sourceCopy:'Escolha uma pasta comum ou procure nas localizações permitidas deste servidor.',customFolder:'Escolher outra pasta',customFolderCopy:'Procurar nas localizações permitidas',noSources:'Não foram detetadas pastas comuns. Pode procurar nas localizações permitidas.',targetTitle:'Onde deve ser guardada a cópia?',targetCopy:'As unidades externas e o armazenamento de rede oferecem melhor proteção do que o disco do sistema.',recommended:'Recomendado',free:'livres',network:'Armazenamento de rede',local:'Armazenamento local',notWritable:'Só de leitura',sameDisk:'Sem proteção contra falha do disco',otherTarget:'Escolher outra localização',otherTargetCopy:'Procurar em pastas montadas e armazenamento',connectNetwork:'Ligar armazenamento de rede',connectNetworkCopy:'Adicionar um destino SMB ou NFS',scheduleTitle:'Quando deve o Runvard criar a cópia?',scheduleCopy:'Uma cópia diária é uma boa predefinição. Também pode iniciá-la manualmente.',daily:'Todos os dias',dailyMeta:'Automático · recomendado',weekly:'Todas as semanas',weeklyMeta:'Automático',manual:'Apenas quando a inicio',manualMeta:'Sem agendamento automático',reviewTitle:'Tudo pronto para proteger os seus dados',reviewCopy:'Verifique a origem, o destino e o agendamento antes de criar a cópia.',name:'Nome da cópia',mirrorTitle:'Esta é uma cópia espelho',mirrorCopy:'Os ficheiros eliminados da origem também podem ser eliminados do destino durante a próxima cópia.',sameDiskCopy:'A origem e o destino usam o mesmo sistema de ficheiros. Esta cópia não protege contra falha do disco.',back:'Voltar',next:'Continuar',create:'Configurar cópia',creating:'A configurar…',useFolder:'Usar esta pasta',up:'Subir',manualPath:'Introduzir caminho manualmente',open:'Usar caminho',noFolders:'Não há pastas disponíveis aqui.',loading:'A carregar armazenamento…',created:'Cópia criada',validationFailed:'Esta localização não pode ser utilizada',source:'Origem',destination:'Destino',browseTitle:'Escolher pasta'}
 };
 Object.assign(BACKUP_WIZARD_I18N,BACKUP_WIZARD_I18N_COMPLETIONS);
+const BACKUP_JOB_I18N={
+  en:{pause:'Pause schedule',resume:'Resume schedule',paused:'Schedule paused',remove:'Remove backup job',removeCopy:'Remove this job from the schedule? Its backup files and history will be kept.',overlap:'Another backup job uses an overlapping destination. Choose a separate folder.',busy:'This backup is running. Wait until it finishes before removing the job.',missing:'This backup job no longer exists.'},
+  de:{pause:'Zeitplan pausieren',resume:'Zeitplan fortsetzen',paused:'Zeitplan pausiert',remove:'Sicherungsauftrag entfernen',removeCopy:'Diesen Auftrag aus dem Zeitplan entfernen? Die gesicherten Dateien und der Verlauf bleiben erhalten.',overlap:'Das Ziel überschneidet sich mit dem eines anderen Sicherungsauftrags. Wähle einen separaten Ordner.',busy:'Die Sicherung läuft. Warte mit dem Entfernen des Auftrags, bis sie abgeschlossen ist.',missing:'Dieser Sicherungsauftrag existiert nicht mehr.'},
+  fr:{pause:'Suspendre la planification',resume:'Reprendre la planification',paused:'Planification suspendue',remove:'Supprimer la tâche de sauvegarde',removeCopy:'Retirer cette tâche de la planification ? Les fichiers sauvegardés et l’historique seront conservés.',overlap:'La destination chevauche celle d’une autre tâche de sauvegarde. Choisissez un dossier distinct.',busy:'La sauvegarde est en cours. Attendez sa fin avant de supprimer la tâche.',missing:'Cette tâche de sauvegarde n’existe plus.'},
+  it:{pause:'Sospendi pianificazione',resume:'Riprendi pianificazione',paused:'Pianificazione sospesa',remove:'Rimuovi attività di backup',removeCopy:'Rimuovere questa attività dalla pianificazione? I file di backup e la cronologia verranno conservati.',overlap:'La destinazione si sovrappone a quella di un’altra attività di backup. Scegli una cartella separata.',busy:'Il backup è in corso. Attendi il completamento prima di rimuovere l’attività.',missing:'Questa attività di backup non esiste più.'},
+  es:{pause:'Pausar programación',resume:'Reanudar programación',paused:'Programación en pausa',remove:'Eliminar tarea de copia de seguridad',removeCopy:'¿Quieres quitar esta tarea de la programación? Se conservarán los archivos de la copia y el historial.',overlap:'El destino se solapa con el de otra tarea de copia de seguridad. Elige una carpeta independiente.',busy:'La copia de seguridad está en curso. Espera a que termine antes de eliminar la tarea.',missing:'Esta tarea de copia de seguridad ya no existe.'},
+  pt:{pause:'Pausar agendamento',resume:'Retomar agendamento',paused:'Agendamento em pausa',remove:'Remover tarefa de cópia de segurança',removeCopy:'Remover esta tarefa do agendamento? Os ficheiros da cópia de segurança e o histórico serão mantidos.',overlap:'O destino sobrepõe-se ao de outra tarefa de cópia de segurança. Escolha uma pasta separada.',busy:'A cópia de segurança está em curso. Aguarde que termine antes de remover a tarefa.',missing:'Esta tarefa de cópia de segurança já não existe.'}
+};
+function backupJobText(key){return BACKUP_JOB_I18N[currentLanguage()][key];}
+function backupErrorText(message){
+  const key={'Backup destinations overlap':'overlap','Running':'busy','Backup job not found':'missing'}[message];
+  return key?backupJobText(key):uiText(message);
+}
 function backupText(key){const lang=currentLanguage();return BACKUP_WIZARD_I18N[lang]?.[key]||BACKUP_WIZARD_I18N.en[key]||key;}
 const BACKUP_SOURCE_LABELS={
   en:{documents:'Documents',photos:'Photos',media:'Media',docker:'Docker data',homes:'User folders'},
@@ -12912,7 +13056,7 @@ function backupWizardDestination(){
 }
 function backupWizardScheduleLabel(){return backupText(backupWizardState.schedule==='daily'?'daily':backupWizardState.schedule==='weekly'?'weekly':'manual');}
 function backupWizardSummary(){
-  const state=backupWizardState,dest=backupWizardDestination();
+  const state=backupWizardState,dest=state.validation.dest;
   return backupWizardHeading(backupText('reviewTitle'),backupText('reviewCopy'))
     +`<div class="backup-name-field"><label for="backup-job-name">${esc(backupText('name'))}</label><input id="backup-job-name" value="${esc(state.name)}" autocomplete="off"></div>`
     +`<div class="backup-summary"><div class="backup-summary-row"><div class="backup-summary-icon">▤</div><div><strong>${esc(backupText('source'))}</strong><span>${esc(state.sourceLabel)} · ${esc(state.source)}</span></div></div><div class="backup-summary-row"><div class="backup-summary-icon">▰</div><div><strong>${esc(backupText('destination'))}</strong><span>${esc(state.targetLabel)} · ${esc(dest)}</span></div></div><div class="backup-summary-row"><div class="backup-summary-icon">◷</div><div><strong>${esc(backupText('schedule'))}</strong><span>${esc(backupWizardScheduleLabel())}</span></div></div></div>`
@@ -12937,15 +13081,15 @@ window.backupWizardNext=async()=>{
   if(state.step<2){state.step++;backupWizardRender();return;}
   if(state.step===2){
     const button=$('#backup-next');if(button){button.disabled=true;button.textContent=backupText('loading');}
-    try{state.validation=await post('/backup/validate',{source:state.source,dest:backupWizardDestination()});state.error='';state.step=3;backupWizardRender();}
-    catch(e){state.error=e.message;state.step=1;backupWizardRender();}
+    try{state.validation=await post('/backup/validate',{source:state.source,dest:backupWizardDestination(),managed:true});state.error='';state.step=3;backupWizardRender();}
+    catch(e){state.error=backupErrorText(e.message);state.step=1;backupWizardRender();}
   }
 };
 window.backupWizardCreate=async()=>{
   const state=backupWizardState,button=$('#backup-create');state.name=$('#backup-job-name')?.value.trim()||state.name;
   if(button){button.disabled=true;button.textContent=backupText('creating');}
-  try{await post('/backup/add',{name:state.name,source:state.source,dest:backupWizardDestination(),schedule:state.schedule});closeForm();toast(backupText('created'));renderBackup($('#modal-body'),'Jobs');}
-  catch(e){if(button){button.disabled=false;button.textContent=backupText('create');}toast(e.message,'error');}
+  try{await post('/backup/add',{name:state.name,source:state.source,dest:state.validation.dest,schedule:state.schedule});closeForm();toast(backupText('created'));renderBackup($('#modal-body'),'Jobs');}
+  catch(e){if(button){button.disabled=false;button.textContent=backupText('create');}toast(backupErrorText(e.message),'error');}
 };
 
 function backupVisibleBrowserEntries(entries){return(entries||[]).filter(entry=>isExpertMode()||!entry.name.startsWith('.'));}
@@ -12973,7 +13117,13 @@ window.backupForm=async()=>{
   try{backupWizardState.locations=await api('/backup/locations');}catch(e){toast(e.message,'error');}
   backupWizardRender();
 };
-window.runBackup=async id=>{toast('Backup started…');try{const r=await post('/backup/run',{job_id:id});toast(r.ok?'Backup complete':(r.error||'Error'),r.ok?'success':'error');}catch(e){toast('Error: '+e.message,'error');}};
+window.runBackup=async id=>{toast('Backup started…');try{const r=await post('/backup/run',{job_id:id});toast(r.ok?'Backup complete':backupErrorText(r.error||'Error'),r.ok?'success':'error');if(currentTile?.id==='backup')renderBackup($('#modal-body'),'Jobs');}catch(e){toast(backupErrorText(e.message),'error');}};
+async function backupJobChange(path,data){
+  try{await post(path,data);if(currentTile?.id==='backup')await renderBackup($('#modal-body'),'Jobs');}
+  catch(e){toast(backupErrorText(e.message),'error');}
+}
+window.backupSetSchedule=(job_id,enabled)=>backupJobChange('/backup/schedule-enabled',{job_id,enabled});
+window.backupRemove=job_id=>confirmDelete(backupJobText('remove'),backupJobText('removeCopy'),()=>backupJobChange('/backup/remove',{job_id}));
 
 // ═══ Freigaben – alle auf einer Seite ═══
 const SHARE_UI={
@@ -13038,7 +13188,7 @@ function renderSharesOriginal(body,samba,nfs,ftp,host){
         <td style="font-weight:500">${esc(x.name)}</td>
         <td class="mono" style="font-size:11px;color:var(--text2)">${esc(x.path)}</td>
         <td style="color:var(--text2)">${x.writable?'✓':'—'}</td>
-        <td style="text-align:right"><button class="btn ghost sm" onclick="showShareLinks('${esc(x.name)}','${host}')" style="font-size:11px">↗ Links</button></td>
+        <td style="text-align:right"><button class="btn ghost sm" onclick="showShareLinks('${esc(x.name)}','${host}')" style="font-size:11px">Links</button></td>
       </tr>`).join('')||'<tr><td colspan="4"><div class="empty-state">No shares</div></td></tr>'}
       </tbody></table>
     </div>
@@ -13048,7 +13198,7 @@ function renderSharesOriginal(body,samba,nfs,ftp,host){
       ${nfs.map(x=>`<tr>
         <td class="mono" style="font-size:11px">${esc(x.path)}</td>
         <td style="color:var(--text2)">${esc(x.clients)}</td>
-        <td style="text-align:right"><button class="btn ghost sm" onclick="showNfsLinks('${esc(x.path)}','${host}')" style="font-size:11px">↗ Links</button></td>
+        <td style="text-align:right"><button class="btn ghost sm" onclick="showNfsLinks('${esc(x.path)}','${host}')" style="font-size:11px">Links</button></td>
       </tr>`).join('')||'<tr><td colspan="3"><div class="empty-state">No exports</div></td></tr>'}
       </tbody></table>
     </div>
@@ -14181,7 +14331,7 @@ async function loadHistoryChart(canvasId,keys,opts){
   const cv=document.getElementById(canvasId);if(!cv)return;
   if(_histChart){try{_histChart.destroy();}catch(e){}_histChart=null;}
   const labels=pts.map(p=>{const d=new Date(p.t*1000);return String(d.getHours()).padStart(2,'0')+':'+String(d.getMinutes()).padStart(2,'0');});
-  _histChart=new Chart(cv,{type:'line',
+  _histChart=createChart(cv,{type:'line',
     data:{labels,datasets:keys.map(k=>({label:k.label,data:pts.map(p=>opts.scale?opts.scale(p[k.field]):p[k.field]),borderColor:k.color,backgroundColor:k.color+'22',borderWidth:1.5,fill:keys.length===1,tension:.35,pointRadius:0}))},
     options:{responsive:true,maintainAspectRatio:false,
       plugins:{legend:{display:keys.length>1,labels:{color:'rgba(240,240,255,.6)',boxWidth:10,font:{size:10}}}},
@@ -14350,6 +14500,11 @@ const appPendingActions=new Map();
 
 const APP_LANGS=['de','en','fr','it','es','pt'];
 const APP_UI={
+  resourceLimits:{de:'Ressourcenlimits',en:'Resource limits',fr:'Limites de ressources',it:'Limiti delle risorse',es:'Límites de recursos',pt:'Limites de recursos'},
+  containerMissing:{de:'Der Container ist nicht mehr vorhanden.',en:'The container no longer exists.',fr:'Le conteneur n’existe plus.',it:'Il container non esiste più.',es:'El contenedor ya no existe.',pt:'O contentor já não existe.'},
+  cpuLimit:{de:'CPU-Limit',en:'CPU limit',fr:'Limite de processeur',it:'Limite CPU',es:'Límite de CPU',pt:'Limite de CPU'},
+  memoryLimit:{de:'Arbeitsspeicherlimit',en:'Memory limit',fr:'Limite de mémoire',it:'Limite di memoria',es:'Límite de memoria',pt:'Limite de memória'},
+  recreateForUnlimited:{de:'Um dieses CPU-Limit vollständig aufzuheben, erstelle den Container ohne Limit neu.',en:'To remove this CPU limit, recreate the container without a limit.',fr:'Pour supprimer cette limite de processeur, recréez le conteneur sans limite.',it:'Per rimuovere questo limite della CPU, ricrea il container senza limite.',es:'Para quitar este límite de CPU, vuelve a crear el contenedor sin límite.',pt:'Para remover este limite de CPU, volte a criar o contentor sem limite.'},
   searchApps:{de:'Apps suchen...',en:'Search apps...',fr:'Rechercher des apps...',it:'Cerca app...',es:'Buscar apps...',pt:'Pesquisar apps...'},
   apps:{de:'Apps',en:'apps',fr:'apps',it:'app',es:'apps',pt:'apps'},
   installed:{de:'installiert',en:'installed',fr:'installées',it:'installate',es:'instaladas',pt:'instaladas'},
@@ -14717,16 +14872,19 @@ function finishAppUpdateIndicator(tracker,ok,detail=''){
 }
 
 async function renderApps(body){
+  if(currentTile?.id!=='apps')return;
+  const version=++appsRenderVersion;
   body.innerHTML='<div class="loading">Loading app catalog…</div>';
   try{
     const data=await api('/apps/catalog');
+    if(version!==appsRenderVersion)return;
     appsCatalog=data.apps||[];
     appsCatalogCategories=data.categories||[];
     _appsUpdateBadgeHasUpdates=appsCatalog.some(app=>app.update_available);
     updateAppsBadge();
     renderAppsView(body,appsCatalogCategories);
   }catch(e){
-    body.innerHTML=`<div class="empty-state">Fehler beim Laden: ${esc(e.message)}</div>`;
+    if(version===appsRenderVersion)body.innerHTML=`<div class="empty-state" role="alert">${esc(uiText('Load error:'))} ${esc(e.message)}</div>`;
   }
 }
 
@@ -14788,7 +14946,7 @@ function appCardHtml(a){
     const primary=pending
       ? pendingButton
       : a.running
-      ? `<a class="btn sm success" style="flex:1;text-decoration:none" href="http://${location.hostname}:${a.port}" target="_blank" rel="noopener noreferrer">↗ ${esc(uiText('Open'))}</a>`
+      ? `<a class="btn sm success" style="flex:1;text-decoration:none" href="http://${location.hostname}:${a.port}" target="_blank" rel="noopener noreferrer">${esc(uiText('Open'))}</a>`
       : `<button class="btn sm" style="flex:1" onclick="appAct('${safeId}','start')">▶ ${esc(uiText('Start'))}</button>`;
     actions=`<div style="display:flex;gap:6px">
       ${primary}
@@ -15056,6 +15214,7 @@ function dashApplyGrid(grid,html){
   if(typeof Sortable!=='undefined'&&grid.querySelector('.dash-tile')){
     state.sortable=Sortable.create(grid,{
       handle:'.dash-dots',filter:'.dash-tile-link',preventOnFilter:false,
+      onMove:()=>currentAuthStatus.role==='admin',
       animation:150,ghostClass:'sortable-ghost',chosenClass:'sortable-chosen',
       onStart:()=>{state.dragging=true;},
       onEnd:()=>{
@@ -15084,7 +15243,7 @@ window.dashClick=(e,id)=>{
 };
 
 function dashTileLinkHtml(t){
-  const url=t.type==='custom'?t.url:dashIsServiceTile(t)&&(t.port||t.url)?dashTileUrl(t):'';
+  const url=t.type==='custom'?(t.url_valid===false?'':t.url):dashIsServiceTile(t)&&(t.port||t.url)?dashTileUrl(t):'';
   return url?`<a class="dash-tile-link" href="${esc(url)}" target="_blank" rel="noopener noreferrer" aria-label="${esc(t.name||t.id)}" draggable="false"></a>`:'';
 }
 
@@ -15124,45 +15283,54 @@ function dashTileStatus(t){
 }
 
 // Kontextmenü
-function dashCtxButton(icon,label,action,extra=''){
-  return `<button type="button" class="dash-ctx-item${extra?' '+extra:''}" onclick="${action}"><span class="dash-ctx-icon">${icon}</span><span class="dash-ctx-label">${esc(uiText(label))}</span></button>`;
-}
-window.dashCtx=(e,id)=>{
-  e.preventDefault();e.stopPropagation();
-  const t=dashTiles.find(x=>x.id===id);
-  if(!t)return;
-  const old=document.querySelector('.dash-ctx');
-  if(old)old.remove();
-  const isCompose=t.type==='compose';
-  const canRun=dashIsServiceTile(t);
-  const pending=dashPendingActions.get(id);
+window.dashCtx=(event,id)=>{
+  event.preventDefault();event.stopPropagation();
+  const tile=dashTiles.find(row=>row.id===id);if(!tile)return;
+  document.querySelector('.dash-ctx')?.dispatchEvent(new Event('dismiss'));
+  const trigger=event.currentTarget.closest('.dash-tile')?.querySelector('.dash-dots');
+  const rect=trigger?.getBoundingClientRect();
   const menu=document.createElement('div');
-  menu.className='dash-ctx';
-  menu.style.top=Math.min(e.clientY,window.innerHeight-260)+'px';
-  menu.style.left=Math.min(e.clientX,window.innerWidth-220)+'px';
-  const statusAction=canRun&&!pending
-    ? (t.running
-      ? dashCtxButton('⏸','Pause',`dashAppAction('${esc(id)}','stop')`)
-      : dashCtxButton('▶','Start',`dashAppAction('${esc(id)}','start')`))
-    : '';
-  menu.innerHTML=`
-    ${dashCtxButton('↗','Open',`dashOpen('${esc(id)}')`)}
-    ${canRun?statusAction:''}
-    ${canRun&&!pending?dashCtxButton('↻','Restart',`dashAppAction('${esc(id)}','restart')`):''}
-    ${canRun?dashCtxButton('≡','Logs',`dashLogs('${esc(id)}')`):''}
-    <div class="dash-ctx-sep"></div>
-    ${dashCtxButton('✎','Edit tile',`dashEditTile('${esc(id)}')`)}
-    <div class="dash-ctx-sep"></div>
-    ${dashCtxButton('🗑','Remove',`dashRemove('${esc(id)}','${esc(t.name)}')`,'danger')}`;
+  menu.className='dash-ctx';menu.setAttribute('role','menu');menu.setAttribute('aria-label',tile.name||id);
+  const events=new AbortController();
+  const dismiss=(focus=false)=>{events.abort();menu.remove();if(focus)trigger?.focus();};
+  menu.addEventListener('dismiss',()=>dismiss());
+  const item=(icon,label,action,danger=false)=>{
+    const button=document.createElement('button');button.type='button';
+    button.className='dash-ctx-item'+(danger?' danger':'');button.setAttribute('role','menuitem');
+    button.innerHTML=`<span class="dash-ctx-icon" aria-hidden="true">${esc(icon)}</span><span class="dash-ctx-label">${esc(uiText(label))}</span>`;
+    button.onclick=()=>{dismiss(true);action();};menu.appendChild(button);
+  };
+  item('▣','Open',()=>dashOpen(id));
+  const service=dashIsServiceTile(tile);
+  const admin=currentAuthStatus.role==='admin';
+  if(service&&admin&&!dashPendingActions.has(id)){
+    item(tile.running?'⏸':'▶',tile.running?'Pause':'Start',()=>dashAppAction(id,tile.running?'stop':'start'));
+    item('↻','Restart',()=>dashAppAction(id,'restart'));
+  }
+  if(service)item('≡','Logs',()=>dashLogs(id));
+  if(admin){
+    item('✎','Edit tile',()=>dashEditTile(id));
+    item('🗑','Remove',()=>dashRemove(id,tile.name),true);
+  }
   document.body.appendChild(menu);
-  const close=ev=>{if(!menu.contains(ev.target))menu.remove();};
-  setTimeout(()=>document.addEventListener('click',close,{once:true}),10);
+  menu.style.top=Math.max(0,Math.min(event.clientY||rect?.bottom||0,innerHeight-menu.offsetHeight))+'px';
+  menu.style.left=Math.max(0,Math.min(event.clientX||rect?.left||0,innerWidth-menu.offsetWidth))+'px';
+  const buttons=[...menu.querySelectorAll('button')];
+  menu.onkeydown=e=>{
+    if(e.key==='Escape'){e.preventDefault();e.stopPropagation();dismiss(true);return;}
+    const i=buttons.indexOf(document.activeElement),last=buttons.length-1;
+    const dest={ArrowDown:(i+1)%buttons.length,ArrowUp:(i+last)%buttons.length,Home:0,End:last}[e.key];
+    if(dest!==undefined){e.preventDefault();buttons[dest].focus();}
+  };
+  menu.addEventListener('focusout',e=>{if(e.relatedTarget&&!menu.contains(e.relatedTarget))dismiss();});
+  document.addEventListener('pointerdown',e=>{if(!menu.contains(e.target))dismiss();},{capture:true,signal:events.signal});
+  buttons[0].focus();
 };
 
 window.dashOpen=id=>{
   const t=dashTiles.find(x=>x.id===id);
   if(!t)return;
-  const url=t.type==='custom'?t.url:dashIsServiceTile(t)&&(t.port||t.url)?dashTileUrl(t):'';
+  const url=t.type==='custom'?(t.url_valid===false?'':t.url):dashIsServiceTile(t)&&(t.port||t.url)?dashTileUrl(t):'';
   if(url){
     const opened=window.open(url,'_blank');
     if(opened)opened.opener=null;
@@ -15435,6 +15603,14 @@ const TILE_EDIT_I18N={
     "es": "No se pudo guardar. Tus cambios se conservan. Inténtalo de nuevo.",
     "pt": "Não foi possível guardar. As alterações foram preservadas. Tente novamente."
   },
+  "editConflict": {
+    "de": "Die Kachel wurde inzwischen geändert oder entfernt. Öffne sie erneut, um den aktuellen Stand zu sehen.",
+    "en": "This tile has been changed or removed. Reopen it to see the latest version.",
+    "fr": "Cette tuile a été modifiée ou supprimée. Rouvrez-la pour afficher sa dernière version.",
+    "it": "Il riquadro è stato modificato o rimosso. Riaprilo per vedere la versione aggiornata.",
+    "es": "La tarjeta se ha modificado o eliminado. Vuelve a abrirla para ver la versión actual.",
+    "pt": "O bloco foi alterado ou removido. Volte a abri-lo para ver a versão atual."
+  },
   "copyError": {
     "de": "Kopieren fehlgeschlagen. Markiere die Adresse und kopiere sie manuell.",
     "en": "Could not copy. Select the address and copy it manually.",
@@ -15452,6 +15628,10 @@ const TILE_EDIT_I18N={
     "pt": "Até 80 caracteres"
   }
 };
+function dashValidUrl(value){
+  if(!/^https?:\/\//i.test(value)||/[\s\\]/.test(value))return false;
+  try{const url=new URL(value);return Boolean(url.hostname)&&url.port!=='0';}catch(e){return false;}
+}
 function tileEditText(key){return TILE_EDIT_I18N[key][currentLanguage()]||TILE_EDIT_I18N[key].en;}
 function dashCancelTileEdit(){dashIconLookupSeq++;dashEditState=null;}
 function dashTileFaviconUrl(t){
@@ -15679,8 +15859,7 @@ window.dashEditTile=id=>{
         </div></fieldset>
       </div>
     </div>
-    <p class="tile-edit-error" id="tile-edit-error" role="alert"></p>
-    <div class="tile-edit-actions"><button type="button" class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button type="submit" class="btn" id="tile-edit-save">${esc(tr('save'))}</button></div>
+    <div class="tile-edit-actions"><p class="tile-edit-error" id="tile-edit-error" role="alert"></p><button type="button" class="btn ghost" onclick="closeForm()">${esc(tr('cancel'))}</button><button type="submit" class="btn" id="tile-edit-save">${esc(tr('save'))}</button></div>
   </form>`;
   ['tile-edit-name','tile-edit-note','tile-edit-accent','tile-edit-show-url','tile-edit-url'].forEach(sel=>$('#'+sel)?.addEventListener(sel==='tile-edit-show-url'?'change':'input',dashUpdateEditPreview));
   $('#tile-edit-icon').addEventListener('input',dashHandleIconInput);
@@ -15692,11 +15871,8 @@ window.dashEditTile=id=>{
     error.textContent='';name.removeAttribute('aria-invalid');url?.removeAttribute('aria-invalid');
     const fail=(input,key)=>{error.textContent=tileEditText(key);input.setAttribute('aria-invalid','true');input.focus();};
     if(!name.value.trim()){fail(name,'nameRequired');return;}
-    {
-      try{const parsed=new URL(url.value.trim());if(!['http:','https:'].includes(parsed.protocol)||!parsed.hostname)throw new Error();}
-      catch(e){fail(url,'urlRequired');return;}
-    }
-    const payload={tile_id:id,name:name.value.trim(),icon:dashEditedIcon(),show_url:$('#tile-edit-show-url').checked,accent:$('#tile-edit-accent').value,note:$('#tile-edit-note').value.trim()};
+    if(!dashValidUrl(url.value.trim())){fail(url,'urlRequired');return;}
+    const payload={tile_id:id,expected_revision:t.revision||0,name:name.value.trim(),icon:dashEditedIcon(),show_url:$('#tile-edit-show-url').checked,accent:$('#tile-edit-accent').value,note:$('#tile-edit-note').value.trim()};
     payload.url=url.value.trim();
     dashIconLookupSeq++;
     state.saving=true;
@@ -15707,7 +15883,7 @@ window.dashEditTile=id=>{
       const result=await post('/dashboard/update',payload);
       if(result?.ok===false)throw new Error();
       if(state===dashEditState){closeForm();toast(uiText('Saved'));loadDashboard();}
-    }catch(e){if(state===dashEditState)error.textContent=tileEditText('saveError');}
+    }catch(e){if(state===dashEditState)error.textContent=tileEditText(e.status===409?'editConflict':'saveError');}
     finally{
       state.saving=false;
       if(state===dashEditState){form.removeAttribute('aria-busy');controls.forEach(control=>control.disabled=false);button.disabled=false;button.textContent=tr('save');$('#tile-edit-copy').disabled=!dashEditedAddress();}
@@ -15729,22 +15905,36 @@ window.dashEditCustom=id=>dashEditTile(id);
 
 // Custom-Link hinzufügen
 window.dashAddForm=()=>{
+  if(currentAuthStatus.role!=='admin')return;
+  const id='custom_'+Array.from(crypto.getRandomValues(new Uint8Array(16)),b=>b.toString(16).padStart(2,'0')).join('');
+  let saving=false;
   openForm('Add tile','+',[
     {name:'name',label:'Name',placeholder:'Home Assistant'},
     {name:'url',label:'URL',placeholder:'http://192.168.1.50:8123'},
     {name:'icon',label:'Icon',placeholder:'auto, home assistant, https://... or 🏠'},
   ],async d=>{
-    if(!d.name||!d.url){toast('Name and URL required','error');return;}
-    const id='custom_'+Date.now();
-    let icon=String(d.icon||'').trim();
-    if(!icon||(!/^https?:\/\//i.test(icon)&&!icon.startsWith('data:image/')&&icon.length>2)){
-      toast(uiText('Searching icon…'));
-      const found=await dashFindSelfhstIconForTerms(dashIconSearchTerms(icon,d.name,d.url));
-      if(found)icon=found;
-    }
-    await post('/dashboard/add',{tile_type:'custom',tile_id:id,name:d.name,url:d.url,icon:icon||'🔗'});
-    closeForm();toast(d.name+' added');loadDashboard();
+    if(saving)return;
+    const button=$('#form-go'),error=$('#dash-add-error');
+    const name=d.name.trim(),url=d.url.trim();error.textContent='';
+    if(!name){error.textContent=tileEditText('nameRequired');$('#f_name').focus();return;}
+    if(!dashValidUrl(url)){error.textContent=tileEditText('urlRequired');$('#f_url').focus();return;}
+    saving=true;button.disabled=true;
+    try{
+      let icon=String(d.icon||'').trim();
+      if(!icon||(!/^https?:\/\//i.test(icon)&&!icon.startsWith('data:image/')&&icon.length>2)){
+        const found=await dashFindSelfhstIconForTerms(dashIconSearchTerms(icon,name,url));
+        if(found)icon=found;
+      }
+      await post('/dashboard/add',{tile_type:'custom',tile_id:id,name,url,icon:icon||'🔗'});
+      if(button.isConnected&&$('#form-overlay').classList.contains('open')){closeForm();toast(tr('saved'));}
+      loadDashboard();
+    }catch(e){
+      const reason=e.status===409?'editConflict':e.status===422?'urlRequired':'saveError';
+      error.textContent=tileEditText(reason);
+    }finally{saving=false;button.disabled=false;}
   });
+  const error=document.createElement('p');error.id='dash-add-error';error.className='tile-edit-error';
+  error.setAttribute('role','alert');$('#form-go').closest('.form-actions').before(error);
 };
 
 // Auto-Add nach App-Installation
@@ -16066,8 +16256,8 @@ async function renderStorage(body,tab){
       el.innerHTML=rows.length?rows.map(({disk,smart})=>`<div class="nx-action-card">
         <div class="nx-action-head"><div class="nx-action-title">${esc(disk.name)}</div>${smart.available?statusBadge(smart.healthy?'Healthy':'Attention',smart.healthy?'good':'bad'):statusBadge('Unavailable','warn')}</div>
         <div class="nx-kv">
-          ${cardMetric('Temperature',smart.temperature?smart.temperature+'°C':'Unknown')}
-          ${cardMetric('Power-on hours',smart.power_on_hours?smart.power_on_hours+'h':'Unknown')}
+          ${cardMetric('Temperature',smart.temperature!=null?smart.temperature+'°C':'Unknown')}
+          ${cardMetric('Power-on hours',smart.power_on_hours!=null?smart.power_on_hours+'h':'Unknown')}
           ${cardMetric('Size',fmtBytes(disk.size))}
           ${cardMetric('Model',esc(smart.model||disk.model||'Disk'))}
         </div>
@@ -16187,6 +16377,7 @@ function dockerModernServiceRow(container){
       <button class="btn ghost sm" onclick="dockerLogs(${idArg},${nameArg})">${esc(uiText('Logs'))}</button>
       <details class="docker-card-menu modern-docker-row-menu"><summary title="${esc(uiText('Actions'))}" aria-label="${esc(uiText('Actions'))}"><span class="docker-card-menu-dots" aria-hidden="true"><i></i><i></i><i></i></span></summary><div class="docker-card-menu-list">
         ${container.state==='running'?`<button onclick="dockerAct(${idArg},'restart')">${esc(uiText('Restart'))}</button><button onclick="dockerAct(${idArg},'stop')">${esc(uiText('Stop'))}</button>`:`<button onclick="dockerAct(${idArg},'start')">${esc(uiText('Start'))}</button>`}
+        ${dockerLimitsAction(container)}
         <button onclick="dockerStats(${idArg},${nameArg})">${esc(uiText('Stats'))}</button><button class="danger" onclick="dockerDel(${idArg},${nameArg})">${esc(uiText('Delete'))}</button>
       </div></details>
     </div>
@@ -16213,6 +16404,7 @@ function dockerModernAppCard(group,catalog,index){
   const menuItems=[
     state.key!=='stopped'?`<button onclick="dockerModernAppAct(${keyArg},'restart')">${esc(uiText('Restart'))}</button>`:'',
     state.key!=='stopped'?`<button onclick="dockerModernAppAct(${keyArg},'stop')">${esc(uiText('Stop'))}</button>`:'',
+    serviceCount===1?dockerLimitsAction(first):'',
     `<button onclick="composeEdit(${esc(JSON.stringify(group.kind==='compose'?group.project:'container:'+group.containers[0].name))})">${esc(uiText('Edit'))}</button>`,
     `<button onclick="dockerModernAddToDashboard(${keyArg})">${esc(uiText('Show on dashboard'))}</button>`,
     group.kind==='container'?`<button class="danger" onclick="dockerDel(${esc(JSON.stringify(first.id))},${esc(JSON.stringify(first.name))})">${esc(uiText('Delete'))}</button>`:'',
@@ -16258,84 +16450,6 @@ window.dockerModernAppAct=async(key,action)=>{
   catch(e){toast('Error: '+e.message,'error');}
   finally{ids.forEach(id=>dockerPendingActions.delete(id));renderDocker($('#modal-body'),'Container');}
 };
-function modernDockerToolIcon(kind){
-  const paths={
-    compose:'<rect x="4" y="4" width="7" height="7" rx="2"/><rect x="13" y="4" width="7" height="7" rx="2"/><rect x="8.5" y="13" width="7" height="7" rx="2"/>',
-    image:'<path d="m12 3 8 4.5v9L12 21l-8-4.5v-9zM4 7.5l8 4.5 8-4.5M12 12v9"/>',
-    volume:'<ellipse cx="12" cy="6" rx="7" ry="3"/><path d="M5 6v12c0 1.7 3.1 3 7 3s7-1.3 7-3V6M5 12c0 1.7 3.1 3 7 3s7-1.3 7-3"/>',
-  };
-  return `<span class="modern-docker-tool-mark" aria-hidden="true"><svg viewBox="0 0 24 24">${paths[kind]||paths.compose}</svg></span>`;
-}
-function modernComposeProjectRows(projects){
-  const running=(projects||[]).filter(project=>project.running).length;
-  return `<div class="nx-summary-grid modern-docker-tool-summary">${summaryCard('Compose projects',(projects||[]).length,'Total')}${summaryCard('Running',running,'Active now')}</div><div class="modern-docker-tool-list">${(projects||[]).map(project=>{
-    const pending=composePendingActions.get(project.name),nameArg=esc(JSON.stringify(project.name)),port=Number(project.port||0);
-    const primary=project.running&&port?`<button class="btn sm" onclick="composeOpen(${nameArg})">${esc(uiText('Open'))}</button>`:`<button class="btn sm" onclick="composeAct(${nameArg},'${project.running?'restart':'up'}')" ${pending?'disabled':''}>${esc(uiText(project.running?'Restart':'Start'))}</button>`;
-    return `<article class="modern-docker-tool-row">${modernDockerToolIcon('compose')}<div class="modern-docker-tool-copy"><strong>${esc(project.name)}</strong><small class="mono">docker-compose.yml${port?' · :'+port:''}</small></div>${pending?statusBadge(appPendingLabel(pending),'warn'):statusBadge(project.running?'Running':'Stopped',project.running?'good':'neutral')}<div class="modern-docker-tool-actions">${primary}<details class="docker-card-menu"><summary title="${esc(uiText('Actions'))}" aria-label="${esc(uiText('Actions'))}"><span class="docker-card-menu-dots" aria-hidden="true"><i></i><i></i><i></i></span></summary><div class="docker-card-menu-list">${project.running?`<button onclick="composeAct(${nameArg},'stop')">${esc(uiText('Stop'))}</button>`:''}<button onclick="composeEdit(${nameArg})">${esc(uiText('Edit'))}</button><button onclick="composeAddToDashboard(${nameArg},${port})">Dashboard</button><button class="danger" onclick="composeDelete(${nameArg})">${esc(uiText('Delete'))}</button></div></details></div></article>`;
-  }).join('')||emptyState('No projects')}</div>`;
-}
-function modernDockerImageRows(images){
-  return `<div class="modern-docker-tool-list">${(images||[]).map(image=>{
-    const label=(image.tags||[]).join(', ')||String(image.id||'').slice(0,12);
-    return `<article class="modern-docker-tool-row">${modernDockerToolIcon('image')}<div class="modern-docker-tool-copy"><strong class="mono" title="${esc(label)}">${esc(label)}</strong><small>${fmtBytes(image.size)}</small></div><div class="modern-docker-tool-actions"><details class="docker-card-menu"><summary title="${esc(uiText('Actions'))}" aria-label="${esc(uiText('Actions'))}"><span class="docker-card-menu-dots" aria-hidden="true"><i></i><i></i><i></i></span></summary><div class="docker-card-menu-list"><button class="danger" onclick="imageDel(${esc(JSON.stringify(image.id))},${esc(JSON.stringify(label))})">${esc(uiText('Delete'))}</button></div></details></div></article>`;
-  }).join('')||emptyState('No images')}</div>`;
-}
-function modernDockerVolumeRows(volumes){
-  return `<div class="modern-docker-tool-list">${(volumes||[]).map(volume=>`<article class="modern-docker-tool-row">${modernDockerToolIcon('volume')}<div class="modern-docker-tool-copy"><strong title="${esc(volume.name)}">${esc(volume.name)}</strong><small><span>${esc(volume.driver||'local')}</span><span class="mono" title="${esc(volume.mountpoint)}">${esc(volume.mountpoint)}</span></small></div><div class="modern-docker-tool-actions"><details class="docker-card-menu"><summary title="${esc(uiText('Actions'))}" aria-label="${esc(uiText('Actions'))}"><span class="docker-card-menu-dots" aria-hidden="true"><i></i><i></i><i></i></span></summary><div class="docker-card-menu-list"><button class="danger" onclick="volumeDel(${esc(JSON.stringify(volume.name))})">${esc(uiText('Delete'))}</button></div></details></div></article>`).join('')||emptyState('No volumes')}</div>`;
-}
-async function renderDockerModern(body,tab){
-  stopDockerCardStats();
-  const available=await api('/docker/available');if(!available.available){body.innerHTML=viewIntro('Containers','Docker is not available on this server.','')+emptyState('Docker unavailable');return;}
-  if(tab==='Compose'){
-    const projects=await api('/docker/compose');body.innerHTML=viewIntro('Compose projects','Advanced multi-container projects. Editing Compose files can break services.',`<button class="btn" onclick="composeForm()">${esc(uiText('Create project'))}</button>`)+modernComposeProjectRows(projects);translateRenderedText(body);return;
-  }
-  if(tab==='Images'){
-    const images=await api('/docker/images');body.innerHTML=viewIntro('Images','Images are templates used to create containers.',`<button class="btn" onclick="pullForm()">${esc(uiText('Pull image'))}</button>`)+modernDockerImageRows(images);translateRenderedText(body);return;
-  }
-  if(tab==='Volumes'){
-    const volumes=await api('/docker/volumes');body.innerHTML=viewIntro('Volumes','Volumes hold persistent container data. Delete only when you know the data is no longer needed.','')+modernDockerVolumeRows(volumes);translateRenderedText(body);return;
-  }
-  const [containers,catalogData]=await Promise.all([api('/docker/containers'),api('/apps/catalog').catch(()=>({apps:[]}))]);
-  const groups=RunvardDockerModern.groupContainers(containers);
-  _modernDockerGroups=new Map(groups.map(group=>[group.key,group]));
-  const counts=groups.reduce((result,group)=>{result[RunvardDockerModern.groupState(group.containers)]++;return result;},{running:0,partial:0,error:0,stopped:0});
-  body.innerHTML=viewIntro('Container services','Start, stop and inspect services running in Docker. Advanced image and volume tools are in the other tabs.',`<button class="btn" onclick="dockerCreateForm()">${esc(uiText('Create container'))}</button>`)
-    +`<div class="nx-summary-grid modern-docker-summary">${summaryCard('Apps',groups.length,'Total')}${summaryCard('Running',counts.running,'Active now')}${summaryCard('Attention',counts.partial+counts.error,counts.partial+counts.error?appUi('partlyRunning'):'OK')}</div><div class="modern-docker-app-grid">${groups.map((group,index)=>dockerModernAppCard(group,catalogData.apps||[],index)).join('')||emptyState('No containers')}</div>`;
-  translateRenderedText(body);startDockerCardStats(body);
-}
-
-async function renderDocker(body,tab){
-  stopDockerCardStats();
-  if(isModernUi())return renderDockerModern(body,tab);
-  const av=await api('/docker/available');if(!av.available){body.innerHTML=viewIntro('Containers','Docker is not available on this server.','')+emptyState('Docker unavailable');return;}
-  if(tab==='Container'||!tab){
-    const c=await api('/docker/containers');
-    body.innerHTML=viewIntro('Container services','Start, stop and inspect services running in Docker. Advanced image and volume tools are in the other tabs.',`<button class="btn" onclick="dockerCreateForm()">Create container</button>`)
-      +`<div class="nx-summary-grid">${summaryCard('Apps',dockerAppGroupCount(c),'Total')}${summaryCard('Running',dockerAppGroupCount(c,true),'Active now')}</div>
-      <div class="docker-service-grid">${c.map(dockerServiceCard).join('')||emptyState('No containers')}</div>`;
-    translateRenderedText(body);
-    startDockerCardStats(body);
-    return;
-  }
-  return renderDockerAdvanced(body,tab);
-}
-async function renderDockerAdvanced(body,tab){
-  body.innerHTML=viewIntro(tab,'Advanced Docker tools for users who know images, volumes and Compose files.','')+'<div class="loading">Loading…</div>';
-  const oldTab=tab;
-  if(oldTab==='Compose'){
-    const p=await api('/docker/compose');
-    body.innerHTML=viewIntro('Compose projects','Advanced multi-container projects. Editing Compose files can break services.',`<button class="btn" onclick="composeForm()">Create project</button>`)
-      +composeProjectCards(p);
-  } else if(oldTab==='Images'){
-    const im=await api('/docker/images');
-    body.innerHTML=viewIntro('Images','Images are templates used to create containers.',`<button class="btn" onclick="pullForm()">Pull image</button>`)
-      +simpleTable(['Tags','Size',''],im.map(x=>`<tr><td class="mono">${esc(x.tags.join(', ')||x.id.slice(0,12))}</td><td>${fmtBytes(x.size)}</td><td><button class="btn danger sm" onclick="imageDel('${x.id}','${esc(x.tags[0]||x.id)}')">Delete</button></td></tr>`).join(''));
-  } else {
-    const v=await api('/docker/volumes');
-    body.innerHTML=viewIntro('Volumes','Volumes hold persistent container data. Delete only when you know the data is no longer needed.','')
-      +simpleTable(['Name','Driver','Mount point',''],v.map(x=>`<tr><td>${esc(x.name)}</td><td>${esc(x.driver)}</td><td class="mono">${esc(x.mountpoint)}</td><td><button class="btn danger sm" onclick="volumeDel('${esc(x.name)}')">Delete</button></td></tr>`).join(''));
-  }
-}
 window.volumeDel=name=>typedConfirm('Delete Docker volume',`Volume "${name}" and all data inside it will be removed.`,name,async()=>{try{await post('/docker/volumes/remove',{name});toast('Volume deleted');renderDocker($('#modal-body'),'Volumes');}catch(e){toast('Error: '+e.message,'error');}});
 
 async function renderVMs(body,tab){
@@ -16962,9 +17076,18 @@ async function renderBackup(body,tab){
     return;
   }
   const [j,h]=await Promise.all([api('/backup/jobs'),api('/backup/history').catch(()=>[])]);
-  body.innerHTML=viewIntro('Backups','Protect important folders by copying them on a schedule.',`<button class="btn" onclick="backupForm()">Create backup</button>`)
+  const admin=currentAuthStatus.role==='admin';
+  body.innerHTML=viewIntro('Backups','Protect important folders by copying them on a schedule.',admin?`<button class="btn" onclick="backupForm()">Create backup</button>`:'')
     +`<div class="nx-summary-grid">${summaryCard('Backup jobs',j.length,'Configured')}${summaryCard('Last result',h[0]?(h[0].success?'OK':'Failed'):'Never',h[0]?new Date(h[0].time*1000).toLocaleString(localeCode()):'No backup has run')}</div>
-    <div class="nx-card-grid">${j.map(x=>`<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${statusBadge(x.schedule==='manual'?'Manual':x.schedule,'good')}</div><div class="nx-kv">${cardMetric('From',esc(x.source))}${cardMetric('To',esc(x.dest))}</div><button class="btn sm" onclick="runBackup(${x.id})">Run now</button></div>`).join('')||emptyState('No backup jobs yet')}</div>`;
+    <div class="nx-card-grid">${j.map(x=>{
+      const paused=x.enabled===false,recurring=x.schedule!=='manual';
+      const scheduleLabels={daily:'Daily',weekly:'Weekly',hourly:'Hourly',manual:'Manual'};
+      const status=paused&&recurring?backupJobText('paused'):uiText(scheduleLabels[x.schedule]||'Manual');
+      const actions=admin?`<div class="nx-action-row"><button class="btn sm" onclick="runBackup(${x.id})">Run now</button>
+        ${recurring?`<button class="btn sm ghost" onclick="backupSetSchedule(${x.id},${paused})">${esc(backupJobText(paused?'resume':'pause'))}</button>`:''}
+        <button class="btn sm danger" onclick="backupRemove(${x.id})">${esc(backupJobText('remove'))}</button></div>`:'';
+      return `<div class="nx-action-card"><div class="nx-action-head"><div class="nx-action-title">${esc(x.name)}</div>${statusBadge(status,paused?'warn':'good')}</div><div class="nx-kv">${cardMetric('From',esc(x.source))}${cardMetric('To',esc(x.dest))}</div>${actions}</div>`;
+    }).join('')||emptyState('No backup jobs yet')}</div>`;
   translateRenderedText(body);
 }
 
@@ -17258,7 +17381,7 @@ function renderDashboard(){
   if(!dashTiles.length){dashApplyGrid(grid,`<div class="nx-view-intro" style="grid-column:1/-1"><div><h3>Ready for apps</h3><p>Install apps or add custom shortcuts.</p></div><button class="btn" onclick="openTileById('apps')">Open apps</button></div>`);return;}
   const html=dashTiles.map(t=>{
     const isService=dashIsServiceTile(t);const status=dashTileStatus(t);const url=isService?dashTileAddress(t):(t.url||'').replace(/^https?:\/\//,'');const iconHtml=dashTileIconHtml(t.icon,t.name,dashTileFaviconUrl(t));const accent=t.accent||'#7a4aff';
-    return `<div class="dash-tile" style="--tile-accent:${esc(accent)}" data-id="${esc(t.id)}" onclick="dashClick(event,'${esc(t.id)}')" oncontextmenu="dashCtx(event,'${esc(t.id)}')">${dashTileLinkHtml(t)}<div class="dash-tile-body${t.show_url?' has-url':''}"><div class="dash-dots" onclick="event.stopPropagation();dashCtx(event,'${esc(t.id)}')">•••</div><div class="dash-status ${status.cls}" title="${esc(status.title)}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div>${t.note?`<div class="dash-tile-note">${esc(t.note)}</div>`:''}</div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
+    return `<div class="dash-tile" style="--tile-accent:${esc(accent)}" data-id="${esc(t.id)}" onclick="dashClick(event,this.dataset.id)" oncontextmenu="dashCtx(event,this.dataset.id)">${dashTileLinkHtml(t)}<div class="dash-tile-body${t.show_url?' has-url':''}"><button class="dash-dots" type="button" aria-haspopup="menu" aria-label="${esc(t.name||t.id)}" onclick="dashCtx(event,this.closest('.dash-tile').dataset.id)">•••</button><div class="dash-status ${status.cls}" title="${esc(status.title)}"></div><div class="dash-tile-icon">${iconHtml}</div><div class="dash-tile-name">${esc(t.name)}</div>${t.note?`<div class="dash-tile-note">${esc(t.note)}</div>`:''}</div>${t.show_url?`<div class="dash-tile-footer"><div class="dash-tile-url">${esc(url)}</div></div>`:''}</div>`;
   }).join('');
   dashApplyGrid(grid,html);
 }

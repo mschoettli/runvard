@@ -1,5 +1,11 @@
 """Dateimanager – komplett neu, sauber, ohne Altlasten."""
 import os, re, shutil, stat, mimetypes, json, time, uuid, zipfile, subprocess, threading
+import errno
+import fcntl
+import hashlib
+import codecs
+import tempfile
+from contextlib import ExitStack, contextmanager
 from pathlib import Path
 
 BLOCKED  = {"/proc", "/sys", "/dev", "/run"}
@@ -21,7 +27,7 @@ def _ok(p):
     if _ro(p): raise PermissionError("Schreibgeschützt")
 
 def _unique_dst(dst):
-    if not os.path.exists(dst):
+    if not os.path.lexists(dst):
         return dst
     parent = os.path.dirname(dst)
     name = os.path.basename(dst)
@@ -29,7 +35,7 @@ def _unique_dst(dst):
     for i in range(1, 10000):
         suffix = " copy" if i == 1 else f" copy {i}"
         cand = os.path.join(parent, f"{stem}{suffix}{ext}")
-        if not os.path.exists(cand):
+        if not os.path.lexists(cand):
             return cand
     raise FileExistsError(dst)
 
@@ -59,23 +65,131 @@ def list_dir(path):
     entries.sort(key=lambda e: (not e["is_dir"], e["name"].lower()))
     return {"path": path, "parent": os.path.dirname(path), "entries": entries}
 
+def _read_editable_stream(stream):
+    if os.fstat(stream.fileno()).st_size > MAX_EDIT:
+        raise ValueError("Datei zu groß")
+    raw = stream.read(MAX_EDIT + 1)
+    if len(raw) > MAX_EDIT:
+        raise ValueError("Datei zu groß")
+    return raw
+
+
+def _editable_bytes(path):
+    with open(path, "rb") as stream:
+        if os.fstat(stream.fileno()).st_nlink > 1:
+            fcntl.flock(stream.fileno(), fcntl.LOCK_SH)
+        return _read_editable_stream(stream)
+
+
+def _editor_text(raw):
+    try:
+        text = raw.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        return raw.decode("utf-8", errors="replace"), "", "unsupportedEncoding"
+    if "\x00" in text:
+        return "", "", "unsupportedEncoding"
+    endings = set(re.findall(r"\r\n|\r|\n", text))
+    if len(endings) > 1:
+        return text, "", "mixedEndings"
+    return text, next(iter(endings), "\n"), ""
+
+
 def read_file(path):
     path = _r(path)
-    if _bl(path): raise PermissionError("Gesperrt")
-    if os.path.getsize(path) > MAX_EDIT: raise ValueError("Datei zu groß")
-    with open(path, "r", errors="replace") as f:
-        return {"path": path, "content": f.read(), "readonly": _ro(path)}
+    if _bl(path):
+        raise PermissionError("Gesperrt")
+    raw = _editable_bytes(path)
+    text, _, reason = _editor_text(raw)
+    return {"path": path, "content": text, "readonly": _ro(path) or bool(reason),
+            "reason": reason, "revision": hashlib.sha256(raw).hexdigest()}
 
-def write_file(path, content):
-    path = _r(path); _ok(path)
-    with open(path, "w") as f: f.write(content)
-    return {"ok": True}
+
+@contextmanager
+def _directory_lock(path):
+    fd = os.open(path, os.O_RDONLY | os.O_DIRECTORY)
+    try:
+        fcntl.flock(fd, fcntl.LOCK_EX)
+        yield
+    finally:
+        os.close(fd)
+
+
+class FileEditConflict(ValueError):
+    pass
+
+
+def write_file(path, content, revision=None):
+    path = _r(path)
+    _ok(path)
+    parent = os.path.dirname(path)
+    with _directory_lock(parent), ExitStack() as opened:
+        if not os.path.exists(path):
+            if revision:
+                raise FileEditConflict("editConflict")
+            raw = content.encode("utf-8")
+            with open(path, "xb") as stream:
+                stream.write(raw)
+            return {"ok": True, "revision": hashlib.sha256(raw).hexdigest()}
+        info = os.stat(path)
+        linked = None
+        if info.st_nlink > 1:
+            # Hardlink aliases can have different parent directories. Protect the
+            # revision check and in-place update with the same inode lock.
+            linked = opened.enter_context(open(path, "r+b"))
+            fcntl.flock(linked.fileno(), fcntl.LOCK_EX)
+            original = _read_editable_stream(linked)
+        else:
+            original = _editable_bytes(path)
+        version = hashlib.sha256(original).hexdigest()
+        if revision != version:
+            raise FileEditConflict("editConflict")
+        _, ending, reason = _editor_text(original)
+        if reason:
+            raise FileEditConflict(reason)
+        normalized = content.replace("\r\n", "\n").replace("\r", "\n")
+        updated = normalized.replace("\n", ending).encode("utf-8")
+        if original.startswith(codecs.BOM_UTF8):
+            updated = codecs.BOM_UTF8 + updated
+        if updated == original:
+            return {"ok": True, "revision": version}
+        if len(updated) > MAX_EDIT:
+            raise ValueError("Datei zu groß")
+        if linked is not None:
+            try:
+                linked.seek(0)
+                linked.write(updated)
+                linked.truncate()
+                linked.flush()
+                os.fsync(linked.fileno())
+            except OSError:
+                linked.seek(0)
+                linked.write(original)
+                linked.truncate()
+                raise
+        else:
+            with tempfile.NamedTemporaryFile(dir=parent, delete=False) as staged:
+                try:
+                    current = os.fstat(staged.fileno())
+                    if (current.st_uid, current.st_gid) != (info.st_uid, info.st_gid):
+                        os.fchown(staged.fileno(), info.st_uid, info.st_gid)
+                    shutil.copystat(path, staged.name)
+                    staged.write(updated)
+                    staged.flush()
+                    os.fsync(staged.fileno())
+                    os.replace(staged.name, path)
+                finally:
+                    Path(staged.name).unlink(missing_ok=True)
+    return {"ok": True, "revision": hashlib.sha256(updated).hexdigest()}
+
 
 def rename(path, new_name):
-    path = _r(path); _ok(path)
-    if "/" in new_name or ".." in new_name: raise ValueError("Ungültiger Name")
+    path = os.path.abspath(path)
+    _ok(path)
+    if not new_name or "/" in new_name or new_name in (".", ".."):
+        raise ValueError("Ungültiger Name")
     dst = os.path.join(os.path.dirname(path), new_name)
-    os.rename(path, dst)
+    if path != dst:
+        _rename_without_overwrite(path, dst, stat.S_ISDIR(os.lstat(path).st_mode))
     return {"ok": True, "path": dst}
 
 def copy_item(src, dst_dir):
@@ -136,56 +250,122 @@ def make_zip(paths, output_path):
         raise ValueError(output_path)
     sources = [p for p in paths if not any(str(parent) in selected for parent in Path(p).parents)]
     archive_root = os.path.commonpath([os.path.dirname(p) for p in sources])
-    with zipfile.ZipFile(output_path, "w", zipfile.ZIP_DEFLATED) as zf:
-        for p in sources:
-            if os.path.isdir(p):
-                for root, dirs, files in os.walk(p):
-                    if _bl(root):
-                        dirs.clear()
-                        continue
-                    dirs[:] = [d for d in dirs if not _bl(os.path.join(root, d))]
-                    files = [f for f in files if _r(os.path.join(root, f)) != output_path]
-                    if not dirs and not files:
-                        zf.write(root, os.path.relpath(root, archive_root))
-                    for f in files:
-                        full = os.path.join(root, f)
-                        zf.write(full, os.path.relpath(full, archive_root))
-            else:
-                zf.write(p, os.path.relpath(p, archive_root))
+    if os.path.lexists(output_path):
+        raise FileExistsError(output_path)
+    fd, staged = tempfile.mkstemp(dir=os.path.dirname(output_path))
+    os.close(fd)
+    try:
+        with zipfile.ZipFile(staged, "w", zipfile.ZIP_DEFLATED) as zf:
+            for p in sources:
+                if os.path.isdir(p):
+                    for root, dirs, files in os.walk(p):
+                        if _bl(root):
+                            dirs.clear()
+                            continue
+                        dirs[:] = [d for d in dirs if not _bl(os.path.join(root, d))]
+                        files = [f for f in files if _r(os.path.join(root, f)) not in (output_path, staged)]
+                        if not dirs and not files:
+                            zf.write(root, os.path.relpath(root, archive_root))
+                        for f in files:
+                            full = os.path.join(root, f)
+                            zf.write(full, os.path.relpath(full, archive_root))
+                else:
+                    zf.write(p, os.path.relpath(p, archive_root))
+        _rename_without_overwrite(staged, output_path, False)
+    finally:
+        Path(staged).unlink(missing_ok=True)
     return {"ok": True, "path": output_path}
 
 def extract_zip(path, dst_dir):
     path = _r(path); dst_dir = _r(dst_dir); _ok(dst_dir)
     dst_real = _r(dst_dir)
-    with zipfile.ZipFile(path, "r") as zf:
-        for member in zf.infolist():
-            target = _r(os.path.join(dst_real, member.filename))
-            if target != dst_real and not target.startswith(dst_real + os.sep):
+    with zipfile.ZipFile(path, "r") as archive, tempfile.TemporaryDirectory(dir=dst_dir) as staging:
+        # Stage and verify the entire archive before publishing any member.
+        for member in archive.infolist():
+            name = Path(member.filename)
+            if name.is_absolute() or ".." in name.parts or not name.parts:
                 raise PermissionError("Unsicherer ZIP-Pfad")
-        zf.extractall(dst_real)
+            target = os.path.join(dst_real, *name.parts)
+            if _r(target) != target:
+                raise PermissionError("Unsicherer ZIP-Pfad")
+            if os.path.lexists(target) and not (member.is_dir() and os.path.isdir(target)):
+                raise FileExistsError(target)
+            local = Path(staging, *name.parts)
+            if member.is_dir():
+                local.mkdir(parents=True, exist_ok=True)
+            else:
+                local.parent.mkdir(parents=True, exist_ok=True)
+                with archive.open(member) as source, local.open("xb") as output:
+                    shutil.copyfileobj(source, output)
+        created_files, created_dirs = [], []
+        with _directory_lock(dst_dir):
+            try:
+                for root, dirs, names in os.walk(staging):
+                    out = Path(dst_dir) / Path(root).relative_to(staging)
+                    for directory in dirs:
+                        target = out / directory
+                        if not target.exists():
+                            target.mkdir()
+                            created_dirs.append(target)
+                        elif target.is_symlink() or not target.is_dir():
+                            raise FileExistsError(target)
+                    for name in names:
+                        target = out / name
+                        source = Path(root, name)
+                        try:
+                            _rename_without_overwrite(source, target, False)
+                        except OSError as exc:
+                            if exc.errno != errno.EXDEV:
+                                raise
+                            # A subdirectory may be a separate mounted filesystem.
+                            with source.open("rb") as src, target.open("xb") as dst:
+                                created_files.append(target)
+                                shutil.copyfileobj(src, dst)
+                        else:
+                            created_files.append(target)
+            except OSError:
+                for target in reversed(created_files):
+                    target.unlink()
+                for target in reversed(created_dirs):
+                    target.rmdir()
+                raise
     return {"ok": True, "dst": dst_dir}
 
 # ── Papierkorb ──
+@contextmanager
+def _trash_transaction():
+    os.makedirs(TRASH, mode=0o700, exist_ok=True)
+    with open(os.path.join(TRASH, ".lock"), "a") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
 def _load_meta():
     try:
         with open(TRASHMETA) as f: return json.load(f)
-    except: return []
+    except FileNotFoundError: return []
 
 def _save_meta(data):
-    os.makedirs(TRASH, exist_ok=True)
-    with open(TRASHMETA, "w") as f: json.dump(data, f, indent=2)
+    with tempfile.NamedTemporaryFile("w", dir=TRASH, delete=False) as tmp:
+        try:
+            json.dump(data, tmp, indent=2)
+            tmp.flush()
+            os.fsync(tmp.fileno())
+            os.replace(tmp.name, TRASHMETA)
+        finally:
+            Path(tmp.name).unlink(missing_ok=True)
 
 def delete(path):
     """Datei/Ordner in den Papierkorb verschieben."""
     path = _r(path); _ok(path)
-    os.makedirs(TRASH, exist_ok=True)
     item_id = str(uuid.uuid4()).replace("-", "")
     dst = os.path.join(TRASH, item_id)
-    shutil.move(path, dst)
-    meta = _load_meta()
-    meta.append({"id": item_id, "original": path, "name": os.path.basename(path),
-                 "deleted": time.time(), "is_dir": os.path.isdir(dst)})
-    _save_meta(meta)
+    with _trash_transaction():
+        meta = _load_meta()
+        shutil.move(path, dst)
+        meta.append({"id": item_id, "original": path, "name": os.path.basename(path),
+                     "deleted": time.time(), "is_dir": os.path.isdir(dst)})
+        _save_meta(meta)
     return {"ok": True}
 
 move_to_trash = delete  # Alias
@@ -193,21 +373,72 @@ move_to_trash = delete  # Alias
 def list_trash():
     return _load_meta()
 
+def _rename_without_overwrite(src, dst, directory):
+    if directory:
+        os.mkdir(dst, 0o700)
+    else:
+        os.close(os.open(dst, os.O_CREAT | os.O_EXCL | os.O_WRONLY, 0o600))
+    try:
+        os.replace(src, dst)
+    except OSError:
+        if directory:
+            os.rmdir(dst)
+        else:
+            os.unlink(dst)
+        raise
+    return dst
+
+
+def _rename_to_free_path(src, original, directory):
+    while True:
+        dst = _unique_dst(original)
+        try:
+            return _rename_without_overwrite(src, dst, directory)
+        except FileExistsError:
+            continue
+
+
+def _restore_to_free_path(src, original):
+    parent = os.path.dirname(original)
+    _ok(parent)
+    directory = stat.S_ISDIR(os.lstat(src).st_mode)
+    try:
+        return _rename_to_free_path(src, original, directory)
+    except OSError as exc:
+        if exc.errno != errno.EXDEV:
+            raise
+
+    # Finish the cross-filesystem copy privately before exposing the final name.
+    with tempfile.TemporaryDirectory(dir=parent) as staging:
+        copy = os.path.join(staging, "item")
+        if directory:
+            shutil.copytree(src, copy, symlinks=True)
+        else:
+            shutil.copy2(src, copy, follow_symlinks=False)
+        dst = _rename_to_free_path(copy, original, directory)
+    if directory:
+        shutil.rmtree(src)
+    else:
+        os.unlink(src)
+    return dst
+
+
 def restore_trash(item_id):
-    meta = _load_meta()
-    item = next((m for m in meta if m["id"] == item_id), None)
-    if not item: raise FileNotFoundError("Nicht im Papierkorb")
-    src = os.path.join(TRASH, item_id)
-    shutil.move(src, item["original"])
-    _save_meta([m for m in meta if m["id"] != item_id])
-    return {"ok": True}
+    with _trash_transaction():
+        meta = _load_meta()
+        item = next((m for m in meta if m["id"] == item_id), None)
+        if not item: raise FileNotFoundError("Nicht im Papierkorb")
+        dst = _restore_to_free_path(os.path.join(TRASH, item_id), item["original"])
+        _save_meta([m for m in meta if m["id"] != item_id])
+    return {"ok": True, "dst": dst}
 
 def empty_trash():
-    for item in _load_meta():
-        p = os.path.join(TRASH, item["id"])
-        if os.path.isdir(p): shutil.rmtree(p, ignore_errors=True)
-        elif os.path.exists(p): os.remove(p)
-    _save_meta([])
+    with _trash_transaction():
+        for item in _load_meta():
+            p = os.path.join(TRASH, item["id"])
+            if os.path.isdir(p): shutil.rmtree(p, ignore_errors=True)
+            elif os.path.exists(p): os.remove(p)
+        _save_meta([])
     return {"ok": True}
 
 # ── Hintergrund-Jobs für große Dateioperationen ──
@@ -371,9 +602,36 @@ def _save_shares(data):
     os.makedirs(os.path.dirname(SHAREDB), exist_ok=True)
     with open(SHAREDB, "w") as f: json.dump(data, f, indent=2)
 
+def directory_download(path):
+    """Build the folder download from regular files, without following links."""
+    stream = tempfile.TemporaryFile()
+    try:
+        with zipfile.ZipFile(stream, "w", zipfile.ZIP_DEFLATED) as archive:
+            for root, dirs, names, dirfd in os.fwalk(path, follow_symlinks=False):
+                dirs[:] = [d for d in dirs if not _bl(os.path.join(root, d))
+                           and not os.path.islink(os.path.join(root, d))]
+                relative = Path(root).relative_to(path)
+                if relative.parts:
+                    archive.writestr(relative.as_posix() + "/", b"")
+                for name in names:
+                    if not stat.S_ISREG(os.stat(name, dir_fd=dirfd, follow_symlinks=False).st_mode):
+                        continue
+                    fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK, dir_fd=dirfd)
+                    with os.fdopen(fd, "rb") as source:
+                        if stat.S_ISREG(os.fstat(fd).st_mode):
+                            with archive.open((relative / name).as_posix(), "w", force_zip64=True) as out:
+                                shutil.copyfileobj(source, out)
+        stream.seek(0)
+        return stream
+    except BaseException:
+        stream.close()
+        raise
+
+
 def create_share_link(path):
     path = _r(path)
-    if not os.path.exists(path): raise FileNotFoundError(path)
+    if _bl(path) or not (os.path.isfile(path) or os.path.isdir(path)):
+        raise FileNotFoundError(path)
     token = str(uuid.uuid4()).replace("-", "")[:16]
     s = _load_shares()
     s[token] = {"path": path, "name": os.path.basename(path), "created": time.time()}

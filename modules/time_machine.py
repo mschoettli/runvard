@@ -1540,7 +1540,9 @@ def run_replication(replication_id: str, *, now: float | None = None,
             remote_host = f"[{host}]" if ":" in host else host
             command = [
                 "rsync", "-aH", "--numeric-ids", "--delete-delay", "--partial",
-                "--protect-args", "-e", _remote_shell(replication),
+                # The restricted SSH receiver must see and validate the destination
+                # in SSH_ORIGINAL_COMMAND. Remote roots allow only path-safe ASCII.
+                "--no-protect-args", "-e", _remote_shell(replication),
             ]
             if replication.get("bandwidth_mbps"):
                 command.append(

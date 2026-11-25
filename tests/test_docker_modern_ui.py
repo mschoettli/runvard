@@ -7,6 +7,34 @@ ROOT = Path(__file__).resolve().parents[1]
 INDEX_HTML = ROOT / "static" / "index.html"
 MODERN_JS = ROOT / "static" / "docker-modern.js"
 MODERN_CSS = ROOT / "static" / "modern-theme.css"
+DOCKER_VIEW = ROOT / "static" / "docker-view.js"
+
+
+def test_docker_view_has_one_entry_point_for_both_themes():
+    html = INDEX_HTML.read_text()
+    assert "async function renderDocker(body,tab)" not in html
+    assert '<script src="/static/docker-view.js' in html
+    script = """
+const vm = require('node:vm');
+const assert = require('node:assert/strict');
+const view = require('node:fs').readFileSync(process.argv[1], 'utf8');
+const calls = [];
+const context = {stopDockerCardStats: () => {}, isModernUi: () => false,
+  api: async path => { calls.push(path); return {available:false}; },
+  viewIntro: title => title, emptyState: message => message};
+vm.createContext(context);
+vm.runInContext(view, context);
+(async () => {
+  for (const modern of [false, true]) {
+    context.isModernUi = () => modern;
+    const body = {};
+    await context.renderDocker(body, 'Container');
+    assert.match(body.innerHTML, /Docker unavailable/);
+  }
+  assert.deepEqual(calls, ['/docker/available', '/docker/available']);
+})();
+"""
+    subprocess.run(["node", "-e", script, str(DOCKER_VIEW)], check=True)
 
 
 def run_modern_docker_helper(expression: str):
@@ -81,10 +109,11 @@ def test_modern_docker_aggregates_app_resource_values():
 def test_modern_docker_renderer_is_isolated_from_original_theme():
     html = INDEX_HTML.read_text()
     css = MODERN_CSS.read_text()
+    view = DOCKER_VIEW.read_text()
 
     assert '<script src="/static/docker-modern.js?v=20261005-dashboard"></script>' in html
-    assert "if(isModernUi())return renderDockerModern(body,tab);" in html
-    assert "async function renderDockerModern(body,tab)" in html
+    assert "if(isModernUi())return renderDockerModern(body,tab);" in view
+    assert "async function renderDockerModern(body,tab)" in view
     assert 'class="modern-docker-app-card"' in html
     assert '<details class="modern-docker-app-details"' in html
     assert 'html[data-ui-theme="modern"] .modern-docker-app-card' in css
@@ -92,27 +121,27 @@ def test_modern_docker_renderer_is_isolated_from_original_theme():
 
 
 def test_modern_docker_advanced_tabs_use_quiet_tool_rows():
-    html = INDEX_HTML.read_text()
+    view = DOCKER_VIEW.read_text()
     css = MODERN_CSS.read_text()
 
-    assert "function modernComposeProjectRows(projects)" in html
-    assert "function modernDockerImageRows(images)" in html
-    assert "function modernDockerVolumeRows(volumes)" in html
-    assert "return renderDockerAdvanced(body,tab);" not in html.split(
+    assert "function modernComposeProjectRows(projects)" in view
+    assert "function modernDockerImageRows(images)" in view
+    assert "function modernDockerVolumeRows(volumes)" in view
+    assert "return renderDockerAdvanced(body,tab);" not in view.split(
         "async function renderDockerModern(body,tab){", 1
     )[1].split("async function renderDocker(body,tab){", 1)[0]
-    assert 'class="modern-docker-tool-row"' in html
+    assert 'class="modern-docker-tool-row"' in view
     assert 'html[data-ui-theme="modern"] .modern-docker-tool-row' in css
 
 
 def test_modern_docker_mobile_summary_stays_compact():
-    html = INDEX_HTML.read_text()
+    view = DOCKER_VIEW.read_text()
     css = MODERN_CSS.read_text()
 
-    assert 'class="nx-summary-grid modern-docker-summary"' in html
+    assert 'class="nx-summary-grid modern-docker-summary"' in view
     assert 'html[data-ui-theme="modern"] .modern-docker-summary {' in css
     assert "grid-template-columns: repeat(3, minmax(0, 1fr));" in css
-    assert 'class="nx-summary-grid modern-docker-tool-summary"' in html
+    assert 'class="nx-summary-grid modern-docker-tool-summary"' in view
     assert 'html[data-ui-theme="modern"] .modern-docker-tool-summary {' in css
 
 
@@ -192,3 +221,13 @@ def test_modern_docker_app_menu_can_save_group_to_dashboard():
     assert "window.dockerContainerAddToDashboard=async(" in html
     assert "dockerContainerAddToDashboard(${groupKeyArg}" in html
     assert "uiText('Show on dashboard')" in html
+
+
+def test_limit_editor_is_reachable_from_both_themes_and_individual_compose_services():
+    html = INDEX_HTML.read_text()
+    for renderer in ("dockerServiceCard", "dockerModernServiceRow"):
+        body = html.split(f"function {renderer}(container){{", 1)[1].split("\n}", 1)[0]
+        assert "dockerLimitsAction(container)" in body
+    group = html.split("function dockerModernAppCard(group,catalog,index){", 1)[1].split("\n}", 1)[0]
+    assert "serviceCount===1?dockerLimitsAction(first)" in group
+    assert 'onclick="dockerLimitsForm(this.dataset.containerLimits)"' in html

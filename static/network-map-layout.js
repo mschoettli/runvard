@@ -28,61 +28,208 @@
   }
   return {positions,groups,width:maxX,height:Math.max(200,maxY),columns,cardWidth,cardHeight};
  }
- function layoutGroups(devices,edges,width,expanded=new Set()){
-  const cardWidth=210,cardHeight=96,gap=20,pad=20;
-  width=Math.max(270,Math.floor(width));
-  const gateway=devices.find(d=>d.gateway)||devices.find(d=>/FRITZ!Box/i.test(d.model||d.name||''));
-  const groups=[],positions=Object.create(null),deviceGroups=Object.create(null);
-  const types=new Map(edges.filter(e=>e.type==='lan'||e.type==='wlan').map(e=>[e.target,e.type]));
-  for(const d of devices)deviceGroups[d.id]=d.id===gateway?.id?'gateway':d.network==='zigbee'?'zigbee':d.connection_type||types.get(d.id)||'unknown';
-  const keys=['lan','wlan','zigbee'];const horizontal=width>=860;
-  const groupWidth=horizontal?(width-40-32)/3:width-32;
-  const top=gateway?168:20;let bottom=top,stackY=top;
-  if(gateway)positions[gateway.id]={x:(width-cardWidth)/2,y:24};
-  for(const [index,key] of keys.entries()){
-   const members=devices.filter(d=>deviceGroups[d.id]===key);
-   const ids=new Set(members.map(d=>d.id)),adj=new Map(members.map(d=>[d.id,[]]));
-   for(const edge of edges){if(ids.has(edge.source)&&ids.has(edge.target)){adj.get(edge.source).push(edge.target);adj.get(edge.target).push(edge.source);}}
-   const memberOrder=new Map(members.map((d,i)=>[d.id,i]));for(const neighbors of adj.values())neighbors.sort((a,b)=>memberOrder.get(a)-memberOrder.get(b));
-   const roots=members.filter(d=>d.kind==='Coordinator'||edges.some(e=>e.target===d.id&&!ids.has(e.source)));
-   const ordered=[],seen=new Set(),queue=roots.map(d=>d.id);
-   while(ordered.length<members.length){if(!queue.length)queue.push(members.find(d=>!seen.has(d.id)).id);const id=queue.shift();if(seen.has(id))continue;seen.add(id);ordered.push(members.find(d=>d.id===id));queue.push(...adj.get(id).filter(x=>!seen.has(x)));}
-   if(key==='zigbee'){const routers=ordered.filter(d=>d.kind==='Router'),coordinators=ordered.filter(d=>d.kind==='Coordinator'),samples=routers.map(d=>ordered.find(x=>x.kind!=='Coordinator'&&x.kind!=='Router'&&adj.get(d.id).includes(x.id))).filter(Boolean);const priority=[...coordinators,...routers,...samples,...ordered];ordered.splice(0,ordered.length,...priority.filter((d,i)=>priority.findIndex(x=>x.id===d.id)===i));}
-   const cap=key==='zigbee'?5:3;const limit=expanded.has(key)?ordered.length:cap,shown=ordered.slice(0,limit),hidden=ordered.length-shown.length;
-   const x=horizontal?16+index*(groupWidth+20):16,y=horizontal?top:stackY;
-   const height=Math.max(190,80+shown.length*(cardHeight+gap)+(hidden||expanded.has(key)&&members.length>cap?50:0));
-   const g={network:key,x,y,width:groupWidth,height,count:members.length,hidden,ids:shown.map(d=>d.id)};
-   groups.push(g);
-   const reserved=shown.filter(d=>d.layout_group===key&&Number.isFinite(d.x)&&Number.isFinite(d.y)&&d.x>=x+12&&d.x+cardWidth<=x+groupWidth-12&&d.y>=y+68).map(d=>({id:d.id,x:d.x,y:d.y}));
-   const used=[...reserved];let slot=0;
-   shown.forEach(d=>{
-    const saved=reserved.find(p=>p.id===d.id);let p;
-    if(saved)p={x:saved.x,y:saved.y};else{
-     do{p={x:x+(groupWidth-cardWidth)/2,y:y+72+slot*(cardHeight+gap)};slot++;}while(used.some(o=>Math.abs(o.x-p.x)<cardWidth+8&&Math.abs(o.y-p.y)<cardHeight+8));used.push(p);
-    }
-    positions[d.id]=p;g.height=Math.max(g.height,p.y-y+cardHeight+24+(hidden||expanded.has(key)&&members.length>cap?50:0));
-   });
-   if(hidden)g.control={x:x+20,y:y+g.height-56,width:groupWidth-40,height:36};
-   else if(expanded.has(key)&&members.length>cap)g.control={x:x+20,y:y+g.height-42,width:groupWidth-40,height:32};
-   bottom=Math.max(bottom,y+g.height);stackY=y+g.height+20;
+ const dimensions = {
+  gateway: {width: 200, height: 80},
+  infrastructure: {width: 184, height: 76},
+  endpoint: {width: 152, height: 54}
+ };
+ const domains = ['lan', 'wlan', 'zigbee', 'unknown'];
+
+ function infrastructureKind(device) {
+  const kind = String(device.kind || '').toLowerCase();
+  if (device.network === 'zigbee') {
+   return ['coordinator', 'router'].includes(kind) ? kind : 'endpoint';
   }
-  const unknown=devices.filter(d=>deviceGroups[d.id]==='unknown');
-  if(unknown.length){
-   const x=16,y=bottom+24,w=width-32,columns=Math.max(1,Math.floor((w-40+20)/(cardWidth+20))),shown=expanded.has('unknown')?unknown:unknown.slice(0,Math.max(columns,5)),hidden=unknown.length-shown.length;
-   const unknownHeader=width<600?148:100;const rows=Math.ceil(shown.length/columns),height=unknownHeader+8+rows*(cardHeight+20)+(hidden||expanded.has('unknown')&&unknown.length>5?50:0);
-   const group={network:'unknown',x,y,width:w,height,count:unknown.length,hidden,ids:shown.map(d=>d.id)};
-   groups.push(group);
-   const reserved=shown.filter(d=>d.layout_group==='unknown'&&Number.isFinite(d.x)&&Number.isFinite(d.y)&&d.x>=x+12&&d.x+cardWidth<=x+w-12&&d.y>=y+unknownHeader).map(d=>({id:d.id,x:d.x,y:d.y}));
-   const occupied=[...reserved];let slot=0;
-   shown.forEach(d=>{let p=reserved.find(p=>p.id===d.id);
-    if(!p){do{p={x:x+(w-columns*cardWidth-(columns-1)*20)/2+(slot%columns)*(cardWidth+20),y:y+unknownHeader+Math.floor(slot/columns)*(cardHeight+20)};slot++;}while(occupied.some(o=>Math.abs(o.x-p.x)<cardWidth+8&&Math.abs(o.y-p.y)<cardHeight+8));occupied.push(p);}
-    positions[d.id]={x:p.x,y:p.y};group.height=Math.max(group.height,p.y-y+cardHeight+24+(hidden||expanded.has('unknown')&&unknown.length>5?50:0));
-   });
-   if(hidden||unknown.length>shown.length||expanded.has('unknown')&&unknown.length>5)group.control={x:x+20,y:y+group.height-48,width:w-40,height:32};
-   bottom=y+group.height;
-  }
-  return {positions,groups,deviceGroups,gateway:gateway?.id,width,height:Math.max(bottom+20,200),cardWidth,cardHeight,columns:horizontal?3:1};
+  if (['router', 'repeater', 'switch', 'bridge'].includes(kind)) return kind;
+  if (['ap', 'accesspoint', 'access_point'].includes(kind)) return 'repeater';
+  const model = String(device.model || '');
+  const identity = model + ' ' + (device.name || '');
+  if (/FRITZ!\s*Repeater|\bmesh repeater\b|\baccess point\b/i.test(identity)) return 'repeater';
+  if (/\b(ethernet|network|managed|unmanaged|gigabit|poe)[ -]+switch\b|\bTL-SG\d/i.test(identity)) return 'switch';
+  if (/^switch$/i.test(model)) return 'switch';
+  if (/FRITZ!Box/i.test(identity)) return 'router';
+  return 'endpoint';
  }
- if(typeof module!=='undefined'&&module.exports)module.exports={layoutNetwork,layoutGroups};
- else root.RunvardMapLayout={layoutNetwork,layoutGroups};
+
+ function classifyTopology(devices, edges) {
+  const byId = new Map(devices.map(device => [device.id, device]));
+  const gateway = devices.find(device => device.gateway) ||
+   devices.find(device => device.network !== 'zigbee' && /FRITZ!Box/i.test(device.model || device.name || ''));
+  const deviceGroups = Object.create(null), deviceRoles = Object.create(null), deviceKinds = Object.create(null);
+  const neighbors = new Map(devices.map(device => [device.id, new Set()]));
+  const connectionTypes = new Map();
+  for (const edge of edges) {
+   if (edge.source === edge.target || !byId.has(edge.source) || !byId.has(edge.target)) continue;
+   neighbors.get(edge.source).add(edge.target);
+   neighbors.get(edge.target).add(edge.source);
+   if (edge.type === 'lan' || edge.type === 'wlan') connectionTypes.set(edge.target, edge.type);
+  }
+  for (const device of devices) {
+   const kind = device.id === gateway?.id ? 'gateway' : infrastructureKind(device);
+   deviceKinds[device.id] = kind;
+   deviceRoles[device.id] = kind === 'gateway' || kind === 'endpoint' ? kind : 'infrastructure';
+   let group = device.connection_type || connectionTypes.get(device.id);
+   if (kind === 'gateway') group = 'gateway';
+   else if (device.network === 'zigbee') group = 'zigbee';
+   else if (group !== 'lan' && group !== 'wlan') group = 'unknown';
+   deviceGroups[device.id] = group;
+  }
+
+  // Give genuine neighbors a common branch order, even when a later filter hides their parent.
+  const depth = new Map(), order = new Map();
+  const visit = roots => {
+   const queue = [];
+   for (const id of roots) {
+    if (!depth.has(id)) { depth.set(id, 0); queue.push(id); }
+   }
+   for (let i = 0; i < queue.length; i++) {
+    const id = queue[i];
+    order.set(id, order.size);
+    for (const other of neighbors.get(id)) {
+     if (depth.has(other)) continue;
+     depth.set(other, depth.get(id) + 1);
+     queue.push(other);
+    }
+   }
+  };
+  visit(devices.filter(d => ['gateway', 'coordinator'].includes(deviceKinds[d.id])).map(d => d.id));
+  for (const device of devices) {
+   if (deviceRoles[device.id] === 'infrastructure' && !depth.has(device.id)) visit([device.id]);
+  }
+  // Isolated devices have no topology depth. Keep them together after traced branches.
+  for (const device of devices) {
+   if (!depth.has(device.id) && neighbors.get(device.id).size) visit([device.id]);
+  }
+  return {gateway: gateway?.id, deviceGroups, deviceRoles, deviceKinds, neighbors, depth, order};
+ }
+
+ function withinLane(a, b) {
+  return a.x < b.x + b.width + 12 && b.x < a.x + a.width + 12 &&
+   a.y < b.y + b.height + 12 && b.y < a.y + a.height + 12;
+ }
+
+ function placeMembers(group, members, stage, topology, filtering) {
+  const gutter = 16, gap = 16;
+  const cellWidth = Math.max(...members.map(d => stage.sizes[d.id].width));
+  const columns = Math.max(1, Math.floor((group.width - gutter * 2 + gap) / (cellWidth + gap)));
+  const cellX = column => group.x + (group.width - columns * cellWidth - (columns - 1) * gap) / 2 + column * (cellWidth + gap);
+  let y = group.contentTop, rowHeight = 0, column = 0, lastDepth;
+  const slots = new Map();
+  for (const device of members) {
+   const depth = topology.depth.get(device.id), size = stage.sizes[device.id];
+   if (rowHeight && (column === columns || lastDepth !== depth)) {
+    y += rowHeight + gap;
+    rowHeight = 0;
+    column = 0;
+   }
+   slots.set(device.id, {x: cellX(column++) + (cellWidth - size.width) / 2, y, ...size});
+   rowHeight = Math.max(rowHeight, size.height);
+   lastDepth = depth;
+  }
+  let bottom = y + rowHeight;
+  const pinned = new Map();
+  if (!filtering) {
+   for (const d of members) {
+    const rect = {x: d.x, y: d.y, ...stage.sizes[d.id]};
+    if (d.layout_group !== group.network || !Number.isFinite(d.x) || !Number.isFinite(d.y)) continue;
+    // Positions from a wider or previously expanded layout may no longer fit.
+    if (d.x < group.x + 12 || d.x + rect.width > group.x + group.width - 12 ||
+        d.y < group.contentTop || d.y + rect.height > bottom + gap) continue;
+    if (![...pinned.values()].some(other => withinLane(rect, other))) pinned.set(d.id, rect);
+   }
+  }
+  const reservations = [...pinned.values()];
+  for (const rect of reservations) bottom = Math.max(bottom, rect.y + rect.height);
+  let overflowY = bottom + gap, overflowColumn = 0, overflowHeight = 0;
+  for (const d of members) {
+   let rect = pinned.get(d.id);
+   if (!rect) {
+    rect = slots.get(d.id);
+    if (reservations.some(other => withinLane(rect, other))) {
+     if (overflowColumn === columns) {
+      overflowY += overflowHeight + gap;
+      overflowColumn = 0;
+      overflowHeight = 0;
+     }
+     rect = {...rect, x: cellX(overflowColumn++) + (cellWidth - rect.width) / 2, y: overflowY};
+     overflowHeight = Math.max(overflowHeight, rect.height);
+    }
+   }
+   stage.positions[d.id] = {x: rect.x, y: rect.y};
+   bottom = Math.max(bottom, rect.y + rect.height);
+  }
+  return bottom;
+ }
+
+ function layoutGroups(devices, edges, width, expanded = new Set(), options = {}) {
+  width = Math.max(270, Math.floor(width));
+  const topology = options.topology || classifyTopology(options.allDevices || devices, edges);
+  const {gateway, deviceGroups, deviceRoles, deviceKinds} = topology;
+  const filtering = Boolean(options.filtering), mobile = width < 600;
+  const stage = {width, height: 200, positions: Object.create(null), sizes: Object.create(null),
+   groups: [], gateway, deviceGroups, deviceRoles, deviceKinds, columns: 1,
+   cardWidth: dimensions.endpoint.width, cardHeight: dimensions.endpoint.height};
+  const membersByGroup = new Map(domains.map(key => [key, []]));
+  let top = 16;
+  for (const d of devices) {
+   stage.sizes[d.id] = dimensions[deviceRoles[d.id]];
+   if (d.id === gateway) {
+    const size = stage.sizes[d.id];
+    stage.positions[d.id] = {x: (width - size.width) / 2, y: 16};
+    top = 16 + size.height + 36;
+   } else {
+    membersByGroup.get(deviceGroups[d.id]).push(d);
+   }
+  }
+  const keys = domains.filter(key => membersByGroup.get(key).length || (!filtering && key !== 'unknown'));
+  const primaryKeys = keys.filter(key => key !== 'unknown');
+  const firstPopulated = keys.find(key => membersByGroup.get(key).length);
+  const columns = width >= 860 ? Math.max(1, primaryKeys.length) : 1;
+  stage.columns = columns;
+  let bottom = top, nextY = top;
+  for (const key of keys) {
+   const members = membersByGroup.get(key);
+   const inPrimaryRow = columns > 1 && key !== 'unknown';
+   const groupWidth = inPrimaryRow ? (width - 32 - (columns - 1) * 16) / columns : width - 32;
+   const x = inPrimaryRow ? 16 + primaryKeys.indexOf(key) * (groupWidth + 16) : 16;
+   const y = inPrimaryRow ? top : nextY;
+   const defaultFold = !filtering && (mobile ? key !== firstPopulated : key === 'unknown');
+   const collapsed = options.collapsed ? options.collapsed.has(key) : defaultFold;
+   // Empty mobile sections are kept to a header, with setup available in Sources.
+   const group = {network: key, x, y, width: groupWidth, contentTop: y + 62, height: 52,
+    collapsed: collapsed || (!members.length && mobile), canCollapse: Boolean(members.length),
+    count: members.length, ids: [], hidden: members.length};
+   stage.groups.push(group);
+   if (!group.collapsed && members.length) {
+    const rank = d => topology.depth.get(d.id) ?? Infinity;
+    const sorted = [...members].sort((a, b) =>
+     rank(a) - rank(b) || (topology.order.get(a.id) ?? Infinity) - (topology.order.get(b.id) ?? Infinity));
+    const cap = key === 'zigbee' || key === 'unknown' ? 5 : 4;
+    let shown = sorted;
+    if (!filtering && !expanded.has(key) && sorted.length > cap) {
+     const preferred = sorted.filter(d => deviceRoles[d.id] === 'infrastructure');
+     const preview = new Set([...preferred, ...sorted].slice(0,cap).map(d => d.id));
+     shown = sorted.filter(d => preview.has(d.id));
+    }
+    group.ids = shown.map(d => d.id);
+    group.hidden = members.length - shown.length;
+    const end = placeMembers(group, shown, stage, topology, filtering);
+    group.height = end - group.y + 16;
+    if (!filtering && sorted.length > cap) {
+     group.control = {x: x + 16, y: end + 12, width: groupWidth - 32, height: 36};
+     group.height += 48;
+    }
+   } else if (!group.collapsed) {
+    group.height = 118;
+   }
+   bottom = Math.max(bottom, y + group.height);
+   nextY = bottom + 16;
+  }
+  stage.height = Math.max(200, bottom + 16);
+  return stage;
+ }
+
+ const api = {layoutNetwork, classifyTopology, layoutGroups};
+ if (typeof module !== 'undefined' && module.exports) module.exports = api;
+ else root.RunvardMapLayout = api;
 })(globalThis);

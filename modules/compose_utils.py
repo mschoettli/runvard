@@ -171,10 +171,20 @@ def published_ports_from_compose(content):
     ports = []
     for service_name, entry in _compose_port_entries(content):
         published, target = _published_and_target(entry)
+        if isinstance(entry, dict):
+            host_ip = str(entry.get("host_ip") or "0.0.0.0")
+            protocol = str(entry.get("protocol") or "tcp").lower()
+        else:
+            spec, _, protocol = str(entry).strip().strip("\"'").partition("/")
+            parts = spec.rsplit(":", 2)
+            host_ip = parts[0].strip("[]") if len(parts) == 3 else "0.0.0.0"
+            protocol = (protocol or "tcp").lower()
         if published:
             ports.append({
                 "service": service_name or "",
                 "port": published,
                 "target": target,
+                "host_ip": host_ip or "0.0.0.0",
+                "protocol": protocol,
             })
     return ports

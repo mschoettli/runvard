@@ -6,7 +6,7 @@ import server
 def _client(role="admin"):
     client = TestClient(server.app)
     client.cookies.set(
-        server.COOKIE_NAME, server.make_token("tester", 3600, role),
+        server.COOKIE_NAME, server.make_token("tester", 3600, role, account_salt=None),
     )
     return client
 
@@ -62,9 +62,34 @@ def test_backup_mutations_require_an_admin(monkeypatch):
     monkeypatch.setattr(server, "login_enabled", lambda: True)
     monkeypatch.setattr(server.backup, "add_job", lambda *args, **kwargs: {"ok": True})
 
-    response = _client("operator").post(
+    response = _client("readonly").post(
         "/api/backup/add",
         data={"name": "Photos", "source": "/srv/photos", "dest": "/mnt/backups/photos"},
     )
 
     assert response.status_code == 403
+
+
+def test_only_admin_can_change_backup_schedule_and_remove_jobs(tmp_path, monkeypatch):
+    state = tmp_path / "state"
+    monkeypatch.setattr(server.backup, "CONFIG", str(state / "jobs.json"))
+    monkeypatch.setattr(server.backup, "HISTORY", str(state / "history.json"))
+    source = tmp_path / "source"
+    source.mkdir()
+    admin = _client()
+    readonly = _client("readonly")
+    destination = admin.post("/api/backup/validate", data={
+        "source": str(source), "dest": str(tmp_path / "mirror"), "managed": "true",
+    }).json()["dest"]
+    assert destination != str(tmp_path / "mirror")
+    assert admin.post("/api/backup/add", data={
+        "name": "Documents", "source": str(source), "dest": destination, "schedule": "daily",
+    }).json()["ok"]
+    job, = admin.get("/api/backup/jobs").json()
+    data = {"job_id": job["id"], "enabled": "false"}
+    for action in ("schedule-enabled", "remove"):
+        assert readonly.post(f"/api/backup/{action}", data=data).status_code == 403
+    assert admin.post("/api/backup/schedule-enabled", data=data).json()["ok"]
+    assert admin.get("/api/backup/jobs").json()[0]["enabled"] is False
+    assert admin.post("/api/backup/remove", data=data).json()["ok"]
+    assert admin.get("/api/backup/jobs").json() == []

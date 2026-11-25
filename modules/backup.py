@@ -1,12 +1,20 @@
 """Backup jobs, safe path selection, storage discovery, and history."""
+from contextlib import ExitStack, contextmanager
+import fcntl
 import glob
-import os
+import hashlib
 import json
+import os
+import secrets
 import shutil
-import time
 import subprocess
+import tempfile
+import time
 
 import psutil
+
+from modules import backup_mounts
+from modules.backup_scheduler import is_due
 
 CONFIG = "/opt/runvard/data/backup_jobs.json"
 HISTORY = "/opt/runvard/data/backup_history.json"
@@ -211,22 +219,100 @@ def validate_paths(source, dest):
     }
 
 
-def _load(path, default):
+def _lock_file(path):
+    os.makedirs(os.path.dirname(path), mode=0o700, exist_ok=True)
+    return os.fdopen(os.open(path, os.O_CREAT | os.O_RDWR, 0o600), "a")
+
+
+@contextmanager
+def _transaction():
+    with _lock_file(CONFIG + ".lock") as lock:
+        fcntl.flock(lock, fcntl.LOCK_EX)
+        yield
+
+
+def _load(path):
     try:
-        with open(path) as f:
-            return json.load(f)
-    except (OSError, json.JSONDecodeError):
-        return default
+        with open(path, encoding="utf-8") as f:
+            rows = json.load(f)
+    except FileNotFoundError:
+        return []
+    if not isinstance(rows, list):
+        raise ValueError(f"Expected a JSON list in {path}")
+    return rows
 
 
 def _save(path, data):
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(data, f, indent=2)
+    directory = os.path.dirname(path)
+    fd, temporary = tempfile.mkstemp(dir=directory, prefix=".backup-")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as f:
+            json.dump(data, f, indent=2)
+            f.flush()
+            os.fsync(f.fileno())
+        os.replace(temporary, path)
+        directory_fd = os.open(directory, os.O_RDONLY)
+        try:
+            os.fsync(directory_fd)
+        finally:
+            os.close(directory_fd)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def _new_id(used):
+    # Job IDs travel through JavaScript numbers and FastAPI integer form fields.
+    while True:
+        candidate = secrets.randbelow(2**53 - 1) + 1
+        if candidate not in used:
+            return candidate
+
+
+def _load_jobs():
+    """Read under the metadata lock and repair colliding legacy second-based IDs."""
+    jobs = _load(CONFIG)
+    used = {job["id"] for job in jobs}
+    if len(used) != len(jobs):
+        seen = set()
+        for job in jobs:
+            if job["id"] in seen:
+                job.setdefault("created_at", job["id"])
+                job["id"] = _new_id(used)
+                used.add(job["id"])
+            seen.add(job["id"])
+        _save(CONFIG, jobs)
+    return jobs
 
 
 def list_jobs():
-    return _load(CONFIG, [])
+    with _transaction():
+        return _load_jobs()
+
+
+def managed_destination(source, dest):
+    # Identically named folders on different paths must have independent mirrors.
+    suffix = hashlib.sha256(os.fsencode(_real(source))).hexdigest()[:16]
+    parent, name = os.path.split(str(dest).rstrip("/"))
+    if not os.path.isabs(dest) or not name:
+        raise ValueError("The destination parent does not exist")
+    prefix = name.encode("utf-8")[:238].decode("utf-8", "ignore")
+    return os.path.join(parent, f"{prefix}-{suffix}")
+
+
+def _mirror_conflicts(other, source, dest):
+    if not other.get("source") or not other.get("dest"):
+        return False
+    other_dest = _real(other["dest"])
+    if other_dest == dest and _real(other["source"]) == source:
+        return False
+    common = os.path.commonpath((other_dest, dest))
+    return common in (other_dest, dest)
+
+
+def _check_mirror_destination(jobs, source, dest):
+    if any(_mirror_conflicts(other, source, dest) for other in jobs):
+        raise ValueError("Backup destinations overlap")
 
 
 def add_job(name, source, dest, schedule="manual", direction="push"):
@@ -236,64 +322,147 @@ def add_job(name, source, dest, schedule="manual", direction="push"):
         raise ValueError("A backup name is required")
     if schedule not in {"manual", "hourly", "daily", "weekly"}:
         raise ValueError("Unsupported backup schedule")
-    jobs = _load(CONFIG, [])
-    jobs.append({
-        "id": int(time.time()),
-        "name": name,
-        "source": validation["source"],
-        "dest": validation["dest"],
-        "schedule": schedule,   # manual, hourly, daily, weekly
-        "direction": direction,  # push, pull
-        "last_run": None,
-    })
-    _save(CONFIG, jobs)
+    mounts = backup_mounts.snapshot(validation["source"], validation["dest"])
+    with _transaction():
+        jobs = _load_jobs()
+        _check_mirror_destination(jobs, validation["source"], validation["dest"])
+        jobs.append({
+            "id": _new_id({job["id"] for job in jobs}),
+            "created_at": time.time(),
+            "name": name,
+            "source": validation["source"],
+            "dest": validation["dest"],
+            "mounts": mounts,
+            "schedule": schedule,
+            "direction": direction,
+            "last_run": None,
+        })
+        _save(CONFIG, jobs)
     return {"ok": True, "validation": validation}
 
 
 def delete_job(job_id: int):
-    jobs = [j for j in _load(CONFIG, []) if j["id"] != job_id]
-    _save(CONFIG, jobs)
+    with _transaction():
+        jobs = _load_jobs()
+        removed = next((job for job in jobs if job["id"] == job_id), None)
+        if removed is None:
+            raise KeyError(job_id)
+        path = f"{CONFIG}.{job_id}.lock"
+        with _lock_file(path) as lock:
+            try:
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                raise ValueError("Running") from None
+            remaining = [job for job in jobs if job["id"] != job_id]
+            if removed.get("source") and removed.get("dest"):
+                # Saving (and keeping) the removed job's files still matters after
+                # deleting one half of an overlapping pair from an older release.
+                for job in remaining:
+                    if _mirror_conflicts(job, _real(removed["source"]), _real(removed["dest"])):
+                        job["blocked_destination"] = _real(job["dest"])
+                        job["enabled"] = False
+            _save(CONFIG, remaining)
+            os.unlink(path)
+    return {"ok": True}
+
+
+def schedule_enabled(job_id: int, enabled: bool):
+    with _transaction():
+        jobs = _load_jobs()
+        job = next((job for job in jobs if job["id"] == job_id), None)
+        if job is None:
+            raise KeyError(job_id)
+        job["enabled"] = enabled
+        _save(CONFIG, jobs)
     return {"ok": True}
 
 
 def run_job(job_id: int):
-    jobs = _load(CONFIG, [])
-    job = next((j for j in jobs if j["id"] == job_id), None)
-    if not job:
-        return {"ok": False, "error": "Job nicht gefunden"}
+    return _run_job(job_id, scheduled_at=None)
 
+
+def run_scheduled_job(job_id: int, now: float):
+    return _run_job(job_id, scheduled_at=now)
+
+
+def _run_job(job_id, scheduled_at):
+    with ExitStack() as execution:
+        with _transaction():
+            jobs = _load_jobs()
+            job = next((row for row in jobs if row["id"] == job_id), None)
+            if scheduled_at is not None and (job is None or not is_due(job, scheduled_at)):
+                return {"ok": True, "skipped": True}
+            if job is None:
+                return {"ok": False, "error": "Job nicht gefunden"}
+
+            destination = _real(job["dest"])
+            destination_key = hashlib.sha256(os.fsencode(destination)).hexdigest()
+            job_lock = execution.enter_context(_lock_file(f"{CONFIG}.{job_id}.lock"))
+            target_lock = execution.enter_context(_lock_file(f"{CONFIG}.target-{destination_key}.lock"))
+            try:
+                fcntl.flock(job_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                fcntl.flock(target_lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+            except BlockingIOError:
+                if scheduled_at is not None:
+                    return {"ok": True, "skipped": True}
+                return {"ok": False, "error": "Running"}
+
+            # Claim this interval durably before rsync starts. No stale job list
+            # gets written back when the process completes or after a restart.
+            start = time.time() if scheduled_at is None else scheduled_at
+            job["last_run"] = start
+            _save(CONFIG, jobs)
+        return _execute(job, start, destination, (job_lock.fileno(), target_lock.fileno()))
+
+
+def _execute(job, start, destination, lock_fds):
+    started = time.monotonic()
     try:
-        validation = validate_paths(job["source"], job["dest"])
+        validation = validate_paths(job["source"], destination)
+        if job.get("blocked_destination") == validation["dest"]:
+            raise ValueError("Backup destinations overlap")
+        # Also guard jobs saved by older releases before any rsync --delete.
+        with _transaction():
+            _check_mirror_destination(_load_jobs(), validation["source"], validation["dest"])
+        _verify_mounts(job, validation["source"], validation["dest"])
         os.makedirs(validation["dest"], exist_ok=True)
-    except (OSError, ValueError) as exc:
-        return {"ok": False, "error": str(exc)}
-
-    start = time.time()
-    try:
         r = subprocess.run(
             ["rsync", "-a", "--delete", "--stats", validation["source"] + "/", validation["dest"]],
-            capture_output=True, text=True, timeout=3600,
+            capture_output=True, text=True, timeout=3600, pass_fds=lock_fds,
         )
-    except (FileNotFoundError, subprocess.TimeoutExpired) as exc:
-        return {"ok": False, "error": str(exc)}
-    duration = round(time.time() - start, 1)
+        ok = r.returncode == 0
+        output = r.stdout if ok else r.stderr
+    except (OSError, ValueError, subprocess.TimeoutExpired) as exc:
+        ok, output = False, str(exc)
+    duration = round(time.monotonic() - started, 1)
+    with _transaction():
+        history = _load(HISTORY)
+        history.insert(0, {
+            "job_id": job["id"], "name": job["name"], "time": start,
+            "duration": duration, "success": ok, "output": output[-2000:],
+        })
+        _save(HISTORY, history[:100])
+    result = {"ok": ok, "duration": duration}
+    if not ok:
+        result["error"] = output[-2000:]
+    return result
 
-    job["last_run"] = start
-    _save(CONFIG, jobs)
 
-    history = _load(HISTORY, [])
-    history.insert(0, {
-        "job_id": job_id,
-        "name": job["name"],
-        "time": start,
-        "duration": duration,
-        "success": r.returncode == 0,
-        "output": r.stdout[-2000:] if r.returncode == 0 else r.stderr[-2000:],
-    })
-    _save(HISTORY, history[:100])
-
-    return {"ok": r.returncode == 0, "duration": duration}
+def _verify_mounts(job, source, dest):
+    observed = backup_mounts.snapshot(source, dest)
+    if "mounts" in job:
+        if job["mounts"] != observed:
+            raise ValueError("Not mounted")
+        return
+    # Legacy jobs have no baseline. Persist only after path validation and
+    # checking that every configured mount backing either path is present.
+    with _transaction():
+        jobs = _load_jobs()
+        current = next((row for row in jobs if row["id"] == job["id"]), None)
+        if current is not None:
+            current["mounts"] = observed
+            _save(CONFIG, jobs)
 
 
 def get_history():
-    return _load(HISTORY, [])
+    return _load(HISTORY)

@@ -11,6 +11,7 @@ from modules import accounts, security_tokens
 
 def _server_client(monkeypatch, tmp_path):
     import server
+    monkeypatch.setattr(server, "_login_attempts", {})
     monkeypatch.setenv("RUNVARD_DATA_DIR", str(tmp_path))
     monkeypatch.setattr(server.accounts, "STORE", str(tmp_path / "users.json"))
     server.accounts.add_user("admin-a", "root password", "admin")
@@ -171,12 +172,78 @@ def test_terminal_websocket_requires_login_and_step_up(monkeypatch, tmp_path):
 def test_installer_hashes_admin_and_never_writes_password_to_env():
     script = (os.path.dirname(__file__) + "/../scripts/install-full.sh")
     text = open(script, encoding="utf-8").read()
-    env_block = text.split('cat > "$ENV_FILE" <<EOF', 1)[1].split("EOF", 1)[0]
-    assert "RUNVARD_PASS" not in env_block
-    assert "RUNVARD_USER" not in env_block
+    assert 'python3 "$SETTINGS" merge "$ENV_FILE" "$PORT" "$WEB_LANG" "$INSTALL_DIR/data"' in text
     assert "accounts.add_user" in text
     assert 'PYTHONPATH="$INSTALL_DIR" "$INSTALL_DIR/venv/bin/python"' in text
     assert 'PRESERVE_ADMIN_PASS=1' in text
     assert 'if preserve and username in existing:' in text
     assert "git gh openssl" in text
-    assert 'chmod 600 "$ENV_FILE"' in text
+    assert 'chmod 600 "$DATA_DIR/users.json"' in text
+
+def test_concurrent_account_updates_preserve_users_and_the_last_admin(monkeypatch, tmp_path):
+    from concurrent.futures import ThreadPoolExecutor
+    from threading import Barrier
+
+    monkeypatch.setattr(accounts, "STORE", str(tmp_path / "users.json"))
+    barrier = Barrier(2)
+
+    def add(name):
+        barrier.wait()
+        return accounts.add_user(name, "initial password", "admin")
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        assert all(result["ok"] for result in pool.map(add, ["one", "two"]))
+    assert {entry["username"] for entry in accounts.list_users()} == {"one", "two"}
+    assert accounts.add_user("one", "replacement", "readonly")["error"] == "account_exists"
+    assert accounts.verify("one", "initial password") == "admin"
+
+    def demote(name):
+        barrier.wait()
+        return accounts.set_role(name, "readonly")
+
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        results = list(pool.map(demote, ["one", "two"]))
+    assert sum(result["ok"] for result in results) == 1
+    last_admin, = [entry["username"] for entry in accounts.list_users() if entry["role"] == "admin"]
+    assert accounts.delete_user(last_admin)["error"] == "last_admin"
+    assert accounts.ensure_bootstrap_account() == last_admin
+
+
+def test_session_reflects_account_changes_and_preserves_remembered_expiry(monkeypatch, tmp_path):
+    server, client = _server_client(monkeypatch, tmp_path)
+    response = client.post("/api/login", data={"username": "admin-a", "password": "root password", "remember": "1"})
+    assert response.status_code == 200
+    expiry = server._parse_token(client.cookies.get(server.COOKIE_NAME)).expires_at
+    assert expiry > time.time() + 29 * 86400
+    for enabled in ("1", "0"):
+        response = client.post("/api/expert-mode", data={"enabled": enabled})
+        assert response.status_code == 200
+        assert server._parse_token(client.cookies.get(server.COOKIE_NAME)).expires_at == expiry
+
+    assert accounts.set_role("viewer", "admin")["ok"]
+    assert accounts.set_role("admin-a", "readonly")["ok"]
+    assert client.get("/api/auth/status").json()["role"] == "readonly"
+    assert accounts.delete_user("admin-a")["ok"]
+    assert client.get("/api/auth/status").json()["user"] is None
+
+
+def test_federated_role_is_independent_of_a_local_namesake(monkeypatch, tmp_path):
+    server, client = _server_client(monkeypatch, tmp_path)
+    monkeypatch.setattr(server.FEDERATION, "accept_sso", lambda ticket: {
+        "username": "admin-a", "role": "readonly", "expert": False,
+    })
+    assert client.post("/api/federation/v1/sso/accept", data={"ticket": "test"}, follow_redirects=False).status_code == 303
+    assert client.get("/api/auth/status").json()["role"] == "readonly"
+
+
+def test_audit_records_operation_result_for_successful_http_responses(monkeypatch, tmp_path):
+    server, client = _server_client(monkeypatch, tmp_path)
+    assert _login(client, "admin-a", "root password").status_code == 200
+    add = {"username": "new-user", "password": "example", "role": "readonly"}
+    assert client.post("/api/accounts/add", data=add).json()["ok"]
+    assert client.post("/api/accounts/add", data=add).json()["ok"] is False
+    monkeypatch.setattr(server.backup, "CONFIG", str(tmp_path / "backup_jobs.json"))
+    assert client.post("/api/backup/run", data={"job_id": 77}).json()["ok"] is False
+    events = [json.loads(line) for line in (tmp_path / "audit.log").read_text().splitlines()]
+    assert [event["ok"] for event in events if event["action"] == "POST /api/accounts/add"] == [True, False]
+    assert [event["ok"] for event in events if event["action"] == "POST /api/backup/run"] == [False]

@@ -1,6 +1,8 @@
 import json
 import os
 from pathlib import Path
+import shutil
+import subprocess
 
 import pytest
 
@@ -446,6 +448,47 @@ def test_forced_receiver_accepts_only_rsync_within_replica_root(tmp_path):
         time_machine_receiver.validate_original_command(
             f"rsync --server -e/bin/sh . {valid_destination}", str(root),
         )
+
+
+def test_real_rsync_sends_two_complete_generations_to_the_restricted_receiver(
+    replication_env, tmp_path, monkeypatch
+):
+    binary = shutil.which("rsync")
+    if not binary or "version 3." not in subprocess.check_output([binary, "--version"], text=True):
+        pytest.skip("rsync 3 is required for the wire-level integration check")
+    # Replace only the network transport. rsync generates its regular server
+    # command and passes real file bytes over the receiver's standard streams.
+    ssh = tmp_path / "ssh"
+    repo = Path(time_machine.__file__).resolve().parents[1]
+    ssh.write_text(
+        "#!/usr/bin/env python3\nimport os, sys\n"
+        f"sys.path.insert(0, {str(repo)!r})\n"
+        "from modules import time_machine_receiver as receiver\n"
+        f"receiver.RSYNC_BINARY = {binary!r}\n"
+        "args = sys.argv[1:]\n"
+        "first = next(i for i, arg in enumerate(args) if arg == 'rsync' or arg.startswith('runvard-tm-'))\n"
+        "os.environ['SSH_ORIGINAL_COMMAND'] = ' '.join(args[first:])\n"
+        "raise SystemExit(receiver.main())\n"
+    )
+    ssh.chmod(0o700)
+    monkeypatch.setenv("PATH", f"{tmp_path}:{os.environ['PATH']}")
+    root = replication_env["destination_root"]
+    monkeypatch.setenv("RUNVARD_TM_RECEIVER_ROOT", str(root))
+    monkeypatch.setattr(time_machine, "_has_pinned_host", lambda *args: True)
+    monkeypatch.setattr(time_machine, "_validate_managed_identity", lambda: None)
+    monkeypatch.setattr(time_machine, "_target_has_open_handles", lambda target: False)
+    replica = time_machine.create_replication(
+        target_id=replication_env["target"]["id"], destination_root=str(root),
+        remote_host="10.0.0.8", remote_user="runvard-replica", bandwidth_mbps=50,
+    )["replication"]
+    band = replication_env["source_path"] / "Mac.sparsebundle" / "bands" / "0"
+    band.parent.mkdir()
+    for stamp in (1000, 2000):
+        band.write_bytes(os.urandom(4096))
+        completed = time_machine.run_replication(replica["id"], now=stamp)["replication"]
+        version = Path(completed["last_complete_path"])
+        assert (version / ".runvard-complete").is_file()
+        assert (version / "Mac.sparsebundle" / "bands" / "0").read_bytes() == band.read_bytes()
 
 
 def test_forced_receiver_capacity_command_is_confined_to_receiver_root(tmp_path):
