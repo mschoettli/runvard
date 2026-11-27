@@ -1073,7 +1073,7 @@ body:not(.dashboard-admin) .dash-add-btn{display:none}
 
 </style>
 <link rel="stylesheet" href="/static/modern-theme.css?v=a6074bbbd0e8">
-<link rel="stylesheet" href="/static/apps-library.css?v=0b5a42b62aae">
+<link rel="stylesheet" href="/static/apps-library.css?v=c6d10339597f">
 
 <link rel="stylesheet" href="/static/brand/brand.css">
 </head>
@@ -9769,8 +9769,13 @@ async function refreshSystemUpdateBadge(){
 }
 async function refreshAppsUpdateBadge(){
   const result=await api('/apps/check-updates');
-  _appsUpdateBadgeHasUpdates=Array.isArray(result.updates)&&result.updates.length>0;
+  if(!Array.isArray(result.updates))return;
+  const updates=new Set(result.updates);
+  _appsUpdateBadgeHasUpdates=updates.size>0;
   updateAppsBadge();
+  if($('#overlay.open .apps-library')&&appsCatalog.some(app=>app.installed&&updates.has(app.id)!==Boolean(app.update_available))){
+    await renderApps($('#modal-body'));
+  }
 }
 async function loadTileBadges(){
   try{
@@ -14502,9 +14507,7 @@ const APP_UI={
   updateAction:{de:'Aktualisieren',en:'Update',fr:'Mettre à jour',it:'Aggiorna',es:'Actualizar',pt:'Atualizar'},
   catalogLoadError:{de:'Der App-Katalog konnte nicht geladen werden.',en:'The app catalog could not be loaded.',fr:'Impossible de charger le catalogue d’apps.',it:'Impossibile caricare il catalogo delle app.',es:'No se pudo cargar el catálogo de apps.',pt:'Não foi possível carregar o catálogo de apps.'},
   customComposeProject:{de:'Eigenes Docker-Compose-Projekt',en:'Custom Docker Compose project',fr:'Projet Docker Compose personnalisé',it:'Progetto Docker Compose personalizzato',es:'Proyecto de Docker Compose personalizado',pt:'Projeto Docker Compose personalizado'},
-  update:{de:'Update',en:'update',fr:'mise à jour',it:'aggiornamento',es:'actualización',pt:'atualização'},
-  updates:{de:'Updates',en:'updates',fr:'mises à jour',it:'aggiornamenti',es:'actualizaciones',pt:'atualizações'},
-  checkUpdates:{de:'Updates prüfen',en:'Check updates',fr:'Vérifier les mises à jour',it:'Controlla aggiornamenti',es:'Buscar actualizaciones',pt:'Verificar atualizações'},
+  availableUpdates:{de:'Verfügbare Updates',en:'Available updates',fr:'Mises à jour disponibles',it:'Aggiornamenti disponibili',es:'Actualizaciones disponibles',pt:'Atualizações disponíveis'},
   noAppsFound:{de:'Keine Apps gefunden',en:'No apps found',fr:'Aucune app trouvée',it:'Nessuna app trovata',es:'No se encontraron apps',pt:'Nenhuma app encontrada'},
   dataFolder:{de:'Datenordner',en:'Data folder',fr:'Dossier de données',it:'Cartella dati',es:'Carpeta de datos',pt:'Pasta de dados'},
   automatic:{de:'Automatisch',en:'Automatic',fr:'Automatique',it:'Automatico',es:'Automático',pt:'Automático'},
@@ -14712,11 +14715,16 @@ function sortAppsCatalog(items){
   }).map(item=>item.app);
 }
 function groupAppsCatalog(items){
-  const sorted=sortAppsCatalog(items);
+  const updates=[], remaining=[];
+  for(const app of sortAppsCatalog(items)){
+    if(app.installed&&app.update_available)updates.push(app);
+    else remaining.push(app);
+  }
   const definitions=appsSort==='installed'
     ? [['installedApps',app=>Boolean(app.installed)],['availableApps',app=>!app.installed]]
     : [['runvardApps',app=>Boolean(app.first_party)],['appCatalog',app=>!app.first_party]];
-  return definitions.map(([labelKey,matches])=>({labelKey,items:sorted.filter(matches)})).filter(group=>group.items.length);
+  const groups=definitions.map(([labelKey,matches])=>({labelKey,items:remaining.filter(matches)}));
+  return [{labelKey:'availableUpdates',items:updates},...groups].filter(group=>group.items.length);
 }
 function appPendingLabel(action){
   return appUi(({up:'starting',start:'starting',stop:'stopping',down:'stopping',restart:'restarting',update:'updating'})[action]||'starting');
@@ -14878,21 +14886,16 @@ function renderAppsView(body){
       <aside class="apps-sidebar" aria-label="${esc(tr('tileApps'))}">
         <div class="apps-tools">
           <input id="apps-search" class="nx-search" aria-label="${esc(appUi('searchApps'))}" placeholder="${esc(appUi('searchApps'))}" value="${esc(appsSearch)}" oninput="appsDoSearch(this.value)">
-          <div class="apps-tool-row">
-            <details class="apps-filter-menu"${appsActiveCat!=='all'||appsSort!=='installed'?' open':''}>
-              <summary>${esc(appUi('filters'))}</summary>
-              <div class="apps-filters">
-                <select id="apps-category" aria-label="${esc(appUi('category'))}" onchange="appsSetCat(this.value)"></select>
-                <select id="apps-sort" aria-label="${esc(appUi('sortApps'))}" onchange="appsSetSort(this.value)">
-                  <option value="installed"${appsSort==='installed'?' selected':''}>${esc(appUi('installedFirst'))}</option>
-                  <option value="default"${appsSort==='default'?' selected':''}>${esc(appUi('runvardAppsFirst'))}</option>
-                </select>
-              </div>
-            </details>
-            <button type="button" class="btn ghost sm" id="apps-check" onclick="appsCheckUpdates()">
-              <span aria-hidden="true">↻</span> ${esc(appUi('checkUpdates'))}<span class="apps-update-count" hidden></span>
-            </button>
-          </div>
+          <details class="apps-filter-menu"${appsActiveCat!=='all'||appsSort!=='installed'?' open':''}>
+            <summary>${esc(appUi('filters'))}</summary>
+            <div class="apps-filters">
+              <select id="apps-category" aria-label="${esc(appUi('category'))}" onchange="appsSetCat(this.value)"></select>
+              <select id="apps-sort" aria-label="${esc(appUi('sortApps'))}" onchange="appsSetSort(this.value)">
+                <option value="installed"${appsSort==='installed'?' selected':''}>${esc(appUi('installedFirst'))}</option>
+                <option value="default"${appsSort==='default'?' selected':''}>${esc(appUi('runvardAppsFirst'))}</option>
+              </select>
+            </div>
+          </details>
         </div>
         <div id="apps-list" class="apps-list"></div>
       </aside>
@@ -14903,11 +14906,6 @@ function renderAppsView(body){
   const category=body.querySelector('#apps-category');
   category.innerHTML=categoryKeys.map(key=>`<option value="${esc(key)}">${esc(key==='all'?appUi('allCategories'):appCategoryLabel(key))}</option>`).join('');
   category.value=appsActiveCat;
-  const count=appsCatalog.filter(app=>app.update_available).length;
-  const badge=body.querySelector('.apps-update-count');
-  badge.hidden=!count;
-  badge.textContent=count;
-  if(count)badge.setAttribute('aria-label',`${count} ${appUi(count===1?'update':'updates')}`);
   renderAppsList();
 }
 
@@ -15194,21 +15192,6 @@ window.appAddToDashboard=async id=>{
     await post('/dashboard/add',{tile_type:isCompose?'compose':'app',tile_id:id,name:a.name,icon:a.icon,port:a.port||0});
     loadDashboard();
     toast(uiText('Added to dashboard'));
-  }catch(e){toast('Error: '+e.message,'error');}
-};
-
-window.appsCheckUpdates=async()=>{
-  toast('Checking for updates…');
-  try{
-    const result=await api('/apps/check-updates?force=true');
-    _appsUpdateBadgeHasUpdates=Array.isArray(result.updates)&&result.updates.length>0;
-    updateAppsBadge();
-    const failures=Object.entries(result.errors||{});
-    if(failures.length){
-      const details=failures.map(([id,error])=>`${id}: ${error}`).join(' · ');
-      toast('Update check failed: '+details,'error');
-    }else toast('Update check complete');
-    renderApps($('#modal-body'));
   }catch(e){toast('Error: '+e.message,'error');}
 };
 

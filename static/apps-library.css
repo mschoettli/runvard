@@ -38,15 +38,7 @@
   background: transparent;
 }
 .apps-tools input.nx-has-clear { padding-inline-end: 2.75rem; }
-.apps-tool-row {
-  display: grid;
-  grid-template-columns: 5rem minmax(0, 1fr);
-  align-items: start;
-  gap: .375rem;
-}
 .apps-filter-menu {
-  grid-column: 1 / -1;
-  grid-row: 1;
   min-width: 0;
 }
 .apps-filter-menu summary {
@@ -64,29 +56,6 @@
   gap: .5rem;
   padding-top: .375rem;
 }
-.apps-tool-row #apps-check {
-  grid-column: 2;
-  grid-row: 1;
-  justify-self: end;
-  min-height: 2.75rem;
-  max-width: 100%;
-  overflow-wrap: anywhere;
-  text-align: start;
-}
-.apps-tool-row:has(details[open]) #apps-check {
-  grid-column: 1 / -1;
-  grid-row: 2;
-  justify-self: stretch;
-  justify-content: center;
-}
-.apps-update-count:not([hidden]) {
-  padding: .15rem .4rem;
-  border-radius: .375rem;
-  background: color-mix(in srgb, var(--yellow) 12%, transparent);
-  color: var(--yellow);
-  font: 600 .75rem/1.25 'JetBrains Mono', monospace;
-}
-html[data-ui-theme="modern"] .apps-update-count { color: #87530c; }
 .apps-list {
   flex: 1 0 7rem;
   min-height: 0;

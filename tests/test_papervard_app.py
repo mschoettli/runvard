@@ -192,6 +192,17 @@ def test_check_updates_reports_registry_inspection_errors(monkeypatch, tmp_path)
     assert result["errors"] == {"papervard": "registry unavailable"}
 
 
+def test_catalog_ignores_cached_update_after_uninstall(monkeypatch, tmp_path):
+    _prepare_catalog(monkeypatch, tmp_path)
+    monkeypatch.setattr(apps, "_load_updates", lambda: {"updates": ["papervard", "jellyfin"]})
+    monkeypatch.setattr(apps, "_running", lambda app_id: False)
+    (tmp_path / "jellyfin").mkdir()
+    (tmp_path / "jellyfin" / "docker-compose.yml").write_text("services: {}\n")
+
+    flagged = [app["id"] for app in apps.get_catalog()["apps"] if app["update_available"]]
+    assert flagged == ["jellyfin"]
+
+
 def test_app_install_rejects_port_conflicts_before_writing(monkeypatch, tmp_path):
     _prepare_catalog(monkeypatch, tmp_path)
     monkeypatch.setattr(
@@ -324,17 +335,25 @@ def test_app_library_groups_installed_and_first_party_apps_independently(order, 
     ]
     script = "\n".join(helpers) + f"""
 const appsSort = {json.dumps(order)};
-const groups = groupAppsCatalog([
+const apps = [
   {{id:'compose:local', installed:true, first_party:false}},
-  {{id:'jellyfin', installed:false, first_party:false}},
+  {{id:'jellyfin', installed:false, first_party:false, update_available:true}},
   {{id:'papervard', installed:false, first_party:true}},
+];
+const updates = [
+  {{id:'nextcloud', installed:true, update_available:true}},
+  {{id:'printvard', installed:true, first_party:true, update_available:true}},
+];
+const groups = items => groupAppsCatalog(items).map(group => [
+  group.labelKey, group.items.map(app => app.id)
 ]);
-console.log(JSON.stringify(Object.fromEntries(
-  groups.map(group => [group.labelKey, group.items.map(app => app.id)])
-)));
+console.log(JSON.stringify([groups(apps), groups([...apps, ...updates])]));
 """
     result = subprocess.run(["node", "-e", script], capture_output=True, text=True, check=True)
-    assert json.loads(result.stdout) == expected
+    without_updates, with_updates = json.loads(result.stdout)
+    expected_groups = [[key, ids] for key, ids in expected.items()]
+    assert without_updates == expected_groups
+    assert with_updates == [["availableUpdates", ["printvard", "nextcloud"]], *expected_groups]
 
 
 def test_readonly_users_cannot_read_app_compose_secrets(monkeypatch):

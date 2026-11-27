@@ -1390,7 +1390,7 @@ def get_catalog():
                if app.get("repository_url") else {}),
             "installed": installed,
             "running": running,
-            "update_available": app["id"] in updates,
+            "update_available": installed and app["id"] in updates,
         })
     for project in docker_mgr.list_compose_projects():
         name = project["name"]
