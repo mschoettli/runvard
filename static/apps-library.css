@@ -101,7 +101,6 @@
 .app-list-item[aria-current="true"] {
   border-color: var(--border-accent);
   background: color-mix(in srgb, var(--accent) 12%, transparent);
-  box-shadow: inset 3px 0 var(--accent);
 }
 .app-list-name { overflow-wrap: anywhere; }
 .app-library-icon {
